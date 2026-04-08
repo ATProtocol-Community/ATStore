@@ -1,0 +1,1 @@
+ALTER TABLE "directory_listings" ADD COLUMN "app_tags" text[] DEFAULT '{}'::text[] NOT NULL;
