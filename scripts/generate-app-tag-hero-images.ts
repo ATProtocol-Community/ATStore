@@ -15,6 +15,7 @@ import { sql } from "drizzle-orm";
 
 const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview" as const;
 const OUTPUT_DIR = path.resolve(process.cwd(), "public/generated/app-tag-heroes");
+const STATIC_APP_TAG_HERO_SLUGS = ["all", "all-apps"] as const;
 
 type ScriptArgs = {
   dryRun: boolean;
@@ -177,7 +178,10 @@ async function getSpecsFromDatabase() {
   );
 
   const specs = new Map<string, ReturnType<typeof getAppTagHeroArtSpec>>();
-  specs.set("all", getAppTagHeroArtSpec("all"));
+
+  for (const slug of STATIC_APP_TAG_HERO_SLUGS) {
+    specs.set(slug, getAppTagHeroArtSpec(slug));
+  }
 
   for (const tag of distinctTags) {
     const spec = getAppTagHeroArtSpecForTag(tag);

@@ -1,0 +1,2 @@
+out/generated-listing-page-shots/** filter=lfs diff=lfs merge=lfs -text
+public/generated/** filter=lfs diff=lfs merge=lfs -text

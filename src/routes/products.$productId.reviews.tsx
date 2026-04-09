@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 
 import { Avatar } from "../design-system/avatar";
@@ -23,20 +23,39 @@ import { Body } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getPlaceholderReviews } from "../lib/product-reviews";
+import {
+  getDirectoryListingSlug,
+  getLegacyDirectoryListingId,
+} from "../lib/directory-listing-slugs";
 
 export const Route = createFileRoute("/products/$productId/reviews")({
   loader: async ({ context, params }) => {
+    const legacyListingId = getLegacyDirectoryListingId(params.productId);
     const listing = await context.queryClient.ensureQueryData(
-      directoryListingApi.getDirectoryListingDetailQueryOptions(
-        params.productId,
-      ),
+      legacyListingId
+        ? directoryListingApi.getDirectoryListingDetailQueryOptions(
+            legacyListingId,
+          )
+        : directoryListingApi.getDirectoryListingDetailBySlugQueryOptions(
+            params.productId,
+          ),
     );
 
     if (!listing) {
       throw notFound();
     }
 
-    return { productId: params.productId };
+    const productSlug = getDirectoryListingSlug(listing);
+
+    if (params.productId !== productSlug) {
+      throw redirect({
+        to: "/products/$productId/reviews",
+        params: { productId: productSlug },
+        replace: true,
+      });
+    }
+
+    return { productId: listing.id, productSlug };
   },
   component: ProductReviewsPage,
 });
@@ -88,7 +107,7 @@ const styles = stylex.create({
 });
 
 function ProductReviewsPage() {
-  const { productId } = Route.useLoaderData();
+  const { productId, productSlug } = Route.useLoaderData();
   const { data: listing } = useSuspenseQuery(
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId),
   );
@@ -105,7 +124,7 @@ function ProductReviewsPage() {
         <Page.Root variant="small" style={styles.page}>
           <Flex direction="column" gap="7xl">
             <Flex style={styles.backLinkRow}>
-              <Link href={`/products/${productId}`}>
+              <Link href={`/products/${productSlug}`}>
                 <ChevronLeft />
                 Back to product
               </Link>

@@ -5,7 +5,9 @@ import {
   Link as RouterLink,
   notFound,
 } from "@tanstack/react-router";
+import { ChevronLeft } from "lucide-react";
 
+import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
@@ -18,13 +20,12 @@ import { blue } from "../design-system/theme/colors/blue.stylex";
 import { green } from "../design-system/theme/colors/green.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
-import { primaryColor, uiColor } from "../design-system/theme/color.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
-  size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
@@ -33,6 +34,7 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import {
   directoryListingApi,
+  type DirectoryAppTagGroup,
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
@@ -41,14 +43,8 @@ import {
   getAppTagDescription,
 } from "../lib/app-tag-metadata";
 import { getAppTagHeroAssetPathForTag } from "../lib/app-tag-hero-art";
-import { ChevronLeft } from "lucide-react";
+import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { StarRating } from "#/design-system/star-rating";
-import { gold } from "../design-system/theme/colors/gold.stylex";
-
-const starTheme = stylex.createTheme(primaryColor, {
-  solid1: gold.solid1,
-  solid2: gold.solid2,
-});
 
 export const Route = createFileRoute("/apps/$tag")({
   loader: async ({ context, params }) => {
@@ -68,6 +64,12 @@ export const Route = createFileRoute("/apps/$tag")({
 });
 
 const styles = stylex.create({
+  pageContent: {
+    gap: {
+      default: gap["6xl"],
+      [breakpoints.xl]: gap["8xl"],
+    },
+  },
   blurContainer: {
     inset: 0,
     overflow: "hidden",
@@ -99,7 +101,7 @@ const styles = stylex.create({
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
+      [breakpoints.xl]: "repeat(3, minmax(0, 1fr))",
     },
   },
   listingLink: {
@@ -108,6 +110,7 @@ const styles = stylex.create({
     textDecoration: "none",
   },
   listingLinkFeatured: {
+    aspectRatio: 16 / 9,
     gridColumn: {
       default: "auto",
       [breakpoints.sm]: "span 2",
@@ -119,7 +122,9 @@ const styles = stylex.create({
   },
   listingCard: {
     height: "100%",
-    minHeight: "15rem",
+    width: "100%",
+    boxSizing: "border-box",
+    // minHeight: "15rem",
   },
   listingCardFeatured: {
     borderRadius: radius["3xl"],
@@ -130,10 +135,10 @@ const styles = stylex.create({
     overflow: "hidden",
     position: "relative",
     boxShadow: shadow["2xl"],
-    minHeight: {
-      default: "20rem",
-      [breakpoints.sm]: "32rem",
-    },
+    // minHeight: {
+    //   default: "20rem",
+    //   [breakpoints.sm]: "32rem",
+    // },
   },
   listingCardBody: {
     gap: gap["4xl"],
@@ -275,6 +280,86 @@ const styles = stylex.create({
   greenGlow: {
     backgroundImage: `radial-gradient(circle, ${green.component3}, transparent 70%)`,
   },
+  softBlueSurface: {
+    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
+    borderColor: blue.border1,
+  },
+  softPinkSurface: {
+    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
+    borderColor: pink.border1,
+  },
+  softPurpleSurface: {
+    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
+    borderColor: purple.border1,
+  },
+  softGreenSurface: {
+    backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
+    borderColor: green.border1,
+  },
+  relatedSection: {
+    gap: gap["5xl"],
+  },
+  relatedHeader: {
+    maxWidth: "44rem",
+  },
+  relatedDescription: {
+    maxWidth: "40rem",
+  },
+  relatedGrid: {
+    display: "grid",
+    gap: gap["2xl"],
+    gridTemplateColumns: {
+      default: "1fr",
+      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.md]: "repeat(4, minmax(0, 1fr))",
+    },
+  },
+  relatedLink: {
+    borderRadius: radius.xl,
+    borderStyle: "solid",
+    borderWidth: 1,
+    boxShadow: shadow.lg,
+    color: "white",
+    cornerShape: "squircle",
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    justifyContent: "space-between",
+    minHeight: "14rem",
+    paddingBottom: verticalSpace["3xl"],
+    paddingLeft: horizontalSpace["3xl"],
+    paddingRight: horizontalSpace["3xl"],
+    paddingTop: verticalSpace["3xl"],
+    position: "relative",
+    textDecoration: "none",
+    gap: gap["3xl"],
+  },
+  relatedCardBody: {
+    flexGrow: 1,
+  },
+  relatedCount: {
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  },
+  relatedIcon: {
+    alignItems: "center",
+    backdropFilter: "blur(10px)",
+    backgroundColor: `color-mix(in srgb, ${uiColor.component1} 36%, transparent)`,
+    borderColor: `color-mix(in srgb, ${uiColor.border1} 65%, transparent)`,
+    borderRadius: radius.md,
+    borderStyle: "solid",
+    borderWidth: 1,
+    display: "inline-flex",
+    height: "2.5rem",
+    justifyContent: "center",
+    width: "2.5rem",
+  },
+  relatedChevron: {
+    marginLeft: "auto",
+  },
+  spacer: {
+    flex: 1,
+  },
 });
 
 function AppsTagPage() {
@@ -284,19 +369,24 @@ function AppsTagPage() {
       tag: params.tag,
     }),
   );
+  const { data: allGroups } = useSuspenseQuery(
+    directoryListingApi.getAppsByTagQueryOptions,
+  );
 
   if (!data) {
     throw notFound();
   }
 
+  const relatedTags = getRelatedAppTagGroups(data, allGroups);
+
   return (
     <HeaderLayout.Root>
       <HeaderLayout.Page>
         <Page.Root variant="large" style={styles.page}>
-          <Flex direction="column" gap="8xl">
+          <Flex direction="column" style={styles.pageContent}>
             <Flex direction="column" gap="4xl">
               <Flex gap="xl" style={styles.navLinks}>
-                <Link href="/apps/all">
+                <Link href="/apps/tags">
                   <ChevronLeft />
                   All tags
                 </Link>
@@ -314,11 +404,15 @@ function AppsTagPage() {
               {data.listings.map((listing, index) => (
                 <AppTagListingCard
                   key={`${data.tag}-${listing.id}`}
-                  featured={index === 0}
+                  featured={index % 9 === 0}
                   listing={listing}
                 />
               ))}
             </Grid>
+
+            {relatedTags.length > 0 ? (
+              <RelatedTagsSection groups={relatedTags} />
+            ) : null}
           </Flex>
         </Page.Root>
       </HeaderLayout.Page>
@@ -333,11 +427,10 @@ function AppTagListingCard({
   listing: DirectoryListingCard;
   featured?: boolean;
 }) {
-  console.log(listing);
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(
         styles.listingLink,
         featured && styles.listingLinkFeatured,
@@ -431,19 +524,39 @@ function AppTagListingCard({
                     <SmallBody variant="secondary">
                       {listing.rating.toFixed(1)}
                     </SmallBody>
-                    <StarRating rating={listing.rating} style={starTheme} />
+                    <StarRating rating={listing.rating} />
                   </Flex>
                 </Flex>
               </Flex>
               <Body variant="secondary" style={styles.listingTagline}>
                 {listing.tagline}
               </Body>
-              <div />
             </>
           )}
         </Flex>
       </Card>
     </RouterLink>
+  );
+}
+
+function RelatedTagsSection({ groups }: { groups: DirectoryAppTagGroup[] }) {
+  return (
+    <Flex direction="column" style={styles.relatedSection}>
+      <Flex direction="column" gap="4xl" style={styles.relatedHeader}>
+        <Text size="3xl" weight="semibold">
+          Related tags to explore
+        </Text>
+        <Body variant="secondary" style={styles.relatedDescription}>
+          Explore adjacent workflows and neighboring collections that share apps
+          with this tag.
+        </Body>
+      </Flex>
+      <Grid style={styles.relatedGrid}>
+        {groups.map((group) => (
+          <AppTagCard key={group.tag} tag={group} />
+        ))}
+      </Grid>
+    </Flex>
   );
 }
 
@@ -469,4 +582,37 @@ function getAccentGlow(accent: DirectoryListingCard["accent"]) {
   if (accent === "green") return styles.greenGlow;
 
   return styles.blueGlow;
+}
+
+function getRelatedAppTagGroups(
+  currentGroup: DirectoryAppTagGroup,
+  groups: DirectoryAppTagGroup[],
+) {
+  const currentListingIds = new Set(
+    currentGroup.listings.map((listing) => listing.id),
+  );
+
+  return groups
+    .filter((group) => group.tag !== currentGroup.tag)
+    .sort((left, right) => {
+      const leftOverlap = left.listings.reduce(
+        (count, listing) => count + Number(currentListingIds.has(listing.id)),
+        0,
+      );
+      const rightOverlap = right.listings.reduce(
+        (count, listing) => count + Number(currentListingIds.has(listing.id)),
+        0,
+      );
+
+      if (rightOverlap !== leftOverlap) {
+        return rightOverlap - leftOverlap;
+      }
+
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+
+      return left.tag.localeCompare(right.tag);
+    })
+    .slice(0, 4);
 }

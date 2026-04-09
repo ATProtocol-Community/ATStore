@@ -15,6 +15,7 @@ import { Route as DevCategoriesRouteImport } from './routes/dev.categories'
 import { Route as DevAppTagsRouteImport } from './routes/dev.app-tags'
 import { Route as CategoriesAllRouteImport } from './routes/categories.all'
 import { Route as CategoriesCategoryIdRouteImport } from './routes/categories.$categoryId'
+import { Route as AppsTagsRouteImport } from './routes/apps.tags'
 import { Route as AppsAllRouteImport } from './routes/apps.all'
 import { Route as AppsTagRouteImport } from './routes/apps.$tag'
 import { Route as ProductsProductIdIndexRouteImport } from './routes/products.$productId.index'
@@ -50,6 +51,11 @@ const CategoriesCategoryIdRoute = CategoriesCategoryIdRouteImport.update({
   path: '/categories/$categoryId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsTagsRoute = AppsTagsRouteImport.update({
+  id: '/apps/tags',
+  path: '/apps/tags',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppsAllRoute = AppsAllRouteImport.update({
   id: '/apps/all',
   path: '/apps/all',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/apps/$tag': typeof AppsTagRoute
   '/apps/all': typeof AppsAllRoute
+  '/apps/tags': typeof AppsTagsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
   '/categories/all': typeof CategoriesAllRoute
   '/dev/app-tags': typeof DevAppTagsRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/apps/$tag': typeof AppsTagRoute
   '/apps/all': typeof AppsAllRoute
+  '/apps/tags': typeof AppsTagsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
   '/categories/all': typeof CategoriesAllRoute
   '/dev/app-tags': typeof DevAppTagsRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/apps/$tag': typeof AppsTagRoute
   '/apps/all': typeof AppsAllRoute
+  '/apps/tags': typeof AppsTagsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
   '/categories/all': typeof CategoriesAllRoute
   '/dev/app-tags': typeof DevAppTagsRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/'
     | '/apps/$tag'
     | '/apps/all'
+    | '/apps/tags'
     | '/categories/$categoryId'
     | '/categories/all'
     | '/dev/app-tags'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/'
     | '/apps/$tag'
     | '/apps/all'
+    | '/apps/tags'
     | '/categories/$categoryId'
     | '/categories/all'
     | '/dev/app-tags'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/'
     | '/apps/$tag'
     | '/apps/all'
+    | '/apps/tags'
     | '/categories/$categoryId'
     | '/categories/all'
     | '/dev/app-tags'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppsTagRoute: typeof AppsTagRoute
   AppsAllRoute: typeof AppsAllRoute
+  AppsTagsRoute: typeof AppsTagsRoute
   CategoriesCategoryIdRoute: typeof CategoriesCategoryIdRoute
   CategoriesAllRoute: typeof CategoriesAllRoute
   DevAppTagsRoute: typeof DevAppTagsRoute
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoriesCategoryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps/tags': {
+      id: '/apps/tags'
+      path: '/apps/tags'
+      fullPath: '/apps/tags'
+      preLoaderRoute: typeof AppsTagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/apps/all': {
       id: '/apps/all'
       path: '/apps/all'
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppsTagRoute: AppsTagRoute,
   AppsAllRoute: AppsAllRoute,
+  AppsTagsRoute: AppsTagsRoute,
   CategoriesCategoryIdRoute: CategoriesCategoryIdRoute,
   CategoriesAllRoute: CategoriesAllRoute,
   DevAppTagsRoute: DevAppTagsRoute,

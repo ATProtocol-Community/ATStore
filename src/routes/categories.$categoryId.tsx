@@ -44,6 +44,7 @@ import {
   type DirectoryCategoryAccent,
   type DirectoryCategoryTreeNode,
 } from "../lib/directory-categories";
+import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 
 export const Route = createFileRoute("/categories/$categoryId")({
   loader: async ({ context, params }) => {
@@ -337,7 +338,7 @@ function CategoryListingCard({ listing }: { listing: DirectoryListingCard }) {
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.listingLink)}
     >
       <Card style={styles.listingCard}>

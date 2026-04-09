@@ -17,6 +17,15 @@ const APP_TAG_HERO_ART_SPECS: AppTagHeroArtSpec[] = [
       "a premium app marketplace ecosystem with floating rounded app cards, glass panels, glowing blobs, layered interface fragments, and joyful editorial energy",
   },
   {
+    slug: "all-apps",
+    label: "Browse All Apps",
+    assetPath: "/generated/app-tag-heroes/all-apps.png",
+    palettePrompt:
+      "electric blue, cyan, pink, purple, coral, mint, and glossy white highlights",
+    subjectPrompt:
+      "a premium catalog of floating app cards, polished discovery tiles, abstract interface layers, rounded glass panels, and vibrant editorial marketplace energy",
+  },
+  {
     slug: "account-tool",
     label: "Account Tool",
     assetPath: "/generated/app-tag-heroes/account-tool.png",

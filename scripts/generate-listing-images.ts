@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config"
 
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { createHash } from "node:crypto"
 
@@ -39,6 +39,7 @@ type CandidateListing = {
 }
 
 type ScriptArgs = {
+  concurrency: number
   dryRun: boolean
   force: boolean
   limit: number | null
@@ -53,6 +54,7 @@ type GeneratedImage = {
 
 function parseArgs(argv: string[]): ScriptArgs {
   const out: ScriptArgs = {
+    concurrency: 4,
     dryRun: false,
     force: false,
     limit: null,
@@ -72,6 +74,15 @@ function parseArgs(argv: string[]): ScriptArgs {
     }
     if (arg === "--force") {
       out.force = true
+      continue
+    }
+    if (arg === "--concurrency" || arg === "-c") {
+      const raw = argv[++i]
+      const value = Number.parseInt(raw ?? "", 10)
+      if (!Number.isFinite(value) || value <= 0) {
+        throw new Error(`Invalid --concurrency value "${raw ?? ""}"`)
+      }
+      out.concurrency = value
       continue
     }
     if (arg === "--limit" || arg === "-l") {
@@ -100,7 +111,8 @@ Usage: npm run generate:listing-images -- [options]
 
 Options:
       --dry-run       Capture screenshots and generate files, but do not update the database
-      --force         Reprocess even if screenshotUrls already has an image
+      --force         Reprocess even if a generated marketing image already exists
+  -c, --concurrency <n> Run up to n listings in parallel (default: 4)
   -l, --limit <n>     Process at most n listings
       --id <listing>  Process a single listing id
   -h, --help          Show help
@@ -121,8 +133,27 @@ function getListingUrl(listing: CandidateListing): string | null {
   return listing.externalUrl || listing.sourceUrl || null
 }
 
-function hasGeneratedImage(listing: CandidateListing): boolean {
-  return listing.screenshotUrls.some((url) => typeof url === "string" && url.length > 0)
+function isGeneratedImageUrl(url: string): boolean {
+  return url.startsWith("/generated/listings/")
+}
+
+async function hasUsableGeneratedImage(listing: CandidateListing): Promise<boolean> {
+  for (const url of listing.screenshotUrls) {
+    if (!isGeneratedImageUrl(url)) {
+      continue
+    }
+
+    const filePath = path.resolve(process.cwd(), "public", url.replace(/^\//, ""))
+
+    try {
+      await stat(filePath)
+      return true
+    } catch {
+      continue
+    }
+  }
+
+  return false
 }
 
 function slugify(value: string): string {
@@ -327,11 +358,29 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
     .from(directoryListings)
     .orderBy(desc(directoryListings.updatedAt), desc(directoryListings.createdAt))
 
-  return rows
-    .filter((row) => (args.id ? row.id === args.id : true))
-    .filter((row) => (args.force ? true : !hasGeneratedImage(row)))
-    .filter((row) => getListingUrl(row) !== null)
-    .slice(0, args.limit ?? Number.POSITIVE_INFINITY)
+  const candidates: CandidateListing[] = []
+
+  for (const row of rows) {
+    if (args.id && row.id !== args.id) {
+      continue
+    }
+
+    if (getListingUrl(row) === null) {
+      continue
+    }
+
+    if (!args.force && (await hasUsableGeneratedImage(row))) {
+      continue
+    }
+
+    candidates.push(row)
+
+    if (candidates.length >= (args.limit ?? Number.POSITIVE_INFINITY)) {
+      break
+    }
+  }
+
+  return candidates
 }
 
 async function processListing(
@@ -387,15 +436,28 @@ async function main(): Promise<void> {
   }
 
   console.log(`Found ${candidates.length} listing(s) to process.`)
+  const concurrency = Math.min(args.concurrency, candidates.length)
+  let nextIndex = 0
 
-  for (const listing of candidates) {
-    try {
-      await processListing(listing, args)
-    } catch (error) {
-      console.error(`Failed for ${listing.name} (${listing.id}).`)
-      console.error(error)
+  async function worker(): Promise<void> {
+    while (nextIndex < candidates.length) {
+      const listing = candidates[nextIndex]
+      nextIndex += 1
+
+      if (!listing) {
+        return
+      }
+
+      try {
+        await processListing(listing, args)
+      } catch (error) {
+        console.error(`Failed for ${listing.name} (${listing.id}).`)
+        console.error(error)
+      }
     }
   }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()))
 }
 
 await main()

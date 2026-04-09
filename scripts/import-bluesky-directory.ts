@@ -4,10 +4,11 @@ import "dotenv/config"
 import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
-import { eq, inArray } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 
 import { db, dbClient } from "../src/db/index.server"
 import { directoryListings } from "../src/db/schema"
+import { buildDirectoryListingSlug } from "../src/lib/directory-listing-slugs"
 
 type InputRecord = {
   name: string
@@ -144,6 +145,7 @@ async function main(): Promise<void> {
   for (const row of rows) {
     const alreadyExists = existingSourceUrls.has(row.sourceUrl)
     const now = new Date()
+    const slug = buildDirectoryListingSlug(row)
 
     const categoryPatch =
       row.categorySlug !== undefined ? { categorySlug: row.categorySlug } : {}
@@ -153,6 +155,7 @@ async function main(): Promise<void> {
       .values({
         sourceUrl: row.sourceUrl,
         name: row.name,
+        slug,
         externalUrl: row.externalUrl,
         iconUrl: row.iconUrl,
         screenshotUrls: row.screenshotUrls,
@@ -171,6 +174,7 @@ async function main(): Promise<void> {
         target: directoryListings.sourceUrl,
         set: {
           name: row.name,
+          slug: sql`coalesce(${directoryListings.slug}, ${slug})`,
           externalUrl: row.externalUrl,
           iconUrl: row.iconUrl,
           screenshotUrls: row.screenshotUrls,

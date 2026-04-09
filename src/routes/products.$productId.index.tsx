@@ -5,6 +5,7 @@ import {
   createLink,
   Link as RouterLink,
   notFound,
+  redirect,
 } from "@tanstack/react-router";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 
@@ -45,30 +46,48 @@ import {
   PRODUCT_REVIEW_PREVIEW_COUNT,
 } from "../lib/product-reviews";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
+import {
+  getDirectoryListingSlug,
+  getLegacyDirectoryListingId,
+} from "../lib/directory-listing-slugs";
 
 const ButtonLink = createLink(Button);
 
 export const Route = createFileRoute("/products/$productId/")({
   loader: async ({ context, params }) => {
-    const [listing] = await Promise.all([
-      context.queryClient.ensureQueryData(
-        directoryListingApi.getDirectoryListingDetailQueryOptions(
-          params.productId,
-        ),
-      ),
-      context.queryClient.ensureQueryData(
-        directoryListingApi.getRelatedDirectoryListingsQueryOptions({
-          id: params.productId,
-          limit: 3,
-        }),
-      ),
-    ]);
+    const legacyListingId = getLegacyDirectoryListingId(params.productId);
+    const listing = await context.queryClient.ensureQueryData(
+      legacyListingId
+        ? directoryListingApi.getDirectoryListingDetailQueryOptions(
+            legacyListingId,
+          )
+        : directoryListingApi.getDirectoryListingDetailBySlugQueryOptions(
+            params.productId,
+          ),
+    );
 
     if (!listing) {
       throw notFound();
     }
 
-    return { productId: params.productId };
+    const productSlug = getDirectoryListingSlug(listing);
+
+    await context.queryClient.ensureQueryData(
+      directoryListingApi.getRelatedDirectoryListingsQueryOptions({
+        id: listing.id,
+        limit: 3,
+      }),
+    );
+
+    if (params.productId !== productSlug) {
+      throw redirect({
+        to: "/products/$productId",
+        params: { productId: productSlug },
+        replace: true,
+      });
+    }
+
+    return { productId: listing.id, productSlug };
   },
   component: ProductPage,
 });
@@ -170,13 +189,9 @@ const styles = stylex.create({
   ratingRow: {
     alignItems: "center",
   },
-  metadataGrid: {
-    display: "grid",
-    gap: gap["2xl"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
-    },
+  metadataGridItem: {
+    flexGrow: 1,
+    flexBasis: "240px",
   },
   metaCard: {
     boxShadow: shadow.sm,
@@ -324,7 +339,7 @@ const styles = stylex.create({
 });
 
 function ProductPage() {
-  const { productId } = Route.useLoaderData();
+  const { productId, productSlug } = Route.useLoaderData();
   const { data: listing } = useSuspenseQuery(
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId),
   );
@@ -341,6 +356,8 @@ function ProductPage() {
 
   const reviews = getPlaceholderReviews(listing);
 
+  const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
+
   return (
     <HeaderLayout.Root>
       <HeaderLayout.Page>
@@ -352,9 +369,7 @@ function ProductPage() {
                 Back to directory
               </Link>
             </Flex>
-
             <HeroSection listing={listing} />
-
             <Flex direction="column" gap="5xl">
               {getDescriptionBlocks(listing.description).map((block, index) => (
                 <Body
@@ -365,16 +380,19 @@ function ProductPage() {
                 </Body>
               ))}
             </Flex>
-
-            <Grid style={styles.metadataGrid}>
-              <MetaCard label="Scope" value={listing.scope || "Unknown"} />
-              <MetaCard label="Domain" value={listing.domain || "Unknown"} />
-              <MetaCard
-                label="Product type"
-                value={listing.productType || listing.rawCategoryHint || "Tool"}
-              />
-            </Grid>
-
+            {type === "Apps" ? (
+              domain ? (
+                <Flex gap="xl">
+                  <MetaCard label="App" value={scope} />
+                  <MetaCard label="Domain" value={domain} />
+                </Flex>
+              ) : null
+            ) : (
+              <Flex gap="xl">
+                <MetaCard label="Type" value={type || "Unknown"} />
+                <MetaCard label="Domain" value={scope || "Unknown"} />
+              </Flex>
+            )}
             <Flex gap="4xl" direction="column">
               <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
                 <Flex
@@ -395,7 +413,7 @@ function ProductPage() {
                   </Flex>
                   <ButtonLink
                     to="/products/$productId/reviews"
-                    params={{ productId }}
+                    params={{ productId: productSlug }}
                     size="lg"
                     variant="secondary"
                   >
@@ -451,7 +469,6 @@ function ProductPage() {
                 Create review
               </Button>
             </Flex>
-
             {relatedProducts.length > 0 ? (
               <RelatedProductsSection listings={relatedProducts} />
             ) : null}
@@ -464,6 +481,8 @@ function ProductPage() {
 
 function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
   const primaryLink = listing.externalUrl || undefined;
+
+  console.log(listing);
 
   return (
     <Flex direction="column" gap="6xl">
@@ -531,7 +550,7 @@ function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
 
 function MetaCard({ label, value }: { label: string; value: string }) {
   return (
-    <Card style={styles.metaCard}>
+    <Card style={[styles.metaCard, styles.metadataGridItem]}>
       <Flex
         direction="column"
         align="center"
@@ -568,7 +587,7 @@ function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.relatedLink)}
     >
       <Card style={styles.relatedCard}>

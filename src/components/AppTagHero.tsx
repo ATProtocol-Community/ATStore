@@ -66,7 +66,7 @@ export function AppTagHero({
         )}
       </div>
 
-      <Flex direction="column" gap="4xl" style={styles.copy}>
+      <Flex direction="column" gap="5xl" style={styles.copy}>
         {eyebrow ? (
           <SmallBody style={styles.eyebrow}>{eyebrow}</SmallBody>
         ) : null}

@@ -23,11 +23,16 @@ import {
   sanitizeListingDescription,
   sanitizeListingTagline,
 } from '../../lib/listing-copy'
+import {
+  buildDirectoryListingSlug,
+  getDirectoryListingSlug,
+} from '../../lib/directory-listing-slugs'
 import { dbMiddleware } from './db-middleware'
 
 type DirectoryListingRow = {
   id: string
   name: string
+  slug: string | null
   iconUrl: string | null
   screenshotUrls: string[]
   tagline: string | null
@@ -43,6 +48,7 @@ type CategoryAccent = DirectoryCategoryAccent
 export interface DirectoryListingCard {
   id: string
   name: string
+  slug?: string | null
   tagline: string
   description: string
   iconUrl: string | null
@@ -360,7 +366,7 @@ function getCategoryLabel(
 ) {
   const assignedCategory = getListingCategory(row)
   if (assignedCategory) {
-    return assignedCategory.label
+    return assignedCategory.pathLabels.slice(1).join(' ') || assignedCategory.label
   }
 
   return formatMetadataLabel(row.productType || row.domain || row.scope || 'Utility')
@@ -408,6 +414,7 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
   return {
     id: row.id,
     name: row.name,
+    slug: row.slug || buildDirectoryListingSlug({ name: row.name }),
     tagline,
     description: getListingDescription(row),
     iconUrl: row.iconUrl,
@@ -571,6 +578,12 @@ function buildAppTagGroups(rows: DirectoryListingAppTagRow[]) {
     })
 }
 
+function buildAllApps(rows: DirectoryListingRow[]) {
+  return dedupeListings(rows.filter(isBrowseableAppRow))
+    .map(toListingCard)
+    .sort((left, right) => left.name.localeCompare(right.name))
+}
+
 function buildHomePageTagSummaries(
   rows: DirectoryListingAppTagRow[],
   limit = 4,
@@ -588,6 +601,7 @@ function getListingSelect(table: any) {
   return {
     id: table.id,
     name: table.name,
+    slug: table.slug,
     iconUrl: table.iconUrl,
     screenshotUrls: table.screenshotUrls,
     tagline: table.tagline,
@@ -779,6 +793,24 @@ const getAppsByTagQueryOptions = queryOptions({
   queryFn: async () => getAppsByTag(),
 })
 
+const getAllApps = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const table = context.schema.directoryListings
+    const rows = await context.db
+      .select(getListingSelect(table))
+      .from(table)
+      .where(like(table.categorySlug, 'apps/%'))
+      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+
+    return buildAllApps(rows)
+  })
+
+const getAllAppsQueryOptions = queryOptions({
+  queryKey: ['directoryListings', 'allApps'],
+  queryFn: async () => getAllApps(),
+})
+
 const getAppsByTagPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getAppsByTagPageInput)
@@ -836,6 +868,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         id: table.id,
         sourceUrl: table.sourceUrl,
         name: table.name,
+        slug: table.slug,
         externalUrl: table.externalUrl,
         iconUrl: table.iconUrl,
         screenshotUrls: table.screenshotUrls,
@@ -863,10 +896,66 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
     return toListingDetail(row)
   })
 
+const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(
+    z.object({
+      slug: z.string().trim().min(1),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const fallbackListing = fallbackDetailListings.find(
+      (listing) => getDirectoryListingSlug(listing) === data.slug,
+    )
+    if (fallbackListing) {
+      return fallbackListing
+    }
+
+    const table = context.schema.directoryListings
+    const [row] = await context.db
+      .select({
+        id: table.id,
+        sourceUrl: table.sourceUrl,
+        name: table.name,
+        slug: table.slug,
+        externalUrl: table.externalUrl,
+        iconUrl: table.iconUrl,
+        screenshotUrls: table.screenshotUrls,
+        tagline: table.tagline,
+        fullDescription: table.fullDescription,
+        rawCategoryHint: table.rawCategoryHint,
+        scope: table.scope,
+        productType: table.productType,
+        domain: table.domain,
+        categorySlug: table.categorySlug,
+        vertical: table.vertical,
+        classificationReason: table.classificationReason,
+        appTags: table.appTags,
+        createdAt: table.createdAt,
+        updatedAt: table.updatedAt,
+      })
+      .from(table)
+      .where(eq(table.slug, data.slug))
+      .limit(1)
+
+    if (!row) {
+      return null
+    }
+
+    return toListingDetail(row)
+  })
+
 function getDirectoryListingDetailQueryOptions(id: string) {
   return queryOptions({
     queryKey: ['directoryListings', 'detail', id],
     queryFn: async () => getDirectoryListingDetail({ data: { id } }),
+  })
+}
+
+function getDirectoryListingDetailBySlugQueryOptions(slug: string) {
+  return queryOptions({
+    queryKey: ['directoryListings', 'detailBySlug', slug],
+    queryFn: async () => getDirectoryListingDetailBySlug({ data: { slug } }),
   })
 }
 
@@ -1248,12 +1337,16 @@ export const directoryListingApi = {
   getDirectoryCategoryTreeQueryOptions,
   getDirectoryCategoryPage,
   getDirectoryCategoryPageQueryOptions,
+  getAllApps,
+  getAllAppsQueryOptions,
   getAppsByTag,
   getAppsByTagQueryOptions,
   getAppsByTagPage,
   getAppsByTagPageQueryOptions,
   getDirectoryListingDetail,
   getDirectoryListingDetailQueryOptions,
+  getDirectoryListingDetailBySlug,
+  getDirectoryListingDetailBySlugQueryOptions,
   getRelatedDirectoryListings,
   getRelatedDirectoryListingsQueryOptions,
   listDirectoryListings,

@@ -4,12 +4,13 @@ import "dotenv/config"
 import { mkdir, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import {
   sanitizeListingDescription,
   sanitizeListingTagline,
 } from "../src/lib/listing-copy"
+import { buildDirectoryListingSlug } from "../src/lib/directory-listing-slugs"
 
 const APPS_PAGE_URL = "https://atproto.brussels/atproto-apps"
 const APPS_FEED_URL = "https://atproto.brussels/apps-data.json"
@@ -28,6 +29,13 @@ const EXTRA_APPS: FeedApp[] = [
     url: "https://alpha.drydown.social/",
     category: "Lifestyle",
     description: "Fragrance reviews on the AT Protocol.",
+    isOnline: true,
+  },
+  {
+    name: "You & Me",
+    url: "https://youandme.at/",
+    category: "Lifestyle",
+    description: "Connect with people around you on the AT Protocol.",
     isOnline: true,
   },
 ]
@@ -267,12 +275,14 @@ async function upsertRecords(records: InputRecord[]): Promise<{
     for (const record of records) {
       const alreadyExists = existingSourceUrls.has(record.sourceUrl)
       const now = new Date()
+      const slug = buildDirectoryListingSlug(record)
 
       await db
         .insert(directoryListings)
         .values({
           sourceUrl: record.sourceUrl,
           name: record.name,
+          slug,
           externalUrl: record.externalUrl,
           iconUrl: record.iconUrl,
           screenshotUrls: record.screenshotUrls,
@@ -290,6 +300,7 @@ async function upsertRecords(records: InputRecord[]): Promise<{
           target: directoryListings.sourceUrl,
           set: {
             name: record.name,
+            slug: sql`coalesce(${directoryListings.slug}, ${slug})`,
             externalUrl: record.externalUrl,
             iconUrl: record.iconUrl,
             screenshotUrls: record.screenshotUrls,

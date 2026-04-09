@@ -58,6 +58,7 @@ export const directoryListings = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     sourceUrl: text('source_url').notNull(),
     name: text('name').notNull(),
+    slug: text('slug').notNull(),
     externalUrl: text('external_url'),
     iconUrl: text('icon_url'),
     screenshotUrls: text('screenshot_urls').array().notNull(),
@@ -85,6 +86,7 @@ export const directoryListings = pgTable(
     sourceUrlIdx: uniqueIndex('directory_listings_source_url_idx').on(
       table.sourceUrl,
     ),
+    slugIdx: uniqueIndex('directory_listings_slug_idx').on(table.slug),
     externalUrlIdx: index('directory_listings_external_url_idx').on(
       table.externalUrl,
     ),

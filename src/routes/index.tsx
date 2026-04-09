@@ -3,16 +3,14 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   AppWindow,
-  BarChart3,
   Bookmark,
   ChevronRight,
-  Code2,
   RadioTower,
   Sparkles,
-  type LucideIcon,
 } from "lucide-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
+import { AppTagCard } from "../components/AppTagCard";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -44,15 +42,12 @@ import {
 import { Text } from "../design-system/typography/text";
 import {
   directoryListingApi,
-  type DirectoryAppTagSummary,
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
-  formatAppTagCount,
-  formatAppTagLabel,
-  getAppTagDescription,
-  getAppTagSlug,
-} from "../lib/app-tag-metadata";
+  getDirectoryListingHref,
+  getDirectoryListingSlug,
+} from "../lib/directory-listing-slugs";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 
@@ -78,6 +73,25 @@ const styles = stylex.create({
   },
   categoryCardContent: {
     flexGrow: 1,
+    position: "relative",
+    zIndex: 1,
+  },
+  categoryCardImage: {
+    height: "100%",
+    inset: 0,
+    objectFit: "cover",
+    opacity: 0.78,
+    position: "absolute",
+    width: "100%",
+  },
+  categoryCardOverlay: {
+    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 18%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 46%, transparent) 48%, color-mix(in srgb, ${uiColor.overlayBackdrop} 88%, transparent) 100%)`,
+    inset: 0,
+    position: "absolute",
+  },
+  categoryCardFooter: {
+    position: "relative",
+    zIndex: 1,
   },
   categoryDescription: {
     color: uiColor.textContrast,
@@ -160,6 +174,9 @@ const styles = stylex.create({
       default: "26rem",
       [breakpoints.sm]: "30rem",
     },
+    borderColor: uiColor.border1,
+    borderStyle: "solid",
+    borderWidth: 2,
   },
   spotlightCardLink: {
     flexGrow: 1,
@@ -288,13 +305,14 @@ const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-    paddingBottom: verticalSpace["3xl"],
+    paddingBottom: verticalSpace["2xl"],
     paddingLeft: horizontalSpace["3xl"],
     paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
+    paddingTop: verticalSpace["4xl"],
     position: "relative",
     textDecoration: "none",
-    gap: gap["3xl"],
+    gap: gap["8xl"],
+    overflow: "hidden",
   },
   categoryIcon: {
     alignItems: "center",
@@ -481,8 +499,8 @@ function HomePage() {
             <section {...stylex.props(styles.section)}>
               <SectionHeader
                 eyebrow="Browse Apps"
-                title="Find apps by workflow"
-                href="/apps/all"
+                title="Find apps you'll love"
+                href="/apps/tags"
               />
               <Grid style={styles.categoriesGrid}>
                 {data.tags.map((tag) => (
@@ -515,7 +533,7 @@ function HomePage() {
               <SectionHeader
                 eyebrow="New & Noteworthy"
                 title="Fresh tools just added"
-                href="/about"
+                href="/apps/all"
               />
               <Grid style={styles.newGrid}>
                 {data.fresh.map((listing) => (
@@ -581,21 +599,15 @@ function SectionHeader({
 }
 
 function HeroCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing.id);
+  const href = getListingHref(listing);
 
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.bentoLink)}
     >
-      <Card
-        style={[
-          styles.accentCard,
-          styles.heroCard,
-          getAccentSurface(listing.accent),
-        ]}
-      >
+      <Card style={[styles.accentCard, styles.heroCard]}>
         {listing.imageUrl ? (
           <img
             src={listing.imageUrl}
@@ -641,12 +653,12 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
 }
 
 function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing.id);
+  const href = getListingHref(listing);
 
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.bentoLink, styles.spotlightCardLink)}
     >
       <Card
@@ -667,7 +679,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
         </div>
         <Flex direction="column" gap="2xl" style={styles.compactCardContent}>
           <SmallBody style={styles.eyebrow}>
-            {formatMetadataLabel(listing.category)}
+            {getListingMetadataLabel(listing)}
           </SmallBody>
           <Flex
             direction="column"
@@ -695,34 +707,6 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
   );
 }
 
-function AppTagCard({ tag }: { tag: DirectoryAppTagSummary }) {
-  const TagIcon = getAppTagIcon(tag.tag);
-  const accent = getAppTagAccent(tag.tag);
-
-  return (
-    <RouterLink
-      to="/apps/$tag"
-      params={{ tag: getAppTagSlug(tag.tag) }}
-      {...stylex.props(styles.categoryCard, getSoftAccentSurface(accent))}
-    >
-      <Flex direction="column" gap="2xl" style={styles.categoryCardContent}>
-        <div {...stylex.props(styles.categoryIcon)}>
-          <TagIcon size={18} strokeWidth={2.25} />
-        </div>
-        <Text size="2xl" weight="semibold" style={styles.heroTitle}>
-          {formatAppTagLabel(tag.tag)}
-        </Text>
-      </Flex>
-      <Flex align="center" justify="between" gap="md" style={styles.spacer}>
-        <SmallBody style={styles.eyebrow}>
-          {formatAppTagCount(tag.count)}
-        </SmallBody>
-        <ChevronRight {...stylex.props(styles.categoryChevron)} />
-      </Flex>
-    </RouterLink>
-  );
-}
-
 function PopularListItem({
   listing,
   rank,
@@ -730,12 +714,12 @@ function PopularListItem({
   listing: DirectoryListingCard;
   rank: number;
 }) {
-  const href = getListingHref(listing.id);
+  const href = getListingHref(listing);
 
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.listItem, ui.bgSubtle)}
     >
       <Text
@@ -761,12 +745,12 @@ function PopularListItem({
 }
 
 function PromoCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing.id);
+  const href = getListingHref(listing);
 
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(
         styles.bentoLink,
         styles.accentCard,
@@ -799,7 +783,7 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
           <Flex align="center" gap="md">
             <Text weight="semibold">{listing.rating.toFixed(1)}</Text>
             <SmallBody style={styles.heroDescription}>
-              {formatMetadataLabel(listing.category)}
+              {getListingMetadataLabel(listing)}
             </SmallBody>
           </Flex>
         </div>
@@ -815,23 +799,23 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
 }
 
 function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing.id);
+  const href = getListingHref(listing);
 
   return (
     <RouterLink
       to="/products/$productId"
-      params={{ productId: listing.id }}
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.bentoLink, styles.newCardLink)}
     >
       <Card style={styles.newCard}>
         <Flex direction="column" gap="4xl" style={styles.newCardContent}>
           <StoreIcon listing={listing} size="xl" />
           <Flex direction="column" gap="xl">
-            <Text size="xl" weight="semibold" style={styles.heroTitle}>
+            <Text size="xl" weight="semibold">
               {listing.name}
             </Text>
             <SmallBody variant="secondary">
-              {formatMetadataLabel(listing.category)}
+              {getListingMetadataLabel(listing)}
             </SmallBody>
           </Flex>
           <Body variant="secondary">{listing.tagline}</Body>
@@ -878,8 +862,24 @@ function getInitials(name: string) {
     .join("");
 }
 
-function getListingHref(listingId: string) {
-  return `/products/${listingId}`;
+function getListingHref(listing: DirectoryListingCard) {
+  return getDirectoryListingHref(listing);
+}
+
+function getListingMetadataLabel(listing: DirectoryListingCard) {
+  const categoryLabel = formatMetadataLabel(listing.category);
+  const listingName = formatMetadataLabel(listing.name);
+
+  if (
+    categoryLabel.trim().length === 0 ||
+    categoryLabel.localeCompare(listingName, undefined, {
+      sensitivity: "base",
+    }) === 0
+  ) {
+    return "App";
+  }
+
+  return categoryLabel;
 }
 
 function formatMetadataLabel(value: string) {
@@ -903,30 +903,6 @@ function formatMetadataLabel(value: string) {
     .join(" ");
 }
 
-function getAppTagIcon(tag: string): LucideIcon {
-  if (tag === "analytics") return BarChart3;
-  if (tag === "developer tool") return Code2;
-  if (tag === "social" || tag === "community" || tag === "moderation") {
-    return RadioTower;
-  }
-  if (tag === "automation" || tag === "creator tool" || tag === "design") {
-    return Sparkles;
-  }
-  if (tag === "account tool") return Bookmark;
-
-  return AppWindow;
-}
-
-function getAppTagAccent(tag: string): DirectoryListingCard["accent"] {
-  if (tag === "analytics" || tag === "social") return "blue";
-  if (tag === "community" || tag === "moderation") return "purple";
-  if (tag === "automation" || tag === "developer tool" || tag === "utility") {
-    return "green";
-  }
-
-  return "pink";
-}
-
 function getAccentSurface(accent: DirectoryListingCard["accent"]) {
   if (accent === "pink") return styles.pinkSurface;
   if (accent === "purple") return styles.purpleSurface;
@@ -941,12 +917,4 @@ function getAccentGlow(accent: DirectoryListingCard["accent"]) {
   if (accent === "green") return styles.greenGlow;
 
   return styles.blueGlow;
-}
-
-function getSoftAccentSurface(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.softPinkSurface;
-  if (accent === "purple") return styles.softPurpleSurface;
-  if (accent === "green") return styles.softGreenSurface;
-
-  return styles.softBlueSurface;
 }
