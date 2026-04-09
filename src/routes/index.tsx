@@ -62,6 +62,10 @@ export const Route = createFileRoute("/")({
 const styles = stylex.create({
   bentoLink: {
     textDecoration: "none",
+    aspectRatio: 16 / 9,
+    display: "block",
+    width: "400px",
+    flexGrow: 1,
   },
   newCardLink: {
     display: "block",
@@ -143,14 +147,6 @@ const styles = stylex.create({
     flexDirection: "column",
     gap: gap["2xl"],
   },
-  heroGrid: {
-    display: "grid",
-    gap: gap["3xl"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.lg]: "minmax(0, 1.65fr) minmax(18rem, 0.95fr)",
-    },
-  },
   spotlightColumn: {
     display: "flex",
     flexDirection: "column",
@@ -170,10 +166,7 @@ const styles = stylex.create({
     flexDirection: "column",
     justifyContent: "flex-end",
     boxShadow: shadow["2xl"],
-    minHeight: {
-      default: "26rem",
-      [breakpoints.sm]: "30rem",
-    },
+    height: "100%",
     borderColor: uiColor.border1,
     borderStyle: "solid",
     borderWidth: 2,
@@ -482,7 +475,7 @@ function HomePage() {
 
           <Flex direction="column" style={styles.pageSections}>
             <section {...stylex.props(styles.section)}>
-              <Grid style={styles.heroGrid}>
+              <Flex gap="3xl">
                 <HeroCard listing={data.featured} />
                 <Flex
                   direction="column"
@@ -493,7 +486,7 @@ function HomePage() {
                     <SpotlightCard key={listing.id} listing={listing} />
                   ))}
                 </Flex>
-              </Grid>
+              </Flex>
             </section>
 
             <section {...stylex.props(styles.section)}>

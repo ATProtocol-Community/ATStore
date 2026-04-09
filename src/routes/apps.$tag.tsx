@@ -207,7 +207,7 @@ const styles = stylex.create({
     backgroundColor:
       "light-dark(rgba(255, 252, 255, 0.55), rgba(252, 252, 252, 0.4))",
     borderColor: `color-mix(in srgb, ${uiColor.border1} 60%, transparent)`,
-    borderRadius: radius["lg"],
+    borderRadius: radius["xl"],
     borderStyle: "solid",
     borderWidth: 1,
     boxShadow: `${shadow.lg}, 0 18px 48px color-mix(in srgb, ${uiColor.overlayBackdrop} 42%, transparent)`,
