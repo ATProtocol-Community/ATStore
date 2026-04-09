@@ -1,16 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  AppWindow,
-  Bookmark,
-  ChevronRight,
-  RadioTower,
-  Sparkles,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
 import { AppTagCard } from "../components/AppTagCard";
+import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -21,7 +16,7 @@ import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { blue } from "../design-system/theme/colors/blue.stylex";
-import { green } from "../design-system/theme/colors/green.stylex";
+import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
@@ -62,10 +57,8 @@ export const Route = createFileRoute("/")({
 const styles = stylex.create({
   bentoLink: {
     textDecoration: "none",
-    aspectRatio: 16 / 9,
     display: "block",
-    width: "400px",
-    flexGrow: 1,
+    height: "100%",
   },
   newCardLink: {
     display: "block",
@@ -147,11 +140,6 @@ const styles = stylex.create({
     flexDirection: "column",
     gap: gap["2xl"],
   },
-  spotlightColumn: {
-    display: "flex",
-    flexDirection: "column",
-    gap: gap["3xl"],
-  },
   accentCard: {
     borderRadius: radius["3xl"],
     borderStyle: "solid",
@@ -170,9 +158,6 @@ const styles = stylex.create({
     borderColor: uiColor.border1,
     borderStyle: "solid",
     borderWidth: 2,
-  },
-  spotlightCardLink: {
-    flexGrow: 1,
   },
   spotlightCard: {
     boxShadow: shadow.xl,
@@ -230,7 +215,7 @@ const styles = stylex.create({
     maxWidth: "34rem",
     backdropFilter: "blur(12px)",
     backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent)`,
-    borderRadius: radius["lg"],
+    borderRadius: radius["xl"],
     height: "fit-content",
     margin: verticalSpace["2xl"],
     display: "flex",
@@ -475,18 +460,22 @@ function HomePage() {
 
           <Flex direction="column" style={styles.pageSections}>
             <section {...stylex.props(styles.section)}>
-              <Flex gap="3xl">
-                <HeroCard listing={data.featured} />
-                <Flex
-                  direction="column"
-                  gap="4xl"
-                  style={styles.spotlightColumn}
-                >
-                  {data.spotlights.map((listing) => (
-                    <SpotlightCard key={listing.id} listing={listing} />
-                  ))}
-                </Flex>
-              </Flex>
+              <FeaturedListingGrid
+                items={[data.featured, ...data.spotlights]}
+                getKey={(listing, index) =>
+                  index === 0
+                    ? `featured-${listing.id}`
+                    : `spotlight-${listing.id}`
+                }
+                isFeatured={(_, index) => index === 0}
+                renderItem={(listing, { featured }) =>
+                  featured ? (
+                    <HeroCard listing={listing} />
+                  ) : (
+                    <SpotlightCard listing={listing} />
+                  )
+                }
+              />
             </section>
 
             <section {...stylex.props(styles.section)}>
@@ -535,27 +524,6 @@ function HomePage() {
               </Grid>
             </section>
           </Flex>
-
-          <Page.StickyFooter>
-            <Flex gap="sm" style={styles.dock}>
-              <Button size="lg" variant="secondary" style={styles.dockButton}>
-                <Sparkles />
-                Today
-              </Button>
-              <Button size="lg" variant="tertiary" style={styles.dockButton}>
-                <AppWindow />
-                Apps
-              </Button>
-              <Button size="lg" variant="tertiary" style={styles.dockButton}>
-                <RadioTower />
-                Feeds
-              </Button>
-              <Button size="lg" variant="tertiary" style={styles.dockButton}>
-                <Bookmark />
-                Saved
-              </Button>
-            </Flex>
-          </Page.StickyFooter>
         </Page.Root>
       </HeaderLayout.Page>
     </HeaderLayout.Root>
@@ -652,7 +620,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, styles.spotlightCardLink)}
+      {...stylex.props(styles.bentoLink)}
     >
       <Card
         style={[

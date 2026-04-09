@@ -19,7 +19,9 @@ import { Route as AppsTagsRouteImport } from './routes/apps.tags'
 import { Route as AppsAllRouteImport } from './routes/apps.all'
 import { Route as AppsTagRouteImport } from './routes/apps.$tag'
 import { Route as ProductsProductIdIndexRouteImport } from './routes/products.$productId.index'
+import { Route as EcosystemsAppIndexRouteImport } from './routes/ecosystems.$app.index'
 import { Route as ProductsProductIdReviewsRouteImport } from './routes/products.$productId.reviews'
+import { Route as EcosystemsAppAllRouteImport } from './routes/ecosystems.$app.all'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -71,12 +73,22 @@ const ProductsProductIdIndexRoute = ProductsProductIdIndexRouteImport.update({
   path: '/products/$productId/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EcosystemsAppIndexRoute = EcosystemsAppIndexRouteImport.update({
+  id: '/ecosystems/$app/',
+  path: '/ecosystems/$app/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsProductIdReviewsRoute =
   ProductsProductIdReviewsRouteImport.update({
     id: '/products/$productId/reviews',
     path: '/products/$productId/reviews',
     getParentRoute: () => rootRouteImport,
   } as any)
+const EcosystemsAppAllRoute = EcosystemsAppAllRouteImport.update({
+  id: '/ecosystems/$app/all',
+  path: '/ecosystems/$app/all',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,7 +100,9 @@ export interface FileRoutesByFullPath {
   '/dev/app-tags': typeof DevAppTagsRoute
   '/dev/categories': typeof DevCategoriesRoute
   '/protocol/all': typeof ProtocolAllRoute
+  '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
   '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
+  '/ecosystems/$app/': typeof EcosystemsAppIndexRoute
   '/products/$productId/': typeof ProductsProductIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -101,7 +115,9 @@ export interface FileRoutesByTo {
   '/dev/app-tags': typeof DevAppTagsRoute
   '/dev/categories': typeof DevCategoriesRoute
   '/protocol/all': typeof ProtocolAllRoute
+  '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
   '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
+  '/ecosystems/$app': typeof EcosystemsAppIndexRoute
   '/products/$productId': typeof ProductsProductIdIndexRoute
 }
 export interface FileRoutesById {
@@ -115,7 +131,9 @@ export interface FileRoutesById {
   '/dev/app-tags': typeof DevAppTagsRoute
   '/dev/categories': typeof DevCategoriesRoute
   '/protocol/all': typeof ProtocolAllRoute
+  '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
   '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
+  '/ecosystems/$app/': typeof EcosystemsAppIndexRoute
   '/products/$productId/': typeof ProductsProductIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -130,7 +148,9 @@ export interface FileRouteTypes {
     | '/dev/app-tags'
     | '/dev/categories'
     | '/protocol/all'
+    | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
+    | '/ecosystems/$app/'
     | '/products/$productId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,7 +163,9 @@ export interface FileRouteTypes {
     | '/dev/app-tags'
     | '/dev/categories'
     | '/protocol/all'
+    | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
+    | '/ecosystems/$app'
     | '/products/$productId'
   id:
     | '__root__'
@@ -156,7 +178,9 @@ export interface FileRouteTypes {
     | '/dev/app-tags'
     | '/dev/categories'
     | '/protocol/all'
+    | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
+    | '/ecosystems/$app/'
     | '/products/$productId/'
   fileRoutesById: FileRoutesById
 }
@@ -170,7 +194,9 @@ export interface RootRouteChildren {
   DevAppTagsRoute: typeof DevAppTagsRoute
   DevCategoriesRoute: typeof DevCategoriesRoute
   ProtocolAllRoute: typeof ProtocolAllRoute
+  EcosystemsAppAllRoute: typeof EcosystemsAppAllRoute
   ProductsProductIdReviewsRoute: typeof ProductsProductIdReviewsRoute
+  EcosystemsAppIndexRoute: typeof EcosystemsAppIndexRoute
   ProductsProductIdIndexRoute: typeof ProductsProductIdIndexRoute
 }
 
@@ -246,11 +272,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsProductIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ecosystems/$app/': {
+      id: '/ecosystems/$app/'
+      path: '/ecosystems/$app'
+      fullPath: '/ecosystems/$app/'
+      preLoaderRoute: typeof EcosystemsAppIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/$productId/reviews': {
       id: '/products/$productId/reviews'
       path: '/products/$productId/reviews'
       fullPath: '/products/$productId/reviews'
       preLoaderRoute: typeof ProductsProductIdReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ecosystems/$app/all': {
+      id: '/ecosystems/$app/all'
+      path: '/ecosystems/$app/all'
+      fullPath: '/ecosystems/$app/all'
+      preLoaderRoute: typeof EcosystemsAppAllRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -266,7 +306,9 @@ const rootRouteChildren: RootRouteChildren = {
   DevAppTagsRoute: DevAppTagsRoute,
   DevCategoriesRoute: DevCategoriesRoute,
   ProtocolAllRoute: ProtocolAllRoute,
+  EcosystemsAppAllRoute: EcosystemsAppAllRoute,
   ProductsProductIdReviewsRoute: ProductsProductIdReviewsRoute,
+  EcosystemsAppIndexRoute: EcosystemsAppIndexRoute,
   ProductsProductIdIndexRoute: ProductsProductIdIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -15,7 +15,7 @@ import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { blue } from "../design-system/theme/colors/blue.stylex";
-import { green } from "../design-system/theme/colors/green.stylex";
+import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";

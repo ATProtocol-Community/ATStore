@@ -147,6 +147,54 @@ export function getDirectoryBrowsePath(categoryId: string | null | undefined) {
   return '/categories/all'
 }
 
+/**
+ * Returns the app root category id `apps/{app}` when `categorySlug` is anywhere under that app
+ * (e.g. `apps/bluesky/tools` → `apps/bluesky`). Otherwise `null`.
+ */
+export function getAppEcosystemRootCategoryId(
+  categorySlug: string | null | undefined,
+): string | null {
+  const option = getDirectoryCategoryOption(categorySlug)
+  if (!option || option.pathIds[0] !== 'apps' || option.pathIds.length < 2) {
+    return null
+  }
+
+  return `${option.pathIds[0]}/${option.pathIds[1]}`
+}
+
+export function getAppSegmentFromEcosystemRootCategoryId(
+  ecosystemRootCategoryId: string,
+): string | null {
+  const parts = ecosystemRootCategoryId.split('/').filter(Boolean)
+  if (parts[0] !== 'apps' || !parts[1]) {
+    return null
+  }
+
+  return parts[1]
+}
+
+/** `/ecosystems/{appSegment}` — `appSegment` should match normalized category segments (e.g. `bluesky`). */
+export function getEcosystemPathFromAppSegment(appSegment: string): string {
+  const normalized = normalizeCategorySegment(appSegment)
+  return `/ecosystems/${normalized}`
+}
+
+export function getEcosystemAllPathFromAppSegment(appSegment: string): string {
+  return `${getEcosystemPathFromAppSegment(appSegment)}/all`
+}
+
+/**
+ * Builds `apps/{segment}` from a dynamic route param (normalized).
+ */
+export function getAppEcosystemCategoryIdFromRouteParam(appParam: string): string | null {
+  const normalized = normalizeCategorySegment(appParam)
+  if (!normalized) {
+    return null
+  }
+
+  return `apps/${normalized}`
+}
+
 
 export function buildStructuredDirectoryCategorySlug(
   draft: StructuredDirectoryCategoryDraft,

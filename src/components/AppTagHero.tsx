@@ -15,6 +15,7 @@ interface AppTagHeroProps {
   title: string;
   description?: string;
   imageSrc?: string | null;
+  action?: React.ReactNode;
 }
 
 const styles = stylex.create({
@@ -55,6 +56,7 @@ export function AppTagHero({
   title,
   description,
   imageSrc,
+  action,
 }: AppTagHeroProps) {
   return (
     <Flex direction="column" gap="4xl" style={styles.root}>
@@ -66,14 +68,21 @@ export function AppTagHero({
         )}
       </div>
 
-      <Flex direction="column" gap="5xl" style={styles.copy}>
-        {eyebrow ? (
-          <SmallBody style={styles.eyebrow}>{eyebrow}</SmallBody>
+      <Flex justify="between" gap="5xl" align="start">
+        <Flex direction="column" gap="5xl" style={styles.copy}>
+          {eyebrow ? (
+            <SmallBody style={styles.eyebrow}>{eyebrow}</SmallBody>
+          ) : null}
+          <Text size={{ default: "4xl", sm: "6xl" }} weight="semibold">
+            {title}
+          </Text>
+          {description ? <Body variant="secondary">{description}</Body> : null}
+        </Flex>
+        {action ? (
+          <Flex align="center" gap="md">
+            {action}
+          </Flex>
         ) : null}
-        <Text size={{ default: "4xl", sm: "6xl" }} weight="semibold">
-          {title}
-        </Text>
-        {description ? <Body variant="secondary">{description}</Body> : null}
       </Flex>
     </Flex>
   );

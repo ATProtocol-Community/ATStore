@@ -6,6 +6,8 @@ import {
   Link as RouterLink,
   notFound,
   redirect,
+  useCanGoBack,
+  useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 
@@ -21,7 +23,7 @@ import { Page } from "../design-system/page";
 import { StarRating } from "../design-system/star-rating";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
-import { green } from "../design-system/theme/colors/green.stylex";
+import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
@@ -36,11 +38,19 @@ import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { Body, Heading2, SubLabel } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
 import {
   directoryListingApi,
   type DirectoryListingCard,
   type DirectoryListingDetail,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import {
+  getAppEcosystemRootCategoryId,
+  getAppSegmentFromEcosystemRootCategoryId,
+  getEcosystemAllPathFromAppSegment,
+  getEcosystemPathFromAppSegment,
+} from "../lib/directory-categories";
+import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import {
   getPlaceholderReviews,
   PRODUCT_REVIEW_PREVIEW_COUNT,
@@ -52,6 +62,7 @@ import {
 } from "../lib/directory-listing-slugs";
 
 const ButtonLink = createLink(Button);
+const AppLink = createLink(Link);
 
 export const Route = createFileRoute("/products/$productId/")({
   loader: async ({ context, params }) => {
@@ -79,6 +90,15 @@ export const Route = createFileRoute("/products/$productId/")({
       }),
     );
 
+    const ecosystemRootId = getAppEcosystemRootCategoryId(listing.categorySlug);
+    if (ecosystemRootId) {
+      await context.queryClient.ensureQueryData(
+        directoryListingApi.getDirectoryCategoryPageQueryOptions({
+          categoryId: ecosystemRootId,
+        }),
+      );
+    }
+
     if (params.productId !== productSlug) {
       throw redirect({
         to: "/products/$productId",
@@ -87,12 +107,15 @@ export const Route = createFileRoute("/products/$productId/")({
       });
     }
 
-    return { productId: listing.id, productSlug };
+    return { productId: listing.id, productSlug, ecosystemRootId };
   },
   component: ProductPage,
 });
 
 const styles = stylex.create({
+  ecosystemSection: {
+    marginTop: verticalSpace["5xl"],
+  },
   heroAvatar: {
     height: size["7xl"],
     width: size["7xl"],
@@ -306,6 +329,23 @@ const styles = stylex.create({
       [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
     },
   },
+  ecosystemGrid: {
+    display: "grid",
+    gap: gap["2xl"],
+    gridTemplateColumns: {
+      default: "1fr",
+      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
+    },
+  },
+  ecosystemHeader: {
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  ecosystemLinks: {
+    flexWrap: "wrap",
+  },
   relatedLink: {
     display: "block",
     height: "100%",
@@ -339,7 +379,7 @@ const styles = stylex.create({
 });
 
 function ProductPage() {
-  const { productId, productSlug } = Route.useLoaderData();
+  const { productId, productSlug, ecosystemRootId } = Route.useLoaderData();
   const { data: listing } = useSuspenseQuery(
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId),
   );
@@ -357,6 +397,9 @@ function ProductPage() {
   const reviews = getPlaceholderReviews(listing);
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
+  const isRootApp = type === "Apps" && scope && !domain;
+  const canGoBack = useCanGoBack();
+  const router = useRouter();
 
   return (
     <HeaderLayout.Root>
@@ -364,10 +407,17 @@ function ProductPage() {
         <Page.Root variant="small" style={styles.page}>
           <Flex direction="column" gap="6xl">
             <Flex style={styles.backLinkRow}>
-              <Link href="/">
-                <ChevronLeft />
-                Back to directory
-              </Link>
+              {canGoBack ? (
+                <Link onClick={() => router.history.back()}>
+                  <ChevronLeft />
+                  Back
+                </Link>
+              ) : (
+                <AppLink to="/">
+                  <ChevronLeft />
+                  Home
+                </AppLink>
+              )}
             </Flex>
             <HeroSection listing={listing} />
             <Flex direction="column" gap="5xl">
@@ -393,6 +443,9 @@ function ProductPage() {
                 <MetaCard label="Domain" value={scope || "Unknown"} />
               </Flex>
             )}
+            {ecosystemRootId && isRootApp ? (
+              <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
+            ) : null}
             <Flex gap="4xl" direction="column">
               <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
                 <Flex
@@ -482,8 +535,6 @@ function ProductPage() {
 function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
   const primaryLink = listing.externalUrl || undefined;
 
-  console.log(listing);
-
   return (
     <Flex direction="column" gap="6xl">
       {listing.imageUrl && (
@@ -566,6 +617,69 @@ function MetaCard({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ProductEcosystemSection({
+  ecosystemRootId,
+}: {
+  ecosystemRootId: string;
+}) {
+  const { data } = useSuspenseQuery(
+    directoryListingApi.getDirectoryCategoryPageQueryOptions({
+      categoryId: ecosystemRootId,
+    }),
+  );
+
+  const appSegment = getAppSegmentFromEcosystemRootCategoryId(ecosystemRootId);
+
+  if (!data || !appSegment) {
+    return null;
+  }
+
+  const { category, listings } = data;
+
+  if (!category.children.length) {
+    return null;
+  }
+
+  return (
+    <Flex direction="column" gap="4xl" style={styles.ecosystemSection}>
+      <Flex align="center" gap="5xl" style={styles.ecosystemHeader}>
+        <Flex direction="column" gap="2xl">
+          <Heading2>Ecosystem</Heading2>
+          <Body variant="secondary">
+            Discover tools and products built for this app.
+          </Body>
+        </Flex>
+        <Flex gap="2xl" style={styles.ecosystemLinks}>
+          <ButtonLink
+            size="lg"
+            variant="secondary"
+            to="/ecosystems/$app"
+            params={{ app: appSegment }}
+          >
+            Explore
+          </ButtonLink>
+        </Flex>
+      </Flex>
+      {category.children.length > 0 ? (
+        <Grid style={styles.ecosystemGrid}>
+          {category.children.map((child) => (
+            <EcosystemCategoryCard
+              key={child.id}
+              category={child}
+              imageSrc={pickListingImageForCategoryBranch(child.id, listings)}
+            />
+          ))}
+        </Grid>
+      ) : (
+        <Body variant="secondary">
+          Explore this app&apos;s directory tree from the ecosystem home page,
+          or search every listing filed under it.
+        </Body>
+      )}
+    </Flex>
+  );
+}
+
 function RelatedProductsSection({
   listings,
 }: {
@@ -573,7 +687,7 @@ function RelatedProductsSection({
 }) {
   return (
     <Flex direction="column" gap="4xl" style={styles.relatedSection}>
-      <Heading2>Related Products</Heading2>
+      <Heading2>More Apps</Heading2>
       <Grid style={styles.relatedGrid}>
         {listings.map((listing) => (
           <RelatedProductCard key={listing.id} listing={listing} />

@@ -9,6 +9,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
+import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
@@ -17,7 +18,7 @@ import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { blue } from "../design-system/theme/colors/blue.stylex";
-import { green } from "../design-system/theme/colors/green.stylex";
+import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
@@ -94,31 +95,10 @@ const styles = stylex.create({
   navLinks: {
     flexWrap: "wrap",
   },
-  listingGrid: {
-    display: "grid",
-    gap: gap["2xl"],
-    gridAutoFlow: "dense",
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.xl]: "repeat(3, minmax(0, 1fr))",
-    },
-  },
   listingLink: {
     display: "block",
     height: "100%",
     textDecoration: "none",
-  },
-  listingLinkFeatured: {
-    aspectRatio: 16 / 9,
-    gridColumn: {
-      default: "auto",
-      [breakpoints.sm]: "span 2",
-    },
-    gridRow: {
-      default: "auto",
-      [breakpoints.sm]: "span 2",
-    },
   },
   listingCard: {
     height: "100%",
@@ -400,15 +380,13 @@ function AppsTagPage() {
               />
             </Flex>
 
-            <Grid style={styles.listingGrid}>
-              {data.listings.map((listing, index) => (
-                <AppTagListingCard
-                  key={`${data.tag}-${listing.id}`}
-                  featured={index % 9 === 0}
-                  listing={listing}
-                />
-              ))}
-            </Grid>
+            <FeaturedListingGrid
+              items={data.listings}
+              getKey={(listing) => `${data.tag}-${listing.id}`}
+              renderItem={(listing, { featured }) => (
+                <AppTagListingCard featured={featured} listing={listing} />
+              )}
+            />
 
             {relatedTags.length > 0 ? (
               <RelatedTagsSection groups={relatedTags} />
@@ -431,10 +409,7 @@ function AppTagListingCard({
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(
-        styles.listingLink,
-        featured && styles.listingLinkFeatured,
-      )}
+      {...stylex.props(styles.listingLink)}
     >
       <Card
         style={[

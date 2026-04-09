@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 
 import { Flex } from "../design-system/flex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
-import { green } from "../design-system/theme/colors/green.stylex";
+import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";

@@ -53,6 +53,8 @@ export interface DirectoryListingCard {
   description: string
   iconUrl: string | null
   imageUrl: string | null
+  /** Canonical directory path; used for ecosystem/category UI. */
+  categorySlug: string | null
   category: string
   accent: CategoryAccent
   rating: number
@@ -219,6 +221,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
     description: 'Curated tools, polished interfaces, and everyday power-ups.',
     iconUrl: null,
     imageUrl: null,
+    categorySlug: null,
     category: 'Apps',
     accent: 'blue',
     rating: 4.9,
@@ -232,6 +235,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'See how communities connect and where trends begin.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'Bluesky',
       accent: 'purple',
       rating: 4.8,
@@ -244,6 +248,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'Shape your home feed around signals that matter.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'Clients',
       accent: 'green',
       rating: 4.8,
@@ -258,6 +263,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'A lightweight toolkit for power users.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'Apps',
       accent: 'blue',
       rating: 4.9,
@@ -270,6 +276,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'Turn follows and lists into an explorable map.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'Protocol',
       accent: 'purple',
       rating: 4.8,
@@ -282,6 +289,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'Tunable ranking for news, memes, and friends.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'Tools',
       accent: 'pink',
       rating: 4.8,
@@ -296,6 +304,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'Make shareable graphics without leaving your flow.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'Analytics',
       accent: 'pink',
       rating: 4.8,
@@ -308,6 +317,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'Block, mute, and review with better safety controls.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'PDS',
       accent: 'blue',
       rating: 4.7,
@@ -320,6 +330,7 @@ const fallbackHomePageData: DirectoryHomePageData = {
       description: 'Keep your circles tidy as the network grows.',
       iconUrl: null,
       imageUrl: null,
+      categorySlug: null,
       category: 'Bluesky',
       accent: 'green',
       rating: 4.7,
@@ -419,6 +430,7 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     description: getListingDescription(row),
     iconUrl: row.iconUrl,
     imageUrl: row.screenshotUrls[0] || null,
+    categorySlug: row.categorySlug,
     category,
     accent: getListingAccent(row),
     rating: getPseudoRating(row.name),

@@ -14,6 +14,7 @@
     "generate:taxonomy": "tsx scripts/generate-directory-taxonomy.ts",
     "generate:category-art": "tsx -r dotenv/config scripts/generate-category-bento-images.ts",
     "generate:app-tag-hero-images": "tsx scripts/generate-app-tag-hero-images.ts",
+    "generate:ecosystem-hero-images": "tsx scripts/generate-ecosystem-hero-images.ts",
     "generate:listing-images": "tsx scripts/generate-listing-images.ts",
     "generate:listing-copy": "tsx scripts/generate-listing-copy.ts",
     "backfill:listing-icons": "tsx scripts/backfill-listing-icons.ts",
