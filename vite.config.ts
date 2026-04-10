@@ -12,6 +12,17 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 
 const config = defineConfig({
+  // Playwright is Node-only and pulls optional chromium-bidi paths that break esbuild pre-bundling
+  // when Vite analyzes server code that dynamically imports it.
+  optimizeDeps: {
+    exclude: ['playwright', 'playwright-core', 'chromium-bidi'],
+  },
+  ssr: {
+    optimizeDeps: {
+      exclude: ['playwright', 'playwright-core', 'chromium-bidi'],
+    },
+    external: ['playwright', 'playwright-core'],
+  },
   plugins: [
     stylexPlugin.vite({
       treeshakeCompensation: true,

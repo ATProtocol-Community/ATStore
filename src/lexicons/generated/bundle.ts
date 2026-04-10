@@ -1,0 +1,120 @@
+export const lexicons = [
+  {
+    "lexicon": 1,
+    "id": "fyi.atstore.listing.detail",
+    "defs": {
+      "main": {
+        "type": "record",
+        "description": "Public protocol or app listing in the AT Store directory.",
+        "key": "tid",
+        "record": {
+          "type": "object",
+          "required": [
+            "slug",
+            "name",
+            "tagline",
+            "externalUrl",
+            "icon",
+            "heroImage",
+            "categorySlug",
+            "createdAt",
+            "updatedAt"
+          ],
+          "properties": {
+            "slug": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "Stable URL slug; unique within the publishing account."
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 640
+            },
+            "tagline": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "externalUrl": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048,
+              "description": "Primary product or project URL."
+            },
+            "icon": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
+            },
+            "heroImage": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048,
+              "description": "Hero / cover image (HTTPS URL)."
+            },
+            "screenshots": {
+              "type": "array",
+              "maxLength": 20,
+              "items": {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 2048
+              }
+            },
+            "categorySlug": {
+              "type": "string",
+              "maxLength": 256,
+              "description": "Single browse category key (e.g. protocol/pds)."
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "datetime"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "datetime"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "lexicon": 1,
+    "id": "fyi.atstore.profile",
+    "defs": {
+      "main": {
+        "type": "record",
+        "description": "AT Store app profile for discovery and TAP ingestion (Kitchen-style).",
+        "key": "literal:self",
+        "record": {
+          "type": "object",
+          "required": [
+            "displayName"
+          ],
+          "properties": {
+            "displayName": {
+              "type": "string",
+              "maxLength": 640,
+              "description": "Human-readable name for the store / app."
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 4000,
+              "description": "Longer description shown in directory surfaces."
+            },
+            "website": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
+            }
+          }
+        }
+      }
+    }
+  }
+]

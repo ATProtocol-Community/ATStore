@@ -64,6 +64,13 @@
       "when": 1775798323594,
       "tag": "0008_vengeful_morgan_stark",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775800862251,
+      "tag": "0009_app_proto_listings",
+      "breakpoints": true
     }
   ]
 }

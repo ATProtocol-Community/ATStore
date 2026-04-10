@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
 import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
+import { Route as HeaderLayoutAdminRouteImport } from './routes/_header-layout.admin'
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
 import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
 import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
@@ -43,6 +44,11 @@ const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
 const HeaderLayoutIndexRoute = HeaderLayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => HeaderLayoutRoute,
+} as any)
+const HeaderLayoutAdminRoute = HeaderLayoutAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const HeaderLayoutProtocolTagsRoute =
@@ -150,6 +156,7 @@ const HeaderLayoutEcosystemsAppAllRoute =
 export interface FileRoutesByFullPath {
   '/': typeof HeaderLayoutIndexRoute
   '/login': typeof LoginRoute
+  '/admin': typeof HeaderLayoutAdminRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/admin': typeof HeaderLayoutAdminRoute
   '/': typeof HeaderLayoutIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/_header-layout/admin': typeof HeaderLayoutAdminRoute
   '/_header-layout/': typeof HeaderLayoutIndexRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/admin'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/admin'
     | '/'
     | '/apps/$tag'
     | '/apps/all'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_header-layout'
     | '/login'
+    | '/_header-layout/admin'
     | '/_header-layout/'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
@@ -316,6 +328,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof HeaderLayoutIndexRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/admin': {
+      id: '/_header-layout/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof HeaderLayoutAdminRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/protocol/tags': {
@@ -448,6 +467,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface HeaderLayoutRouteChildren {
+  HeaderLayoutAdminRoute: typeof HeaderLayoutAdminRoute
   HeaderLayoutIndexRoute: typeof HeaderLayoutIndexRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
@@ -465,6 +485,7 @@ interface HeaderLayoutRouteChildren {
 }
 
 const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
+  HeaderLayoutAdminRoute: HeaderLayoutAdminRoute,
   HeaderLayoutIndexRoute: HeaderLayoutIndexRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,

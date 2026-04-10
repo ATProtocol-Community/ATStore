@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
-import { desc, eq, ilike, like, ne, or, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, like, ne, or, sql } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
 import { z } from 'zod'
 
 import {
@@ -28,6 +29,15 @@ import {
   buildDirectoryListingSlug,
 } from '../../lib/directory-listing-slugs'
 import { dbMiddleware } from './db-middleware'
+import * as dbSchema from '#/db/schema'
+
+function listingPublicWhere(
+  table: typeof dbSchema.directoryListings,
+  extra?: SQL,
+) {
+  const pub = eq(table.verificationStatus, 'verified')
+  return extra ? and(pub, extra) : pub
+}
 
 type DirectoryListingRow = {
   id: string
@@ -659,7 +669,7 @@ function isLikelyBoilerplateText(value: string) {
 }
 
 async function extractPageCopy(url: string): Promise<ExtractedPageCopy> {
-  const { chromium } = await import('playwright')
+  const { chromium } = await import(/* @vite-ignore */ 'playwright')
   const browser = await chromium.launch({
     headless: true,
   })
@@ -986,7 +996,7 @@ function buildListingGenerationMetadata(
 }
 
 async function captureListingScreenshot(url: string): Promise<Buffer> {
-  const { chromium } = await import('playwright')
+  const { chromium } = await import(/* @vite-ignore */ 'playwright')
   const browser = await chromium.launch({
     headless: true,
   })
@@ -1180,13 +1190,23 @@ const getHomePageData = createServerFn({ method: 'GET' })
       context.db
         .select(listingSelect)
         .from(table)
-        .where(isRootCategoryPath(table.categorySlug, 'apps'))
+        .where(
+          listingPublicWhere(
+            table,
+            isRootCategoryPath(table.categorySlug, 'apps'),
+          ),
+        )
         .orderBy(desc(table.updatedAt), desc(table.createdAt))
         .limit(30),
       context.db
         .select(listingSelect)
         .from(table)
-        .where(isRootCategoryPath(table.categorySlug, 'apps'))
+        .where(
+          listingPublicWhere(
+            table,
+            isRootCategoryPath(table.categorySlug, 'apps'),
+          ),
+        )
         .orderBy(desc(table.createdAt))
         .limit(6),
       context.db
@@ -1195,13 +1215,23 @@ const getHomePageData = createServerFn({ method: 'GET' })
           appTags: table.appTags,
         })
         .from(table)
-        .where(isRootCategoryPath(table.categorySlug, 'apps'))
+        .where(
+          listingPublicWhere(
+            table,
+            isRootCategoryPath(table.categorySlug, 'apps'),
+          ),
+        )
         .orderBy(desc(table.updatedAt), desc(table.createdAt))
         .limit(96),
       context.db
         .select(listingSelect)
         .from(table)
-        .where(isRootCategoryPath(table.categorySlug, 'protocol'))
+        .where(
+          listingPublicWhere(
+            table,
+            isRootCategoryPath(table.categorySlug, 'protocol'),
+          ),
+        )
         .orderBy(desc(table.updatedAt), desc(table.createdAt)),
     ])
 
@@ -1302,6 +1332,7 @@ const getDirectoryCategories = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
+      .where(listingPublicWhere(table))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
       .limit(500)
 
@@ -1322,6 +1353,7 @@ const getDirectoryCategoryTree = createServerFn({ method: 'GET' })
         categorySlug: table.categorySlug,
       })
       .from(table)
+      .where(listingPublicWhere(table))
 
     return buildDirectoryCategoryTree(rows.map((row) => row.categorySlug))
   })
@@ -1339,6 +1371,7 @@ const getDirectoryCategoryPage = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
+      .where(listingPublicWhere(table))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     const tree = buildDirectoryCategoryTree(rows.map((row) => row.categorySlug))
@@ -1382,7 +1415,7 @@ const getAppsByTag = createServerFn({ method: 'GET' })
         appTags: table.appTags,
       })
       .from(table)
-      .where(like(table.categorySlug, 'apps/%'))
+      .where(listingPublicWhere(table, like(table.categorySlug, 'apps/%')))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     return buildAppTagGroups(rows)
@@ -1406,7 +1439,7 @@ const getAllApps = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(like(table.categorySlug, 'apps/%'))
+      .where(listingPublicWhere(table, like(table.categorySlug, 'apps/%')))
       .orderBy(
         input.sort === 'newest'
           ? desc(table.createdAt)
@@ -1437,7 +1470,7 @@ const getAppsByTagPage = createServerFn({ method: 'GET' })
         appTags: table.appTags,
       })
       .from(table)
-      .where(like(table.categorySlug, 'apps/%'))
+      .where(listingPublicWhere(table, like(table.categorySlug, 'apps/%')))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     const groups = buildAppTagGroups(rows)
@@ -1469,7 +1502,7 @@ const getProtocolCategories = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(like(table.categorySlug, 'protocol/%'))
+      .where(listingPublicWhere(table, like(table.categorySlug, 'protocol/%')))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     return buildProtocolCategoryGroups(rows)
@@ -1488,7 +1521,7 @@ const getProtocolCategoryPage = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(like(table.categorySlug, 'protocol/%'))
+      .where(listingPublicWhere(table, like(table.categorySlug, 'protocol/%')))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     const groups = buildProtocolCategoryGroups(rows)
@@ -1513,7 +1546,7 @@ const getAllProtocolListings = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(like(table.categorySlug, 'protocol/%'))
+      .where(listingPublicWhere(table, like(table.categorySlug, 'protocol/%')))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     return buildAllProtocolListings(rows)
@@ -1556,7 +1589,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         updatedAt: table.updatedAt,
       })
       .from(table)
-      .where(eq(table.id, data.id))
+      .where(listingPublicWhere(table, eq(table.id, data.id)))
       .limit(1)
 
     if (!row) {
@@ -1598,7 +1631,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         updatedAt: table.updatedAt,
       })
       .from(table)
-      .where(eq(table.slug, data.slug))
+      .where(listingPublicWhere(table, eq(table.slug, data.slug)))
       .limit(1)
 
     if (!row) {
@@ -1641,7 +1674,7 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
           categorySlug: table.categorySlug,
         })
         .from(table)
-        .where(eq(table.id, data.id))
+        .where(listingPublicWhere(table, eq(table.id, data.id)))
         .limit(1)
         .then((rows) => rows[0] ?? null),
       context.db
@@ -1652,7 +1685,7 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
           createdAt: table.createdAt,
         })
         .from(table)
-        .where(ne(table.id, data.id))
+        .where(listingPublicWhere(table, ne(table.id, data.id)))
         .orderBy(desc(table.updatedAt), desc(table.createdAt))
         .limit(128),
     ])
@@ -1738,15 +1771,18 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
       .select(listingSelect)
       .from(table)
       .where(
-        search
-          ? or(
-              ilike(table.name, `%${search}%`),
-              ilike(table.tagline, `%${search}%`),
-              ilike(table.productType, `%${search}%`),
-              ilike(table.domain, `%${search}%`),
-              ilike(table.categorySlug, `%${search}%`),
-            )
-          : sql`true`,
+        listingPublicWhere(
+          table,
+          search
+            ? or(
+                ilike(table.name, `%${search}%`),
+                ilike(table.tagline, `%${search}%`),
+                ilike(table.productType, `%${search}%`),
+                ilike(table.domain, `%${search}%`),
+                ilike(table.categorySlug, `%${search}%`),
+              )
+            : undefined,
+        ),
       )
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
       .limit(data.limit)

@@ -1,5 +1,6 @@
 /**
  * Authentication middleware for TanStack Start routes.
+ * DB and OAuth session restore are loaded dynamically so this module stays client-safe.
  */
 
 import { Client } from '@atcute/client'
@@ -9,12 +10,21 @@ import { redirect } from '@tanstack/react-router'
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 
-import { restoreAtprotoSession } from '#/integrations/auth/atproto'
-import { db } from '#/db/index.server'
-import * as schema from '#/db/schema'
+import { fetchBlueskyHandleForDid } from '#/lib/bluesky-public-profile'
+import { isAdminHandle } from '#/lib/admin'
 import { getSafePostLoginRedirect } from '#/utils/auth-redirect'
 
-async function getSessionContext(request: Request) {
+export type AtprotoSessionContext = {
+  did: string
+  atprotoSession: unknown
+  client: Client
+  session: { user: { id: string; name: string; email: string | null; did: string | null; image: string | null } }
+}
+
+/** Session + ATProto `Client` when cookies and OAuth session are valid. */
+export async function getAtprotoSessionForRequest(
+  request: Request,
+): Promise<AtprotoSessionContext | undefined> {
   const cookieHeader = request.headers.get('cookie') || ''
   const cookiePairs = cookieHeader.split('; ').map((c) => {
     const [key, ...valueParts] = c.split('=')
@@ -26,6 +36,12 @@ async function getSessionContext(request: Request) {
   if (!did || !isDid(did)) {
     return
   }
+
+  const [{ db }, schema, { restoreAtprotoSession }] = await Promise.all([
+    import('#/db/index.server'),
+    import('#/db/schema'),
+    import('#/integrations/auth/atproto'),
+  ])
 
   const atprotoSession = await restoreAtprotoSession(did)
 
@@ -48,6 +64,10 @@ async function getSessionContext(request: Request) {
   const client = new Client({ handler: atprotoSession })
 
   return { did, atprotoSession, client, session: { user: account.user } }
+}
+
+async function getSessionContext(request: Request) {
+  return getAtprotoSessionForRequest(request)
 }
 
 /** Route middleware: redirect authenticated users away (e.g. from `/login`). */
@@ -76,11 +96,47 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
   return await next({ context })
 })
 
+/** Like `authMiddleware`, but only allows the configured admin Bluesky handle. */
+export const adminRouteMiddleware = createMiddleware().server(async ({ next }) => {
+  const request = getRequest()
+  const context = await getAtprotoSessionForRequest(request)
+
+  if (!context?.session.user.did) {
+    throw redirect({
+      to: '/login',
+      search: { redirect: getSafePostLoginRedirect(request) },
+    })
+  }
+
+  const handle = await fetchBlueskyHandleForDid(context.session.user.did)
+  if (!isAdminHandle(handle)) {
+    throw redirect({ to: '/' })
+  }
+
+  return await next({ context })
+})
+
 /** Server function middleware: attach session when present. */
 export const maybeAuthMiddleware = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     const request = getRequest()
     const context = await getSessionContext(request)
     return await next({ context })
+  },
+)
+
+/** Server functions: require Bluesky handle in `ADMIN_HANDLE` (default hipstersmoothie.com). */
+export const adminFnMiddleware = createMiddleware({ type: 'function' }).server(
+  async ({ next }) => {
+    const request = getRequest()
+    const ctx = await getAtprotoSessionForRequest(request)
+    if (!ctx?.session.user.did) {
+      throw new Error('Unauthorized')
+    }
+    const handle = await fetchBlueskyHandleForDid(ctx.session.user.did)
+    if (!isAdminHandle(handle)) {
+      throw new Error('Forbidden')
+    }
+    return await next({ context: { adminSession: ctx } })
   },
 )

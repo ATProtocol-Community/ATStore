@@ -183,6 +183,26 @@ export const directoryListings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    /** Indexed AT Protocol record URI (`at://did/...`). */
+    atUri: text('at_uri'),
+    /** Repo DID for `atUri` (usually same as `source_account_did` for @store). */
+    repoDid: text('repo_did'),
+    /** Record key in `fyi.atstore.listing.detail`. */
+    rkey: text('rkey'),
+    /** Cached hero image URL (matches lexicon `heroImage`). */
+    heroImageUrl: text('hero_image_url'),
+    /**
+     * Store moderation: `verified` (shown), `unverified` (awaiting review),
+     * `rejected` (hidden from public listing surfaces).
+     */
+    verificationStatus: text('verification_status')
+      .notNull()
+      .default('verified'),
+    /** DID of the account hosting this record (e.g. @store). */
+    sourceAccountDid: text('source_account_did'),
+    /** Set when a listing is claimed by another repo. */
+    claimedByDid: text('claimed_by_did'),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -206,6 +226,35 @@ export const directoryListings = pgTable(
     categorySlugIdx: index('directory_listings_category_slug_idx').on(
       table.categorySlug,
     ),
+    atUriIdx: uniqueIndex('directory_listings_at_uri_idx').on(table.atUri),
+    verificationIdx: index('directory_listings_verification_status_idx').on(
+      table.verificationStatus,
+    ),
+  }),
+)
+
+/** App-side claim workflow against @store-hosted listings (protocol layer is separate). */
+export const listingClaims = pgTable(
+  'listing_claims',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    directoryListingId: uuid('directory_listing_id')
+      .notNull()
+      .references(() => directoryListings.id, { onDelete: 'cascade' }),
+    claimantDid: text('claimant_did').notNull(),
+    status: text('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingIdx: index('listing_claims_directory_listing_id_idx').on(
+      table.directoryListingId,
+    ),
+    statusIdx: index('listing_claims_status_idx').on(table.status),
   }),
 )
 
@@ -219,3 +268,5 @@ export type Embedding = typeof embeddings.$inferSelect
 export type NewEmbedding = typeof embeddings.$inferInsert
 export type DirectoryListing = typeof directoryListings.$inferSelect
 export type NewDirectoryListing = typeof directoryListings.$inferInsert
+export type ListingClaim = typeof listingClaims.$inferSelect
+export type NewListingClaim = typeof listingClaims.$inferInsert
