@@ -40,7 +40,7 @@ import {
   type StructuredDirectoryCategoryDraft,
 } from "../lib/directory-categories";
 
-export const Route = createFileRoute("/dev/categories")({
+export const Route = createFileRoute("/_header-layout/dev/categories")({
   loader: async ({ context }) => {
     if (!import.meta.env.DEV) {
       throw notFound();
@@ -252,8 +252,7 @@ function DevCategoriesPage() {
   }
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
+    <HeaderLayout.Page>
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" style={styles.pageContent}>
             <Flex gap="xl">
@@ -691,7 +690,6 @@ function DevCategoriesPage() {
           </Flex>
         </Page.Root>
       </HeaderLayout.Page>
-    </HeaderLayout.Root>
   );
 }
 

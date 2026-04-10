@@ -44,7 +44,7 @@ import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_header-layout/")({
   loader: ({ context }) =>
     context.queryClient.ensureQueryData(
       directoryListingApi.getHomePageQueryOptions,
@@ -456,7 +456,6 @@ function HomePage() {
   const protocolListings = [data.protocolFeatured, ...data.protocolSpotlights];
 
   return (
-    <HeaderLayout.Root>
       <HeaderLayout.Page>
         <Page.Root variant="large">
           <Flex direction="column" gap="5xl" style={styles.pageHeader}>
@@ -598,7 +597,6 @@ function HomePage() {
           </Flex>
         </Page.Root>
       </HeaderLayout.Page>
-    </HeaderLayout.Root>
   );
 }
 

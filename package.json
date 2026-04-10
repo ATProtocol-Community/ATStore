@@ -6,7 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev --port 3000 --host",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -26,12 +26,19 @@
     "db:import:bluesky-directory": "tsx scripts/import-bluesky-directory.ts",
     "db:import:atproto-brussels-apps": "tsx scripts/ingest-atproto-brussels-apps.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "db:migrate:kit": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@atcute/atproto": "^3.1.11",
+    "@atcute/client": "^4.2.1",
+    "@atcute/identity-resolver": "^1.2.2",
+    "@atcute/identity-resolver-node": "^1.0.3",
+    "@atcute/lexicons": "^1.3.0",
+    "@atcute/oauth-node-client": "^1.1.0",
     "@origin-space/image-cropper": "^0.1.9",
     "@react-aria/overlays": "^3.31.2",
     "@react-aria/utils": "^3.33.1",
@@ -63,6 +70,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "tailwindcss": "^4.1.18",
+    "universal-cookie": "^8.1.0",
     "web-haptics": "^0.0.6",
     "zod": "^4.3.6"
   },

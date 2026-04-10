@@ -63,7 +63,7 @@ import {
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
 
-export const Route = createFileRoute("/products/$productId/")({
+export const Route = createFileRoute("/_header-layout/products/$productId/")({
   loader: async ({ context, params }) => {
     const legacyListingId = getLegacyDirectoryListingId(params.productId);
     const listing = await context.queryClient.ensureQueryData(
@@ -511,187 +511,181 @@ function ProductPage() {
   }
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
-        <Page.Root variant="small" style={styles.page}>
-          <Flex direction="column" gap="6xl">
-            <Flex style={styles.backLinkRow}>
-              {canGoBack ? (
-                <Link onClick={() => router.history.back()}>
-                  <ChevronLeft />
-                  Back
-                </Link>
-              ) : (
-                <AppLink to="/">
-                  <ChevronLeft />
-                  Home
-                </AppLink>
-              )}
-            </Flex>
-            <HeroSection listing={listing} />
-            <Flex direction="column" gap="5xl">
-              {getDescriptionBlocks(listing.description).map((block, index) => (
-                <Body
-                  key={`${listing.id}-description-${index}`}
-                  style={styles.descriptionText}
-                >
-                  {block}
-                </Body>
-              ))}
-            </Flex>
-            {type === "Apps" ? (
-              domain ? (
-                <Flex gap="xl">
-                  <MetaCard label="App" value={scope} />
-                  <MetaCard label="Domain" value={domain} />
-                </Flex>
-              ) : null
+    <HeaderLayout.Page>
+      <Page.Root variant="small" style={styles.page}>
+        <Flex direction="column" gap="6xl">
+          <Flex style={styles.backLinkRow}>
+            {canGoBack ? (
+              <Link onClick={() => router.history.back()}>
+                <ChevronLeft />
+                Back
+              </Link>
             ) : (
-              <Flex gap="xl">
-                <MetaCard label="Type" value={type || "Unknown"} />
-                <MetaCard label="Domain" value={scope || "Unknown"} />
-              </Flex>
+              <AppLink to="/">
+                <ChevronLeft />
+                Home
+              </AppLink>
             )}
-            {ecosystemRootId && isRootApp ? (
-              <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
-            ) : null}
-            <Flex gap="4xl" direction="column">
-              <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
-                <Flex
-                  align="center"
-                  gap="2xl"
-                  justify="between"
-                  style={styles.reviewsHeaderTop}
-                >
-                  <Flex gap="4xl" align="center">
-                    <Heading2>Reviews</Heading2>
-                    <Flex gap="md" style={styles.ratingRow}>
-                      <StarRating
-                        rating={listing.rating}
-                        showReviewCount={false}
-                      />
-                      <Text weight="semibold">{listing.rating.toFixed(1)}</Text>
-                    </Flex>
-                  </Flex>
-                  <ButtonLink
-                    to="/products/$productId/reviews"
-                    params={{ productId: productSlug }}
-                    size="lg"
-                    variant="secondary"
-                  >
-                    View all
-                  </ButtonLink>
-                </Flex>
+          </Flex>
+          <HeroSection listing={listing} />
+          <Flex direction="column" gap="5xl">
+            {getDescriptionBlocks(listing.description).map((block, index) => (
+              <Body
+                key={`${listing.id}-description-${index}`}
+                style={styles.descriptionText}
+              >
+                {block}
+              </Body>
+            ))}
+          </Flex>
+          {type === "Apps" ? (
+            domain ? (
+              <Flex gap="xl">
+                <MetaCard label="App" value={scope} />
+                <MetaCard label="Domain" value={domain} />
               </Flex>
+            ) : null
+          ) : (
+            <Flex gap="xl">
+              <MetaCard label="Type" value={type || "Unknown"} />
+              <MetaCard label="Domain" value={scope || "Unknown"} />
+            </Flex>
+          )}
+          {ecosystemRootId && isRootApp ? (
+            <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
+          ) : null}
+          <Flex gap="4xl" direction="column">
+            <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
+              <Flex
+                align="center"
+                gap="2xl"
+                justify="between"
+                style={styles.reviewsHeaderTop}
+              >
+                <Flex gap="4xl" align="center">
+                  <Heading2>Reviews</Heading2>
+                  <Flex gap="md" style={styles.ratingRow}>
+                    <StarRating
+                      rating={listing.rating}
+                      showReviewCount={false}
+                    />
+                    <Text weight="semibold">{listing.rating.toFixed(1)}</Text>
+                  </Flex>
+                </Flex>
+                <ButtonLink
+                  to="/products/$productId/reviews"
+                  params={{ productId: productSlug }}
+                  size="lg"
+                  variant="secondary"
+                >
+                  View all
+                </ButtonLink>
+              </Flex>
+            </Flex>
 
-              <Grid style={styles.reviewsGrid}>
-                {reviews
-                  .slice(0, PRODUCT_REVIEW_PREVIEW_COUNT)
-                  .map((review) => (
-                    <Card
-                      key={`${listing.id}-review-${review.author}`}
-                      style={styles.reviewCard}
-                    >
-                      <Flex direction="column" style={styles.reviewCardBody}>
-                        <Flex gap="2xl" style={styles.reviewHeader}>
-                          <Avatar
-                            alt={review.author}
-                            fallback={getInitials(review.author)}
-                            size="lg"
-                          />
-                          <Flex
-                            direction="column"
-                            gap="lg"
-                            style={styles.reviewAuthor}
-                          >
-                            <Text weight="semibold">{review.author}</Text>
-                            <Text size="sm" variant="secondary">
-                              {review.role}
-                            </Text>
-                          </Flex>
-                          <StarRating
-                            rating={review.rating}
-                            showReviewCount={false}
-                          />
-                        </Flex>
-                        <Body style={styles.reviewQuote}>{review.quote}</Body>
-                        <Text
-                          size="sm"
-                          variant="secondary"
-                          style={styles.reviewMeta}
-                        >
-                          {review.context}
+            <Grid style={styles.reviewsGrid}>
+              {reviews.slice(0, PRODUCT_REVIEW_PREVIEW_COUNT).map((review) => (
+                <Card
+                  key={`${listing.id}-review-${review.author}`}
+                  style={styles.reviewCard}
+                >
+                  <Flex direction="column" style={styles.reviewCardBody}>
+                    <Flex gap="2xl" style={styles.reviewHeader}>
+                      <Avatar
+                        alt={review.author}
+                        fallback={getInitials(review.author)}
+                        size="lg"
+                      />
+                      <Flex
+                        direction="column"
+                        gap="lg"
+                        style={styles.reviewAuthor}
+                      >
+                        <Text weight="semibold">{review.author}</Text>
+                        <Text size="sm" variant="secondary">
+                          {review.role}
                         </Text>
                       </Flex>
-                    </Card>
-                  ))}
-              </Grid>
+                      <StarRating
+                        rating={review.rating}
+                        showReviewCount={false}
+                      />
+                    </Flex>
+                    <Body style={styles.reviewQuote}>{review.quote}</Body>
+                    <Text
+                      size="sm"
+                      variant="secondary"
+                      style={styles.reviewMeta}
+                    >
+                      {review.context}
+                    </Text>
+                  </Flex>
+                </Card>
+              ))}
+            </Grid>
 
-              <Button isDisabled size="lg" variant="secondary">
-                Create review
-              </Button>
-            </Flex>
-            {relatedProducts.length > 0 ? (
-              <RelatedProductsSection listings={relatedProducts} />
-            ) : null}
+            <Button isDisabled size="lg" variant="secondary">
+              Create review
+            </Button>
           </Flex>
-          {import.meta.env.DEV ? (
-            <Card style={styles.devToolbar}>
-              <Flex direction="column" style={styles.devToolbarBody}>
-                <Text size="sm" weight="semibold">
-                  Dev tools
-                </Text>
-                <Flex direction="column" style={styles.devToolbarButtons}>
-                  <Button
-                    variant="secondary"
-                    isPending={pendingGeneration === "icon"}
-                    isDisabled={pendingGeneration !== null}
-                    onPress={() => void runGeneration("icon")}
-                  >
-                    Generate icon
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    isPending={pendingGeneration === "hero"}
-                    isDisabled={pendingGeneration !== null}
-                    onPress={() => void runGeneration("hero")}
-                  >
-                    Generate hero image
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    isPending={pendingGeneration === "tagline"}
-                    isDisabled={pendingGeneration !== null}
-                    onPress={() => void runGeneration("tagline")}
-                  >
-                    Generate tagline
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    isPending={pendingGeneration === "description"}
-                    isDisabled={pendingGeneration !== null}
-                    onPress={() => void runGeneration("description")}
-                  >
-                    Generate description
-                  </Button>
-                </Flex>
-                <Text
-                  size="sm"
-                  variant={
-                    toolbarStatus?.tone === "critical"
-                      ? "critical"
-                      : "secondary"
-                  }
-                  style={styles.devToolbarStatus}
-                >
-                  {toolbarStatus?.text ?? " "}
-                </Text>
-              </Flex>
-            </Card>
+          {relatedProducts.length > 0 ? (
+            <RelatedProductsSection listings={relatedProducts} />
           ) : null}
-        </Page.Root>
-      </HeaderLayout.Page>
-    </HeaderLayout.Root>
+        </Flex>
+        {import.meta.env.DEV ? (
+          <Card style={styles.devToolbar}>
+            <Flex direction="column" style={styles.devToolbarBody}>
+              <Text size="sm" weight="semibold">
+                Dev tools
+              </Text>
+              <Flex direction="column" style={styles.devToolbarButtons}>
+                <Button
+                  variant="secondary"
+                  isPending={pendingGeneration === "icon"}
+                  isDisabled={pendingGeneration !== null}
+                  onPress={() => void runGeneration("icon")}
+                >
+                  Generate icon
+                </Button>
+                <Button
+                  variant="secondary"
+                  isPending={pendingGeneration === "hero"}
+                  isDisabled={pendingGeneration !== null}
+                  onPress={() => void runGeneration("hero")}
+                >
+                  Generate hero image
+                </Button>
+                <Button
+                  variant="secondary"
+                  isPending={pendingGeneration === "tagline"}
+                  isDisabled={pendingGeneration !== null}
+                  onPress={() => void runGeneration("tagline")}
+                >
+                  Generate tagline
+                </Button>
+                <Button
+                  variant="secondary"
+                  isPending={pendingGeneration === "description"}
+                  isDisabled={pendingGeneration !== null}
+                  onPress={() => void runGeneration("description")}
+                >
+                  Generate description
+                </Button>
+              </Flex>
+              <Text
+                size="sm"
+                variant={
+                  toolbarStatus?.tone === "critical" ? "critical" : "secondary"
+                }
+                style={styles.devToolbarStatus}
+              >
+                {toolbarStatus?.text ?? " "}
+              </Text>
+            </Flex>
+          </Card>
+        ) : null}
+      </Page.Root>
+    </HeaderLayout.Page>
   );
 }
 

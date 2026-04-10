@@ -39,7 +39,7 @@ const IconButtonLink = createLink(IconButton);
 const AppLink = createLink(Link);
 const INITIAL_SECTION_LISTING_COUNT = 6;
 
-export const Route = createFileRoute("/ecosystems/$app/")({
+export const Route = createFileRoute("/_header-layout/ecosystems/$app/")({
   loader: async ({ context, params }) => {
     const categoryId = getAppEcosystemCategoryIdFromRouteParam(params.app);
     if (!categoryId) {
@@ -133,8 +133,7 @@ function EcosystemIndexPage() {
     .filter((section) => section.listings.length > 0);
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
+    <HeaderLayout.Page>
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" gap="8xl">
             <Flex direction="column" gap="4xl">
@@ -188,7 +187,6 @@ function EcosystemIndexPage() {
           </Flex>
         </Page.Root>
       </HeaderLayout.Page>
-    </HeaderLayout.Root>
   );
 }
 

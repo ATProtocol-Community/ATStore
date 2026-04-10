@@ -11,6 +11,24 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.39.0
         version: 0.39.0
+      '@atcute/atproto':
+        specifier: ^3.1.11
+        version: 3.1.11
+      '@atcute/client':
+        specifier: ^4.2.1
+        version: 4.2.1
+      '@atcute/identity-resolver':
+        specifier: ^1.2.2
+        version: 1.2.2(@atcute/identity@1.1.4)
+      '@atcute/identity-resolver-node':
+        specifier: ^1.0.3
+        version: 1.0.3(@atcute/identity-resolver@1.2.2(@atcute/identity@1.1.4))(@atcute/identity@1.1.4)
+      '@atcute/lexicons':
+        specifier: ^1.3.0
+        version: 1.3.0
+      '@atcute/oauth-node-client':
+        specifier: ^1.1.0
+        version: 1.1.0
       '@origin-space/image-cropper':
         specifier: ^0.1.9
         version: 0.1.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -104,6 +122,9 @@ importers:
       tailwindcss:
         specifier: ^4.1.18
         version: 4.2.2
+      universal-cookie:
+        specifier: ^8.1.0
+        version: 8.1.0
       web-haptics:
         specifier: ^0.0.6
         version: 0.0.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -193,6 +214,53 @@ packages:
 
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
+
+  '@atcute/atproto@3.1.11':
+    resolution: {integrity: sha512-yh+ASvA+iHHQij6UeHEKp2+rwvFvQR8A6/5Dk/xvqDslIikWEFx9VlprNwm/clQIPl2bLuQg+LHS8uY9o5nFTA==}
+
+  '@atcute/client@4.2.1':
+    resolution: {integrity: sha512-ZBFM2pW075JtgGFu5g7HHZBecrClhlcNH8GVP9Zz1aViWR+cjjBsTpeE63rJs+FCOHFYlirUyo5L8SGZ4kMINw==}
+
+  '@atcute/identity-resolver-node@1.0.3':
+    resolution: {integrity: sha512-RPH5M4ZRayKRcGnJWUOPVhN5WSYURXXZxKzgVT9lj/WZCH6ij2Vg3P3Eva7GGs0SG1ytnX1XVBTMoIk8nF/SLQ==}
+    peerDependencies:
+      '@atcute/identity': ^1.0.0
+      '@atcute/identity-resolver': ^1.0.0
+
+  '@atcute/identity-resolver@1.2.2':
+    resolution: {integrity: sha512-eUh/UH4bFvuXS0X7epYCeJC/kj4rbBXfSRumLEH4smMVwNOgTo7cL/0Srty+P/qVPoZEyXdfEbS0PHJyzoXmHw==}
+    peerDependencies:
+      '@atcute/identity': ^1.0.0
+
+  '@atcute/identity@1.1.4':
+    resolution: {integrity: sha512-RCw1IqflfuSYCxK5m0lZCm0UnvIzcUnuhngiBhJEJb9a9Mc2SEf1xP3H8N5r8pvEH1LoAYd6/zrvCNU+uy9esw==}
+
+  '@atcute/lexicons@1.3.0':
+    resolution: {integrity: sha512-Eq5y+9onnCXNVUlNiMf31beSXHKqptB7lUo/68YbhlmxdaR7ooywHmahya9goP5AsmlYEA1z+dRPXIDAa9O7cg==}
+
+  '@atcute/multibase@1.2.0':
+    resolution: {integrity: sha512-ZK2GRra+qIYq9nNuQB52m2ul0hOmCQEtPobGfTSUxm7pF0OGEkWGkWHugFhNEDVzHzTwPxHp6VGotdZFue4lYQ==}
+
+  '@atcute/oauth-crypto@0.1.0':
+    resolution: {integrity: sha512-qZYDCNLF/4B6AndYT1rsQelN8621AC5u/sL5PHvlr/qqAbmmUwCBGjEgRSyZtHE1AqD60VNiSMlOgAuEQTSl3w==}
+
+  '@atcute/oauth-keyset@0.1.0':
+    resolution: {integrity: sha512-+wqT/+I5Lg9VzKnKY3g88+N45xbq+wsdT6bHDGqCVa2u57gRvolFF4dY+weMfc/OX641BIZO6/o+zFtKBsMQnQ==}
+
+  '@atcute/oauth-node-client@1.1.0':
+    resolution: {integrity: sha512-xCp/VfjtvTeKscKR/oI2hdMTp1/DaF/7ll8b6yZOCgbKlVDDfhCn5mmKNVARGTNaoywxrXG3XffbWCIx3/E87w==}
+
+  '@atcute/oauth-types@0.1.1':
+    resolution: {integrity: sha512-u+3KMjse3Uc/9hDyilu1QVN7IpcnjVXgRzhddzBB8Uh6wePHNVBDdi9wQvFTVVA3zmxtMJVptXRyLLg6Ou9bqg==}
+
+  '@atcute/uint8array@1.1.1':
+    resolution: {integrity: sha512-3LsC8XB8TKe9q/5hOA5sFuzGaIFdJZJNewC5OKa3o/eU6+K7JR6see9Zy2JbQERNVnRl11EzbNov1efgLMAs4g==}
+
+  '@atcute/util-fetch@1.0.5':
+    resolution: {integrity: sha512-qjHj01BGxjSjIFdPiAjSARnodJIIyKxnCMMEcXMESo9TAyND6XZQqrie5fia+LlYWVXdpsTds8uFQwc9jdKTig==}
+
+  '@atcute/util-text@1.2.0':
+    resolution: {integrity: sha512-b8WSh+Z7K601eUFFmTFj8QPKDO8Ic0VDDj63sdKzpkm+ySQKsYT5nXekViGqFVKbyKj1V5FyvZvgXad6/aI4QQ==}
 
   '@babel/code-frame@7.27.1':
     resolution: {integrity: sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg==}
@@ -302,6 +370,10 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@badrap/valita@0.4.6':
+    resolution: {integrity: sha512-4kdqcjyxo/8RQ8ayjms47HCWZIF5981oE5nIenbfThKDxWXtEHKipAOWlflpPJzZx9y/JWYQkp18Awr7VuepFg==}
+    engines: {node: '>= 18'}
 
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
@@ -2337,6 +2409,10 @@ packages:
   cookie-es@2.0.1:
     resolution: {integrity: sha512-aVf4A4hI2w70LnF7GG+7xDQUkliwiXWXFvTjkip4+b64ygDQ2sJPRSKFDHbxn8o0xu9QzPkMuuiWIXyFSE2slA==}
 
+  cookie@1.1.1:
+    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
+    engines: {node: '>=18'}
+
   css-mediaquery@0.1.2:
     resolution: {integrity: sha512-COtn4EROW5dBGlE/4PiKnh6rZpAPxDeFLaEEwt4i10jpDMFt2EhQGS79QmmrO+iKCHv0PU/HrOWEhijFd1x99Q==}
 
@@ -2617,6 +2693,9 @@ packages:
   escape-string-regexp@5.0.0:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
+
+  esm-env@1.2.2:
+    resolution: {integrity: sha512-Epxrv+Nr/CaL4ZcFGPJIYLWFom+YeV1DqMLHJoEd9SYRxNbaFruBwfEX/kkHUJf55j2+TUbmDcmuilbP1TmXHA==}
 
   esprima@4.0.1:
     resolution: {integrity: sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==}
@@ -3178,6 +3257,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@5.1.7:
+    resolution: {integrity: sha512-ua3NDgISf6jdwezAheMOk4mbE1LXjm1DfMUDMuJf4AqxLFK3ccGpgWizwa5YV7Yz9EpXwEaWoRXSb/BnV0t5dQ==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
@@ -3615,6 +3699,9 @@ packages:
     resolution: {integrity: sha512-H/nlJ/h0ggGC+uRL3ovD+G0i4bqhvsDOpbDv7At5eFLlj2b41L8QliGbnl2H7SnDiYhENphh1tQFJZf+MyfLsQ==}
     engines: {node: '>=20.18.1'}
 
+  unicode-segmenter@0.14.5:
+    resolution: {integrity: sha512-jHGmj2LUuqDcX3hqY12Ql+uhUTn8huuxNZGq7GvtF6bSybzH3aFgedYu/KTzQStEgt1Ra2F3HxadNXsNjb3m3g==}
+
   unified@11.0.5:
     resolution: {integrity: sha512-xKvGhPWw3k84Qjh8bI3ZeJjqnyadK+GEFtazSfZv/rKeTkTjOJho6mFqh2SM96iIcZokxiOpg78GazTSg8+KHA==}
 
@@ -3632,6 +3719,9 @@ packages:
 
   unist-util-visit@5.1.0:
     resolution: {integrity: sha512-m+vIdyeCOpdr/QeQCu2EzxX/ohgS8KbnPDgFni4dQsfSCtpz8UqDyY5GjRru8PDKuYn7Fq19j1CQ+nJSsGKOzg==}
+
+  universal-cookie@8.1.0:
+    resolution: {integrity: sha512-65+kikQAWq7gsJbirwB7dk6e8xeug1hx3++x2dQoymdXcV7fYv0yChOgHCg01ZwP3fE3sYeq6EWCSpFv3HLl9g==}
 
   unplugin@2.3.11:
     resolution: {integrity: sha512-5uKD0nqiYVzlmCRs01Fhs2BdkEgBS3SAVP6ndrBsuK42iC2+JHyxM05Rm9G8+5mkmRtzMZGY8Ct5+mliZxU/Ww==}
@@ -3905,6 +3995,85 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
+  '@atcute/atproto@3.1.11':
+    dependencies:
+      '@atcute/lexicons': 1.3.0
+
+  '@atcute/client@4.2.1':
+    dependencies:
+      '@atcute/identity': 1.1.4
+      '@atcute/lexicons': 1.3.0
+
+  '@atcute/identity-resolver-node@1.0.3(@atcute/identity-resolver@1.2.2(@atcute/identity@1.1.4))(@atcute/identity@1.1.4)':
+    dependencies:
+      '@atcute/identity': 1.1.4
+      '@atcute/identity-resolver': 1.2.2(@atcute/identity@1.1.4)
+      '@atcute/lexicons': 1.3.0
+
+  '@atcute/identity-resolver@1.2.2(@atcute/identity@1.1.4)':
+    dependencies:
+      '@atcute/identity': 1.1.4
+      '@atcute/lexicons': 1.3.0
+      '@atcute/util-fetch': 1.0.5
+      '@badrap/valita': 0.4.6
+
+  '@atcute/identity@1.1.4':
+    dependencies:
+      '@atcute/lexicons': 1.3.0
+      '@badrap/valita': 0.4.6
+
+  '@atcute/lexicons@1.3.0':
+    dependencies:
+      '@atcute/uint8array': 1.1.1
+      '@atcute/util-text': 1.2.0
+      '@standard-schema/spec': 1.1.0
+      esm-env: 1.2.2
+
+  '@atcute/multibase@1.2.0':
+    dependencies:
+      '@atcute/uint8array': 1.1.1
+
+  '@atcute/oauth-crypto@0.1.0':
+    dependencies:
+      '@atcute/multibase': 1.2.0
+      '@atcute/uint8array': 1.1.1
+      '@badrap/valita': 0.4.6
+      nanoid: 5.1.7
+
+  '@atcute/oauth-keyset@0.1.0':
+    dependencies:
+      '@atcute/oauth-crypto': 0.1.0
+
+  '@atcute/oauth-node-client@1.1.0':
+    dependencies:
+      '@atcute/client': 4.2.1
+      '@atcute/identity': 1.1.4
+      '@atcute/identity-resolver': 1.2.2(@atcute/identity@1.1.4)
+      '@atcute/lexicons': 1.3.0
+      '@atcute/oauth-crypto': 0.1.0
+      '@atcute/oauth-keyset': 0.1.0
+      '@atcute/oauth-types': 0.1.1
+      '@atcute/util-fetch': 1.0.5
+      '@badrap/valita': 0.4.6
+      nanoid: 5.1.7
+
+  '@atcute/oauth-types@0.1.1':
+    dependencies:
+      '@atcute/identity': 1.1.4
+      '@atcute/lexicons': 1.3.0
+      '@atcute/oauth-keyset': 0.1.0
+      '@badrap/valita': 0.4.6
+
+  '@atcute/uint8array@1.1.1': {}
+
+  '@atcute/util-fetch@1.0.5':
+    dependencies:
+      '@badrap/valita': 0.4.6
+
+  '@atcute/util-text@1.2.0':
+    dependencies:
+      unicode-segmenter: 0.14.5
+
   '@babel/code-frame@7.27.1':
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
@@ -4039,6 +4208,8 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@badrap/valita@0.4.6': {}
 
   '@bramus/specificity@2.4.2':
     dependencies:
@@ -6380,6 +6551,8 @@ snapshots:
 
   cookie-es@2.0.1: {}
 
+  cookie@1.1.1: {}
+
   css-mediaquery@0.1.2: {}
 
   css-select@5.2.2:
@@ -6615,6 +6788,8 @@ snapshots:
   escape-string-regexp@2.0.0: {}
 
   escape-string-regexp@5.0.0: {}
+
+  esm-env@1.2.2: {}
 
   esprima@4.0.1: {}
 
@@ -7395,6 +7570,8 @@ snapshots:
 
   nanoid@3.3.11: {}
 
+  nanoid@5.1.7: {}
+
   node-domexception@1.0.0: {}
 
   node-fetch@2.7.0:
@@ -7926,6 +8103,8 @@ snapshots:
 
   undici@7.24.7: {}
 
+  unicode-segmenter@0.14.5: {}
+
   unified@11.0.5:
     dependencies:
       '@types/unist': 3.0.3
@@ -7958,6 +8137,10 @@ snapshots:
       '@types/unist': 3.0.3
       unist-util-is: 6.0.1
       unist-util-visit-parents: 6.0.2
+
+  universal-cookie@8.1.0:
+    dependencies:
+      cookie: 1.1.1
 
   unplugin@2.3.11:
     dependencies:

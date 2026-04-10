@@ -42,7 +42,7 @@ const sortOptions = [
   { id: "newest", label: "Newest" },
 ] as const;
 
-export const Route = createFileRoute("/apps/all")({
+export const Route = createFileRoute("/_header-layout/apps/all")({
   validateSearch: (search): { sort: "popular" | "newest" } => ({
     sort: search.sort === "newest" ? "newest" : "popular",
   }),
@@ -166,8 +166,7 @@ function AppsAllPage() {
   }, [apps, normalizedQuery]);
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
+    <HeaderLayout.Page>
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" gap="7xl">
             <Flex direction="column" gap="4xl">
@@ -257,7 +256,6 @@ function AppsAllPage() {
           </Flex>
         </Page.Root>
       </HeaderLayout.Page>
-    </HeaderLayout.Root>
   );
 }
 

@@ -9,146 +9,217 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProtocolTagsRouteImport } from './routes/protocol.tags'
-import { Route as ProtocolListingsRouteImport } from './routes/protocol.listings'
-import { Route as ProtocolCategoryRouteImport } from './routes/protocol.$category'
-import { Route as DevCategoriesRouteImport } from './routes/dev.categories'
-import { Route as DevAppTagsRouteImport } from './routes/dev.app-tags'
-import { Route as CategoriesCategoryIdRouteImport } from './routes/categories.$categoryId'
-import { Route as AppsTagsRouteImport } from './routes/apps.tags'
-import { Route as AppsAllRouteImport } from './routes/apps.all'
-import { Route as AppsTagRouteImport } from './routes/apps.$tag'
-import { Route as ProductsProductIdIndexRouteImport } from './routes/products.$productId.index'
-import { Route as EcosystemsAppIndexRouteImport } from './routes/ecosystems.$app.index'
-import { Route as ProductsProductIdReviewsRouteImport } from './routes/products.$productId.reviews'
-import { Route as EcosystemsAppAllRouteImport } from './routes/ecosystems.$app.all'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
+import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
+import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
+import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
+import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
+import { Route as HeaderLayoutDevCategoriesRouteImport } from './routes/_header-layout.dev.categories'
+import { Route as HeaderLayoutDevAppTagsRouteImport } from './routes/_header-layout.dev.app-tags'
+import { Route as HeaderLayoutCategoriesCategoryIdRouteImport } from './routes/_header-layout.categories.$categoryId'
+import { Route as HeaderLayoutAppsTagsRouteImport } from './routes/_header-layout.apps.tags'
+import { Route as HeaderLayoutAppsAllRouteImport } from './routes/_header-layout.apps.all'
+import { Route as HeaderLayoutAppsTagRouteImport } from './routes/_header-layout.apps.$tag'
+import { Route as HeaderLayoutProductsProductIdIndexRouteImport } from './routes/_header-layout.products.$productId.index'
+import { Route as HeaderLayoutEcosystemsAppIndexRouteImport } from './routes/_header-layout.ecosystems.$app.index'
+import { Route as ApiAuthAtprotoSignupRouteImport } from './routes/api.auth.atproto.signup'
+import { Route as ApiAuthAtprotoMetadataDotjsonRouteImport } from './routes/api.auth.atproto.metadata[.]json'
+import { Route as ApiAuthAtprotoJwksDotjsonRouteImport } from './routes/api.auth.atproto.jwks[.]json'
+import { Route as ApiAuthAtprotoCallbackRouteImport } from './routes/api.auth.atproto.callback'
+import { Route as ApiAuthAtprotoAuthorizeRouteImport } from './routes/api.auth.atproto.authorize'
+import { Route as HeaderLayoutProductsProductIdReviewsRouteImport } from './routes/_header-layout.products.$productId.reviews'
+import { Route as HeaderLayoutEcosystemsAppAllRouteImport } from './routes/_header-layout.ecosystems.$app.all'
 
-const IndexRoute = IndexRouteImport.update({
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
+  id: '/_header-layout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeaderLayoutIndexRoute = HeaderLayoutIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const ProtocolTagsRoute = ProtocolTagsRouteImport.update({
-  id: '/protocol/tags',
-  path: '/protocol/tags',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProtocolListingsRoute = ProtocolListingsRouteImport.update({
-  id: '/protocol/listings',
-  path: '/protocol/listings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProtocolCategoryRoute = ProtocolCategoryRouteImport.update({
-  id: '/protocol/$category',
-  path: '/protocol/$category',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevCategoriesRoute = DevCategoriesRouteImport.update({
-  id: '/dev/categories',
-  path: '/dev/categories',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevAppTagsRoute = DevAppTagsRouteImport.update({
+const HeaderLayoutProtocolTagsRoute =
+  HeaderLayoutProtocolTagsRouteImport.update({
+    id: '/protocol/tags',
+    path: '/protocol/tags',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutProtocolListingsRoute =
+  HeaderLayoutProtocolListingsRouteImport.update({
+    id: '/protocol/listings',
+    path: '/protocol/listings',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutProtocolCategoryRoute =
+  HeaderLayoutProtocolCategoryRouteImport.update({
+    id: '/protocol/$category',
+    path: '/protocol/$category',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutDevCategoriesRoute =
+  HeaderLayoutDevCategoriesRouteImport.update({
+    id: '/dev/categories',
+    path: '/dev/categories',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutDevAppTagsRoute = HeaderLayoutDevAppTagsRouteImport.update({
   id: '/dev/app-tags',
   path: '/dev/app-tags',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const CategoriesCategoryIdRoute = CategoriesCategoryIdRouteImport.update({
-  id: '/categories/$categoryId',
-  path: '/categories/$categoryId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppsTagsRoute = AppsTagsRouteImport.update({
+const HeaderLayoutCategoriesCategoryIdRoute =
+  HeaderLayoutCategoriesCategoryIdRouteImport.update({
+    id: '/categories/$categoryId',
+    path: '/categories/$categoryId',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutAppsTagsRoute = HeaderLayoutAppsTagsRouteImport.update({
   id: '/apps/tags',
   path: '/apps/tags',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const AppsAllRoute = AppsAllRouteImport.update({
+const HeaderLayoutAppsAllRoute = HeaderLayoutAppsAllRouteImport.update({
   id: '/apps/all',
   path: '/apps/all',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const AppsTagRoute = AppsTagRouteImport.update({
+const HeaderLayoutAppsTagRoute = HeaderLayoutAppsTagRouteImport.update({
   id: '/apps/$tag',
   path: '/apps/$tag',
+  getParentRoute: () => HeaderLayoutRoute,
+} as any)
+const HeaderLayoutProductsProductIdIndexRoute =
+  HeaderLayoutProductsProductIdIndexRouteImport.update({
+    id: '/products/$productId/',
+    path: '/products/$productId/',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutEcosystemsAppIndexRoute =
+  HeaderLayoutEcosystemsAppIndexRouteImport.update({
+    id: '/ecosystems/$app/',
+    path: '/ecosystems/$app/',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const ApiAuthAtprotoSignupRoute = ApiAuthAtprotoSignupRouteImport.update({
+  id: '/api/auth/atproto/signup',
+  path: '/api/auth/atproto/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProductsProductIdIndexRoute = ProductsProductIdIndexRouteImport.update({
-  id: '/products/$productId/',
-  path: '/products/$productId/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EcosystemsAppIndexRoute = EcosystemsAppIndexRouteImport.update({
-  id: '/ecosystems/$app/',
-  path: '/ecosystems/$app/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProductsProductIdReviewsRoute =
-  ProductsProductIdReviewsRouteImport.update({
-    id: '/products/$productId/reviews',
-    path: '/products/$productId/reviews',
+const ApiAuthAtprotoMetadataDotjsonRoute =
+  ApiAuthAtprotoMetadataDotjsonRouteImport.update({
+    id: '/api/auth/atproto/metadata.json',
+    path: '/api/auth/atproto/metadata.json',
     getParentRoute: () => rootRouteImport,
   } as any)
-const EcosystemsAppAllRoute = EcosystemsAppAllRouteImport.update({
-  id: '/ecosystems/$app/all',
-  path: '/ecosystems/$app/all',
+const ApiAuthAtprotoJwksDotjsonRoute =
+  ApiAuthAtprotoJwksDotjsonRouteImport.update({
+    id: '/api/auth/atproto/jwks.json',
+    path: '/api/auth/atproto/jwks.json',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthAtprotoCallbackRoute = ApiAuthAtprotoCallbackRouteImport.update({
+  id: '/api/auth/atproto/callback',
+  path: '/api/auth/atproto/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthAtprotoAuthorizeRoute = ApiAuthAtprotoAuthorizeRouteImport.update({
+  id: '/api/auth/atproto/authorize',
+  path: '/api/auth/atproto/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeaderLayoutProductsProductIdReviewsRoute =
+  HeaderLayoutProductsProductIdReviewsRouteImport.update({
+    id: '/products/$productId/reviews',
+    path: '/products/$productId/reviews',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutEcosystemsAppAllRoute =
+  HeaderLayoutEcosystemsAppAllRouteImport.update({
+    id: '/ecosystems/$app/all',
+    path: '/ecosystems/$app/all',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/apps/$tag': typeof AppsTagRoute
-  '/apps/all': typeof AppsAllRoute
-  '/apps/tags': typeof AppsTagsRoute
-  '/categories/$categoryId': typeof CategoriesCategoryIdRoute
-  '/dev/app-tags': typeof DevAppTagsRoute
-  '/dev/categories': typeof DevCategoriesRoute
-  '/protocol/$category': typeof ProtocolCategoryRoute
-  '/protocol/listings': typeof ProtocolListingsRoute
-  '/protocol/tags': typeof ProtocolTagsRoute
-  '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
-  '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
-  '/ecosystems/$app/': typeof EcosystemsAppIndexRoute
-  '/products/$productId/': typeof ProductsProductIdIndexRoute
+  '/': typeof HeaderLayoutIndexRoute
+  '/login': typeof LoginRoute
+  '/apps/$tag': typeof HeaderLayoutAppsTagRoute
+  '/apps/all': typeof HeaderLayoutAppsAllRoute
+  '/apps/tags': typeof HeaderLayoutAppsTagsRoute
+  '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
+  '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
+  '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
+  '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
+  '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
+  '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
+  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRoute
+  '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
+  '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
+  '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
+  '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
+  '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
+  '/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
+  '/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/apps/$tag': typeof AppsTagRoute
-  '/apps/all': typeof AppsAllRoute
-  '/apps/tags': typeof AppsTagsRoute
-  '/categories/$categoryId': typeof CategoriesCategoryIdRoute
-  '/dev/app-tags': typeof DevAppTagsRoute
-  '/dev/categories': typeof DevCategoriesRoute
-  '/protocol/$category': typeof ProtocolCategoryRoute
-  '/protocol/listings': typeof ProtocolListingsRoute
-  '/protocol/tags': typeof ProtocolTagsRoute
-  '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
-  '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
-  '/ecosystems/$app': typeof EcosystemsAppIndexRoute
-  '/products/$productId': typeof ProductsProductIdIndexRoute
+  '/login': typeof LoginRoute
+  '/': typeof HeaderLayoutIndexRoute
+  '/apps/$tag': typeof HeaderLayoutAppsTagRoute
+  '/apps/all': typeof HeaderLayoutAppsAllRoute
+  '/apps/tags': typeof HeaderLayoutAppsTagsRoute
+  '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
+  '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
+  '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
+  '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
+  '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
+  '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
+  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRoute
+  '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
+  '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
+  '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
+  '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
+  '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
+  '/ecosystems/$app': typeof HeaderLayoutEcosystemsAppIndexRoute
+  '/products/$productId': typeof HeaderLayoutProductsProductIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/apps/$tag': typeof AppsTagRoute
-  '/apps/all': typeof AppsAllRoute
-  '/apps/tags': typeof AppsTagsRoute
-  '/categories/$categoryId': typeof CategoriesCategoryIdRoute
-  '/dev/app-tags': typeof DevAppTagsRoute
-  '/dev/categories': typeof DevCategoriesRoute
-  '/protocol/$category': typeof ProtocolCategoryRoute
-  '/protocol/listings': typeof ProtocolListingsRoute
-  '/protocol/tags': typeof ProtocolTagsRoute
-  '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
-  '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
-  '/ecosystems/$app/': typeof EcosystemsAppIndexRoute
-  '/products/$productId/': typeof ProductsProductIdIndexRoute
+  '/_header-layout': typeof HeaderLayoutRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_header-layout/': typeof HeaderLayoutIndexRoute
+  '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
+  '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
+  '/_header-layout/apps/tags': typeof HeaderLayoutAppsTagsRoute
+  '/_header-layout/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
+  '/_header-layout/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
+  '/_header-layout/dev/categories': typeof HeaderLayoutDevCategoriesRoute
+  '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
+  '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
+  '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
+  '/_header-layout/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRoute
+  '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
+  '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
+  '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
+  '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
+  '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
+  '/_header-layout/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
+  '/_header-layout/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
@@ -160,10 +231,16 @@ export interface FileRouteTypes {
     | '/protocol/tags'
     | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
+    | '/api/auth/atproto/authorize'
+    | '/api/auth/atproto/callback'
+    | '/api/auth/atproto/jwks.json'
+    | '/api/auth/atproto/metadata.json'
+    | '/api/auth/atproto/signup'
     | '/ecosystems/$app/'
     | '/products/$productId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/login'
     | '/'
     | '/apps/$tag'
     | '/apps/all'
@@ -176,161 +253,248 @@ export interface FileRouteTypes {
     | '/protocol/tags'
     | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
+    | '/api/auth/atproto/authorize'
+    | '/api/auth/atproto/callback'
+    | '/api/auth/atproto/jwks.json'
+    | '/api/auth/atproto/metadata.json'
+    | '/api/auth/atproto/signup'
     | '/ecosystems/$app'
     | '/products/$productId'
   id:
     | '__root__'
-    | '/'
-    | '/apps/$tag'
-    | '/apps/all'
-    | '/apps/tags'
-    | '/categories/$categoryId'
-    | '/dev/app-tags'
-    | '/dev/categories'
-    | '/protocol/$category'
-    | '/protocol/listings'
-    | '/protocol/tags'
-    | '/ecosystems/$app/all'
-    | '/products/$productId/reviews'
-    | '/ecosystems/$app/'
-    | '/products/$productId/'
+    | '/_header-layout'
+    | '/login'
+    | '/_header-layout/'
+    | '/_header-layout/apps/$tag'
+    | '/_header-layout/apps/all'
+    | '/_header-layout/apps/tags'
+    | '/_header-layout/categories/$categoryId'
+    | '/_header-layout/dev/app-tags'
+    | '/_header-layout/dev/categories'
+    | '/_header-layout/protocol/$category'
+    | '/_header-layout/protocol/listings'
+    | '/_header-layout/protocol/tags'
+    | '/_header-layout/ecosystems/$app/all'
+    | '/_header-layout/products/$productId/reviews'
+    | '/api/auth/atproto/authorize'
+    | '/api/auth/atproto/callback'
+    | '/api/auth/atproto/jwks.json'
+    | '/api/auth/atproto/metadata.json'
+    | '/api/auth/atproto/signup'
+    | '/_header-layout/ecosystems/$app/'
+    | '/_header-layout/products/$productId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AppsTagRoute: typeof AppsTagRoute
-  AppsAllRoute: typeof AppsAllRoute
-  AppsTagsRoute: typeof AppsTagsRoute
-  CategoriesCategoryIdRoute: typeof CategoriesCategoryIdRoute
-  DevAppTagsRoute: typeof DevAppTagsRoute
-  DevCategoriesRoute: typeof DevCategoriesRoute
-  ProtocolCategoryRoute: typeof ProtocolCategoryRoute
-  ProtocolListingsRoute: typeof ProtocolListingsRoute
-  ProtocolTagsRoute: typeof ProtocolTagsRoute
-  EcosystemsAppAllRoute: typeof EcosystemsAppAllRoute
-  ProductsProductIdReviewsRoute: typeof ProductsProductIdReviewsRoute
-  EcosystemsAppIndexRoute: typeof EcosystemsAppIndexRoute
-  ProductsProductIdIndexRoute: typeof ProductsProductIdIndexRoute
+  HeaderLayoutRoute: typeof HeaderLayoutRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  ApiAuthAtprotoAuthorizeRoute: typeof ApiAuthAtprotoAuthorizeRoute
+  ApiAuthAtprotoCallbackRoute: typeof ApiAuthAtprotoCallbackRoute
+  ApiAuthAtprotoJwksDotjsonRoute: typeof ApiAuthAtprotoJwksDotjsonRoute
+  ApiAuthAtprotoMetadataDotjsonRoute: typeof ApiAuthAtprotoMetadataDotjsonRoute
+  ApiAuthAtprotoSignupRoute: typeof ApiAuthAtprotoSignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_header-layout': {
+      id: '/_header-layout'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof HeaderLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_header-layout/': {
+      id: '/_header-layout/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutIndexRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/protocol/tags': {
-      id: '/protocol/tags'
+    '/_header-layout/protocol/tags': {
+      id: '/_header-layout/protocol/tags'
       path: '/protocol/tags'
       fullPath: '/protocol/tags'
-      preLoaderRoute: typeof ProtocolTagsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutProtocolTagsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/protocol/listings': {
-      id: '/protocol/listings'
+    '/_header-layout/protocol/listings': {
+      id: '/_header-layout/protocol/listings'
       path: '/protocol/listings'
       fullPath: '/protocol/listings'
-      preLoaderRoute: typeof ProtocolListingsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutProtocolListingsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/protocol/$category': {
-      id: '/protocol/$category'
+    '/_header-layout/protocol/$category': {
+      id: '/_header-layout/protocol/$category'
       path: '/protocol/$category'
       fullPath: '/protocol/$category'
-      preLoaderRoute: typeof ProtocolCategoryRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutProtocolCategoryRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/dev/categories': {
-      id: '/dev/categories'
+    '/_header-layout/dev/categories': {
+      id: '/_header-layout/dev/categories'
       path: '/dev/categories'
       fullPath: '/dev/categories'
-      preLoaderRoute: typeof DevCategoriesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutDevCategoriesRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/dev/app-tags': {
-      id: '/dev/app-tags'
+    '/_header-layout/dev/app-tags': {
+      id: '/_header-layout/dev/app-tags'
       path: '/dev/app-tags'
       fullPath: '/dev/app-tags'
-      preLoaderRoute: typeof DevAppTagsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutDevAppTagsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/categories/$categoryId': {
-      id: '/categories/$categoryId'
+    '/_header-layout/categories/$categoryId': {
+      id: '/_header-layout/categories/$categoryId'
       path: '/categories/$categoryId'
       fullPath: '/categories/$categoryId'
-      preLoaderRoute: typeof CategoriesCategoryIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutCategoriesCategoryIdRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/apps/tags': {
-      id: '/apps/tags'
+    '/_header-layout/apps/tags': {
+      id: '/_header-layout/apps/tags'
       path: '/apps/tags'
       fullPath: '/apps/tags'
-      preLoaderRoute: typeof AppsTagsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutAppsTagsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/apps/all': {
-      id: '/apps/all'
+    '/_header-layout/apps/all': {
+      id: '/_header-layout/apps/all'
       path: '/apps/all'
       fullPath: '/apps/all'
-      preLoaderRoute: typeof AppsAllRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutAppsAllRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/apps/$tag': {
-      id: '/apps/$tag'
+    '/_header-layout/apps/$tag': {
+      id: '/_header-layout/apps/$tag'
       path: '/apps/$tag'
       fullPath: '/apps/$tag'
-      preLoaderRoute: typeof AppsTagRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutAppsTagRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/products/$productId/': {
-      id: '/products/$productId/'
+    '/_header-layout/products/$productId/': {
+      id: '/_header-layout/products/$productId/'
       path: '/products/$productId'
       fullPath: '/products/$productId/'
-      preLoaderRoute: typeof ProductsProductIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutProductsProductIdIndexRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/ecosystems/$app/': {
-      id: '/ecosystems/$app/'
+    '/_header-layout/ecosystems/$app/': {
+      id: '/_header-layout/ecosystems/$app/'
       path: '/ecosystems/$app'
       fullPath: '/ecosystems/$app/'
-      preLoaderRoute: typeof EcosystemsAppIndexRouteImport
+      preLoaderRoute: typeof HeaderLayoutEcosystemsAppIndexRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/api/auth/atproto/signup': {
+      id: '/api/auth/atproto/signup'
+      path: '/api/auth/atproto/signup'
+      fullPath: '/api/auth/atproto/signup'
+      preLoaderRoute: typeof ApiAuthAtprotoSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/products/$productId/reviews': {
-      id: '/products/$productId/reviews'
+    '/api/auth/atproto/metadata.json': {
+      id: '/api/auth/atproto/metadata.json'
+      path: '/api/auth/atproto/metadata.json'
+      fullPath: '/api/auth/atproto/metadata.json'
+      preLoaderRoute: typeof ApiAuthAtprotoMetadataDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/atproto/jwks.json': {
+      id: '/api/auth/atproto/jwks.json'
+      path: '/api/auth/atproto/jwks.json'
+      fullPath: '/api/auth/atproto/jwks.json'
+      preLoaderRoute: typeof ApiAuthAtprotoJwksDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/atproto/callback': {
+      id: '/api/auth/atproto/callback'
+      path: '/api/auth/atproto/callback'
+      fullPath: '/api/auth/atproto/callback'
+      preLoaderRoute: typeof ApiAuthAtprotoCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/atproto/authorize': {
+      id: '/api/auth/atproto/authorize'
+      path: '/api/auth/atproto/authorize'
+      fullPath: '/api/auth/atproto/authorize'
+      preLoaderRoute: typeof ApiAuthAtprotoAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_header-layout/products/$productId/reviews': {
+      id: '/_header-layout/products/$productId/reviews'
       path: '/products/$productId/reviews'
       fullPath: '/products/$productId/reviews'
-      preLoaderRoute: typeof ProductsProductIdReviewsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
-    '/ecosystems/$app/all': {
-      id: '/ecosystems/$app/all'
+    '/_header-layout/ecosystems/$app/all': {
+      id: '/_header-layout/ecosystems/$app/all'
       path: '/ecosystems/$app/all'
       fullPath: '/ecosystems/$app/all'
-      preLoaderRoute: typeof EcosystemsAppAllRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof HeaderLayoutEcosystemsAppAllRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
   }
 }
 
+interface HeaderLayoutRouteChildren {
+  HeaderLayoutIndexRoute: typeof HeaderLayoutIndexRoute
+  HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
+  HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
+  HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
+  HeaderLayoutCategoriesCategoryIdRoute: typeof HeaderLayoutCategoriesCategoryIdRoute
+  HeaderLayoutDevAppTagsRoute: typeof HeaderLayoutDevAppTagsRoute
+  HeaderLayoutDevCategoriesRoute: typeof HeaderLayoutDevCategoriesRoute
+  HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
+  HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
+  HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
+  HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
+  HeaderLayoutProductsProductIdReviewsRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+  HeaderLayoutEcosystemsAppIndexRoute: typeof HeaderLayoutEcosystemsAppIndexRoute
+  HeaderLayoutProductsProductIdIndexRoute: typeof HeaderLayoutProductsProductIdIndexRoute
+}
+
+const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
+  HeaderLayoutIndexRoute: HeaderLayoutIndexRoute,
+  HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
+  HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
+  HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
+  HeaderLayoutCategoriesCategoryIdRoute: HeaderLayoutCategoriesCategoryIdRoute,
+  HeaderLayoutDevAppTagsRoute: HeaderLayoutDevAppTagsRoute,
+  HeaderLayoutDevCategoriesRoute: HeaderLayoutDevCategoriesRoute,
+  HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
+  HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
+  HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,
+  HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
+  HeaderLayoutProductsProductIdReviewsRoute:
+    HeaderLayoutProductsProductIdReviewsRoute,
+  HeaderLayoutEcosystemsAppIndexRoute: HeaderLayoutEcosystemsAppIndexRoute,
+  HeaderLayoutProductsProductIdIndexRoute:
+    HeaderLayoutProductsProductIdIndexRoute,
+}
+
+const HeaderLayoutRouteWithChildren = HeaderLayoutRoute._addFileChildren(
+  HeaderLayoutRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AppsTagRoute: AppsTagRoute,
-  AppsAllRoute: AppsAllRoute,
-  AppsTagsRoute: AppsTagsRoute,
-  CategoriesCategoryIdRoute: CategoriesCategoryIdRoute,
-  DevAppTagsRoute: DevAppTagsRoute,
-  DevCategoriesRoute: DevCategoriesRoute,
-  ProtocolCategoryRoute: ProtocolCategoryRoute,
-  ProtocolListingsRoute: ProtocolListingsRoute,
-  ProtocolTagsRoute: ProtocolTagsRoute,
-  EcosystemsAppAllRoute: EcosystemsAppAllRoute,
-  ProductsProductIdReviewsRoute: ProductsProductIdReviewsRoute,
-  EcosystemsAppIndexRoute: EcosystemsAppIndexRoute,
-  ProductsProductIdIndexRoute: ProductsProductIdIndexRoute,
+  HeaderLayoutRoute: HeaderLayoutRouteWithChildren,
+  LoginRoute: LoginRoute,
+  ApiAuthAtprotoAuthorizeRoute: ApiAuthAtprotoAuthorizeRoute,
+  ApiAuthAtprotoCallbackRoute: ApiAuthAtprotoCallbackRoute,
+  ApiAuthAtprotoJwksDotjsonRoute: ApiAuthAtprotoJwksDotjsonRoute,
+  ApiAuthAtprotoMetadataDotjsonRoute: ApiAuthAtprotoMetadataDotjsonRoute,
+  ApiAuthAtprotoSignupRoute: ApiAuthAtprotoSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

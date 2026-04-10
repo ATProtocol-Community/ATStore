@@ -34,7 +34,7 @@ import {
 
 const AppLink = createLink(Link);
 
-export const Route = createFileRoute("/ecosystems/$app/all")({
+export const Route = createFileRoute("/_header-layout/ecosystems/$app/all")({
   loader: async ({ context, params }) => {
     const categoryId = getAppEcosystemCategoryIdFromRouteParam(params.app);
     if (!categoryId) {
@@ -128,74 +128,72 @@ function EcosystemAllPage() {
   const [, AppName] = category.pathLabels;
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
-        <Page.Root variant="large" style={styles.page}>
-          <Flex direction="column" gap="7xl">
-            <Flex direction="column" gap="4xl">
-              <Flex gap="xl" style={styles.navLinks}>
-                <AppLink to="/ecosystems/$app" params={{ app: appSegment }}>
-                  <ChevronLeft />
-                  Back to {AppName} Ecosystem
-                </AppLink>
-              </Flex>
-
-              <AppTagHero
-                description={`Search every listing filed under ${category.pathLabels.join(" / ")} — clients, tools, and more.`}
-                eyebrow={formatEcosystemListingCount(listings.length)}
-                imageSrc={heroImage}
-                title={`Search ${category.label} ecosystem`}
-              />
+    <HeaderLayout.Page>
+      <Page.Root variant="large" style={styles.page}>
+        <Flex direction="column" gap="7xl">
+          <Flex direction="column" gap="4xl">
+            <Flex gap="xl" style={styles.navLinks}>
+              <AppLink to="/ecosystems/$app" params={{ app: appSegment }}>
+                <ChevronLeft />
+                Back to {AppName} Ecosystem
+              </AppLink>
             </Flex>
 
-            <Flex direction="column" gap="4xl" style={styles.searchSection}>
-              <Flex align="center" gap="2xl" style={styles.resultsHeader}>
-                <Flex
-                  align="center"
-                  direction="row"
-                  gap="2xl"
-                  style={styles.searchFieldRow}
-                >
-                  <SearchField
-                    aria-label={`Search listings in ${category.label}`}
-                    onChange={setQuery}
-                    placeholder="Search listings"
-                    value={query}
-                    variant="secondary"
-                    size="lg"
-                  />
-                  <SmallBody style={styles.resultCount}>
-                    {getResultsLabel(
-                      filteredListings.length,
-                      listings.length,
-                      normalizedQuery,
-                    )}
-                  </SmallBody>
-                </Flex>
-              </Flex>
-
-              {filteredListings.length > 0 ? (
-                <Grid style={ecosystemListingGridStyles.grid}>
-                  {filteredListings.map((listing) => (
-                    <EcosystemListingCard key={listing.id} listing={listing} />
-                  ))}
-                </Grid>
-              ) : (
-                <Flex direction="column" style={styles.emptyState}>
-                  <Text size="2xl" weight="semibold">
-                    No listings matched your search
-                  </Text>
-                  <Body variant="secondary">
-                    Try a different keyword or browse categories from the
-                    ecosystem home page.
-                  </Body>
-                </Flex>
-              )}
-            </Flex>
+            <AppTagHero
+              description={`Search every listing filed under ${category.pathLabels.join(" / ")} — clients, tools, and more.`}
+              eyebrow={formatEcosystemListingCount(listings.length)}
+              imageSrc={heroImage}
+              title={`Search ${category.label} ecosystem`}
+            />
           </Flex>
-        </Page.Root>
-      </HeaderLayout.Page>
-    </HeaderLayout.Root>
+
+          <Flex direction="column" gap="4xl" style={styles.searchSection}>
+            <Flex align="center" gap="2xl" style={styles.resultsHeader}>
+              <Flex
+                align="center"
+                direction="row"
+                gap="2xl"
+                style={styles.searchFieldRow}
+              >
+                <SearchField
+                  aria-label={`Search listings in ${category.label}`}
+                  onChange={setQuery}
+                  placeholder="Search listings"
+                  value={query}
+                  variant="secondary"
+                  size="lg"
+                />
+                <SmallBody style={styles.resultCount}>
+                  {getResultsLabel(
+                    filteredListings.length,
+                    listings.length,
+                    normalizedQuery,
+                  )}
+                </SmallBody>
+              </Flex>
+            </Flex>
+
+            {filteredListings.length > 0 ? (
+              <Grid style={ecosystemListingGridStyles.grid}>
+                {filteredListings.map((listing) => (
+                  <EcosystemListingCard key={listing.id} listing={listing} />
+                ))}
+              </Grid>
+            ) : (
+              <Flex direction="column" style={styles.emptyState}>
+                <Text size="2xl" weight="semibold">
+                  No listings matched your search
+                </Text>
+                <Body variant="secondary">
+                  Try a different keyword or browse categories from the
+                  ecosystem home page.
+                </Body>
+              </Flex>
+            )}
+          </Flex>
+        </Flex>
+      </Page.Root>
+    </HeaderLayout.Page>
   );
 }
 

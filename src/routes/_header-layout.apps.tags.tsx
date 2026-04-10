@@ -5,7 +5,6 @@ import {
   createLink,
   Link as RouterLink,
 } from "@tanstack/react-router";
-import { ChevronLeft, Search } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
@@ -26,23 +25,29 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import {
   directoryListingApi,
+  type DirectoryAppTagGroup,
   type DirectoryListingCard,
-  type DirectoryProtocolCategoryGroup,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import {
+  formatAppTagCount,
+  formatAppTagLabel,
+  getAppTagDescription,
+  getAppTagSlug,
+} from "../lib/app-tag-metadata";
+import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
-import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
+import { ChevronLeft } from "lucide-react";
 
 const ButtonLink = createLink(Button);
 const LinkLink = createLink(Link);
 const INITIAL_SECTION_LISTING_COUNT = 6;
 
-export const Route = createFileRoute("/protocol/tags")({
+export const Route = createFileRoute("/_header-layout/apps/tags")({
   loader: ({ context }) =>
     context.queryClient.ensureQueryData(
-      directoryListingApi.getProtocolCategoriesQueryOptions,
+      directoryListingApi.getAppsByTagQueryOptions,
     ),
-  component: ProtocolTagsPage,
+  component: AppsAllPage,
 });
 
 const styles = stylex.create({
@@ -55,6 +60,10 @@ const styles = stylex.create({
   },
   navLinks: {
     flexWrap: "wrap",
+  },
+  eyebrow: {
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
   },
   sectionTitle: {
     flexGrow: 1,
@@ -110,105 +119,93 @@ const styles = stylex.create({
     gap: gap["lg"],
     maxWidth: "40rem",
   },
-  pageGap: {
+  gap: {
     gap: 64,
   },
 });
 
-function ProtocolTagsPage() {
+function AppsAllPage() {
   const { data: groups } = useSuspenseQuery(
-    directoryListingApi.getProtocolCategoriesQueryOptions,
+    directoryListingApi.getAppsByTagQueryOptions,
   );
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
+    <HeaderLayout.Page>
         <Page.Root variant="large" style={styles.page}>
-          <Flex direction="column" style={styles.pageGap}>
+          <Flex direction="column" style={styles.gap}>
             <Flex direction="column" gap="4xl">
               <Flex gap="xl" justify="between" style={styles.navLinks}>
                 <LinkLink to="/">
                   <ChevronLeft />
                   Home
                 </LinkLink>
-                <LinkLink to="/protocol/listings">All tools</LinkLink>
+
+                <LinkLink to="/apps/all">All apps</LinkLink>
               </Flex>
 
               <AppTagHero
-                description="Browse protocol listings by top-level category — PDS, AppView, and other infrastructure."
-                eyebrow="Protocol categories"
-                imageSrc={getProtocolPageHeroArtSpec("tags")?.assetPath}
-                title="Explore the stack"
+                eyebrow="Collections"
+                title="Find your new favorite app"
+                description="Explore cross-cutting app tags like analytics, moderation, and automation. Listings can appear in more than one group when they fit multiple workflows."
+                imageSrc={getAppTagHeroArtSpec("all")?.assetPath}
               />
             </Flex>
 
             {groups.length > 0 ? (
-              <Flex direction="column" style={styles.pageGap}>
+              <Flex direction="column" style={styles.gap}>
                 {groups.map((group) => (
-                  <ProtocolCategorySection
-                    key={group.categoryId}
-                    group={group}
-                  />
+                  <AppTagSection key={group.tag} group={group} />
                 ))}
               </Flex>
             ) : (
               <Flex direction="column" style={styles.emptyState}>
                 <Body variant="secondary">
-                  No protocol listings are available yet.
+                  No tagged app listings are available yet.
                 </Body>
               </Flex>
             )}
           </Flex>
         </Page.Root>
       </HeaderLayout.Page>
-    </HeaderLayout.Root>
   );
 }
 
-function ProtocolCategorySection({
-  group,
-}: {
-  group: DirectoryProtocolCategoryGroup;
-}) {
+function AppTagSection({ group }: { group: DirectoryAppTagGroup }) {
   const visibleListings = group.listings.slice(
     0,
     INITIAL_SECTION_LISTING_COUNT,
   );
 
-  const description =
-    group.description.trim() ||
-    getProtocolCategoryDescription(group.categoryId);
-
   return (
     <Flex direction="column" gap="2xl">
       <Flex direction="column" gap="4xl" style={styles.sectionHeader}>
-        <Flex align="center" gap="2xl" justify="between">
+        <Flex justify="between" align="center" gap="2xl">
           <Flex direction="column" gap="2xl" style={styles.sectionTitle}>
             <Text size="sm" style={styles.sectionEyebrow}>
-              {formatProtocolListingCount(group.count)}
+              {formatAppTagCount(group.count)}
             </Text>
             <Text size="3xl" weight="semibold">
-              {group.label}
+              {formatAppTagLabel(group.tag)}
             </Text>
           </Flex>
           <ButtonLink
-            params={{ category: group.segment }}
+            to="/apps/$tag"
+            params={{ tag: getAppTagSlug(group.tag) }}
             size="lg"
-            to="/protocol/$category"
             variant="secondary"
           >
             View all
           </ButtonLink>
         </Flex>
         <Body variant="secondary" style={styles.sectionDescription}>
-          {description}
+          {getAppTagDescription(group.tag)}
         </Body>
       </Flex>
 
       <Grid style={styles.listingGrid}>
         {visibleListings.map((listing) => (
-          <ProtocolListingCard
-            key={`${group.categoryId}-${listing.id}`}
+          <AppTagListingCard
+            key={`${group.tag}-${listing.id}`}
             listing={listing}
           />
         ))}
@@ -217,16 +214,16 @@ function ProtocolCategorySection({
   );
 }
 
-function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
+function AppTagListingCard({ listing }: { listing: DirectoryListingCard }) {
   return (
     <RouterLink
-      params={{ productId: getDirectoryListingSlug(listing) }}
       to="/products/$productId"
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.listingLink)}
     >
       <Card style={styles.listingCard}>
         <Flex direction="column" style={styles.listingCardBody}>
-          <Flex align="center" gap="2xl" style={styles.listingHeader}>
+          <Flex gap="2xl" align="center" style={styles.listingHeader}>
             <Avatar
               alt={listing.name}
               fallback={getInitials(listing.name)}
@@ -244,7 +241,7 @@ function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
             {listing.tagline}
           </Body>
           <div />
-          <Flex gap="xl" justify="between" style={styles.listingFooter}>
+          <Flex justify="between" gap="xl" style={styles.listingFooter}>
             <Text size="sm" weight="semibold">
               {listing.rating.toFixed(1)} rating
             </Text>
@@ -254,10 +251,6 @@ function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
       </Card>
     </RouterLink>
   );
-}
-
-function formatProtocolListingCount(count: number) {
-  return `${count} ${count === 1 ? "listing" : "listings"}`;
 }
 
 function getInitials(name: string) {

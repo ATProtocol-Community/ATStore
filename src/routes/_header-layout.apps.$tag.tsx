@@ -8,9 +8,9 @@ import {
 } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 
+import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
-import { ProtocolCategoryCard } from "../components/ProtocolCategoryCard";
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
@@ -22,6 +22,7 @@ import { blue } from "../design-system/theme/colors/blue.stylex";
 import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
@@ -35,20 +36,23 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import {
   directoryListingApi,
+  type DirectoryAppTagGroup,
   type DirectoryListingCard,
-  type DirectoryProtocolCategoryGroup,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import {
+  formatAppTagCount,
+  formatAppTagLabel,
+  getAppTagDescription,
+} from "../lib/app-tag-metadata";
+import { getAppTagHeroAssetPathForTag } from "../lib/app-tag-hero-art";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { getProtocolCategoryCoverAssetPathForSegment } from "../lib/protocol-category-hero-art";
-import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
 import { StarRating } from "#/design-system/star-rating";
-import { uiColor } from "../design-system/theme/color.stylex";
 
-export const Route = createFileRoute("/protocol/$category")({
+export const Route = createFileRoute("/_header-layout/apps/$tag")({
   loader: async ({ context, params }) => {
     const data = await context.queryClient.ensureQueryData(
-      directoryListingApi.getProtocolCategoryPageQueryOptions({
-        category: params.category,
+      directoryListingApi.getAppsByTagPageQueryOptions({
+        tag: params.tag,
       }),
     );
 
@@ -58,7 +62,7 @@ export const Route = createFileRoute("/protocol/$category")({
 
     return params;
   },
-  component: ProtocolCategoryPage,
+  component: AppsTagPage,
 });
 
 const LinkLink = createLink(Link);
@@ -84,6 +88,9 @@ const styles = stylex.create({
     right: -48,
     top: -48,
   },
+  listingTagline: {
+    flexGrow: 1,
+  },
   page: {
     paddingBottom: verticalSpace["10xl"],
     paddingTop: verticalSpace["6xl"],
@@ -100,6 +107,7 @@ const styles = stylex.create({
     height: "100%",
     width: "100%",
     boxSizing: "border-box",
+    // minHeight: "15rem",
   },
   listingCardFeatured: {
     borderRadius: radius["3xl"],
@@ -110,6 +118,10 @@ const styles = stylex.create({
     overflow: "hidden",
     position: "relative",
     boxShadow: shadow["2xl"],
+    // minHeight: {
+    //   default: "20rem",
+    //   [breakpoints.sm]: "32rem",
+    // },
   },
   listingCardBody: {
     gap: gap["4xl"],
@@ -142,12 +154,24 @@ const styles = stylex.create({
     paddingTop: verticalSpace["4xl"],
     paddingBottom: verticalSpace["4xl"],
   },
+  listingInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
   featuredImageFrame: {
     height: "100%",
     inset: 0,
     objectFit: "cover",
     position: "absolute",
     width: "100%",
+  },
+  accentOverlay: {
+    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 12%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent) 46%, color-mix(in srgb, ${uiColor.overlayBackdrop} 100%, transparent) 100%)`,
+    inset: 0,
+    position: "absolute",
+  },
+  heroOverlay: {
+    background: `linear-gradient(90deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 88%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 78%, transparent) 34%, color-mix(in srgb, ${uiColor.overlayBackdrop} 38%, transparent) 68%, color-mix(in srgb, ${uiColor.overlayBackdrop} 16%, transparent) 100%), linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 20%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 18%, transparent) 32%, color-mix(in srgb, ${uiColor.overlayBackdrop} 96%, transparent) 100%)`,
   },
   ambientGlow: {
     filter: "blur(12px)",
@@ -208,15 +232,8 @@ const styles = stylex.create({
     position: "relative",
     zIndex: 1,
   },
-  listingInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
   listingFooter: {
     alignItems: "center",
-  },
-  listingTagline: {
-    flexGrow: 1,
   },
   blueSurface: {
     backgroundImage: `linear-gradient(135deg, ${blue.solid1} 0%, ${blue.solid2} 45%, ${blue.border3} 100%)`,
@@ -246,6 +263,22 @@ const styles = stylex.create({
   greenGlow: {
     backgroundImage: `radial-gradient(circle, ${green.component3}, transparent 70%)`,
   },
+  softBlueSurface: {
+    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
+    borderColor: blue.border1,
+  },
+  softPinkSurface: {
+    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
+    borderColor: pink.border1,
+  },
+  softPurpleSurface: {
+    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
+    borderColor: purple.border1,
+  },
+  softGreenSurface: {
+    backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
+    borderColor: green.border1,
+  },
   relatedSection: {
     gap: gap["5xl"],
   },
@@ -264,102 +297,109 @@ const styles = stylex.create({
       [breakpoints.md]: "repeat(4, minmax(0, 1fr))",
     },
   },
+  relatedLink: {
+    borderRadius: radius.xl,
+    borderStyle: "solid",
+    borderWidth: 1,
+    boxShadow: shadow.lg,
+    color: "white",
+    cornerShape: "squircle",
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    justifyContent: "space-between",
+    minHeight: "14rem",
+    paddingBottom: verticalSpace["3xl"],
+    paddingLeft: horizontalSpace["3xl"],
+    paddingRight: horizontalSpace["3xl"],
+    paddingTop: verticalSpace["3xl"],
+    position: "relative",
+    textDecoration: "none",
+    gap: gap["3xl"],
+  },
+  relatedCardBody: {
+    flexGrow: 1,
+  },
+  relatedCount: {
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  },
+  relatedIcon: {
+    alignItems: "center",
+    backdropFilter: "blur(10px)",
+    backgroundColor: `color-mix(in srgb, ${uiColor.component1} 36%, transparent)`,
+    borderColor: `color-mix(in srgb, ${uiColor.border1} 65%, transparent)`,
+    borderRadius: radius.md,
+    borderStyle: "solid",
+    borderWidth: 1,
+    display: "inline-flex",
+    height: "2.5rem",
+    justifyContent: "center",
+    width: "2.5rem",
+  },
+  relatedChevron: {
+    marginLeft: "auto",
+  },
+  spacer: {
+    flex: 1,
+  },
 });
 
-function ProtocolCategoryPage() {
+function AppsTagPage() {
   const params = Route.useLoaderData();
   const { data } = useSuspenseQuery(
-    directoryListingApi.getProtocolCategoryPageQueryOptions({
-      category: params.category,
+    directoryListingApi.getAppsByTagPageQueryOptions({
+      tag: params.tag,
     }),
   );
   const { data: allGroups } = useSuspenseQuery(
-    directoryListingApi.getProtocolCategoriesQueryOptions,
+    directoryListingApi.getAppsByTagQueryOptions,
   );
 
   if (!data) {
     throw notFound();
   }
 
-  const heroImage = getProtocolCategoryCoverAssetPathForSegment(data.segment);
-  const description =
-    data.description.trim() || getProtocolCategoryDescription(data.categoryId);
-  const related = getRelatedProtocolCategories(data, allGroups);
+  const relatedTags = getRelatedAppTagGroups(data, allGroups);
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
+    <HeaderLayout.Page>
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" style={styles.pageContent}>
             <Flex direction="column" gap="4xl">
               <Flex gap="xl" style={styles.navLinks}>
-                <LinkLink to="/protocol/tags">
+                <LinkLink to="/apps/tags">
                   <ChevronLeft />
-                  All protocol categories
+                  All tags
                 </LinkLink>
               </Flex>
 
               <AppTagHero
-                description={description}
-                eyebrow={formatProtocolListingCount(data.count)}
-                imageSrc={heroImage}
-                title={data.label}
+                eyebrow={formatAppTagCount(data.count)}
+                title={formatAppTagLabel(data.tag)}
+                description={getAppTagDescription(data.tag)}
+                imageSrc={getAppTagHeroAssetPathForTag(data.tag)}
               />
             </Flex>
 
             <FeaturedListingGrid
-              getKey={(listing) => `${data.categoryId}-${listing.id}`}
               items={data.listings}
+              getKey={(listing) => `${data.tag}-${listing.id}`}
               renderItem={(listing, { featured }) => (
-                <ProtocolCategoryListingCard
-                  featured={featured}
-                  listing={listing}
-                />
+                <AppTagListingCard featured={featured} listing={listing} />
               )}
             />
 
-            {related.length > 0 ? (
-              <RelatedProtocolSection groups={related} />
+            {relatedTags.length > 0 ? (
+              <RelatedTagsSection groups={relatedTags} />
             ) : null}
           </Flex>
         </Page.Root>
       </HeaderLayout.Page>
-    </HeaderLayout.Root>
   );
 }
 
-function RelatedProtocolSection({
-  groups,
-}: {
-  groups: DirectoryProtocolCategoryGroup[];
-}) {
-  return (
-    <Flex direction="column" gap="4xl" style={styles.relatedSection}>
-      <Flex direction="column" gap="4xl" style={styles.relatedHeader}>
-        <Text size="3xl" weight="semibold">
-          More protocol categories
-        </Text>
-        <Body variant="secondary" style={styles.relatedDescription}>
-          Explore neighboring infrastructure categories in the directory.
-        </Body>
-      </Flex>
-      <Grid style={styles.relatedGrid}>
-        {groups.map((group) => (
-          <ProtocolCategoryCard
-            key={group.categoryId}
-            category={{
-              count: group.count,
-              label: group.label,
-              segment: group.segment,
-            }}
-          />
-        ))}
-      </Grid>
-    </Flex>
-  );
-}
-
-function ProtocolCategoryListingCard({
+function AppTagListingCard({
   listing,
   featured = false,
 }: {
@@ -368,8 +408,8 @@ function ProtocolCategoryListingCard({
 }) {
   return (
     <RouterLink
-      params={{ productId: getDirectoryListingSlug(listing) }}
       to="/products/$productId"
+      params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.listingLink)}
     >
       <Card
@@ -381,9 +421,9 @@ function ProtocolCategoryListingCard({
       >
         {featured && listing.imageUrl ? (
           <img
+            src={listing.imageUrl}
             alt=""
             aria-hidden="true"
-            src={listing.imageUrl}
             {...stylex.props(styles.featuredImageFrame)}
           />
         ) : null}
@@ -406,35 +446,28 @@ function ProtocolCategoryListingCard({
             <></>
           ) : (
             <>
-              <Flex align="center" gap="2xl" style={styles.listingHeader}>
+              <Flex gap="2xl" align="center" style={styles.listingHeader}>
                 <Avatar
                   alt={listing.name}
                   fallback={getInitials(listing.name)}
                   size="xl"
                   src={listing.iconUrl || undefined}
                 />
-                <Flex direction="column" gap="md" style={styles.listingInfo}>
-                  <Text
-                    font="title"
-                    size={{ default: "lg", sm: "xl" }}
-                    weight="semibold"
-                  >
+                <Flex direction="column" gap="xl" style={styles.listingInfo}>
+                  <Text size="xl" weight="semibold">
                     {listing.name}
                   </Text>
-                  <SmallBody variant="secondary">{listing.category}</SmallBody>
+                  <Flex align="center" gap="lg">
+                    <SmallBody variant="secondary">
+                      {listing.rating.toFixed(1)}
+                    </SmallBody>
+                    <StarRating rating={listing.rating} />
+                  </Flex>
                 </Flex>
               </Flex>
               <Body variant="secondary" style={styles.listingTagline}>
                 {listing.tagline}
               </Body>
-              <div />
-              <Flex gap="xl" justify="between" style={styles.listingFooter}>
-                <Text size="sm" weight="semibold">
-                  {listing.rating.toFixed(1)} rating
-                </Text>
-                <StarRating rating={listing.rating} />
-                <Text weight="semibold">{listing.priceLabel}</Text>
-              </Flex>
             </>
           )}
         </Flex>
@@ -443,41 +476,25 @@ function ProtocolCategoryListingCard({
   );
 }
 
-function formatProtocolListingCount(count: number) {
-  return `${count} ${count === 1 ? "listing" : "listings"}`;
-}
-
-function getRelatedProtocolCategories(
-  current: DirectoryProtocolCategoryGroup,
-  groups: DirectoryProtocolCategoryGroup[],
-) {
-  const currentListingIds = new Set(
-    current.listings.map((listing) => listing.id),
+function RelatedTagsSection({ groups }: { groups: DirectoryAppTagGroup[] }) {
+  return (
+    <Flex direction="column" style={styles.relatedSection}>
+      <Flex direction="column" gap="4xl" style={styles.relatedHeader}>
+        <Text size="3xl" weight="semibold">
+          Related tags to explore
+        </Text>
+        <Body variant="secondary" style={styles.relatedDescription}>
+          Explore adjacent workflows and neighboring collections that share apps
+          with this tag.
+        </Body>
+      </Flex>
+      <Grid style={styles.relatedGrid}>
+        {groups.map((group) => (
+          <AppTagCard key={group.tag} tag={group} />
+        ))}
+      </Grid>
+    </Flex>
   );
-
-  return groups
-    .filter((group) => group.categoryId !== current.categoryId)
-    .sort((left, right) => {
-      const leftOverlap = left.listings.reduce(
-        (count, listing) => count + Number(currentListingIds.has(listing.id)),
-        0,
-      );
-      const rightOverlap = right.listings.reduce(
-        (count, listing) => count + Number(currentListingIds.has(listing.id)),
-        0,
-      );
-
-      if (rightOverlap !== leftOverlap) {
-        return rightOverlap - leftOverlap;
-      }
-
-      if (right.count !== left.count) {
-        return right.count - left.count;
-      }
-
-      return left.label.localeCompare(right.label);
-    })
-    .slice(0, 4);
 }
 
 function getInitials(name: string) {
@@ -502,4 +519,37 @@ function getAccentGlow(accent: DirectoryListingCard["accent"]) {
   if (accent === "green") return styles.greenGlow;
 
   return styles.blueGlow;
+}
+
+function getRelatedAppTagGroups(
+  currentGroup: DirectoryAppTagGroup,
+  groups: DirectoryAppTagGroup[],
+) {
+  const currentListingIds = new Set(
+    currentGroup.listings.map((listing) => listing.id),
+  );
+
+  return groups
+    .filter((group) => group.tag !== currentGroup.tag)
+    .sort((left, right) => {
+      const leftOverlap = left.listings.reduce(
+        (count, listing) => count + Number(currentListingIds.has(listing.id)),
+        0,
+      );
+      const rightOverlap = right.listings.reduce(
+        (count, listing) => count + Number(currentListingIds.has(listing.id)),
+        0,
+      );
+
+      if (rightOverlap !== leftOverlap) {
+        return rightOverlap - leftOverlap;
+      }
+
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+
+      return left.tag.localeCompare(right.tag);
+    })
+    .slice(0, 4);
 }

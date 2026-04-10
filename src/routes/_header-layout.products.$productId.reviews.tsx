@@ -33,7 +33,9 @@ import {
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
 
-export const Route = createFileRoute("/products/$productId/reviews")({
+export const Route = createFileRoute(
+  "/_header-layout/products/$productId/reviews",
+)({
   loader: async ({ context, params }) => {
     const legacyListingId = getLegacyDirectoryListingId(params.productId);
     const listing = await context.queryClient.ensureQueryData(
@@ -126,112 +128,108 @@ function ProductReviewsPage() {
   const reviews = getPlaceholderReviews(listing);
 
   return (
-    <HeaderLayout.Root>
-      <HeaderLayout.Page>
-        <Page.Root variant="small" style={styles.page}>
-          <Flex direction="column" gap="7xl">
-            <Flex style={styles.backLinkRow}>
-              <AppLink
-                to="/products/$productId"
-                params={{ productId: productSlug }}
-              >
-                <ChevronLeft />
-                Back to product
-              </AppLink>
-            </Flex>
+    <HeaderLayout.Page>
+      <Page.Root variant="small" style={styles.page}>
+        <Flex direction="column" gap="7xl">
+          <Flex style={styles.backLinkRow}>
+            <AppLink
+              to="/products/$productId"
+              params={{ productId: productSlug }}
+            >
+              <ChevronLeft />
+              Back to product
+            </AppLink>
+          </Flex>
 
-            <Flex gap="2xl" align="center">
-              <Avatar
-                alt={listing.name}
-                fallback={getInitials(listing.name)}
-                size="xl"
-                src={listing.iconUrl || undefined}
-              />
-              <Flex direction="column" gap="2xl">
-                <Text
-                  font="title"
-                  size={{ default: "4xl", sm: "4xl" }}
-                  weight="semibold"
-                >
-                  {listing.name}
-                </Text>
-                <Body>{listing.tagline}</Body>
+          <Flex gap="2xl" align="center">
+            <Avatar
+              alt={listing.name}
+              fallback={getInitials(listing.name)}
+              size="xl"
+              src={listing.iconUrl || undefined}
+            />
+            <Flex direction="column" gap="2xl">
+              <Text
+                font="title"
+                size={{ default: "4xl", sm: "4xl" }}
+                weight="semibold"
+              >
+                {listing.name}
+              </Text>
+              <Body>{listing.tagline}</Body>
+            </Flex>
+          </Flex>
+
+          <Flex direction="column" gap="2xl">
+            <Flex direction="column" gap="4xl">
+              <Flex align="center" gap="2xl" justify="between" wrap>
+                <Flex gap="2xl" align="center" style={styles.headerCopy}>
+                  <Text weight="semibold" size="3xl">
+                    Reviews
+                  </Text>
+                  <Flex gap="md" align="center" style={styles.ratingRow}>
+                    <Flex gap="xs">
+                      <Text weight="semibold">{listing.rating.toFixed(1)}</Text>
+                      <Text size="sm" variant="secondary">
+                        ({reviews.length})
+                      </Text>
+                    </Flex>
+                    <StarRating
+                      rating={listing.rating}
+                      showReviewCount={false}
+                    />
+                  </Flex>
+                </Flex>
+                <Button isDisabled size="lg" variant="secondary">
+                  Create review
+                </Button>
               </Flex>
             </Flex>
 
             <Flex direction="column" gap="2xl">
-              <Flex direction="column" gap="4xl">
-                <Flex align="center" gap="2xl" justify="between" wrap>
-                  <Flex gap="2xl" align="center" style={styles.headerCopy}>
-                    <Text weight="semibold" size="3xl">
-                      Reviews
-                    </Text>
-                    <Flex gap="md" align="center" style={styles.ratingRow}>
-                      <Flex gap="xs">
-                        <Text weight="semibold">
-                          {listing.rating.toFixed(1)}
-                        </Text>
+              {reviews.map((review) => (
+                <Card
+                  key={`${listing.id}-review-page-${review.author}`}
+                  style={styles.reviewCard}
+                >
+                  <Flex direction="column" style={styles.reviewCardBody}>
+                    <Flex gap="2xl" style={styles.reviewHeader}>
+                      <Avatar
+                        alt={review.author}
+                        fallback={getInitials(review.author)}
+                        size="lg"
+                      />
+                      <Flex
+                        direction="column"
+                        gap="lg"
+                        style={styles.reviewAuthor}
+                      >
+                        <Text weight="semibold">{review.author}</Text>
                         <Text size="sm" variant="secondary">
-                          ({reviews.length})
+                          {review.role}
                         </Text>
                       </Flex>
                       <StarRating
-                        rating={listing.rating}
+                        rating={review.rating}
                         showReviewCount={false}
                       />
                     </Flex>
+                    <Body style={styles.reviewQuote}>{review.quote}</Body>
+                    <Text
+                      size="sm"
+                      variant="secondary"
+                      style={styles.reviewMeta}
+                    >
+                      {review.context}
+                    </Text>
                   </Flex>
-                  <Button isDisabled size="lg" variant="secondary">
-                    Create review
-                  </Button>
-                </Flex>
-              </Flex>
-
-              <Flex direction="column" gap="2xl">
-                {reviews.map((review) => (
-                  <Card
-                    key={`${listing.id}-review-page-${review.author}`}
-                    style={styles.reviewCard}
-                  >
-                    <Flex direction="column" style={styles.reviewCardBody}>
-                      <Flex gap="2xl" style={styles.reviewHeader}>
-                        <Avatar
-                          alt={review.author}
-                          fallback={getInitials(review.author)}
-                          size="lg"
-                        />
-                        <Flex
-                          direction="column"
-                          gap="lg"
-                          style={styles.reviewAuthor}
-                        >
-                          <Text weight="semibold">{review.author}</Text>
-                          <Text size="sm" variant="secondary">
-                            {review.role}
-                          </Text>
-                        </Flex>
-                        <StarRating
-                          rating={review.rating}
-                          showReviewCount={false}
-                        />
-                      </Flex>
-                      <Body style={styles.reviewQuote}>{review.quote}</Body>
-                      <Text
-                        size="sm"
-                        variant="secondary"
-                        style={styles.reviewMeta}
-                      >
-                        {review.context}
-                      </Text>
-                    </Flex>
-                  </Card>
-                ))}
-              </Flex>
+                </Card>
+              ))}
             </Flex>
           </Flex>
-        </Page.Root>
-      </HeaderLayout.Page>
-    </HeaderLayout.Root>
+        </Flex>
+      </Page.Root>
+    </HeaderLayout.Page>
   );
 }
 
