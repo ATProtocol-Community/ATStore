@@ -27,7 +27,20 @@ export async function resolveUrlToImageBytes(
 ): Promise<{ bytes: Uint8Array; mimeType: string }> {
   const raw = url.trim()
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
-    const res = await fetch(raw)
+    let res = await fetch(raw)
+    // Legacy bug: `blobLikeToBskyCdnUrl` used `mime.split('/').pop()` → `@xml` for some types;
+    // CDN 404s but the same blob often works with a raster suffix.
+    if (
+      !res.ok &&
+      res.status === 404 &&
+      raw.includes('cdn.bsky.app') &&
+      /@xml(?:\?|$)/.test(raw)
+    ) {
+      const alt = raw.replace(/@xml(\?|$)/, '@jpeg$1')
+      if (alt !== raw) {
+        res = await fetch(alt)
+      }
+    }
     if (!res.ok) {
       throw new Error(`fetch ${raw}: ${res.status}`)
     }

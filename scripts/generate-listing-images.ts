@@ -6,10 +6,15 @@ import path from "node:path"
 import { createHash } from "node:crypto"
 
 import { desc, eq } from "drizzle-orm"
-import { chromium } from "playwright"
-
 import { db, dbClient } from "../src/db/index.server"
 import { storeListings } from "../src/db/schema"
+import { geminiFlashGenerateImageFromPromptAndImage } from "../src/lib/gemini-flash-image-gen"
+import { buildIconPolishFromSiteAssetPrompt } from "../src/lib/listing-icon-prompts"
+import { captureListingPageScreenshotForGeneration } from "../src/lib/listing-page-screenshot"
+import {
+  discoverSiteBrandIconAsset,
+  rasterizeBrandIconForGeminiInput,
+} from "../src/lib/site-brand-icon"
 
 const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview" as const
 const PAGE_SCREENSHOT_DIR = path.resolve(
@@ -20,19 +25,20 @@ const GENERATED_IMAGE_DIR = path.resolve(
   process.cwd(),
   "public/generated/listings",
 )
+const GENERATED_ICON_DIR = path.resolve(
+  process.cwd(),
+  "public/generated/listing-icons",
+)
 const IMAGE_REQUEST_TIMEOUT_MS = 60_000
 const IMAGE_REQUEST_MAX_ATTEMPTS = 2
-const VIEWPORT = {
-  width: 1440,
-  height: 960,
-} as const
-
 type CandidateListing = {
   id: string
+  slug: string
   name: string
   assetBaseName: string
   sourceUrl: string
   externalUrl: string | null
+  iconUrl: string | null
   screenshotUrls: string[]
   tagline: string | null
   fullDescription: string | null
@@ -61,6 +67,7 @@ type ScriptArgs = {
   concurrency: number
   dryRun: boolean
   force: boolean
+  icon: boolean
   limit: number | null
   id: string | null
   input: string | null
@@ -94,6 +101,7 @@ function parseArgs(argv: string[]): ScriptArgs {
     concurrency: 4,
     dryRun: false,
     force: false,
+    icon: false,
     limit: null,
     id: null,
     input: null,
@@ -112,6 +120,10 @@ function parseArgs(argv: string[]): ScriptArgs {
     }
     if (arg === "--force") {
       out.force = true
+      continue
+    }
+    if (arg === "--icon") {
+      out.icon = true
       continue
     }
     if (arg === "--concurrency" || arg === "-c") {
@@ -154,6 +166,7 @@ Usage: npm run generate:listing-images -- [options]
 Options:
       --dry-run       Capture screenshots and generate files, but do not update store_listings
       --force         Reprocess even if a generated marketing image already exists
+      --icon          Build listing icons: prefer site /logo paths, manifest, link icons, then favicon (upscaled); otherwise Gemini from a page screenshot
   -c, --concurrency <n> Run up to n listings in parallel (default: 4)
   -l, --limit <n>     Process at most n listings
       --id <listing>  Process a single listing id
@@ -178,6 +191,10 @@ function getListingUrl(listing: CandidateListing): string | null {
 
 function isGeneratedImageUrl(url: string): boolean {
   return url.startsWith("/generated/listings/")
+}
+
+function isGeneratedIconUrl(url: string): boolean {
+  return url.startsWith("/generated/listing-icons/")
 }
 
 async function findExistingGeneratedImageUrl(
@@ -208,6 +225,22 @@ async function findExistingGeneratedImageUrl(
   }
 
   return null
+}
+
+async function findExistingGeneratedIconUrl(
+  listing: CandidateListing,
+): Promise<string | null> {
+  const raw = listing.iconUrl?.trim()
+  if (!raw || !isGeneratedIconUrl(raw)) {
+    return null
+  }
+  const filePath = path.resolve(process.cwd(), "public", raw.replace(/^\//, ""))
+  try {
+    await stat(filePath)
+    return raw
+  } catch {
+    return null
+  }
 }
 
 function getContentHash(input: string): string {
@@ -317,16 +350,18 @@ function buildMarketingPrompt(listing: CandidateListing, pageUrl: string): strin
 Goals:
 - Preserve the brand feeling, palette, and product category suggested by the screenshot.
 - Produce a clean, aspirational hero image suitable for an app directory card or product detail page.
-- Show a plausible product UI or marketing composition inspired by the screenshot, but improve clarity and composition.
+- Show a plausible marketing composition inspired by the screenshot; improve clarity and composition. Illustrative **mock product UI** (windows, panels, toolbars, in-app controls) is fine—read as the **product**, not a marketing funnel.
+- If the reference is dominated by CTAs, signup strips, or "Get started"-style conversion blocks, do not recreate that focal layout—borrow palette and mood only.
 - Keep it realistic and product-focused, not abstract art.
 - If the listing is dev focused and doesnt have much branding to work with, use this fallback style:
   - Style: bright, colorful, playful, polished, editorial, and high-end product marketing art.
   - Use soft 3D gradients, glossy lighting, rounded cards, translucent glass layers, luminous highlights, subtle depth, and a sense of motion and delight.
   - Composition: wide 16:9 banner with richer decorative energy.
-  - Show layered foreground, midground, and background depth with floating app-like tiles and abstract interface hints.
+  - Show layered foreground, midground, and background depth with abstract shapes and energy—still no marketing CTA text or conversion-style hero strips.
 
 Constraints:
 - No device mockups, browser chrome, cursors, or visible cookie banners.
+- **CTAs only:** Do not use marketing / conversion copy as readable text—e.g. "Get started", "Sign up", "Try it free", "Learn more", "Subscribe", "Download", "Contact sales", "Book a demo". Buttons and controls are **allowed** when they read as **in-product mock UI** (neutral toolbars, editors, settings)—not as the main signup or sales pitch.
 - No watermarks.
 - No tiny unreadable text blocks.
 - Avoid adding extra logos unless they are clearly implied by the source.
@@ -336,44 +371,57 @@ Listing metadata:
 ${metadata}`
 }
 
+function buildIconPrompt(listing: CandidateListing, pageUrl: string): string {
+  const metadata = [
+    `Name: ${listing.name}`,
+    `URL: ${pageUrl}`,
+    listing.tagline ? `Tagline: ${listing.tagline}` : null,
+    listing.productType ? `Product type: ${listing.productType}` : null,
+    listing.domain ? `Domain: ${listing.domain}` : null,
+    listing.scope ? `Scope: ${listing.scope}` : null,
+    listing.fullDescription ? `Description: ${listing.fullDescription}` : null,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join("\n")
+
+  return `Create a polished product icon for this software listing using the provided website screenshot as reference.
+
+Format (required):
+- Output must be exactly 1:1 — a square image (equal width and height), not a rectangle or wide banner.
+- Do not add a separate "container" shape: no rounded-square plate, squircle, circle mask, glossy bubble, drop-shadow tile, or fake 3D app icon backing. The brand mark sits directly on a flat fill or transparent background across the full square.
+- Safe padding only as empty margin around the mark — not an extra outlined shape.
+
+Goals:
+- Preserve the brand feeling, palette, and primary visual motif suggested by the screenshot.
+- Produce a crisp standalone mark that reads clearly at small sizes in a software directory.
+- Favor a simple, memorable symbol over a detailed illustration.
+
+Style fallback order:
+- If the site already suggests a clear brand mark or symbol, refine that mark only — still full-bleed square, no extra outer shape.
+- If the site mostly uses a wordmark, extract one simple motif or monogram that still feels native to the brand.
+- If the brand is weak or developer-tooling oriented: soft solid or gradient fill across the entire square (no inner rounded card), one centered motif, minimal detail.
+
+Constraints:
+- No browser chrome, screenshots, UI mockups, or website layouts.
+- No tiny text, taglines, or readable words unless a single letter is essential to the brand.
+- Avoid photorealism and avoid generic clip-art.
+- Keep edges clean; readable on light or dark backgrounds.
+
+Listing metadata:
+${metadata}`
+}
+
 async function captureReferenceScreenshot(
   listing: CandidateListing,
   url: string,
 ): Promise<{ buffer: Buffer; filePath: string }> {
-  const browser = await chromium.launch({
-    headless: true,
-  })
+  const buffer = await captureListingPageScreenshotForGeneration(url)
+  const filePath = buildPageScreenshotPath(listing, url)
+  await writeFile(filePath, buffer)
 
-  try {
-    const page = await browser.newPage({
-      viewport: VIEWPORT,
-      deviceScaleFactor: 1,
-    })
-
-    await page.goto(url, {
-      waitUntil: "domcontentloaded",
-      timeout: 30_000,
-    })
-    await page.emulateMedia({ reducedMotion: "reduce" })
-    await page.waitForTimeout(2_500)
-    await page.evaluate(() => {
-      window.scrollTo(0, 0)
-    })
-
-    const buffer = await page.screenshot({
-      type: "png",
-      fullPage: false,
-    })
-
-    const filePath = buildPageScreenshotPath(listing, url)
-    await writeFile(filePath, buffer)
-
-    return {
-      buffer,
-      filePath,
-    }
-  } finally {
-    await browser.close()
+  return {
+    buffer,
+    filePath,
   }
 }
 
@@ -460,6 +508,89 @@ async function generateMarketingImage(
   throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
+async function generateIconImage(
+  screenshot: Buffer,
+  listing: CandidateListing,
+  pageUrl: string,
+): Promise<GeneratedImage> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`
+  let lastError: unknown = null
+
+  for (let attempt = 1; attempt <= IMAGE_REQUEST_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": getGeminiApiKey(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: buildIconPrompt(listing, pageUrl),
+                },
+                {
+                  inlineData: {
+                    mimeType: "image/png",
+                    data: screenshot.toString("base64"),
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseModalities: ["IMAGE"],
+          },
+        }),
+        signal: AbortSignal.timeout(IMAGE_REQUEST_TIMEOUT_MS),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Gemini image request failed: ${await response.text()}`)
+      }
+
+      const json = (await response.json()) as {
+        candidates?: Array<{
+          content?: {
+            parts?: Array<{
+              inlineData?: {
+                data?: string
+                mimeType?: string
+              }
+            }>
+          }
+        }>
+      }
+
+      const imagePart = json.candidates?.[0]?.content?.parts?.find(
+        (part) => part.inlineData?.data,
+      )?.inlineData
+
+      if (!imagePart?.data) {
+        throw new Error(`No image data returned by Gemini: ${JSON.stringify(json)}`)
+      }
+
+      return {
+        buffer: Buffer.from(imagePart.data, "base64"),
+        mimeType: imagePart.mimeType ?? "image/png",
+      }
+    } catch (error) {
+      lastError = error
+
+      if (attempt < IMAGE_REQUEST_MAX_ATTEMPTS) {
+        console.warn(
+          `Icon generation attempt ${attempt} failed for ${listing.name}; retrying...`,
+        )
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
 async function saveGeneratedImage(
   listing: CandidateListing,
   image: GeneratedImage,
@@ -485,6 +616,7 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
           slug: storeListings.slug,
           categorySlugs: storeListings.categorySlugs,
           screenshotUrls: storeListings.screenshotUrls,
+          iconUrl: storeListings.iconUrl,
         })
         .from(storeListings)
         .where(eq(storeListings.sourceUrl, row.sourceUrl))
@@ -500,10 +632,12 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
       const hints = taxonomyHintsFromCategorySlugs(match.categorySlugs)
       const candidate: CandidateListing = {
         id: match.id,
+        slug: match.slug,
         name: row.name,
         assetBaseName: `${match.slug}-screenshot`,
         sourceUrl: row.sourceUrl,
         externalUrl: row.externalUrl,
+        iconUrl: match.iconUrl,
         screenshotUrls:
           match.screenshotUrls.length > 0 ? match.screenshotUrls : row.screenshotUrls,
         tagline: row.tagline,
@@ -515,19 +649,26 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
         continue
       }
 
-      const existingGeneratedImageUrl = args.force
-        ? null
-        : await findExistingGeneratedImageUrl(candidate)
-
-      if (existingGeneratedImageUrl) {
-        if (row.screenshotUrls.length > 0) {
+      if (args.icon) {
+        if (!args.force && (await findExistingGeneratedIconUrl(candidate))) {
           continue
         }
-
-        candidate.existingGeneratedImageUrl = existingGeneratedImageUrl
         candidates.push(candidate)
       } else {
-        candidates.push(candidate)
+        const existingGeneratedImageUrl = args.force
+          ? null
+          : await findExistingGeneratedImageUrl(candidate)
+
+        if (existingGeneratedImageUrl) {
+          if (row.screenshotUrls.length > 0) {
+            continue
+          }
+
+          candidate.existingGeneratedImageUrl = existingGeneratedImageUrl
+          candidates.push(candidate)
+        } else {
+          candidates.push(candidate)
+        }
       }
 
       if (candidates.length >= (args.limit ?? Number.POSITIVE_INFINITY)) {
@@ -545,6 +686,7 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
       name: storeListings.name,
       sourceUrl: storeListings.sourceUrl,
       externalUrl: storeListings.externalUrl,
+      iconUrl: storeListings.iconUrl,
       screenshotUrls: storeListings.screenshotUrls,
       tagline: storeListings.tagline,
       fullDescription: storeListings.fullDescription,
@@ -563,10 +705,12 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
     const hints = taxonomyHintsFromCategorySlugs(row.categorySlugs)
     const candidate: CandidateListing = {
       id: row.id,
+      slug: row.slug,
       name: row.name,
       assetBaseName: `${row.slug}-screenshot`,
       sourceUrl: row.sourceUrl,
       externalUrl: row.externalUrl,
+      iconUrl: row.iconUrl,
       screenshotUrls: row.screenshotUrls,
       tagline: row.tagline,
       fullDescription: row.fullDescription,
@@ -577,7 +721,11 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
       continue
     }
 
-    if (!args.force && (await findExistingGeneratedImageUrl(candidate))) {
+    if (args.icon) {
+      if (!args.force && (await findExistingGeneratedIconUrl(candidate))) {
+        continue
+      }
+    } else if (!args.force && (await findExistingGeneratedImageUrl(candidate))) {
       continue
     }
 
@@ -635,6 +783,83 @@ async function processListing(
   console.log(`Updated store_listings hero + screenshot URLs for ${listing.name}.`)
 }
 
+async function processListingIcon(
+  listing: CandidateListing,
+  args: ScriptArgs,
+): Promise<void> {
+  const pageUrl = getListingUrl(listing)
+  if (!pageUrl) {
+    console.log(`Skipping ${listing.name} (${listing.id}) because it has no usable URL.`)
+    return
+  }
+
+  console.log(`Processing icon for ${listing.name} (${listing.id}) -> ${pageUrl}`)
+
+  let image: GeneratedImage
+  const discovered = await discoverSiteBrandIconAsset(pageUrl)
+  if (discovered) {
+    try {
+      console.log(
+        `Discovered site favicon/logo; refining with Gemini for ${listing.name}`,
+      )
+      const pngIn = await rasterizeBrandIconForGeminiInput(
+        discovered.bytes,
+        discovered.contentType,
+      )
+      image = await geminiFlashGenerateImageFromPromptAndImage({
+        prompt: buildIconPolishFromSiteAssetPrompt({
+          name: listing.name,
+          pageUrl,
+          tagline: listing.tagline,
+          productType: listing.productType,
+          domain: listing.domain,
+          scope: listing.scope,
+        }),
+        imageBytes: pngIn,
+        imageMimeType: "image/png",
+      })
+    } catch (error) {
+      console.warn(
+        `Site asset + Gemini failed for ${listing.name}; falling back to page screenshot.`,
+        error,
+      )
+      const { buffer: screenshotBuffer, filePath: screenshotPath } =
+        await captureReferenceScreenshot(listing, pageUrl)
+      console.log(`Saved page screenshot -> ${screenshotPath}`)
+      image = await generateIconImage(screenshotBuffer, listing, pageUrl)
+    }
+  } else {
+    console.log(`No suitable site icon; using Gemini for ${listing.name}`)
+    const { buffer: screenshotBuffer, filePath: screenshotPath } =
+      await captureReferenceScreenshot(listing, pageUrl)
+    console.log(`Saved page screenshot -> ${screenshotPath}`)
+    image = await generateIconImage(screenshotBuffer, listing, pageUrl)
+  }
+
+  const extension = getExtensionFromMimeType(image.mimeType)
+  const fileName = `${listing.slug}-icon${extension}`
+  const absolutePath = path.resolve(GENERATED_ICON_DIR, fileName)
+  await mkdir(GENERATED_ICON_DIR, { recursive: true })
+  await writeFile(absolutePath, image.buffer)
+  const publicPath = `/generated/listing-icons/${fileName}`
+  console.log(`Saved icon -> ${publicPath}`)
+
+  if (args.dryRun) {
+    console.log(`Dry run enabled; leaving database row unchanged for ${listing.name}.`)
+    return
+  }
+
+  await db
+    .update(storeListings)
+    .set({
+      iconUrl: publicPath,
+      updatedAt: new Date(),
+    })
+    .where(eq(storeListings.id, listing.id))
+
+  console.log(`Updated store_listings iconUrl for ${listing.name}.`)
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
   if (args.help) {
@@ -644,14 +869,21 @@ async function main(): Promise<void> {
 
   await mkdir(PAGE_SCREENSHOT_DIR, { recursive: true })
   await mkdir(GENERATED_IMAGE_DIR, { recursive: true })
+  await mkdir(GENERATED_ICON_DIR, { recursive: true })
 
   const candidates = await getCandidateListings(args)
   if (candidates.length === 0) {
-    console.log("No matching listings need image generation.")
+    console.log(
+      args.icon
+        ? "No matching listings need icon generation."
+        : "No matching listings need image generation.",
+    )
     return
   }
 
-  console.log(`Found ${candidates.length} listing(s) to process.`)
+  console.log(
+    `Found ${candidates.length} listing(s) to process${args.icon ? " (icons)" : " (hero images)"}.`,
+  )
   const concurrency = Math.min(args.concurrency, candidates.length)
   let nextIndex = 0
 
@@ -665,7 +897,11 @@ async function main(): Promise<void> {
       }
 
       try {
-        await processListing(listing, args)
+        if (args.icon) {
+          await processListingIcon(listing, args)
+        } else {
+          await processListing(listing, args)
+        }
       } catch (error) {
         console.error(`Failed for ${listing.name} (${listing.id}).`)
         console.error(error)

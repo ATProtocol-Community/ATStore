@@ -397,6 +397,58 @@ const styles = stylex.create({
   devToolbarStatus: {
     minHeight: "1.25rem",
   },
+  imageReviewPanel: {
+    bottom: verticalSpace["4xl"],
+    boxShadow: shadow.lg,
+    left: horizontalSpace["4xl"],
+    maxHeight: "min(70vh, 520px)",
+    maxWidth: "min(40rem, calc(100% - 8rem))",
+    overflow: "auto",
+    position: "fixed",
+    width: "min(40rem, calc(100% - 8rem))",
+    zIndex: 25,
+  },
+  imageReviewCardBody: {
+    gap: gap["2xl"],
+    paddingBottom: verticalSpace["4xl"],
+    paddingLeft: horizontalSpace["4xl"],
+    paddingRight: horizontalSpace["4xl"],
+    paddingTop: verticalSpace["4xl"],
+  },
+  imageReviewHeading: {
+    color: uiColor.text2,
+  },
+  imageReviewFigure: {
+    alignItems: "center",
+    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
+    borderRadius: radius["2xl"],
+    display: "flex",
+    justifyContent: "center",
+    margin: 0,
+    maxHeight: "min(42vh, 360px)",
+    overflow: "hidden",
+    padding: horizontalSpace["2xl"],
+  },
+  imageReviewHeroImg: {
+    borderRadius: radius["xl"],
+    display: "block",
+    height: "auto",
+    maxHeight: "min(40vh, 340px)",
+    maxWidth: "100%",
+    objectFit: "contain",
+  },
+  imageReviewIconImg: {
+    borderRadius: radius["2xl"],
+    display: "block",
+    height: "auto",
+    maxHeight: 192,
+    maxWidth: 192,
+    objectFit: "contain",
+  },
+  imageReviewActions: {
+    gap: gap["2xl"],
+    justifyContent: "flex-end",
+  },
 });
 
 function ProductPage() {
@@ -425,12 +477,80 @@ function ProductPage() {
   const [pendingGeneration, setPendingGeneration] = useState<
     null | "hero" | "icon" | "tagline" | "description"
   >(null);
+  const [pendingImageCommit, setPendingImageCommit] = useState(false);
+  const [imageReviewDraft, setImageReviewDraft] = useState<null | {
+    kind: "hero" | "icon";
+    mimeType: string;
+    imageBase64: string;
+    /** Icon preview only: discovered on site vs Gemini */
+    previewSource?: "site_asset" | "model";
+  }>(null);
   const [toolbarStatus, setToolbarStatus] = useState<{
     tone: "neutral" | "critical";
     text: string;
   } | null>(null);
 
   const listingId = listing.id;
+
+  function dismissImageReview() {
+    setImageReviewDraft(null);
+    setToolbarStatus(null);
+  }
+
+  async function commitImageReview() {
+    if (!imageReviewDraft) {
+      return;
+    }
+    setPendingImageCommit(true);
+    setToolbarStatus(null);
+    try {
+      const { kind, mimeType, imageBase64 } = imageReviewDraft;
+      if (kind === "hero") {
+        await directoryListingApi.commitDirectoryListingHeroImage({
+          data: {
+            id: listingId,
+            mimeType,
+            imageBase64,
+          },
+        });
+        setToolbarStatus({
+          tone: "neutral",
+          text: "Published the new hero image to the listing record.",
+        });
+      } else {
+        await directoryListingApi.commitDirectoryListingIcon({
+          data: {
+            id: listingId,
+            mimeType,
+            imageBase64,
+          },
+        });
+        setToolbarStatus({
+          tone: "neutral",
+          text: "Published the new icon to the listing record.",
+        });
+      }
+      setImageReviewDraft(null);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: detailQueryOptions.queryKey,
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: relatedQueryOptions.queryKey,
+          exact: true,
+        }),
+        router.invalidate(),
+      ]);
+    } catch (error) {
+      setToolbarStatus({
+        tone: "critical",
+        text: error instanceof Error ? error.message : "Publish failed.",
+      });
+    } finally {
+      setPendingImageCommit(false);
+    }
+  }
 
   async function runGeneration(
     action: "hero" | "icon" | "tagline" | "description",
@@ -440,24 +560,39 @@ function ProductPage() {
 
     try {
       if (action === "hero") {
-        await directoryListingApi.regenerateDirectoryListingHeroImage({
-          data: {
-            id: listingId,
-          },
+        const preview =
+          await directoryListingApi.previewDirectoryListingHeroImage({
+            data: {
+              id: listingId,
+            },
+          });
+        setImageReviewDraft({
+          kind: "hero",
+          mimeType: preview.mimeType,
+          imageBase64: preview.imageBase64,
         });
         setToolbarStatus({
           tone: "neutral",
-          text: "Generated a new hero image from the site homepage.",
+          text: "Review the hero preview below, then accept or discard.",
         });
       } else if (action === "icon") {
-        await directoryListingApi.regenerateDirectoryListingIcon({
+        const preview = await directoryListingApi.previewDirectoryListingIcon({
           data: {
             id: listingId,
           },
         });
+        setImageReviewDraft({
+          kind: "icon",
+          mimeType: preview.mimeType,
+          imageBase64: preview.imageBase64,
+          previewSource: preview.previewSource,
+        });
         setToolbarStatus({
           tone: "neutral",
-          text: "Generated a new icon from the site homepage.",
+          text:
+            preview.previewSource === "site_asset"
+              ? "Preview from site favicon/logo, refined with Gemini. Accept or discard."
+              : "Review the generated icon below, then accept or discard.",
         });
       } else if (action === "tagline") {
         const result =
@@ -632,6 +767,60 @@ function ProductPage() {
             <RelatedProductsSection listings={relatedProducts} />
           ) : null}
         </Flex>
+        {import.meta.env.DEV && imageReviewDraft ? (
+          <Card style={styles.imageReviewPanel}>
+            <Flex direction="column" style={styles.imageReviewCardBody}>
+              <Text
+                size="sm"
+                weight="semibold"
+                style={styles.imageReviewHeading}
+              >
+                {imageReviewDraft.kind === "hero"
+                  ? "Review new hero image"
+                  : "Review new icon"}
+              </Text>
+              {imageReviewDraft.kind === "icon" &&
+              imageReviewDraft.previewSource ? (
+                <Text size="sm" variant="secondary">
+                  {imageReviewDraft.previewSource === "site_asset"
+                    ? "Sourced from site favicon or logo asset, then refined with Gemini."
+                    : "Generated from a homepage screenshot."}
+                </Text>
+              ) : null}
+              <figure {...stylex.props(styles.imageReviewFigure)}>
+                <img
+                  alt={
+                    imageReviewDraft.kind === "hero"
+                      ? "Generated hero preview"
+                      : "Generated icon preview"
+                  }
+                  src={`data:${imageReviewDraft.mimeType};base64,${imageReviewDraft.imageBase64}`}
+                  {...stylex.props(
+                    imageReviewDraft.kind === "hero"
+                      ? styles.imageReviewHeroImg
+                      : styles.imageReviewIconImg,
+                  )}
+                />
+              </figure>
+              <Flex style={styles.imageReviewActions}>
+                <Button
+                  variant="secondary"
+                  isDisabled={pendingImageCommit}
+                  onPress={dismissImageReview}
+                >
+                  Discard
+                </Button>
+                <Button
+                  isPending={pendingImageCommit}
+                  isDisabled={pendingImageCommit}
+                  onPress={() => void commitImageReview()}
+                >
+                  Publish to listing
+                </Button>
+              </Flex>
+            </Flex>
+          </Card>
+        ) : null}
         {import.meta.env.DEV ? (
           <Card style={styles.devToolbar}>
             <Flex direction="column" style={styles.devToolbarBody}>
@@ -642,7 +831,9 @@ function ProductPage() {
                 <Button
                   variant="secondary"
                   isPending={pendingGeneration === "icon"}
-                  isDisabled={pendingGeneration !== null}
+                  isDisabled={
+                    pendingGeneration !== null || imageReviewDraft !== null
+                  }
                   onPress={() => void runGeneration("icon")}
                 >
                   Generate icon
@@ -650,7 +841,9 @@ function ProductPage() {
                 <Button
                   variant="secondary"
                   isPending={pendingGeneration === "hero"}
-                  isDisabled={pendingGeneration !== null}
+                  isDisabled={
+                    pendingGeneration !== null || imageReviewDraft !== null
+                  }
                   onPress={() => void runGeneration("hero")}
                 >
                   Generate hero image

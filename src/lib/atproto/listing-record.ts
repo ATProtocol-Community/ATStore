@@ -6,6 +6,17 @@ import type { StoreListing } from '#/db/schema'
 import { uploadImageBlob } from '#/lib/atproto/blob-upload'
 import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
 
+async function resolveUrlToImageBytesOrPlaceholder(
+  url: string,
+  placeholderUrl: string,
+): Promise<{ bytes: Uint8Array; mimeType: string }> {
+  try {
+    return await resolveUrlToImageBytes(url)
+  } catch {
+    return await resolveUrlToImageBytes(placeholderUrl)
+  }
+}
+
 const PLACEHOLDER_ICON = 'https://placehold.co/64x64/png'
 
 function normalizeListingCategorySlugs(row: StoreListing): string[] {
@@ -84,12 +95,24 @@ export type ListingDetailDbUrls = {
   screenshotUrls: string[]
 }
 
+/** In-memory image bytes uploaded via `com.atproto.repo.uploadBlob` (no `public/` file). */
+export type ListingDetailInMemoryImage = {
+  bytes: Uint8Array
+  mimeType: string
+}
+
+export type ListingDetailBlobOverrides = {
+  icon?: ListingDetailInMemoryImage
+  heroImage?: ListingDetailInMemoryImage
+}
+
 /**
  * Build a lexicon record with blobs (Kitchen-style uploadBlob) plus the string URLs to store in Postgres for the site.
  */
 export async function buildListingDetailRecordWithBlobs(
   client: Client,
   row: StoreListing,
+  blobOverrides?: ListingDetailBlobOverrides,
 ): Promise<{ record: FyiAtstoreListingDetail; dbUrls: ListingDetailDbUrls }> {
   const externalUrl =
     pickUri(row.externalUrl, row.sourceUrl) ?? 'https://bsky.app'
@@ -113,13 +136,22 @@ export async function buildListingDetailRecordWithBlobs(
   const createdAt = row.createdAt.toISOString()
   const updatedAt = row.updatedAt.toISOString()
 
-  const iconBytes = await resolveUrlToImageBytes(iconUrl)
-  const heroBytes = await resolveUrlToImageBytes(heroUrl)
+  const iconBytes = blobOverrides?.icon
+    ? blobOverrides.icon
+    : await resolveUrlToImageBytesOrPlaceholder(iconUrl, PLACEHOLDER_ICON)
+  const heroBytes = blobOverrides?.heroImage
+    ? blobOverrides.heroImage
+    : await resolveUrlToImageBytesOrPlaceholder(heroUrl, PLACEHOLDER_HERO)
+
   if (!iconBytes.mimeType.startsWith('image/')) {
-    throw new Error(`Icon is not an image: ${iconBytes.mimeType} (${iconUrl})`)
+    throw new Error(
+      `Icon is not an image: ${iconBytes.mimeType} (${blobOverrides?.icon ? 'in-memory' : iconUrl})`,
+    )
   }
   if (!heroBytes.mimeType.startsWith('image/')) {
-    throw new Error(`Hero is not an image: ${heroBytes.mimeType} (${heroUrl})`)
+    throw new Error(
+      `Hero is not an image: ${heroBytes.mimeType} (${blobOverrides?.heroImage ? 'in-memory' : heroUrl})`,
+    )
   }
 
   const icon = await uploadImageBlob(client, iconBytes.bytes, iconBytes.mimeType)
@@ -131,9 +163,13 @@ export async function buildListingDetailRecordWithBlobs(
 
   const screenshots: AtprotoBlob[] = []
   for (const u of screenshotUrls) {
-    const { bytes, mimeType } = await resolveUrlToImageBytes(u)
-    if (!mimeType.startsWith('image/')) continue
-    screenshots.push(await uploadImageBlob(client, bytes, mimeType))
+    try {
+      const { bytes, mimeType } = await resolveUrlToImageBytes(u)
+      if (!mimeType.startsWith('image/')) continue
+      screenshots.push(await uploadImageBlob(client, bytes, mimeType))
+    } catch {
+      /* Stale CDN URL or missing blob — omit screenshot */
+    }
   }
 
   const record: FyiAtstoreListingDetail = {

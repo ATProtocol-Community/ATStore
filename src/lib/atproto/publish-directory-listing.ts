@@ -1,7 +1,10 @@
 import { Client, CredentialManager } from '@atcute/client'
 
 import type { StoreListing } from '#/db/schema'
-import { buildListingDetailRecordWithBlobs } from '#/lib/atproto/listing-record'
+import {
+  buildListingDetailRecordWithBlobs,
+  type ListingDetailBlobOverrides,
+} from '#/lib/atproto/listing-record'
 import {
   createListingDetailRecord,
   putListingDetailRecord,
@@ -42,10 +45,15 @@ function mergeListingRow(
 export async function publishDirectoryListingDetail(
   row: StoreListing,
   patch?: Partial<StoreListing>,
+  blobOverrides?: ListingDetailBlobOverrides,
 ): Promise<{ uri: string }> {
   const { client, repoDid } = await createAtstorePublishClient()
   const merged = mergeListingRow(row, patch)
-  const { record } = await buildListingDetailRecordWithBlobs(client, merged)
+  const { record } = await buildListingDetailRecordWithBlobs(
+    client,
+    merged,
+    blobOverrides,
+  )
   record.updatedAt = new Date().toISOString()
 
   if (row.rkey && row.atUri) {

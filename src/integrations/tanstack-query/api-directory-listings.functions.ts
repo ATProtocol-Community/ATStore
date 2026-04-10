@@ -40,6 +40,13 @@ import {
   publishDirectoryListingDetail,
 } from '#/lib/atproto/publish-directory-listing'
 import { deleteRecord } from '#/lib/atproto/repo-records'
+import { geminiFlashGenerateImageFromPromptAndImage } from '#/lib/gemini-flash-image-gen'
+import { buildIconPolishFromSiteAssetPrompt } from '#/lib/listing-icon-prompts'
+import { captureListingPageScreenshotForGeneration } from '#/lib/listing-page-screenshot'
+import {
+  discoverSiteBrandIconAsset,
+  rasterizeBrandIconForGeminiInput,
+} from '#/lib/site-brand-icon'
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -256,6 +263,18 @@ const deleteDirectoryListingInput = z.object({
 
 const regenerateDirectoryListingContentInput = z.object({
   id: z.string().min(1),
+})
+
+const commitGeneratedListingImageInput = z.object({
+  id: z.string().min(1),
+  mimeType: z
+    .string()
+    .min(1)
+    .max(128)
+    .refine((s) => s.trim().toLowerCase().startsWith('image/'), {
+      message: 'mimeType must be an image/* type',
+    }),
+  imageBase64: z.string().min(1).max(25_000_000),
 })
 
 const updateDirectoryListingAppTagsInput = z.object({
@@ -1039,22 +1058,6 @@ async function getDirectoryListingGenerationCandidate(
   return listing
 }
 
-function slugifyGeneratedAssetName(value: string) {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-
-  return normalized || 'listing'
-}
-
-function getImageExtensionFromMimeType(mimeType: string) {
-  if (mimeType === 'image/jpeg') return '.jpg'
-  if (mimeType === 'image/webp') return '.webp'
-
-  return '.png'
-}
-
 function buildListingGenerationMetadata(
   listing: DirectoryListingGenerationCandidate,
   pageUrl: string,
@@ -1073,40 +1076,6 @@ function buildListingGenerationMetadata(
     .join('\n')
 }
 
-async function captureListingScreenshot(url: string): Promise<Buffer> {
-  const { chromium } = await import(/* @vite-ignore */ 'playwright')
-  const browser = await chromium.launch({
-    headless: true,
-  })
-
-  try {
-    const page = await browser.newPage({
-      viewport: {
-        width: 1440,
-        height: 960,
-      },
-      deviceScaleFactor: 1,
-    })
-
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    })
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.waitForTimeout(2_500)
-    await page.evaluate(() => {
-      window.scrollTo(0, 0)
-    })
-
-    return await page.screenshot({
-      type: 'png',
-      fullPage: false,
-    })
-  } finally {
-    await browser.close()
-  }
-}
-
 function buildMarketingPrompt(
   listing: DirectoryListingGenerationCandidate,
   pageUrl: string,
@@ -1118,20 +1087,24 @@ function buildMarketingPrompt(
 Goals:
 - Preserve the brand feeling, palette, and product category suggested by the screenshot.
 - Produce a clean, aspirational hero image suitable for an app directory card or product detail page.
-- Show a plausible product UI or marketing composition inspired by the screenshot, but improve clarity and composition.
+- Show a plausible marketing composition inspired by the screenshot; improve clarity and composition. Illustrative **mock product UI** (windows, panels, toolbars, in-app controls) is fine—read as the **product**, not a marketing funnel.
+- If the reference is dominated by CTAs, signup strips, or "Get started"-style conversion blocks, do not recreate that focal layout—borrow palette and mood only.
 - Keep it realistic and product-focused, not abstract art.
-- If the listing is dev focused and doesnt have any branding use the following
-  - Style: bright, colorful, playful, polished, editorial, and high-end product marketing art.
-  - Use soft 3D gradients, glossy lighting, rounded cards, translucent glass layers, luminous highlights, subtle depth, and a sense of motion and delight.
-  - Composition: wide 16:9 banner with richer decorative energy.
-  - Show layered foreground, midground, and background depth with floating app-like tiles and abstract interface hints.
-    
+- If the listing doesnt have any branding use the following, otherwise stick as closely as possible the brand feeling, palette, and product category suggested by the screenshot.
+
 Constraints:
 - No device mockups, browser chrome, cursors, or visible cookie banners.
+- **CTAs only:** Do not use marketing / conversion copy as readable text—e.g. "Get started", "Sign up", "Try it free", "Learn more", "Subscribe", "Download", "Contact sales", "Book a demo". Buttons and controls are **allowed** when they read as **in-product mock UI** (neutral toolbars, editors, settings)—not as the main signup or sales pitch.
 - No watermarks.
 - No tiny unreadable text blocks.
 - Avoid adding extra logos unless they are clearly implied by the source.
 - Use a landscape composition that reads well when cropped to a wide card.
+
+Fallback style (DO NOT USE IF THE LISTING HAS BRANDING):
+- Style: bright, colorful, playful, polished, editorial, and high-end product marketing art.
+- Use soft 3D gradients, glossy lighting, rounded cards, translucent glass layers, luminous highlights, subtle depth, and a sense of motion and delight.
+- Composition: wide 16:9 banner with richer decorative energy.
+- Show layered foreground, midground, and background depth with abstract shapes and energy—still no marketing CTA text or conversion-style hero strips.
 
 Listing metadata:
 ${metadata}`
@@ -1143,25 +1116,28 @@ function buildIconPrompt(
 ) {
   const metadata = buildListingGenerationMetadata(listing, pageUrl)
 
-  return `Create a polished square product icon for this software listing using the provided website screenshot as reference.
+  return `Create a polished product icon for this software listing using the provided website screenshot as reference.
+
+Format (required):
+- Output must be exactly 1:1 — a square image (equal width and height), not a rectangle or wide banner.
+- Do not add a separate "container" shape: no rounded-square plate, squircle, circle mask, glossy bubble, drop-shadow tile, or fake 3D app icon backing. The brand mark sits directly on a flat fill or transparent background across the full square.
+- Safe padding only as empty margin around the mark — not an extra outlined shape.
 
 Goals:
 - Preserve the brand feeling, palette, and primary visual motif suggested by the screenshot.
-- Produce a crisp standalone icon that reads clearly at small sizes in a software directory.
-- Favor a simple, memorable mark over a detailed illustration.
-- Keep the result modern, product-focused, and plausible for the brand.
+- Produce a crisp standalone mark that reads clearly at small sizes in a software directory.
+- Favor a simple, memorable symbol over a detailed illustration.
 
 Style fallback order:
-- If the site already suggests a clear brand mark or symbol, refine that into a cleaner square app icon.
-- If the site mostly uses a wordmark, extract one simple motif, monogram, or geometric shape that still feels native to the brand.
-- If the brand is weak or developer-tooling oriented, use a tasteful fallback: bold gradient background, one centered motif, subtle depth, high contrast, and minimal detail.
+- If the site already suggests a clear brand mark or symbol, refine that mark only — still full-bleed square, no extra outer shape.
+- If the site mostly uses a wordmark, extract one simple motif or monogram that still feels native to the brand.
+- If the brand is weak or developer-tooling oriented: soft solid or gradient fill across the entire square (no inner rounded card), one centered motif, minimal detail.
 
 Constraints:
-- Square 1:1 composition with safe padding around the mark.
 - No browser chrome, screenshots, UI mockups, or website layouts.
 - No tiny text, taglines, or readable words unless a single letter is essential to the brand.
 - Avoid photorealism and avoid generic clip-art.
-- Keep edges clean and the silhouette recognizable on light or dark backgrounds.
+- Keep edges clean; readable on light or dark backgrounds.
 
 Listing metadata:
 ${metadata}`
@@ -1171,91 +1147,11 @@ async function generateImageFromScreenshot(input: {
   screenshot: Buffer
   prompt: string
 }): Promise<{ buffer: Buffer; mimeType: string }> {
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? ''
-  if (!apiKey) {
-    throw new Error(
-      'Missing GEMINI_API_KEY or GOOGLE_API_KEY in the environment for image generation.',
-    )
-  }
-
-  const endpoint =
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent'
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'x-goog-api-key': apiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: input.prompt,
-            },
-            {
-              inlineData: {
-                mimeType: 'image/png',
-                data: input.screenshot.toString('base64'),
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseModalities: ['IMAGE'],
-      },
-    }),
+  return geminiFlashGenerateImageFromPromptAndImage({
+    prompt: input.prompt,
+    imageBytes: input.screenshot,
+    imageMimeType: 'image/png',
   })
-
-  if (!response.ok) {
-    throw new Error(`Gemini image request failed: ${await response.text()}`)
-  }
-
-  const json = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{
-          inlineData?: {
-            data?: string
-            mimeType?: string
-          }
-        }>
-      }
-    }>
-  }
-
-  const imagePart = json.candidates?.[0]?.content?.parts?.find(
-    (part) => part.inlineData?.data,
-  )?.inlineData
-
-  if (!imagePart?.data) {
-    throw new Error(`No image data returned by Gemini: ${JSON.stringify(json)}`)
-  }
-
-  return {
-    buffer: Buffer.from(imagePart.data, 'base64'),
-    mimeType: imagePart.mimeType ?? 'image/png',
-  }
-}
-
-async function saveGeneratedListingAsset(
-  listing: DirectoryListingGenerationCandidate,
-  image: { buffer: Buffer; mimeType: string },
-  assetType: 'hero' | 'icon',
-): Promise<string> {
-  const path = await import('node:path')
-  const { mkdir, writeFile } = await import('node:fs/promises')
-  const extension = getImageExtensionFromMimeType(image.mimeType)
-  const fileName = `${slugifyGeneratedAssetName(listing.name)}-${assetType}-${listing.id}${extension}`
-  const outputDirectory = path.resolve(process.cwd(), 'public/generated/listings')
-  const absolutePath = path.resolve(outputDirectory, fileName)
-
-  await mkdir(outputDirectory, { recursive: true })
-  await writeFile(absolutePath, image.buffer)
-
-  return `/generated/listings/${fileName}`
 }
 
 const getHomePageData = createServerFn({ method: 'GET' })
@@ -2152,7 +2048,7 @@ const deleteDirectoryListing = createServerFn({ method: 'POST' })
     }
   })
 
-const regenerateDirectoryListingHeroImage = createServerFn({ method: 'POST' })
+const previewDirectoryListingHeroImage = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
@@ -2165,23 +2061,42 @@ const regenerateDirectoryListingHeroImage = createServerFn({ method: 'POST' })
       throw new Error(`Missing URL for ${listing.name}`)
     }
 
-    const screenshot = await captureListingScreenshot(pageUrl)
+    const screenshot =
+      await captureListingPageScreenshotForGeneration(pageUrl)
     const generatedImage = await generateImageFromScreenshot({
       screenshot,
       prompt: buildMarketingPrompt(listing, pageUrl),
     })
-    const publicPath = await saveGeneratedListingAsset(listing, generatedImage, 'hero')
-    const full = await getFullDirectoryListing(context, data.id)
-
-    await publishDirectoryListingDetail(full, { screenshotUrls: [publicPath] })
 
     return {
       id: data.id,
-      heroImageUrl: publicPath,
+      mimeType: generatedImage.mimeType,
+      imageBase64: generatedImage.buffer.toString('base64'),
     }
   })
 
-const regenerateDirectoryListingIcon = createServerFn({ method: 'POST' })
+const commitDirectoryListingHeroImage = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(commitGeneratedListingImageInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const full = await getFullDirectoryListing(context, data.id)
+    const raw = Buffer.from(data.imageBase64, 'base64')
+    const { uri } = await publishDirectoryListingDetail(full, undefined, {
+      heroImage: {
+        bytes: Uint8Array.from(raw),
+        mimeType: data.mimeType.trim(),
+      },
+    })
+
+    return {
+      id: data.id,
+      listingDetailUri: uri,
+    }
+  })
+
+const previewDirectoryListingIcon = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
@@ -2194,19 +2109,69 @@ const regenerateDirectoryListingIcon = createServerFn({ method: 'POST' })
       throw new Error(`Missing URL for ${listing.name}`)
     }
 
-    const screenshot = await captureListingScreenshot(pageUrl)
+    const discovered = await discoverSiteBrandIconAsset(pageUrl)
+    if (discovered) {
+      try {
+        const pngIn = await rasterizeBrandIconForGeminiInput(
+          discovered.bytes,
+          discovered.contentType,
+        )
+        const polished = await geminiFlashGenerateImageFromPromptAndImage({
+          prompt: buildIconPolishFromSiteAssetPrompt({
+            name: listing.name,
+            pageUrl,
+            tagline: listing.tagline,
+            productType: listing.productType,
+            domain: listing.domain,
+            scope: listing.scope,
+          }),
+          imageBytes: pngIn,
+          imageMimeType: 'image/png',
+        })
+        return {
+          id: data.id,
+          mimeType: polished.mimeType,
+          imageBase64: polished.buffer.toString('base64'),
+          previewSource: 'site_asset' as const,
+        }
+      } catch {
+        /* Raster or Gemini failed — fall back to full-page screenshot */
+      }
+    }
+
+    const screenshot =
+      await captureListingPageScreenshotForGeneration(pageUrl)
     const generatedImage = await generateImageFromScreenshot({
       screenshot,
       prompt: buildIconPrompt(listing, pageUrl),
     })
-    const publicPath = await saveGeneratedListingAsset(listing, generatedImage, 'icon')
-    const full = await getFullDirectoryListing(context, data.id)
-
-    await publishDirectoryListingDetail(full, { iconUrl: publicPath })
 
     return {
       id: data.id,
-      iconUrl: publicPath,
+      mimeType: generatedImage.mimeType,
+      imageBase64: generatedImage.buffer.toString('base64'),
+      previewSource: 'model' as const,
+    }
+  })
+
+const commitDirectoryListingIcon = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(commitGeneratedListingImageInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const full = await getFullDirectoryListing(context, data.id)
+    const raw = Buffer.from(data.imageBase64, 'base64')
+    const { uri } = await publishDirectoryListingDetail(full, undefined, {
+      icon: {
+        bytes: Uint8Array.from(raw),
+        mimeType: data.mimeType.trim(),
+      },
+    })
+
+    return {
+      id: data.id,
+      listingDetailUri: uri,
     }
   })
 
@@ -2292,8 +2257,10 @@ export const directoryListingApi = {
   updateDirectoryListingAppTags,
   updateDirectoryListingCategoryAssignment,
   deleteDirectoryListing,
-  regenerateDirectoryListingHeroImage,
-  regenerateDirectoryListingIcon,
+  previewDirectoryListingHeroImage,
+  commitDirectoryListingHeroImage,
+  previewDirectoryListingIcon,
+  commitDirectoryListingIcon,
   regenerateDirectoryListingTagline,
   regenerateDirectoryListingDescription,
 }

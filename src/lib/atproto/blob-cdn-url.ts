@@ -147,6 +147,41 @@ export function getBlobCidString(blob: unknown): string | null {
 }
 
 /**
+ * Bluesky `img/feed_fullsize` expects a simple `@suffix` (e.g. `@jpeg`, `@png`).
+ * Naive `mime.split('/').pop()` breaks for `image/svg+xml` (`svg+xml`), `image/xml`, etc.
+ */
+function mimeTypeToBskyCdnExtension(mimeType: string): string {
+  const base = mimeType.trim().toLowerCase().split(';')[0]?.trim() ?? ''
+  switch (base) {
+    case 'image/jpeg':
+    case 'image/jpg':
+    case 'image/pjpeg':
+      return 'jpeg'
+    case 'image/png':
+      return 'png'
+    case 'image/webp':
+      return 'webp'
+    case 'image/gif':
+      return 'gif'
+    case 'image/avif':
+      return 'avif'
+    case 'image/svg+xml':
+    case 'image/svg':
+      return 'svg'
+    default:
+      if (base.startsWith('image/')) {
+        const sub = base.slice('image/'.length)
+        if (sub.startsWith('svg')) return 'svg'
+        // Junk types (e.g. `image/xml`) — use a CDN-supported raster suffix.
+        if (sub === 'xml') return 'jpeg'
+        const simple = sub.split('+')[0] ?? ''
+        if (/^[a-z0-9]+$/i.test(simple)) return simple
+      }
+      return 'jpeg'
+  }
+}
+
+/**
  * Bluesky CDN URL for a repo blob (feed_fullsize template used in Kitchen).
  */
 export function blobLikeToBskyCdnUrl(blobLike: unknown, repoDid: string): string | null {
@@ -155,6 +190,6 @@ export function blobLikeToBskyCdnUrl(blobLike: unknown, repoDid: string): string
   const mimeType = typeof b.mimeType === 'string' ? b.mimeType : ''
   const cid = getBlobCidString(blobLike)
   if (!cid || !mimeType) return null
-  const ext = mimeType.split('/').pop() || 'jpeg'
+  const ext = mimeTypeToBskyCdnExtension(mimeType)
   return `https://cdn.bsky.app/img/feed_fullsize/plain/${repoDid}/${cid}@${ext}`
 }
