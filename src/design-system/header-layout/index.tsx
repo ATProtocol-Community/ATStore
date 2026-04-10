@@ -17,8 +17,17 @@ const styles = stylex.create({
     containerType: "inline-size",
     display: "flex",
     flexDirection: "column",
-    minHeight: "100vh",
-    width: "100cqw",
+    flexGrow: {
+      ":is([data-header-layout] [data-header-layout])": 1,
+    },
+    minHeight: {
+      default: "100vh",
+      ":is([data-header-layout] [data-header-layout])": "auto",
+    },
+    width: {
+      default: "100cqw",
+      ":is([data-header-layout] [data-header-layout])": "100%",
+    },
   },
   rootMaxWidth: (maxWidth: string | undefined) => ({
     "--page-content-max-width": maxWidth || "1280px",

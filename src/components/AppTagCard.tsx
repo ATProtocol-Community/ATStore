@@ -61,17 +61,23 @@ const styles = stylex.create({
     height: "100%",
     inset: 0,
     objectFit: "cover",
-    opacity: 0.78,
+    opacity: 0.64,
     position: "absolute",
     width: "100%",
   },
   cardOverlay: {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 18%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 46%, transparent) 48%, color-mix(in srgb, ${uiColor.overlayBackdrop} 88%, transparent) 100%)`,
+    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 34%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 62%, transparent) 48%, color-mix(in srgb, ${uiColor.overlayBackdrop} 92%, transparent) 100%)`,
     inset: 0,
     position: "absolute",
   },
+  footerText: {
+    color: uiColor.textContrast,
+    textShadow: "0 1px 2px rgb(0 0 0 / 0.45)",
+  },
   chevron: {
+    color: uiColor.textContrast,
     marginLeft: "auto",
+    filter: "drop-shadow(0 1px 2px rgb(0 0 0 / 0.45))",
   },
   softBlueSurface: {
     backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
@@ -91,6 +97,7 @@ const styles = stylex.create({
   },
   title: {
     color: uiColor.textContrast,
+    textShadow: "0 1px 2px rgb(0 0 0 / 0.45)",
   },
 });
 
@@ -123,7 +130,9 @@ export function AppTagCard({ tag }: AppTagCardProps) {
         </Text>
       </Flex>
       <Flex align="center" justify="between" gap="md" style={styles.cardFooter}>
-        <SmallBody>{formatAppTagCount(tag.count)}</SmallBody>
+        <SmallBody style={styles.footerText}>
+          {formatAppTagCount(tag.count)}
+        </SmallBody>
         <ChevronRight {...stylex.props(styles.chevron)} />
       </Flex>
     </RouterLink>

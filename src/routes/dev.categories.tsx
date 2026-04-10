@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Avatar } from "../design-system/avatar";
@@ -52,6 +52,8 @@ export const Route = createFileRoute("/dev/categories")({
   },
   component: DevCategoriesPage,
 });
+
+const AppLink = createLink(Link);
 
 const styles = stylex.create({
   page: {
@@ -255,9 +257,11 @@ function DevCategoriesPage() {
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" style={styles.pageContent}>
             <Flex gap="xl">
-              <Link href="/categories/all">Back to categories</Link>
-              <Link href="/dev/app-tags">App tags</Link>
-              <Link href="/">Home</Link>
+              <AppLink to={"/categories/all" as never}>
+                Back to categories
+              </AppLink>
+              <AppLink to="/dev/app-tags">App tags</AppLink>
+              <AppLink to="/">Home</AppLink>
             </Flex>
 
             <Flex direction="column" style={styles.pageHeader}>

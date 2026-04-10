@@ -173,18 +173,18 @@ const styles = stylex.create({
     width: "auto",
   },
   separator: {
-    gridColumnEnd: 'separator',
-    gridColumnStart: 'separator',
-    gridRowEnd: 'separator',
-    gridRowStart: 'separator',
+    gridColumnEnd: "separator",
+    gridColumnStart: "separator",
+    gridRowEnd: "separator",
+    gridRowStart: "separator",
     // eslint-disable-next-line @stylexjs/valid-styles
     display: "var(--separator-visibility, none)",
   },
   navigation: {
-    gridColumnEnd: 'navigation',
-    gridColumnStart: 'navigation',
-    gridRowEnd: 'navigation',
-    gridRowStart: 'navigation',
+    gridColumnEnd: "navigation",
+    gridColumnStart: "navigation",
+    gridRowEnd: "navigation",
+    gridRowStart: "navigation",
     gap: {
       default: gap["5xl"],
       [containerBreakpoints.sm]: sizeSpace["3xl"],
@@ -214,10 +214,10 @@ const styles = stylex.create({
     justifyContent: "flex-end",
   },
   action: {
-    gridColumnEnd: 'action',
-    gridColumnStart: 'action',
-    gridRowEnd: 'action',
-    gridRowStart: 'action',
+    gridColumnEnd: "action",
+    gridColumnStart: "action",
+    gridRowEnd: "action",
+    gridRowStart: "action",
     gap: gap["md"],
     alignItems: "center",
     display: {
@@ -228,10 +228,10 @@ const styles = stylex.create({
     },
   },
   hamburgerButton: {
-    gridColumnEnd: 'hamburger',
-    gridColumnStart: 'hamburger',
-    gridRowEnd: 'hamburger',
-    gridRowStart: 'hamburger',
+    gridColumnEnd: "hamburger",
+    gridColumnStart: "hamburger",
+    gridRowEnd: "hamburger",
+    gridRowStart: "hamburger",
     alignItems: "center",
     display: {
       default: "flex",

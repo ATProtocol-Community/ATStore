@@ -386,10 +386,10 @@ function CategoryPage() {
                     Back to {AppName} Ecosystem
                   </AppLink>
                 ) : (
-                  <Link href={browsePath}>
+                  <AppLink to={browsePath as never}>
                     <ChevronLeft />
                     Back to categories
-                  </Link>
+                  </AppLink>
                 )}
               </Flex>
 
@@ -415,9 +415,9 @@ function CategoryPage() {
                   No listings are assigned to this branch yet.
                 </Body>
                 {import.meta.env.DEV ? (
-                  <Link href="/dev/categories">
+                  <AppLink to="/dev/categories">
                     Open the dev recategorization panel to assign some.
-                  </Link>
+                  </AppLink>
                 ) : null}
               </Flex>
             )}

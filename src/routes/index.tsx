@@ -1,10 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, createLink } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
 import { AppTagCard } from "../components/AppTagCard";
+import { ProtocolCategoryCard } from "../components/ProtocolCategoryCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
@@ -39,10 +40,7 @@ import {
   directoryListingApi,
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
-import {
-  getDirectoryListingHref,
-  getDirectoryListingSlug,
-} from "../lib/directory-listing-slugs";
+import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 
@@ -54,7 +52,15 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+const AppLink = createLink(Link);
+
 const styles = stylex.create({
+  protocolHeader: {
+    paddingTop: verticalSpace["8xl"],
+  },
+  headerDescription: {
+    maxWidth: "50rem",
+  },
   bentoLink: {
     textDecoration: "none",
     display: "block",
@@ -174,7 +180,6 @@ const styles = stylex.create({
     height: "100%",
     inset: 0,
     objectFit: "cover",
-    opacity: 0.7,
     position: "absolute",
     width: "100%",
   },
@@ -253,6 +258,9 @@ const styles = stylex.create({
     fontSize: fontSize["lg"],
   },
   heroMetaRow: {
+    flexWrap: "wrap",
+  },
+  protocolLinks: {
     flexWrap: "wrap",
   },
   sectionHeader: {
@@ -445,6 +453,7 @@ function HomePage() {
     directoryListingApi.getHomePageQueryOptions,
   );
   const promoListing = data.spotlights[0] || data.featured;
+  const protocolListings = [data.protocolFeatured, ...data.protocolSpotlights];
 
   return (
     <HeaderLayout.Root>
@@ -452,9 +461,15 @@ function HomePage() {
         <Page.Root variant="large">
           <Flex direction="column" gap="5xl" style={styles.pageHeader}>
             <Heading1>Apps on the Atmosphere</Heading1>
-            <Text variant="secondary" size="2xl">
-              Discover standout apps, feeds, and developer tools built for the
-              Bluesky ecosystem.
+            <Text
+              variant="secondary"
+              size="2xl"
+              leading="sm"
+              style={styles.headerDescription}
+            >
+              Discover the best apps the atmosphere has to offer. With every
+              product you own your data and use the same identity across all
+              apps.
             </Text>
           </Flex>
 
@@ -482,7 +497,7 @@ function HomePage() {
               <SectionHeader
                 eyebrow="Browse Apps"
                 title="Find apps you'll love"
-                href="/apps/tags"
+                to="/apps/tags"
               />
               <Grid style={styles.categoriesGrid}>
                 {data.tags.map((tag) => (
@@ -494,8 +509,9 @@ function HomePage() {
             <section {...stylex.props(styles.section)}>
               <SectionHeader
                 eyebrow="Popular Right Now"
-                title="Trending across the Bluesky ecosystem"
-                href="/about"
+                title="Trending across the ecosystem"
+                to="/apps/all"
+                search={{ sort: "popular" }}
               />
               <Grid style={styles.popularGrid}>
                 <Flex direction="column" gap="md">
@@ -514,14 +530,70 @@ function HomePage() {
             <section {...stylex.props(styles.section)}>
               <SectionHeader
                 eyebrow="New & Noteworthy"
-                title="Fresh tools just added"
-                href="/apps/all"
+                title="Fresh apps just added"
+                to="/apps/all"
+                search={{ sort: "newest" }}
               />
               <Grid style={styles.newGrid}>
                 {data.fresh.map((listing) => (
                   <NewListingCard key={listing.id} listing={listing} />
                 ))}
               </Grid>
+            </section>
+
+            <Flex direction="column" gap="5xl" style={styles.protocolHeader}>
+              <Heading1>Dive into the Protocol</Heading1>
+              <Text
+                variant="secondary"
+                size="2xl"
+                leading="sm"
+                style={styles.headerDescription}
+              >
+                The Atmosphere is built on an open Protocol, so you can use it
+                to build your own apps and services.
+              </Text>
+            </Flex>
+
+            <section {...stylex.props(styles.section)}>
+              <FeaturedListingGrid
+                items={protocolListings}
+                getKey={(listing, index) =>
+                  index === 0
+                    ? `protocol-featured-${listing.id}`
+                    : `protocol-spotlight-${listing.id}`
+                }
+                isFeatured={(_, index) => index === 0}
+                renderItem={(listing, { featured }) =>
+                  featured ? (
+                    <HeroCard
+                      listing={listing}
+                      badgeLabel="Featured Protocol Tool"
+                    />
+                  ) : (
+                    <SpotlightCard listing={listing} />
+                  )
+                }
+              />
+            </section>
+
+            <section {...stylex.props(styles.section)}>
+              <SectionHeader
+                eyebrow="Browse Protocol"
+                title="Infrastructure & developer tooling"
+                to="/protocol/tags"
+              />
+              {data.protocolCategories.length > 0 ? (
+                <Grid style={styles.categoriesGrid}>
+                  {data.protocolCategories.map((cat) => (
+                    <ProtocolCategoryCard key={cat.segment} category={cat} />
+                  ))}
+                </Grid>
+              ) : (
+                <Body variant="secondary">
+                  Protocol categories will appear here as listings are added to
+                  the directory.
+                </Body>
+              )}
             </section>
           </Flex>
         </Page.Root>
@@ -530,15 +602,55 @@ function HomePage() {
   );
 }
 
-function SectionHeader({
-  eyebrow,
-  title,
-  href,
-}: {
-  eyebrow: string;
-  title: string;
-  href: string;
-}) {
+type SectionHeaderProps =
+  | {
+      eyebrow: string;
+      title: string;
+      to: "/apps/tags";
+      search?: never;
+    }
+  | {
+      eyebrow: string;
+      title: string;
+      to: "/protocol/tags";
+      search?: never;
+    }
+  | {
+      eyebrow: string;
+      title: string;
+      to: "/apps/all";
+      search: {
+        sort: "popular" | "newest";
+      };
+    };
+
+function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
+  let action: React.ReactNode;
+
+  switch (to) {
+    case "/apps/all":
+      action = (
+        <AppLink to="/apps/all" search={search}>
+          See All <ChevronRight />
+        </AppLink>
+      );
+      break;
+    case "/apps/tags":
+      action = (
+        <AppLink to="/apps/tags">
+          See All <ChevronRight />
+        </AppLink>
+      );
+      break;
+    case "/protocol/tags":
+      action = (
+        <AppLink to="/protocol/tags">
+          See All <ChevronRight />
+        </AppLink>
+      );
+      break;
+  }
+
   return (
     <Flex
       align="center"
@@ -552,16 +664,18 @@ function SectionHeader({
         </SmallBody>
         <Heading2>{title}</Heading2>
       </div>
-      <Link href={href}>
-        See All <ChevronRight />
-      </Link>
+      {action}
     </Flex>
   );
 }
 
-function HeroCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing);
-
+function HeroCard({
+  listing,
+  badgeLabel = "Featured Extension",
+}: {
+  listing: DirectoryListingCard;
+  badgeLabel?: string;
+}) {
   return (
     <RouterLink
       to="/products/$productId"
@@ -576,46 +690,12 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
             {...stylex.props(styles.imageLayer)}
           />
         ) : null}
-        <div {...stylex.props(styles.accentOverlay, styles.heroOverlay)} />
-        <div {...stylex.props(styles.ambientGlow)}>
-          <div
-            {...stylex.props(
-              styles.ambientGlowInner,
-              getAccentGlow(listing.accent),
-            )}
-          />
-        </div>
-        <div {...stylex.props(styles.cardContent, styles.heroContent)}>
-          <Flex direction="column" gap="2xl" style={styles.heroIntro}>
-            <Badge size="sm" variant="primary">
-              Featured Extension
-            </Badge>
-            <Text
-              font="title"
-              size={{ default: "4xl", sm: "6xl" }}
-              weight="semibold"
-              style={styles.heroTitle}
-            >
-              {listing.name}
-            </Text>
-            <Body style={styles.heroDescription}>{listing.tagline}</Body>
-          </Flex>
-          <Flex direction="column" gap="2xl">
-            <Flex gap="md" align="center" style={styles.heroMetaRow}>
-              <Button size="xl" variant="secondary" href={href}>
-                {listing.priceLabel}
-              </Button>
-            </Flex>
-          </Flex>
-        </div>
       </Card>
     </RouterLink>
   );
 }
 
 function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing);
-
   return (
     <RouterLink
       to="/products/$productId"
@@ -658,7 +738,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
           </Flex>
           <Flex align="center" justify="between" gap="xl">
             <StoreIcon listing={listing} size="lg" />
-            <Button size="lg" variant="secondary" href={href}>
+            <Button size="lg" variant="secondary">
               {listing.priceLabel}
             </Button>
           </Flex>
@@ -675,8 +755,6 @@ function PopularListItem({
   listing: DirectoryListingCard;
   rank: number;
 }) {
-  const href = getListingHref(listing);
-
   return (
     <RouterLink
       to="/products/$productId"
@@ -698,7 +776,7 @@ function PopularListItem({
         </Text>
         <SmallBody variant="secondary">{listing.tagline}</SmallBody>
       </Flex>
-      <Button size="lg" variant="secondary" href={href}>
+      <Button size="lg" variant="secondary">
         {listing.priceLabel}
       </Button>
     </RouterLink>
@@ -706,8 +784,6 @@ function PopularListItem({
 }
 
 function PromoCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing);
-
   return (
     <RouterLink
       to="/products/$productId"
@@ -750,7 +826,7 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
         </div>
         <Flex align="center" justify="between" gap="xl">
           <StoreIcon listing={listing} size="lg" />
-          <Button size="lg" variant="secondary" href={href}>
+          <Button size="lg" variant="secondary">
             {listing.priceLabel}
           </Button>
         </Flex>
@@ -760,8 +836,6 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
 }
 
 function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
-  const href = getListingHref(listing);
-
   return (
     <RouterLink
       to="/products/$productId"
@@ -788,7 +862,7 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
               </Text>
               <SmallBody variant="secondary">Rating</SmallBody>
             </Flex>
-            <Button size="lg" variant="secondary" href={href}>
+            <Button size="lg" variant="secondary">
               {listing.priceLabel}
             </Button>
           </Flex>
@@ -821,10 +895,6 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
-}
-
-function getListingHref(listing: DirectoryListingCard) {
-  return getDirectoryListingHref(listing);
 }
 
 function getListingMetadataLabel(listing: DirectoryListingCard) {

@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
 import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -40,6 +40,8 @@ export const Route = createFileRoute("/dev/app-tags")({
   },
   component: DevAppTagsPage,
 });
+
+const AppLink = createLink(Link);
 
 const styles = stylex.create({
   page: {
@@ -229,9 +231,11 @@ function DevAppTagsPage() {
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" style={styles.pageContent}>
             <Flex gap="xl" style={styles.filterBar}>
-              <Link href="/categories/all">Back to categories</Link>
-              <Link href="/dev/categories">Recategorize categories</Link>
-              <Link href="/">Home</Link>
+              <AppLink to={"/categories/all" as never}>
+                Back to categories
+              </AppLink>
+              <AppLink to="/dev/categories">Recategorize categories</AppLink>
+              <AppLink to="/">Home</AppLink>
             </Flex>
 
             <Flex direction="column" style={styles.pageHeader}>

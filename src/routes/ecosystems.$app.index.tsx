@@ -36,6 +36,7 @@ import {
 
 const ButtonLink = createLink(Button);
 const IconButtonLink = createLink(IconButton);
+const AppLink = createLink(Link);
 const INITIAL_SECTION_LISTING_COUNT = 6;
 
 export const Route = createFileRoute("/ecosystems/$app/")({
@@ -138,10 +139,10 @@ function EcosystemIndexPage() {
           <Flex direction="column" gap="8xl">
             <Flex direction="column" gap="4xl">
               <Flex gap="xl" justify="between" style={styles.navLinks}>
-                <Link href="/">
+                <AppLink to="/">
                   <ChevronLeft />
                   Home
-                </Link>
+                </AppLink>
                 <IconButtonLink
                   params={{ app: appSegment }}
                   to="/ecosystems/$app/all"
@@ -176,9 +177,9 @@ function EcosystemIndexPage() {
                 <Body variant="secondary">
                   This ecosystem does not have nested category sections yet.
                 </Body>
-                <Link href={getEcosystemAllPathFromAppSegment(appSegment)}>
+                <AppLink to={getEcosystemAllPathFromAppSegment(appSegment)}>
                   Search all listings in this ecosystem
-                </Link>
+                </AppLink>
               </Flex>
             )}
           </Flex>

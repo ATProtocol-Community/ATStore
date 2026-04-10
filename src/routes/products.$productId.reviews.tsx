@@ -1,6 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  createLink,
+  notFound,
+  redirect,
+} from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 
 import { Avatar } from "../design-system/avatar";
@@ -59,6 +64,8 @@ export const Route = createFileRoute("/products/$productId/reviews")({
   },
   component: ProductReviewsPage,
 });
+
+const AppLink = createLink(Link);
 
 const styles = stylex.create({
   page: {
@@ -124,10 +131,13 @@ function ProductReviewsPage() {
         <Page.Root variant="small" style={styles.page}>
           <Flex direction="column" gap="7xl">
             <Flex style={styles.backLinkRow}>
-              <Link href={`/products/${productSlug}`}>
+              <AppLink
+                to="/products/$productId"
+                params={{ productId: productSlug }}
+              >
                 <ChevronLeft />
                 Back to product
-              </Link>
+              </AppLink>
             </Flex>
 
             <Flex gap="2xl" align="center">

@@ -10,10 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProtocolAllRouteImport } from './routes/protocol.all'
+import { Route as ProtocolTagsRouteImport } from './routes/protocol.tags'
+import { Route as ProtocolListingsRouteImport } from './routes/protocol.listings'
+import { Route as ProtocolCategoryRouteImport } from './routes/protocol.$category'
 import { Route as DevCategoriesRouteImport } from './routes/dev.categories'
 import { Route as DevAppTagsRouteImport } from './routes/dev.app-tags'
-import { Route as CategoriesAllRouteImport } from './routes/categories.all'
 import { Route as CategoriesCategoryIdRouteImport } from './routes/categories.$categoryId'
 import { Route as AppsTagsRouteImport } from './routes/apps.tags'
 import { Route as AppsAllRouteImport } from './routes/apps.all'
@@ -28,9 +29,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProtocolAllRoute = ProtocolAllRouteImport.update({
-  id: '/protocol/all',
-  path: '/protocol/all',
+const ProtocolTagsRoute = ProtocolTagsRouteImport.update({
+  id: '/protocol/tags',
+  path: '/protocol/tags',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtocolListingsRoute = ProtocolListingsRouteImport.update({
+  id: '/protocol/listings',
+  path: '/protocol/listings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtocolCategoryRoute = ProtocolCategoryRouteImport.update({
+  id: '/protocol/$category',
+  path: '/protocol/$category',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevCategoriesRoute = DevCategoriesRouteImport.update({
@@ -41,11 +52,6 @@ const DevCategoriesRoute = DevCategoriesRouteImport.update({
 const DevAppTagsRoute = DevAppTagsRouteImport.update({
   id: '/dev/app-tags',
   path: '/dev/app-tags',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CategoriesAllRoute = CategoriesAllRouteImport.update({
-  id: '/categories/all',
-  path: '/categories/all',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CategoriesCategoryIdRoute = CategoriesCategoryIdRouteImport.update({
@@ -96,10 +102,11 @@ export interface FileRoutesByFullPath {
   '/apps/all': typeof AppsAllRoute
   '/apps/tags': typeof AppsTagsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
-  '/categories/all': typeof CategoriesAllRoute
   '/dev/app-tags': typeof DevAppTagsRoute
   '/dev/categories': typeof DevCategoriesRoute
-  '/protocol/all': typeof ProtocolAllRoute
+  '/protocol/$category': typeof ProtocolCategoryRoute
+  '/protocol/listings': typeof ProtocolListingsRoute
+  '/protocol/tags': typeof ProtocolTagsRoute
   '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
   '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
   '/ecosystems/$app/': typeof EcosystemsAppIndexRoute
@@ -111,10 +118,11 @@ export interface FileRoutesByTo {
   '/apps/all': typeof AppsAllRoute
   '/apps/tags': typeof AppsTagsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
-  '/categories/all': typeof CategoriesAllRoute
   '/dev/app-tags': typeof DevAppTagsRoute
   '/dev/categories': typeof DevCategoriesRoute
-  '/protocol/all': typeof ProtocolAllRoute
+  '/protocol/$category': typeof ProtocolCategoryRoute
+  '/protocol/listings': typeof ProtocolListingsRoute
+  '/protocol/tags': typeof ProtocolTagsRoute
   '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
   '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
   '/ecosystems/$app': typeof EcosystemsAppIndexRoute
@@ -127,10 +135,11 @@ export interface FileRoutesById {
   '/apps/all': typeof AppsAllRoute
   '/apps/tags': typeof AppsTagsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
-  '/categories/all': typeof CategoriesAllRoute
   '/dev/app-tags': typeof DevAppTagsRoute
   '/dev/categories': typeof DevCategoriesRoute
-  '/protocol/all': typeof ProtocolAllRoute
+  '/protocol/$category': typeof ProtocolCategoryRoute
+  '/protocol/listings': typeof ProtocolListingsRoute
+  '/protocol/tags': typeof ProtocolTagsRoute
   '/ecosystems/$app/all': typeof EcosystemsAppAllRoute
   '/products/$productId/reviews': typeof ProductsProductIdReviewsRoute
   '/ecosystems/$app/': typeof EcosystemsAppIndexRoute
@@ -144,10 +153,11 @@ export interface FileRouteTypes {
     | '/apps/all'
     | '/apps/tags'
     | '/categories/$categoryId'
-    | '/categories/all'
     | '/dev/app-tags'
     | '/dev/categories'
-    | '/protocol/all'
+    | '/protocol/$category'
+    | '/protocol/listings'
+    | '/protocol/tags'
     | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
     | '/ecosystems/$app/'
@@ -159,10 +169,11 @@ export interface FileRouteTypes {
     | '/apps/all'
     | '/apps/tags'
     | '/categories/$categoryId'
-    | '/categories/all'
     | '/dev/app-tags'
     | '/dev/categories'
-    | '/protocol/all'
+    | '/protocol/$category'
+    | '/protocol/listings'
+    | '/protocol/tags'
     | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
     | '/ecosystems/$app'
@@ -174,10 +185,11 @@ export interface FileRouteTypes {
     | '/apps/all'
     | '/apps/tags'
     | '/categories/$categoryId'
-    | '/categories/all'
     | '/dev/app-tags'
     | '/dev/categories'
-    | '/protocol/all'
+    | '/protocol/$category'
+    | '/protocol/listings'
+    | '/protocol/tags'
     | '/ecosystems/$app/all'
     | '/products/$productId/reviews'
     | '/ecosystems/$app/'
@@ -190,10 +202,11 @@ export interface RootRouteChildren {
   AppsAllRoute: typeof AppsAllRoute
   AppsTagsRoute: typeof AppsTagsRoute
   CategoriesCategoryIdRoute: typeof CategoriesCategoryIdRoute
-  CategoriesAllRoute: typeof CategoriesAllRoute
   DevAppTagsRoute: typeof DevAppTagsRoute
   DevCategoriesRoute: typeof DevCategoriesRoute
-  ProtocolAllRoute: typeof ProtocolAllRoute
+  ProtocolCategoryRoute: typeof ProtocolCategoryRoute
+  ProtocolListingsRoute: typeof ProtocolListingsRoute
+  ProtocolTagsRoute: typeof ProtocolTagsRoute
   EcosystemsAppAllRoute: typeof EcosystemsAppAllRoute
   ProductsProductIdReviewsRoute: typeof ProductsProductIdReviewsRoute
   EcosystemsAppIndexRoute: typeof EcosystemsAppIndexRoute
@@ -209,11 +222,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/protocol/all': {
-      id: '/protocol/all'
-      path: '/protocol/all'
-      fullPath: '/protocol/all'
-      preLoaderRoute: typeof ProtocolAllRouteImport
+    '/protocol/tags': {
+      id: '/protocol/tags'
+      path: '/protocol/tags'
+      fullPath: '/protocol/tags'
+      preLoaderRoute: typeof ProtocolTagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/protocol/listings': {
+      id: '/protocol/listings'
+      path: '/protocol/listings'
+      fullPath: '/protocol/listings'
+      preLoaderRoute: typeof ProtocolListingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/protocol/$category': {
+      id: '/protocol/$category'
+      path: '/protocol/$category'
+      fullPath: '/protocol/$category'
+      preLoaderRoute: typeof ProtocolCategoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/categories': {
@@ -228,13 +255,6 @@ declare module '@tanstack/react-router' {
       path: '/dev/app-tags'
       fullPath: '/dev/app-tags'
       preLoaderRoute: typeof DevAppTagsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/categories/all': {
-      id: '/categories/all'
-      path: '/categories/all'
-      fullPath: '/categories/all'
-      preLoaderRoute: typeof CategoriesAllRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/categories/$categoryId': {
@@ -302,10 +322,11 @@ const rootRouteChildren: RootRouteChildren = {
   AppsAllRoute: AppsAllRoute,
   AppsTagsRoute: AppsTagsRoute,
   CategoriesCategoryIdRoute: CategoriesCategoryIdRoute,
-  CategoriesAllRoute: CategoriesAllRoute,
   DevAppTagsRoute: DevAppTagsRoute,
   DevCategoriesRoute: DevCategoriesRoute,
-  ProtocolAllRoute: ProtocolAllRoute,
+  ProtocolCategoryRoute: ProtocolCategoryRoute,
+  ProtocolListingsRoute: ProtocolListingsRoute,
+  ProtocolTagsRoute: ProtocolTagsRoute,
   EcosystemsAppAllRoute: EcosystemsAppAllRoute,
   ProductsProductIdReviewsRoute: ProductsProductIdReviewsRoute,
   EcosystemsAppIndexRoute: EcosystemsAppIndexRoute,

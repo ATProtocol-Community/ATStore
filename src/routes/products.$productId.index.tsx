@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   createLink,
@@ -10,6 +10,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft, ExternalLink } from "lucide-react";
+import { useState } from "react";
 
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
@@ -47,8 +48,6 @@ import {
 import {
   getAppEcosystemRootCategoryId,
   getAppSegmentFromEcosystemRootCategoryId,
-  getEcosystemAllPathFromAppSegment,
-  getEcosystemPathFromAppSegment,
 } from "../lib/directory-categories";
 import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import {
@@ -123,6 +122,7 @@ const styles = stylex.create({
   page: {
     paddingBottom: verticalSpace["11xl"],
     paddingTop: verticalSpace["6xl"],
+    position: "relative",
   },
   backLinkRow: {
     alignItems: "center",
@@ -376,19 +376,41 @@ const styles = stylex.create({
   relatedFooter: {
     alignItems: "center",
   },
+  devToolbar: {
+    bottom: verticalSpace["4xl"],
+    boxShadow: shadow.md,
+    position: "fixed",
+    right: horizontalSpace["4xl"],
+    width: "min(22rem, calc(100% - 2rem))",
+    zIndex: 1,
+  },
+  devToolbarBody: {
+    gap: gap["lg"],
+    paddingBottom: verticalSpace["lg"],
+    paddingLeft: horizontalSpace["lg"],
+    paddingRight: horizontalSpace["lg"],
+    paddingTop: verticalSpace["lg"],
+  },
+  devToolbarButtons: {
+    gap: gap["lg"],
+  },
+  devToolbarStatus: {
+    minHeight: "1.25rem",
+  },
 });
 
 function ProductPage() {
   const { productId, productSlug, ecosystemRootId } = Route.useLoaderData();
-  const { data: listing } = useSuspenseQuery(
-    directoryListingApi.getDirectoryListingDetailQueryOptions(productId),
-  );
-  const { data: relatedProducts } = useSuspenseQuery(
+  const queryClient = useQueryClient();
+  const detailQueryOptions =
+    directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
+  const relatedQueryOptions =
     directoryListingApi.getRelatedDirectoryListingsQueryOptions({
       id: productId,
       limit: 3,
-    }),
-  );
+    });
+  const { data: listing } = useSuspenseQuery(detailQueryOptions);
+  const { data: relatedProducts } = useSuspenseQuery(relatedQueryOptions);
 
   if (!listing) {
     throw notFound();
@@ -400,6 +422,93 @@ function ProductPage() {
   const isRootApp = type === "Apps" && scope && !domain;
   const canGoBack = useCanGoBack();
   const router = useRouter();
+  const [pendingGeneration, setPendingGeneration] = useState<
+    null | "hero" | "icon" | "tagline" | "description"
+  >(null);
+  const [toolbarStatus, setToolbarStatus] = useState<{
+    tone: "neutral" | "critical";
+    text: string;
+  } | null>(null);
+
+  const listingId = listing.id;
+
+  async function runGeneration(
+    action: "hero" | "icon" | "tagline" | "description",
+  ) {
+    setPendingGeneration(action);
+    setToolbarStatus(null);
+
+    try {
+      if (action === "hero") {
+        await directoryListingApi.regenerateDirectoryListingHeroImage({
+          data: {
+            id: listingId,
+          },
+        });
+        setToolbarStatus({
+          tone: "neutral",
+          text: "Generated a new hero image from the site homepage.",
+        });
+      } else if (action === "icon") {
+        await directoryListingApi.regenerateDirectoryListingIcon({
+          data: {
+            id: listingId,
+          },
+        });
+        setToolbarStatus({
+          tone: "neutral",
+          text: "Generated a new icon from the site homepage.",
+        });
+      } else if (action === "tagline") {
+        const result =
+          await directoryListingApi.regenerateDirectoryListingTagline({
+            data: {
+              id: listingId,
+            },
+          });
+        setToolbarStatus({
+          tone: "neutral",
+          text:
+            result.source === "website"
+              ? "Generated a new tagline from homepage copy."
+              : "Generated a new tagline from homepage context.",
+        });
+      } else {
+        const result =
+          await directoryListingApi.regenerateDirectoryListingDescription({
+            data: {
+              id: listingId,
+            },
+          });
+        setToolbarStatus({
+          tone: "neutral",
+          text:
+            result.source === "website"
+              ? "Generated a new description from homepage copy."
+              : "Generated a new description from homepage context.",
+        });
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: detailQueryOptions.queryKey,
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: relatedQueryOptions.queryKey,
+          exact: true,
+        }),
+        router.invalidate(),
+      ]);
+    } catch (error) {
+      setToolbarStatus({
+        tone: "critical",
+        text: error instanceof Error ? error.message : "Generation failed.",
+      });
+    } finally {
+      setPendingGeneration(null);
+    }
+  }
 
   return (
     <HeaderLayout.Root>
@@ -526,6 +635,60 @@ function ProductPage() {
               <RelatedProductsSection listings={relatedProducts} />
             ) : null}
           </Flex>
+          {import.meta.env.DEV ? (
+            <Card style={styles.devToolbar}>
+              <Flex direction="column" style={styles.devToolbarBody}>
+                <Text size="sm" weight="semibold">
+                  Dev tools
+                </Text>
+                <Flex direction="column" style={styles.devToolbarButtons}>
+                  <Button
+                    variant="secondary"
+                    isPending={pendingGeneration === "icon"}
+                    isDisabled={pendingGeneration !== null}
+                    onPress={() => void runGeneration("icon")}
+                  >
+                    Generate icon
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    isPending={pendingGeneration === "hero"}
+                    isDisabled={pendingGeneration !== null}
+                    onPress={() => void runGeneration("hero")}
+                  >
+                    Generate hero image
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    isPending={pendingGeneration === "tagline"}
+                    isDisabled={pendingGeneration !== null}
+                    onPress={() => void runGeneration("tagline")}
+                  >
+                    Generate tagline
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    isPending={pendingGeneration === "description"}
+                    isDisabled={pendingGeneration !== null}
+                    onPress={() => void runGeneration("description")}
+                  >
+                    Generate description
+                  </Button>
+                </Flex>
+                <Text
+                  size="sm"
+                  variant={
+                    toolbarStatus?.tone === "critical"
+                      ? "critical"
+                      : "secondary"
+                  }
+                  style={styles.devToolbarStatus}
+                >
+                  {toolbarStatus?.text ?? " "}
+                </Text>
+              </Flex>
+            </Card>
+          ) : null}
         </Page.Root>
       </HeaderLayout.Page>
     </HeaderLayout.Root>

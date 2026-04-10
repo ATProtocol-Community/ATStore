@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config"
 
-import { mkdir, stat, writeFile } from "node:fs/promises"
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { createHash } from "node:crypto"
 
@@ -20,6 +20,8 @@ const GENERATED_IMAGE_DIR = path.resolve(
   process.cwd(),
   "public/generated/listings",
 )
+const IMAGE_REQUEST_TIMEOUT_MS = 60_000
+const IMAGE_REQUEST_MAX_ATTEMPTS = 2
 const VIEWPORT = {
   width: 1440,
   height: 960,
@@ -28,6 +30,7 @@ const VIEWPORT = {
 type CandidateListing = {
   id: string
   name: string
+  assetBaseName: string
   sourceUrl: string
   externalUrl: string | null
   screenshotUrls: string[]
@@ -36,6 +39,8 @@ type CandidateListing = {
   productType: string | null
   domain: string | null
   scope: string | null
+  existingGeneratedImageUrl?: string
+  manualRecordIndex?: number
 }
 
 type ScriptArgs = {
@@ -44,12 +49,30 @@ type ScriptArgs = {
   force: boolean
   limit: number | null
   id: string | null
+  input: string | null
   help: boolean
 }
 
 type GeneratedImage = {
   buffer: Buffer
   mimeType: string
+}
+
+type ManualListingRecord = {
+  name: string
+  sourceUrl: string
+  externalUrl: string | null
+  iconUrl: string | null
+  screenshotUrls: string[]
+  tagline: string | null
+  fullDescription: string | null
+  rawCategoryHint: string | null
+  scope: string | null
+  productType: string | null
+  domain: string | null
+  vertical: string | null
+  classificationReason: string | null
+  categorySlug?: string | null
 }
 
 function parseArgs(argv: string[]): ScriptArgs {
@@ -59,6 +82,7 @@ function parseArgs(argv: string[]): ScriptArgs {
     force: false,
     limit: null,
     id: null,
+    input: null,
     help: false,
   }
 
@@ -98,6 +122,10 @@ function parseArgs(argv: string[]): ScriptArgs {
       out.id = argv[++i] ?? null
       continue
     }
+    if (arg === "--input" || arg === "-i") {
+      out.input = argv[++i] ?? null
+      continue
+    }
 
     throw new Error(`Unknown argument: ${arg}`)
   }
@@ -110,11 +138,12 @@ function printHelp(): void {
 Usage: npm run generate:listing-images -- [options]
 
 Options:
-      --dry-run       Capture screenshots and generate files, but do not update the database
+      --dry-run       Capture screenshots and generate files, but do not update the database or JSON
       --force         Reprocess even if a generated marketing image already exists
   -c, --concurrency <n> Run up to n listings in parallel (default: 4)
   -l, --limit <n>     Process at most n listings
       --id <listing>  Process a single listing id
+  -i, --input <path>  Process a manual listings JSON file instead of the database
   -h, --help          Show help
 `)
 }
@@ -137,7 +166,9 @@ function isGeneratedImageUrl(url: string): boolean {
   return url.startsWith("/generated/listings/")
 }
 
-async function hasUsableGeneratedImage(listing: CandidateListing): Promise<boolean> {
+async function findExistingGeneratedImageUrl(
+  listing: CandidateListing,
+): Promise<string | null> {
   for (const url of listing.screenshotUrls) {
     if (!isGeneratedImageUrl(url)) {
       continue
@@ -147,13 +178,22 @@ async function hasUsableGeneratedImage(listing: CandidateListing): Promise<boole
 
     try {
       await stat(filePath)
-      return true
+      return url
     } catch {
       continue
     }
   }
 
-  return false
+  for (const extension of [".png", ".jpg", ".webp"]) {
+    try {
+      await stat(path.resolve(GENERATED_IMAGE_DIR, `${listing.assetBaseName}${extension}`))
+      return `/generated/listings/${listing.assetBaseName}${extension}`
+    } catch {
+      continue
+    }
+  }
+
+  return null
 }
 
 function slugify(value: string): string {
@@ -175,8 +215,69 @@ function getExtensionFromMimeType(mimeType: string): string {
   return ".png"
 }
 
+function normalizeNullableString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null
+}
+
+function parseManualListingRecord(value: unknown, rowIndex: number): ManualListingRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Row ${rowIndex}: expected object`)
+  }
+
+  const row = value as Record<string, unknown>
+  const screenshotUrls = Array.isArray(row.screenshotUrls)
+    ? row.screenshotUrls.map((entry, screenshotIndex) => {
+        if (typeof entry !== "string") {
+          throw new Error(
+            `Row ${rowIndex}: expected screenshotUrls[${screenshotIndex}] to be a string`,
+          )
+        }
+        return entry
+      })
+    : []
+
+  if (typeof row.name !== "string" || row.name.length === 0) {
+    throw new Error(`Row ${rowIndex}: expected non-empty string for name`)
+  }
+
+  if (typeof row.sourceUrl !== "string" || row.sourceUrl.length === 0) {
+    throw new Error(`Row ${rowIndex}: expected non-empty string for sourceUrl`)
+  }
+
+  return {
+    name: row.name,
+    sourceUrl: row.sourceUrl,
+    externalUrl: normalizeNullableString(row.externalUrl),
+    iconUrl: normalizeNullableString(row.iconUrl),
+    screenshotUrls,
+    tagline: normalizeNullableString(row.tagline),
+    fullDescription: normalizeNullableString(row.fullDescription),
+    rawCategoryHint: normalizeNullableString(row.rawCategoryHint),
+    scope: normalizeNullableString(row.scope),
+    productType: normalizeNullableString(row.productType),
+    domain: normalizeNullableString(row.domain),
+    vertical: normalizeNullableString(row.vertical),
+    classificationReason: normalizeNullableString(row.classificationReason),
+    categorySlug: Object.hasOwn(row, "categorySlug")
+      ? normalizeNullableString(row.categorySlug)
+      : undefined,
+  }
+}
+
+async function readManualListingRecords(inputPath: string): Promise<ManualListingRecord[]> {
+  const absoluteInputPath = path.resolve(process.cwd(), inputPath)
+  const raw = await readFile(absoluteInputPath, "utf8")
+  const data: unknown = JSON.parse(raw)
+
+  if (!Array.isArray(data)) {
+    throw new Error(`Expected ${inputPath} to contain a JSON array`)
+  }
+
+  return data.map((row, index) => parseManualListingRecord(row, index))
+}
+
 function buildPageScreenshotPath(listing: CandidateListing, url: string): string {
-  const baseName = `${slugify(listing.name)}-${getContentHash(`${listing.id}:${url}`)}.png`
+  const baseName = `${listing.assetBaseName}-${getContentHash(`${listing.id}:${url}`)}.png`
   return path.resolve(PAGE_SCREENSHOT_DIR, baseName)
 }
 
@@ -185,7 +286,7 @@ function buildGeneratedImageTarget(listing: CandidateListing, mimeType: string):
   publicPath: string
 } {
   const extension = getExtensionFromMimeType(mimeType)
-  const baseName = `${slugify(listing.name)}-${listing.id}${extension}`
+  const baseName = `${listing.assetBaseName}${extension}`
 
   return {
     absolutePath: path.resolve(GENERATED_IMAGE_DIR, baseName),
@@ -213,6 +314,11 @@ Goals:
 - Produce a clean, aspirational hero image suitable for an app directory card or product detail page.
 - Show a plausible product UI or marketing composition inspired by the screenshot, but improve clarity and composition.
 - Keep it realistic and product-focused, not abstract art.
+- If the listing is dev focused and doesnt have much branding to work with, use this fallback style:
+  - Style: bright, colorful, playful, polished, editorial, and high-end product marketing art.
+  - Use soft 3D gradients, glossy lighting, rounded cards, translucent glass layers, luminous highlights, subtle depth, and a sense of motion and delight.
+  - Composition: wide 16:9 banner with richer decorative energy.
+  - Show layered foreground, midground, and background depth with floating app-like tiles and abstract interface hints.
 
 Constraints:
 - No device mockups, browser chrome, cursors, or visible cookie banners.
@@ -272,64 +378,81 @@ async function generateMarketingImage(
   pageUrl: string,
 ): Promise<GeneratedImage> {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": getGeminiApiKey(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [
+  let lastError: unknown = null
+
+  for (let attempt = 1; attempt <= IMAGE_REQUEST_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": getGeminiApiKey(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
             {
-              text: buildMarketingPrompt(listing, pageUrl),
-            },
-            {
-              inlineData: {
-                mimeType: "image/png",
-                data: screenshot.toString("base64"),
-              },
+              role: "user",
+              parts: [
+                {
+                  text: buildMarketingPrompt(listing, pageUrl),
+                },
+                {
+                  inlineData: {
+                    mimeType: "image/png",
+                    data: screenshot.toString("base64"),
+                  },
+                },
+              ],
             },
           ],
-        },
-      ],
-      generationConfig: {
-        responseModalities: ["IMAGE"],
-      },
-    }),
-  })
+          generationConfig: {
+            responseModalities: ["IMAGE"],
+          },
+        }),
+        signal: AbortSignal.timeout(IMAGE_REQUEST_TIMEOUT_MS),
+      })
 
-  if (!response.ok) {
-    throw new Error(`Gemini image request failed: ${await response.text()}`)
-  }
+      if (!response.ok) {
+        throw new Error(`Gemini image request failed: ${await response.text()}`)
+      }
 
-  const json = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{
-          inlineData?: {
-            data?: string
-            mimeType?: string
+      const json = (await response.json()) as {
+        candidates?: Array<{
+          content?: {
+            parts?: Array<{
+              inlineData?: {
+                data?: string
+                mimeType?: string
+              }
+            }>
           }
         }>
       }
-    }>
+
+      const imagePart = json.candidates?.[0]?.content?.parts?.find(
+        (part) => part.inlineData?.data,
+      )?.inlineData
+
+      if (!imagePart?.data) {
+        throw new Error(`No image data returned by Gemini: ${JSON.stringify(json)}`)
+      }
+
+      return {
+        buffer: Buffer.from(imagePart.data, "base64"),
+        mimeType: imagePart.mimeType ?? "image/png",
+      }
+    } catch (error) {
+      lastError = error
+
+      if (attempt < IMAGE_REQUEST_MAX_ATTEMPTS) {
+        console.warn(
+          `Image generation attempt ${attempt} failed for ${listing.name}; retrying...`,
+        )
+      }
+    }
   }
 
-  const imagePart = json.candidates?.[0]?.content?.parts?.find(
-    (part) => part.inlineData?.data,
-  )?.inlineData
-
-  if (!imagePart?.data) {
-    throw new Error(`No image data returned by Gemini: ${JSON.stringify(json)}`)
-  }
-
-  return {
-    buffer: Buffer.from(imagePart.data, "base64"),
-    mimeType: imagePart.mimeType ?? "image/png",
-  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
 async function saveGeneratedImage(
@@ -342,6 +465,57 @@ async function saveGeneratedImage(
 }
 
 async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[]> {
+  if (args.input) {
+    const rows = await readManualListingRecords(args.input)
+    const candidates: CandidateListing[] = []
+
+    for (const [index, row] of rows.entries()) {
+      if (args.id && row.sourceUrl !== args.id) {
+        continue
+      }
+
+      if (getListingUrl(row) === null) {
+        continue
+      }
+
+      const candidate: CandidateListing = {
+        id: row.sourceUrl,
+        name: row.name,
+        assetBaseName: `${slugify(row.name)}-screenshot`,
+        sourceUrl: row.sourceUrl,
+        externalUrl: row.externalUrl,
+        screenshotUrls: row.screenshotUrls,
+        tagline: row.tagline,
+        fullDescription: row.fullDescription,
+        productType: row.productType,
+        domain: row.domain,
+        scope: row.scope,
+        manualRecordIndex: index,
+      }
+
+      const existingGeneratedImageUrl = args.force
+        ? null
+        : await findExistingGeneratedImageUrl(candidate)
+
+      if (existingGeneratedImageUrl) {
+        if (row.screenshotUrls.length > 0) {
+          continue
+        }
+
+        candidate.existingGeneratedImageUrl = existingGeneratedImageUrl
+        candidates.push(candidate)
+      } else {
+        candidates.push(candidate)
+      }
+
+      if (candidates.length >= (args.limit ?? Number.POSITIVE_INFINITY)) {
+        break
+      }
+    }
+
+    return candidates
+  }
+
   const rows = await db
     .select({
       id: directoryListings.id,
@@ -369,7 +543,7 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
       continue
     }
 
-    if (!args.force && (await hasUsableGeneratedImage(row))) {
+      if (!args.force && (await findExistingGeneratedImageUrl(row))) {
       continue
     }
 
@@ -386,11 +560,24 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
 async function processListing(
   listing: CandidateListing,
   args: ScriptArgs,
-): Promise<void> {
+): Promise<{ manualRecordIndex: number; publicPath: string } | null> {
+  if (!args.force && listing.existingGeneratedImageUrl) {
+    console.log(
+      `Reusing existing generated image for ${listing.name} -> ${listing.existingGeneratedImageUrl}`,
+    )
+
+    return typeof listing.manualRecordIndex === "number"
+      ? {
+          manualRecordIndex: listing.manualRecordIndex,
+          publicPath: listing.existingGeneratedImageUrl,
+        }
+      : null
+  }
+
   const pageUrl = getListingUrl(listing)
   if (!pageUrl) {
     console.log(`Skipping ${listing.name} (${listing.id}) because it has no usable URL.`)
-    return
+    return null
   }
 
   console.log(`Processing ${listing.name} (${listing.id}) -> ${pageUrl}`)
@@ -405,7 +592,14 @@ async function processListing(
 
   if (args.dryRun) {
     console.log(`Dry run enabled; leaving database row unchanged for ${listing.name}.`)
-    return
+    return null
+  }
+
+  if (typeof listing.manualRecordIndex === "number") {
+    return {
+      manualRecordIndex: listing.manualRecordIndex,
+      publicPath,
+    }
   }
 
   await db
@@ -417,6 +611,15 @@ async function processListing(
     .where(eq(directoryListings.id, listing.id))
 
   console.log(`Updated screenshotUrls for ${listing.name}.`)
+  return null
+}
+
+async function writeManualListingRecords(
+  inputPath: string,
+  records: ManualListingRecord[],
+): Promise<void> {
+  const absoluteInputPath = path.resolve(process.cwd(), inputPath)
+  await writeFile(absoluteInputPath, JSON.stringify(records, null, 2) + "\n")
 }
 
 async function main(): Promise<void> {
@@ -438,6 +641,8 @@ async function main(): Promise<void> {
   console.log(`Found ${candidates.length} listing(s) to process.`)
   const concurrency = Math.min(args.concurrency, candidates.length)
   let nextIndex = 0
+  const manualRecords = args.input ? await readManualListingRecords(args.input) : null
+  const manualUpdates = new Map<number, string>()
 
   async function worker(): Promise<void> {
     while (nextIndex < candidates.length) {
@@ -449,7 +654,10 @@ async function main(): Promise<void> {
       }
 
       try {
-        await processListing(listing, args)
+        const result = await processListing(listing, args)
+        if (result) {
+          manualUpdates.set(result.manualRecordIndex, result.publicPath)
+        }
       } catch (error) {
         console.error(`Failed for ${listing.name} (${listing.id}).`)
         console.error(error)
@@ -458,6 +666,19 @@ async function main(): Promise<void> {
   }
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()))
+
+  if (manualRecords && manualUpdates.size > 0 && !args.dryRun) {
+    for (const [recordIndex, publicPath] of manualUpdates) {
+      const record = manualRecords[recordIndex]
+      if (!record) {
+        continue
+      }
+      record.screenshotUrls = [publicPath]
+    }
+
+    await writeManualListingRecords(args.input, manualRecords)
+    console.log(`Updated ${manualUpdates.size} manual listing record(s) in ${args.input}.`)
+  }
 }
 
 await main()

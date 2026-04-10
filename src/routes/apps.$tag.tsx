@@ -2,6 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
+  createLink,
   Link as RouterLink,
   notFound,
 } from "@tanstack/react-router";
@@ -63,6 +64,8 @@ export const Route = createFileRoute("/apps/$tag")({
   },
   component: AppsTagPage,
 });
+
+const LinkLink = createLink(Link);
 
 const styles = stylex.create({
   pageContent: {
@@ -366,10 +369,10 @@ function AppsTagPage() {
           <Flex direction="column" style={styles.pageContent}>
             <Flex direction="column" gap="4xl">
               <Flex gap="xl" style={styles.navLinks}>
-                <Link href="/apps/tags">
+                <LinkLink to="/apps/tags">
                   <ChevronLeft />
                   All tags
-                </Link>
+                </LinkLink>
               </Flex>
 
               <AppTagHero
@@ -442,46 +445,7 @@ function AppTagListingCard({
           ]}
         >
           {featured ? (
-            <>
-              <Flex
-                direction="column"
-                gap="4xl"
-                style={styles.featuredInfoPanel}
-              >
-                <div {...stylex.props(styles.blurContainer)}>
-                  <div {...stylex.props(styles.blur)} />
-                </div>
-
-                <Flex gap="2xl" align="center" style={styles.listingHeader}>
-                  <div {...stylex.props(styles.featuredAvatarContainer)}>
-                    <Avatar
-                      alt={listing.name}
-                      fallback={getInitials(listing.name)}
-                      size="xl"
-                      src={listing.iconUrl || undefined}
-                      style={styles.featuredAvatar}
-                    />
-                  </div>
-                  <Flex
-                    direction="column"
-                    gap="2xl"
-                    style={styles.featuredInfoContent}
-                  >
-                    <Text
-                      font="title"
-                      size={{ default: "4xl", sm: "6xl" }}
-                      weight="semibold"
-                      style={styles.featuredTitle}
-                    >
-                      {listing.name}
-                    </Text>
-                    <Body style={styles.featuredTagline}>
-                      {listing.tagline}
-                    </Body>
-                  </Flex>
-                </Flex>
-              </Flex>
-            </>
+            <></>
           ) : (
             <>
               <Flex gap="2xl" align="center" style={styles.listingHeader}>

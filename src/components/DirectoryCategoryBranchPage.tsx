@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { Link as RouterLink, createLink } from "@tanstack/react-router";
 import {
   AppWindow,
   BarChart3,
@@ -36,6 +36,8 @@ import {
 } from "../lib/directory-categories";
 
 export type RootDirectoryCategoryId = "apps" | "protocol";
+
+const AppLink = createLink(Link);
 
 const ROOT_CATEGORY_COPY = {
   apps: {
@@ -188,15 +190,15 @@ export function DirectoryCategoryBranchPage({
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" style={styles.pageContent}>
             <Flex gap="xl" style={styles.navLinks}>
-              <Link href="/">Back to home</Link>
-              <Link href="/categories/all">All branches</Link>
-              <Link href={copy.alternateHref}>
+              <AppLink to="/">Back to home</AppLink>
+              <AppLink to={"/categories/all" as never}>All branches</AppLink>
+              <AppLink to={copy.alternateHref as never}>
                 Browse {copy.alternateLabel}
-              </Link>
+              </AppLink>
               {import.meta.env.DEV ? (
                 <>
-                  <Link href="/dev/categories">Recategorize DB</Link>
-                  <Link href="/dev/app-tags">App tags</Link>
+                  <AppLink to="/dev/categories">Recategorize DB</AppLink>
+                  <AppLink to="/dev/app-tags">App tags</AppLink>
                 </>
               ) : null}
             </Flex>

@@ -4,13 +4,13 @@ import {
   createFileRoute,
   createLink,
   Link as RouterLink,
+  useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
-import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
@@ -18,6 +18,7 @@ import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
+import { Select, SelectItem } from "../design-system/select";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
@@ -34,12 +35,25 @@ import {
 import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 
-const ButtonLink = createLink(Button);
+const LinkLink = createLink(Link);
+
+const sortOptions = [
+  { id: "popular", label: "Popular" },
+  { id: "newest", label: "Newest" },
+] as const;
 
 export const Route = createFileRoute("/apps/all")({
-  loader: ({ context }) =>
+  validateSearch: (search): { sort: "popular" | "newest" } => ({
+    sort: search.sort === "newest" ? "newest" : "popular",
+  }),
+  loaderDeps: ({ search }) => ({
+    sort: search.sort,
+  }),
+  loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(
-      directoryListingApi.getAllAppsQueryOptions,
+      directoryListingApi.getAllAppsQueryOptions({
+        sort: deps.sort,
+      }),
     ),
   component: AppsAllPage,
 });
@@ -67,9 +81,16 @@ const styles = stylex.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
+  resultsActions: {
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
   resultCount: {
     letterSpacing: "0.16em",
     textTransform: "uppercase",
+  },
+  sortSelect: {
+    minWidth: "12rem",
   },
   listingGrid: {
     display: "grid",
@@ -118,9 +139,14 @@ const styles = stylex.create({
 });
 
 function AppsAllPage() {
+  const search = Route.useSearch();
+  const router = useRouter();
   const { data: apps } = useSuspenseQuery(
-    directoryListingApi.getAllAppsQueryOptions,
+    directoryListingApi.getAllAppsQueryOptions({
+      sort: search.sort,
+    }),
   );
+  console.log("apps", apps);
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -145,11 +171,12 @@ function AppsAllPage() {
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" gap="7xl">
             <Flex direction="column" gap="4xl">
-              <Flex gap="xl" style={styles.navLinks}>
-                <Link href="/">
+              <Flex gap="xl" justify="between" style={styles.navLinks}>
+                <LinkLink to="/">
                   <ChevronLeft />
                   Home
-                </Link>
+                </LinkLink>
+                <LinkLink to="/apps/tags">Browse by tag</LinkLink>
               </Flex>
 
               <AppTagHero
@@ -184,9 +211,29 @@ function AppsAllPage() {
                     )}
                   </SmallBody>
                 </Flex>
-                <ButtonLink to="/apps/tags" size="lg" variant="secondary">
-                  Browse by tag
-                </ButtonLink>
+                <Flex gap="xl" style={styles.resultsActions}>
+                  <Select
+                    aria-label="Sort apps"
+                    items={sortOptions}
+                    placeholder="Sort apps"
+                    size="lg"
+                    style={styles.sortSelect}
+                    value={search.sort}
+                    variant="secondary"
+                    onChange={(key) => {
+                      if (key !== "popular" && key !== "newest") {
+                        return;
+                      }
+
+                      void router.navigate({
+                        to: "/apps/all",
+                        search: { sort: key },
+                      });
+                    }}
+                  >
+                    {(item) => <SelectItem>{item.label}</SelectItem>}
+                  </Select>
+                </Flex>
               </Flex>
 
               {filteredApps.length > 0 ? (

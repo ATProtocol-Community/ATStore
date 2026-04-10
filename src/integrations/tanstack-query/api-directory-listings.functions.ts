@@ -19,13 +19,13 @@ import {
   type DirectoryCategoryAccent,
   type DirectoryCategoryTreeNode,
 } from '../../lib/directory-categories'
+import { findProtocolCategoryBySlugParam } from '../../lib/protocol-category-metadata'
 import {
   sanitizeListingDescription,
   sanitizeListingTagline,
 } from '../../lib/listing-copy'
 import {
   buildDirectoryListingSlug,
-  getDirectoryListingSlug,
 } from '../../lib/directory-listing-slugs'
 import { dbMiddleware } from './db-middleware'
 
@@ -103,6 +103,30 @@ export interface DirectoryAppTagSummary {
   count: number
 }
 
+export interface DirectoryProtocolCategoryGroup {
+  /** Full path e.g. `protocol/pds`. */
+  categoryId: string
+  /** Second path segment; used in URLs `/protocol/$segment`. */
+  segment: string
+  label: string
+  description: string
+  count: number
+  listings: DirectoryListingCard[]
+}
+
+export interface DirectoryProtocolCategorySummary {
+  segment: string
+  label: string
+  count: number
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value)
+}
+
 export interface DirectoryListingCategoryAssignment {
   id: string
   name: string
@@ -138,6 +162,9 @@ export interface DirectoryHomePageData {
   popular: DirectoryListingCard[]
   fresh: DirectoryListingCard[]
   tags: DirectoryAppTagSummary[]
+  protocolFeatured: DirectoryListingCard
+  protocolSpotlights: DirectoryListingCard[]
+  protocolCategories: DirectoryProtocolCategorySummary[]
 }
 
 const CATEGORY_ACCENTS: CategoryAccent[] = ['blue', 'pink', 'purple', 'green']
@@ -160,6 +187,10 @@ const deleteDirectoryListingInput = z.object({
   id: z.string().min(1),
 })
 
+const regenerateDirectoryListingContentInput = z.object({
+  id: z.string().min(1),
+})
+
 const updateDirectoryListingAppTagsInput = z.object({
   id: z.string().min(1),
   appTags: z.array(z.string()).max(64),
@@ -167,6 +198,10 @@ const updateDirectoryListingAppTagsInput = z.object({
 
 const getAppsByTagPageInput = z.object({
   tag: z.string().trim().min(1),
+})
+
+const getProtocolCategoryPageInput = z.object({
+  category: z.string().trim().min(1),
 })
 
 const getRelatedDirectoryListingsInput = z.object({
@@ -212,161 +247,6 @@ function toDirectoryCategorySummary(input: {
     pathLabels: input.pathLabels,
   } satisfies DirectoryCategorySummary
 }
-
-const fallbackHomePageData: DirectoryHomePageData = {
-  featured: {
-    id: 'fallback-featured',
-    name: 'Bluesky Boost',
-    tagline: 'Enhance your Bluesky desktop experience',
-    description: 'Curated tools, polished interfaces, and everyday power-ups.',
-    iconUrl: null,
-    imageUrl: null,
-    categorySlug: null,
-    category: 'Apps',
-    accent: 'blue',
-    rating: 4.9,
-    priceLabel: 'GET',
-  },
-  spotlights: [
-    {
-      id: 'fallback-spotlight-social',
-      name: 'SkyLink Explorer',
-      tagline: 'Visualize the social graph in 3D',
-      description: 'See how communities connect and where trends begin.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'Bluesky',
-      accent: 'purple',
-      rating: 4.8,
-      priceLabel: 'GET',
-    },
-    {
-      id: 'fallback-spotlight-utility',
-      name: 'FeedMaster Pro',
-      tagline: 'Custom feeds for every mood',
-      description: 'Shape your home feed around signals that matter.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'Clients',
-      accent: 'green',
-      rating: 4.8,
-      priceLabel: 'GET',
-    },
-  ],
-  popular: [
-    {
-      id: 'fallback-popular-1',
-      name: 'Bluesky Boost',
-      tagline: 'Enhance your Bluesky desktop experience',
-      description: 'A lightweight toolkit for power users.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'Apps',
-      accent: 'blue',
-      rating: 4.9,
-      priceLabel: 'GET',
-    },
-    {
-      id: 'fallback-popular-2',
-      name: 'SkyLink Explorer',
-      tagline: 'Visualize the social graph in 3D',
-      description: 'Turn follows and lists into an explorable map.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'Protocol',
-      accent: 'purple',
-      rating: 4.8,
-      priceLabel: 'GET',
-    },
-    {
-      id: 'fallback-popular-3',
-      name: 'FeedMaster Pro',
-      tagline: 'Custom feeds for every mood',
-      description: 'Tunable ranking for news, memes, and friends.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'Tools',
-      accent: 'pink',
-      rating: 4.8,
-      priceLabel: 'GET',
-    },
-  ],
-  fresh: [
-    {
-      id: 'fallback-new-1',
-      name: 'Palette Studio',
-      tagline: 'Design beautiful post cards',
-      description: 'Make shareable graphics without leaving your flow.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'Analytics',
-      accent: 'pink',
-      rating: 4.8,
-      priceLabel: 'GET',
-    },
-    {
-      id: 'fallback-new-2',
-      name: 'SkyGuard',
-      tagline: 'Privacy-first moderation at scale',
-      description: 'Block, mute, and review with better safety controls.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'PDS',
-      accent: 'blue',
-      rating: 4.7,
-      priceLabel: 'GET',
-    },
-    {
-      id: 'fallback-new-3',
-      name: 'Listsmith',
-      tagline: 'Organize communities into smart lists',
-      description: 'Keep your circles tidy as the network grows.',
-      iconUrl: null,
-      imageUrl: null,
-      categorySlug: null,
-      category: 'Bluesky',
-      accent: 'green',
-      rating: 4.7,
-      priceLabel: 'GET',
-    },
-  ],
-  tags: [
-    { tag: 'social', count: 0 },
-    { tag: 'developer tool', count: 0 },
-    { tag: 'automation', count: 0 },
-    { tag: 'community', count: 0 },
-  ],
-}
-
-const fallbackDetailListings: DirectoryListingDetail[] = [
-  fallbackHomePageData.featured,
-  ...fallbackHomePageData.spotlights,
-  ...fallbackHomePageData.popular,
-  ...fallbackHomePageData.fresh,
-].map((listing) => ({
-  ...listing,
-  screenshots: listing.imageUrl ? [listing.imageUrl] : [],
-  externalUrl: null,
-  sourceUrl: null,
-  rawCategoryHint: null,
-  scope: null,
-  productType: listing.category,
-  domain: null,
-  vertical: null,
-  classificationReason: null,
-  categorySlug: null,
-  categoryPathLabel: null,
-  appTags: [],
-  createdAt: null,
-  updatedAt: null,
-}))
 
 function getListingCategory(row: Pick<DirectoryListingRow, 'categorySlug'>) {
   return getDirectoryCategoryOption(row.categorySlug)
@@ -449,6 +329,29 @@ type DirectoryListingDetailRow = DirectoryListingRow & {
   updatedAt: Date
 }
 
+type DirectoryListingGenerationCandidate = {
+  id: string
+  name: string
+  sourceUrl: string
+  externalUrl: string | null
+  screenshotUrls: string[]
+  tagline: string | null
+  fullDescription: string | null
+  rawCategoryHint: string | null
+  scope: string | null
+  productType: string | null
+  domain: string | null
+}
+
+type ExtractedPageCopy = {
+  finalUrl: string
+  title: string | null
+  metaDescription: string | null
+  ogDescription: string | null
+  headings: string[]
+  paragraphs: string[]
+}
+
 function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail {
   const assignedCategory = getDirectoryCategoryOption(row.categorySlug)
 
@@ -486,26 +389,16 @@ function dedupeListings(rows: DirectoryListingRow[]) {
   })
 }
 
-function ensureCards(
+function requireCards(
   cards: DirectoryListingCard[],
-  fallbackCards: DirectoryListingCard[],
   desiredCount: number,
+  label: string,
 ) {
-  const merged = [...cards]
-
-  for (const fallbackCard of fallbackCards) {
-    if (merged.length >= desiredCount) {
-      break
-    }
-
-    if (merged.some((card) => card.id === fallbackCard.id)) {
-      continue
-    }
-
-    merged.push(fallbackCard)
+  if (cards.length < desiredCount) {
+    throw new Error(`Expected ${desiredCount} ${label}, found ${cards.length}`)
   }
 
-  return merged.slice(0, desiredCount)
+  return cards.slice(0, desiredCount)
 }
 
 function buildCategories(rows: DirectoryListingRow[], limit = 4) {
@@ -554,6 +447,10 @@ function isBrowseableAppRow(row: Pick<DirectoryListingRow, 'categorySlug'>) {
   )
 }
 
+function isRootCategoryPath(categorySlug: unknown, prefix: string) {
+  return sql<boolean>`array_length(string_to_array(${categorySlug}, '/'), 1) = 2 and ${categorySlug} like ${`${prefix}/%`}`
+}
+
 function buildAppTagGroups(rows: DirectoryListingAppTagRow[]) {
   const groups = new Map<string, DirectoryListingCard[]>()
 
@@ -593,6 +490,69 @@ function buildAppTagGroups(rows: DirectoryListingAppTagRow[]) {
 function buildAllApps(rows: DirectoryListingRow[]) {
   return dedupeListings(rows.filter(isBrowseableAppRow))
     .map(toListingCard)
+}
+
+function isHomePageFeaturedAppRow(row: Pick<DirectoryListingRow, 'categorySlug'>) {
+  return Boolean(
+    row.categorySlug &&
+      row.categorySlug.startsWith('apps/') &&
+      row.categorySlug.split('/').length === 2,
+  )
+}
+
+function isBrowseableProtocolRow(row: Pick<DirectoryListingRow, 'categorySlug'>) {
+  return Boolean(
+    row.categorySlug &&
+      row.categorySlug.startsWith('protocol/') &&
+      row.categorySlug.split('/').length === 2,
+  )
+}
+
+function buildProtocolCategoryGroups(rows: DirectoryListingRow[]): DirectoryProtocolCategoryGroup[] {
+  const groups = new Map<string, DirectoryListingCard[]>()
+
+  for (const row of rows) {
+    if (!isBrowseableProtocolRow(row)) {
+      continue
+    }
+
+    const categoryId = row.categorySlug!
+    const card = toListingCard(row)
+    const listings = groups.get(categoryId)
+    if (listings) {
+      listings.push(card)
+      continue
+    }
+
+    groups.set(categoryId, [card])
+  }
+
+  return [...groups.entries()]
+    .map(([categoryId, listings]) => {
+      const option = getDirectoryCategoryOption(categoryId)
+      const segment = categoryId.split('/')[1] ?? categoryId
+
+      return {
+        categoryId,
+        segment,
+        label: option?.label ?? segment,
+        description: option?.description ?? '',
+        count: listings.length,
+        listings: [...listings].sort((left, right) => left.name.localeCompare(right.name)),
+      } satisfies DirectoryProtocolCategoryGroup
+    })
+    .sort((left, right) => {
+      if (right.count !== left.count) {
+        return right.count - left.count
+      }
+
+      return left.label.localeCompare(right.label)
+    })
+}
+
+function buildAllProtocolListings(rows: DirectoryListingRow[]) {
+  return dedupeListings(rows.filter(isBrowseableProtocolRow))
+    .map(toListingCard)
     .sort((left, right) => left.name.localeCompare(right.name))
 }
 
@@ -606,7 +566,7 @@ function buildHomePageTagSummaries(
     return groups.slice(0, limit).map(({ tag, count }) => ({ tag, count }))
   }
 
-  return fallbackHomePageData.tags.slice(0, limit)
+  throw new Error('No app tag summaries found')
 }
 
 function getListingSelect(table: any) {
@@ -631,67 +591,692 @@ function assertDevelopmentOnly() {
   }
 }
 
+function getListingGenerationUrl(listing: DirectoryListingGenerationCandidate) {
+  return listing.externalUrl || listing.sourceUrl || null
+}
+
+function normalizeGeneratedText(value: string | null | undefined): string | null {
+  if (!value) {
+    return null
+  }
+
+  const cleaned = value
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  return cleaned.length > 0 ? cleaned : null
+}
+
+function dedupeGeneratedStrings(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+
+  for (const value of values) {
+    const cleaned = normalizeGeneratedText(value)
+    if (!cleaned) continue
+
+    const key = cleaned.toLowerCase()
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    out.push(cleaned)
+  }
+
+  return out
+}
+
+function shortenToSentence(value: string, maxLength = 160): string {
+  const cleaned = normalizeGeneratedText(value) ?? value.trim()
+  if (cleaned.length <= maxLength) {
+    return cleaned
+  }
+
+  const sentenceMatch = cleaned.match(/^(.{30,200}?[.!?])(?:\s|$)/)
+  if (sentenceMatch?.[1] && sentenceMatch[1].length <= maxLength) {
+    return sentenceMatch[1].trim()
+  }
+
+  return `${cleaned.slice(0, maxLength - 1).trimEnd()}…`
+}
+
+function isLikelyBoilerplateText(value: string) {
+  const normalized = value.trim().toLowerCase()
+  if (normalized.length < 30) {
+    return true
+  }
+
+  return (
+    normalized.includes('cookie') ||
+    normalized.includes('privacy policy') ||
+    normalized.includes('terms of service') ||
+    normalized.includes('all rights reserved') ||
+    normalized.includes('sign in') ||
+    normalized.includes('log in') ||
+    normalized.includes('create account')
+  )
+}
+
+async function extractPageCopy(url: string): Promise<ExtractedPageCopy> {
+  const { chromium } = await import('playwright')
+  const browser = await chromium.launch({
+    headless: true,
+  })
+
+  try {
+    const page = await browser.newPage({
+      viewport: {
+        width: 1440,
+        height: 960,
+      },
+    })
+
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.waitForTimeout(2_500)
+
+    const [title, finalUrl, metaDescription, ogDescription, headings, paragraphs] =
+      await Promise.all([
+        page.title(),
+        page.url(),
+        page
+          .locator('meta[name="description"]')
+          .first()
+          .getAttribute('content')
+          .catch(() => null),
+        page
+          .locator('meta[property="og:description"]')
+          .first()
+          .getAttribute('content')
+          .catch(() => null),
+        page
+          .locator('main h1, main h2, main h3, article h1, article h2, article h3, [role="main"] h1, [role="main"] h2, [role="main"] h3, body h1, body h2, body h3')
+          .evaluateAll((nodes) =>
+            nodes
+              .map((node) => node.textContent ?? '')
+              .map((value) => value.replace(/\s+/g, ' ').trim())
+              .filter((value) => value.length > 0)
+              .slice(0, 10),
+          ),
+        page
+          .locator('main p, main li, article p, article li, [role="main"] p, [role="main"] li, body p, body li')
+          .evaluateAll((nodes) =>
+            nodes
+              .map((node) => node.textContent ?? '')
+              .map((value) => value.replace(/\s+/g, ' ').trim())
+              .filter((value) => value.length >= 30)
+              .slice(0, 24),
+          ),
+      ])
+
+    return {
+      finalUrl,
+      title,
+      metaDescription,
+      ogDescription,
+      headings: dedupeGeneratedStrings(headings),
+      paragraphs: dedupeGeneratedStrings(paragraphs),
+    }
+  } finally {
+    await browser.close()
+  }
+}
+
+function chooseSiteTagline(extracted: ExtractedPageCopy): string | null {
+  const candidates = dedupeGeneratedStrings([
+    extracted.metaDescription,
+    extracted.ogDescription,
+    extracted.headings[1],
+    extracted.paragraphs[0],
+    extracted.title,
+  ])
+
+  for (const candidate of candidates) {
+    if (isLikelyBoilerplateText(candidate)) continue
+    if (candidate.length < 24) continue
+
+    return shortenToSentence(candidate, 140)
+  }
+
+  return null
+}
+
+function chooseSiteDescription(extracted: ExtractedPageCopy): string | null {
+  const parts: string[] = []
+
+  for (const paragraph of extracted.paragraphs) {
+    if (isLikelyBoilerplateText(paragraph)) continue
+    if (parts.some((existing) => existing.toLowerCase() === paragraph.toLowerCase())) {
+      continue
+    }
+
+    parts.push(paragraph)
+    if (parts.join('\n\n').length >= 420) {
+      break
+    }
+  }
+
+  const joined = normalizeGeneratedText(parts.join('\n\n'))
+  if (joined && joined.length >= 80) {
+    return joined
+  }
+
+  return dedupeGeneratedStrings([
+    extracted.metaDescription,
+    extracted.ogDescription,
+    extracted.paragraphs[0],
+  ])[0] ?? null
+}
+
+function parseJsonObject(text: string): Record<string, unknown> {
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim()
+  const start = cleaned.indexOf('{')
+  const end = cleaned.lastIndexOf('}')
+  const slice = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned
+  const parsed: unknown = JSON.parse(slice)
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Expected JSON object from model')
+  }
+
+  return parsed as Record<string, unknown>
+}
+
+async function generateListingCopyField(input: {
+  field: 'tagline' | 'description'
+  listing: DirectoryListingGenerationCandidate
+  extracted: ExtractedPageCopy
+  preferredTagline: string | null
+  preferredDescription: string | null
+}): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_KEY ?? ''
+  if (!apiKey) {
+    throw new Error(
+      'Missing ANTHROPIC_API_KEY or ANTHROPIC_KEY in the environment for copy generation.',
+    )
+  }
+
+  const { default: Anthropic } = await import('@anthropic-ai/sdk')
+  const client = new Anthropic({ apiKey })
+  const model = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'
+  const responseKey = input.field === 'tagline' ? 'tagline' : 'description'
+  const payload = {
+    name: input.listing.name,
+    url: input.extracted.finalUrl,
+    sourceUrl: input.listing.sourceUrl,
+    rawCategoryHint: input.listing.rawCategoryHint,
+    scope: input.listing.scope,
+    productType: input.listing.productType,
+    domain: input.listing.domain,
+    currentTagline: sanitizeListingTagline(input.listing.tagline),
+    currentDescription: sanitizeListingDescription(input.listing.fullDescription),
+    preferredTagline: input.preferredTagline,
+    preferredDescription: input.preferredDescription,
+    pageTitle: input.extracted.title,
+    metaDescription: input.extracted.metaDescription,
+    ogDescription: input.extracted.ogDescription,
+    headings: input.extracted.headings.slice(0, 8),
+    paragraphs: input.extracted.paragraphs.slice(0, 10),
+  }
+
+  const message = await client.messages.create({
+    model,
+    max_tokens: 400,
+    temperature: 0.2,
+    system:
+      input.field === 'tagline'
+        ? `You write concise, accurate software directory taglines.
+
+Rules:
+- Prefer the product's own wording when it is available and clear.
+- Do not invent features, platforms, pricing, or claims not supported by the provided page text.
+- The tagline must be a single sentence under 140 characters.
+- Avoid hype, filler, and phrases like "revolutionary" or "next-generation".
+- Return JSON only with the key "tagline".`
+        : `You write concise, accurate software directory descriptions.
+
+Rules:
+- Prefer the product's own wording when it is available and clear.
+- Do not invent features, platforms, pricing, or claims not supported by the provided page text.
+- Always write the final description in English, even if the source website is in another language.
+- Translate or paraphrase non-English source text into natural English.
+- The description should be 2-4 sentences and explain what the product is and why someone would use it.
+- Avoid hype, filler, and phrases like "revolutionary" or "next-generation".
+- Never include metadata labels such as Category, Platforms, Status, or Last checked.
+- Return JSON only with the key "description".`,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(payload),
+          },
+        ],
+      },
+    ],
+  })
+
+  const text = message.content
+    .filter((block) => block.type === 'text')
+    .map((block) => ('text' in block ? block.text : ''))
+    .join('')
+    .trim()
+  const parsed = parseJsonObject(text)
+  const value = String(parsed[responseKey] ?? '')
+
+  if (input.field === 'tagline') {
+    const tagline = sanitizeListingTagline(value)
+    if (!tagline) {
+      throw new Error('Model returned an empty tagline')
+    }
+
+    return tagline
+  }
+
+  const description = sanitizeListingDescription(value)
+  if (!description) {
+    throw new Error('Model returned an empty description')
+  }
+
+  return description
+}
+
+async function generateListingTextField(input: {
+  field: 'tagline' | 'description'
+  listing: DirectoryListingGenerationCandidate
+}): Promise<{ value: string; source: 'website' | 'model' }> {
+  const pageUrl = getListingGenerationUrl(input.listing)
+  if (!pageUrl) {
+    throw new Error(`Missing URL for ${input.listing.name}`)
+  }
+
+  const extracted = await extractPageCopy(pageUrl)
+  const siteTagline = chooseSiteTagline(extracted)
+  const siteDescription = chooseSiteDescription(extracted)
+
+  if (input.field === 'tagline' && siteTagline) {
+    return {
+      value: siteTagline,
+      source: 'website',
+    }
+  }
+
+  return {
+    value: await generateListingCopyField({
+      field: input.field,
+      listing: input.listing,
+      extracted,
+      preferredTagline: siteTagline,
+      preferredDescription: siteDescription,
+    }),
+    source: 'model',
+  }
+}
+
+async function getDirectoryListingGenerationCandidate(
+  context: any,
+  id: string,
+): Promise<DirectoryListingGenerationCandidate> {
+  const table = context.schema.directoryListings
+  const [listing] = await context.db
+    .select({
+      id: table.id,
+      name: table.name,
+      sourceUrl: table.sourceUrl,
+      externalUrl: table.externalUrl,
+      screenshotUrls: table.screenshotUrls,
+      tagline: table.tagline,
+      fullDescription: table.fullDescription,
+      rawCategoryHint: table.rawCategoryHint,
+      scope: table.scope,
+      productType: table.productType,
+      domain: table.domain,
+    })
+    .from(table)
+    .where(eq(table.id, id))
+    .limit(1)
+
+  if (!listing) {
+    throw new Error(`Listing not found: ${id}`)
+  }
+
+  return listing
+}
+
+function slugifyGeneratedAssetName(value: string) {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return normalized || 'listing'
+}
+
+function getImageExtensionFromMimeType(mimeType: string) {
+  if (mimeType === 'image/jpeg') return '.jpg'
+  if (mimeType === 'image/webp') return '.webp'
+
+  return '.png'
+}
+
+function buildListingGenerationMetadata(
+  listing: DirectoryListingGenerationCandidate,
+  pageUrl: string,
+) {
+  return [
+    `Name: ${listing.name}`,
+    `URL: ${pageUrl}`,
+    listing.tagline ? `Tagline: ${listing.tagline}` : null,
+    listing.productType ? `Product type: ${listing.productType}` : null,
+    listing.domain ? `Domain: ${listing.domain}` : null,
+    listing.scope ? `Scope: ${listing.scope}` : null,
+    listing.rawCategoryHint ? `Category hint: ${listing.rawCategoryHint}` : null,
+    listing.fullDescription ? `Description: ${listing.fullDescription}` : null,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join('\n')
+}
+
+async function captureListingScreenshot(url: string): Promise<Buffer> {
+  const { chromium } = await import('playwright')
+  const browser = await chromium.launch({
+    headless: true,
+  })
+
+  try {
+    const page = await browser.newPage({
+      viewport: {
+        width: 1440,
+        height: 960,
+      },
+      deviceScaleFactor: 1,
+    })
+
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.waitForTimeout(2_500)
+    await page.evaluate(() => {
+      window.scrollTo(0, 0)
+    })
+
+    return await page.screenshot({
+      type: 'png',
+      fullPage: false,
+    })
+  } finally {
+    await browser.close()
+  }
+}
+
+function buildMarketingPrompt(
+  listing: DirectoryListingGenerationCandidate,
+  pageUrl: string,
+) {
+  const metadata = buildListingGenerationMetadata(listing, pageUrl)
+
+  return `Create a polished product-marketing image for this software listing using the provided website screenshot as reference.
+
+Goals:
+- Preserve the brand feeling, palette, and product category suggested by the screenshot.
+- Produce a clean, aspirational hero image suitable for an app directory card or product detail page.
+- Show a plausible product UI or marketing composition inspired by the screenshot, but improve clarity and composition.
+- Keep it realistic and product-focused, not abstract art.
+- If the listing is dev focused and doesnt have any branding use the following
+  - Style: bright, colorful, playful, polished, editorial, and high-end product marketing art.
+  - Use soft 3D gradients, glossy lighting, rounded cards, translucent glass layers, luminous highlights, subtle depth, and a sense of motion and delight.
+  - Composition: wide 16:9 banner with richer decorative energy.
+  - Show layered foreground, midground, and background depth with floating app-like tiles and abstract interface hints.
+    
+Constraints:
+- No device mockups, browser chrome, cursors, or visible cookie banners.
+- No watermarks.
+- No tiny unreadable text blocks.
+- Avoid adding extra logos unless they are clearly implied by the source.
+- Use a landscape composition that reads well when cropped to a wide card.
+
+Listing metadata:
+${metadata}`
+}
+
+function buildIconPrompt(
+  listing: DirectoryListingGenerationCandidate,
+  pageUrl: string,
+) {
+  const metadata = buildListingGenerationMetadata(listing, pageUrl)
+
+  return `Create a polished square product icon for this software listing using the provided website screenshot as reference.
+
+Goals:
+- Preserve the brand feeling, palette, and primary visual motif suggested by the screenshot.
+- Produce a crisp standalone icon that reads clearly at small sizes in a software directory.
+- Favor a simple, memorable mark over a detailed illustration.
+- Keep the result modern, product-focused, and plausible for the brand.
+
+Style fallback order:
+- If the site already suggests a clear brand mark or symbol, refine that into a cleaner square app icon.
+- If the site mostly uses a wordmark, extract one simple motif, monogram, or geometric shape that still feels native to the brand.
+- If the brand is weak or developer-tooling oriented, use a tasteful fallback: bold gradient background, one centered motif, subtle depth, high contrast, and minimal detail.
+
+Constraints:
+- Square 1:1 composition with safe padding around the mark.
+- No browser chrome, screenshots, UI mockups, or website layouts.
+- No tiny text, taglines, or readable words unless a single letter is essential to the brand.
+- Avoid photorealism and avoid generic clip-art.
+- Keep edges clean and the silhouette recognizable on light or dark backgrounds.
+
+Listing metadata:
+${metadata}`
+}
+
+async function generateImageFromScreenshot(input: {
+  screenshot: Buffer
+  prompt: string
+}): Promise<{ buffer: Buffer; mimeType: string }> {
+  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? ''
+  if (!apiKey) {
+    throw new Error(
+      'Missing GEMINI_API_KEY or GOOGLE_API_KEY in the environment for image generation.',
+    )
+  }
+
+  const endpoint =
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent'
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'x-goog-api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: input.prompt,
+            },
+            {
+              inlineData: {
+                mimeType: 'image/png',
+                data: input.screenshot.toString('base64'),
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Gemini image request failed: ${await response.text()}`)
+  }
+
+  const json = (await response.json()) as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{
+          inlineData?: {
+            data?: string
+            mimeType?: string
+          }
+        }>
+      }
+    }>
+  }
+
+  const imagePart = json.candidates?.[0]?.content?.parts?.find(
+    (part) => part.inlineData?.data,
+  )?.inlineData
+
+  if (!imagePart?.data) {
+    throw new Error(`No image data returned by Gemini: ${JSON.stringify(json)}`)
+  }
+
+  return {
+    buffer: Buffer.from(imagePart.data, 'base64'),
+    mimeType: imagePart.mimeType ?? 'image/png',
+  }
+}
+
+async function saveGeneratedListingAsset(
+  listing: DirectoryListingGenerationCandidate,
+  image: { buffer: Buffer; mimeType: string },
+  assetType: 'hero' | 'icon',
+): Promise<string> {
+  const path = await import('node:path')
+  const { mkdir, writeFile } = await import('node:fs/promises')
+  const extension = getImageExtensionFromMimeType(image.mimeType)
+  const fileName = `${slugifyGeneratedAssetName(listing.name)}-${assetType}-${listing.id}${extension}`
+  const outputDirectory = path.resolve(process.cwd(), 'public/generated/listings')
+  const absolutePath = path.resolve(outputDirectory, fileName)
+
+  await mkdir(outputDirectory, { recursive: true })
+  await writeFile(absolutePath, image.buffer)
+
+  return `/generated/listings/${fileName}`
+}
+
 const getHomePageData = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
     const table = context.schema.directoryListings
     const listingSelect = getListingSelect(table)
 
-    const [recentRows, newestRows, tagRows] = await Promise.all([
+    const [recentRows, newestRows, tagRows, protocolRows] = await Promise.all([
       context.db
         .select(listingSelect)
         .from(table)
+        .where(isRootCategoryPath(table.categorySlug, 'apps'))
         .orderBy(desc(table.updatedAt), desc(table.createdAt))
-        .limit(12),
-      context.db.select(listingSelect).from(table).orderBy(desc(table.createdAt)).limit(6),
+        .limit(30),
+      context.db
+        .select(listingSelect)
+        .from(table)
+        .where(isRootCategoryPath(table.categorySlug, 'apps'))
+        .orderBy(desc(table.createdAt))
+        .limit(6),
       context.db
         .select({
           ...listingSelect,
           appTags: table.appTags,
         })
         .from(table)
+        .where(isRootCategoryPath(table.categorySlug, 'apps'))
         .orderBy(desc(table.updatedAt), desc(table.createdAt))
         .limit(96),
+      context.db
+        .select(listingSelect)
+        .from(table)
+        .where(isRootCategoryPath(table.categorySlug, 'protocol'))
+        .orderBy(desc(table.updatedAt), desc(table.createdAt)),
     ])
 
     if (recentRows.length === 0) {
-      return fallbackHomePageData
+      throw new Error('No recent rows found')
     }
 
     const dedupedRecentRows = dedupeListings(recentRows)
+    const dedupedRecentAppRows = dedupedRecentRows.filter(isHomePageFeaturedAppRow)
     const featuredSource =
-      dedupedRecentRows.find((row) => row.screenshotUrls.length > 0 || row.iconUrl) ||
-      dedupedRecentRows[0]
+      dedupedRecentAppRows.find((row) => row.screenshotUrls.length > 0 || row.iconUrl) ||
+      dedupedRecentAppRows[0]
 
     if (!featuredSource) {
-      return fallbackHomePageData
+      throw new Error('No homepage featured listing found')
     }
 
     const featured = toListingCard(featuredSource)
-    const remainingRows = dedupedRecentRows.filter((row) => row.id !== featuredSource.id)
+    console.log('dedupedRecentAppRows', dedupedRecentAppRows)
+    const remainingAppRows = dedupedRecentAppRows.filter(
+      (row) => row.id !== featuredSource.id,
+    )
 
-    const spotlights = ensureCards(
-      remainingRows.slice(0, 2).map(toListingCard),
-      fallbackHomePageData.spotlights,
+    const spotlights = requireCards(
+      remainingAppRows.slice(0, 2).map(toListingCard),
       2,
+      'homepage spotlights',
     )
 
-    const popular = ensureCards(
-      remainingRows.slice(0, 3).map(toListingCard),
-      fallbackHomePageData.popular,
+    const popular = requireCards(
+      dedupedRecentRows
+        .filter((row) => row.id !== featuredSource.id)
+        .slice(0, 3)
+        .map(toListingCard),
       3,
+      'homepage popular listings',
     )
 
-    const fresh = ensureCards(
+    const fresh = requireCards(
       dedupeListings(newestRows)
         .filter((row) => row.id !== featuredSource.id)
         .slice(0, 3)
         .map(toListingCard),
-      fallbackHomePageData.fresh,
       3,
+      'homepage fresh listings',
     )
 
     const tags = buildHomePageTagSummaries(tagRows, 4)
+    const dedupedProtocolRows = dedupeListings(protocolRows)
+    const protocolFeaturedSource =
+      dedupedProtocolRows.find((row) => row.screenshotUrls.length > 0 || row.iconUrl) ||
+      dedupedProtocolRows[0]
+    if (!protocolFeaturedSource) {
+      throw new Error('No homepage protocol featured listing found')
+    }
+
+    const protocolFeatured = toListingCard(protocolFeaturedSource)
+    const protocolSpotlights = requireCards(
+      dedupedProtocolRows
+        .filter((row) => row.id !== protocolFeaturedSource?.id)
+        .slice(0, 2)
+        .map(toListingCard),
+      2,
+      'homepage protocol spotlights',
+    )
+
+    const protocolGroups = buildProtocolCategoryGroups(protocolRows)
+    const protocolCategories: DirectoryProtocolCategorySummary[] =
+      protocolGroups.length > 0
+        ? protocolGroups.slice(0, 6).map(({ segment, label, count }) => ({
+            segment,
+            label,
+            count,
+          }))
+        : []
 
     return {
       featured,
@@ -699,6 +1284,9 @@ const getHomePageData = createServerFn({ method: 'GET' })
       popular,
       fresh,
       tags,
+      protocolFeatured,
+      protocolSpotlights,
+      protocolCategories,
     } satisfies DirectoryHomePageData
   })
 
@@ -805,23 +1393,38 @@ const getAppsByTagQueryOptions = queryOptions({
   queryFn: async () => getAppsByTag(),
 })
 
+const getAllAppsInput = z.object({
+  sort: z.enum(['popular', 'newest']).default('popular'),
+})
+
 const getAllApps = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
-  .handler(async ({ context }) => {
+  .inputValidator(getAllAppsInput)
+  .handler(async ({ data, context }) => {
+    const input = getAllAppsInput.parse(data)
     const table = context.schema.directoryListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(like(table.categorySlug, 'apps/%'))
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(
+        input.sort === 'newest'
+          ? desc(table.createdAt)
+          : desc(table.updatedAt),
+        desc(table.createdAt),
+      )
 
     return buildAllApps(rows)
   })
 
-const getAllAppsQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'allApps'],
-  queryFn: async () => getAllApps(),
-})
+function getAllAppsQueryOptions(input: z.input<typeof getAllAppsInput> = {}) {
+  const normalizedInput = getAllAppsInput.parse(input)
+
+  return queryOptions({
+    queryKey: ['directoryListings', 'allApps', normalizedInput],
+    queryFn: async () => getAllApps({ data: normalizedInput }),
+  })
+}
 
 const getAppsByTagPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
@@ -859,6 +1462,68 @@ function getAppsByTagPageQueryOptions(input: z.input<typeof getAppsByTagPageInpu
   })
 }
 
+const getProtocolCategories = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const table = context.schema.directoryListings
+    const rows = await context.db
+      .select(getListingSelect(table))
+      .from(table)
+      .where(like(table.categorySlug, 'protocol/%'))
+      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+
+    return buildProtocolCategoryGroups(rows)
+  })
+
+const getProtocolCategoriesQueryOptions = queryOptions({
+  queryKey: ['directoryListings', 'protocolCategories'],
+  queryFn: async () => getProtocolCategories(),
+})
+
+const getProtocolCategoryPage = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(getProtocolCategoryPageInput)
+  .handler(async ({ data, context }) => {
+    const table = context.schema.directoryListings
+    const rows = await context.db
+      .select(getListingSelect(table))
+      .from(table)
+      .where(like(table.categorySlug, 'protocol/%'))
+      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+
+    const groups = buildProtocolCategoryGroups(rows)
+    return findProtocolCategoryBySlugParam(groups, data.category) ?? null
+  })
+
+function getProtocolCategoryPageQueryOptions(
+  input: z.input<typeof getProtocolCategoryPageInput>,
+) {
+  const normalizedInput = getProtocolCategoryPageInput.parse(input)
+
+  return queryOptions({
+    queryKey: ['directoryListings', 'protocolCategoryPage', normalizedInput],
+    queryFn: async () => getProtocolCategoryPage({ data: normalizedInput }),
+  })
+}
+
+const getAllProtocolListings = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const table = context.schema.directoryListings
+    const rows = await context.db
+      .select(getListingSelect(table))
+      .from(table)
+      .where(like(table.categorySlug, 'protocol/%'))
+      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+
+    return buildAllProtocolListings(rows)
+  })
+
+const getAllProtocolListingsQueryOptions = queryOptions({
+  queryKey: ['directoryListings', 'allProtocol'],
+  queryFn: async () => getAllProtocolListings(),
+})
+
 const getDirectoryListingDetail = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(
@@ -867,13 +1532,6 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data, context }) => {
-    const fallbackListing = fallbackDetailListings.find(
-      (listing) => listing.id === data.id,
-    )
-    if (fallbackListing) {
-      return fallbackListing
-    }
-
     const table = context.schema.directoryListings
     const [row] = await context.db
       .select({
@@ -916,13 +1574,6 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data, context }) => {
-    const fallbackListing = fallbackDetailListings.find(
-      (listing) => getDirectoryListingSlug(listing) === data.slug,
-    )
-    if (fallbackListing) {
-      return fallbackListing
-    }
-
     const table = context.schema.directoryListings
     const [row] = await context.db
       .select({
@@ -975,6 +1626,10 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getRelatedDirectoryListingsInput)
   .handler(async ({ data, context }) => {
+    if (!isUuid(data.id)) {
+      return []
+    }
+
     const table = context.schema.directoryListings
     const listingSelect = getListingSelect(table)
 
@@ -1340,6 +1995,132 @@ const deleteDirectoryListing = createServerFn({ method: 'POST' })
     }
   })
 
+const regenerateDirectoryListingHeroImage = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(regenerateDirectoryListingContentInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
+    const pageUrl = getListingGenerationUrl(listing)
+
+    if (!pageUrl) {
+      throw new Error(`Missing URL for ${listing.name}`)
+    }
+
+    const screenshot = await captureListingScreenshot(pageUrl)
+    const generatedImage = await generateImageFromScreenshot({
+      screenshot,
+      prompt: buildMarketingPrompt(listing, pageUrl),
+    })
+    const publicPath = await saveGeneratedListingAsset(listing, generatedImage, 'hero')
+    const table = context.schema.directoryListings
+
+    await context.db
+      .update(table)
+      .set({
+        screenshotUrls: [publicPath],
+        updatedAt: new Date(),
+      })
+      .where(eq(table.id, data.id))
+
+    return {
+      id: data.id,
+      imageUrl: publicPath,
+    }
+  })
+
+const regenerateDirectoryListingIcon = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(regenerateDirectoryListingContentInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
+    const pageUrl = getListingGenerationUrl(listing)
+
+    if (!pageUrl) {
+      throw new Error(`Missing URL for ${listing.name}`)
+    }
+
+    const screenshot = await captureListingScreenshot(pageUrl)
+    const generatedImage = await generateImageFromScreenshot({
+      screenshot,
+      prompt: buildIconPrompt(listing, pageUrl),
+    })
+    const publicPath = await saveGeneratedListingAsset(listing, generatedImage, 'icon')
+    const table = context.schema.directoryListings
+
+    await context.db
+      .update(table)
+      .set({
+        iconUrl: publicPath,
+        updatedAt: new Date(),
+      })
+      .where(eq(table.id, data.id))
+
+    return {
+      id: data.id,
+      iconUrl: publicPath,
+    }
+  })
+
+const regenerateDirectoryListingTagline = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(regenerateDirectoryListingContentInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
+    const nextTagline = await generateListingTextField({
+      field: 'tagline',
+      listing,
+    })
+    const table = context.schema.directoryListings
+
+    await context.db
+      .update(table)
+      .set({
+        tagline: nextTagline.value,
+        updatedAt: new Date(),
+      })
+      .where(eq(table.id, data.id))
+
+    return {
+      id: data.id,
+      tagline: nextTagline.value,
+      source: nextTagline.source,
+    }
+  })
+
+const regenerateDirectoryListingDescription = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(regenerateDirectoryListingContentInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
+    const nextDescription = await generateListingTextField({
+      field: 'description',
+      listing,
+    })
+    const table = context.schema.directoryListings
+
+    await context.db
+      .update(table)
+      .set({
+        fullDescription: nextDescription.value,
+        updatedAt: new Date(),
+      })
+      .where(eq(table.id, data.id))
+
+    return {
+      id: data.id,
+      description: nextDescription.value,
+      source: nextDescription.source,
+    }
+  })
+
 export const directoryListingApi = {
   getHomePageData,
   getHomePageQueryOptions,
@@ -1355,6 +2136,12 @@ export const directoryListingApi = {
   getAppsByTagQueryOptions,
   getAppsByTagPage,
   getAppsByTagPageQueryOptions,
+  getProtocolCategories,
+  getProtocolCategoriesQueryOptions,
+  getProtocolCategoryPage,
+  getProtocolCategoryPageQueryOptions,
+  getAllProtocolListings,
+  getAllProtocolListingsQueryOptions,
   getDirectoryListingDetail,
   getDirectoryListingDetailQueryOptions,
   getDirectoryListingDetailBySlug,
@@ -1370,4 +2157,8 @@ export const directoryListingApi = {
   updateDirectoryListingAppTags,
   updateDirectoryListingCategoryAssignment,
   deleteDirectoryListing,
+  regenerateDirectoryListingHeroImage,
+  regenerateDirectoryListingIcon,
+  regenerateDirectoryListingTagline,
+  regenerateDirectoryListingDescription,
 }

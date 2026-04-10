@@ -39,6 +39,7 @@ import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { ChevronLeft } from "lucide-react";
 
 const ButtonLink = createLink(Button);
+const LinkLink = createLink(Link);
 const INITIAL_SECTION_LISTING_COUNT = 6;
 
 export const Route = createFileRoute("/apps/tags")({
@@ -135,16 +136,16 @@ function AppsAllPage() {
           <Flex direction="column" style={styles.gap}>
             <Flex direction="column" gap="4xl">
               <Flex gap="xl" justify="between" style={styles.navLinks}>
-                <Link href="/">
+                <LinkLink to="/">
                   <ChevronLeft />
                   Home
-                </Link>
+                </LinkLink>
 
-                <Link href="/apps/all">All apps</Link>
+                <LinkLink to="/apps/all">All apps</LinkLink>
               </Flex>
 
               <AppTagHero
-                eyebrow="Editorial collections"
+                eyebrow="Collections"
                 title="Find your new favorite app"
                 description="Explore cross-cutting app tags like analytics, moderation, and automation. Listings can appear in more than one group when they fit multiple workflows."
                 imageSrc={getAppTagHeroArtSpec("all")?.assetPath}

@@ -1,0 +1,650 @@
+[
+  {
+    "name": "Eurosky",
+    "sourceUrl": "https://www.eurosky.tech/eurosky-accounts",
+    "externalUrl": "https://www.eurosky.tech/eurosky-accounts",
+    "iconUrl": "/generated/listings/eurosky-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/eurosky-og-image.png"
+    ],
+    "tagline": "European-hosted AT Protocol accounts that act as your PDS and work across Bluesky, Flashes, Tangled, and other Atmosphere apps.",
+    "fullDescription": "Eurosky offers European-hosted eurosky.social accounts built on the AT Protocol. Each account acts as a personal data server (PDS), so your identity, posts, and social graph stay portable across apps while remaining governed under European law and infrastructure.",
+    "rawCategoryHint": "PDS",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "hosting",
+    "vertical": null,
+    "classificationReason": "Eurosky provides hosted AT Protocol accounts whose eurosky.social identity acts as a personal data server, so it belongs in the protocol/PDS category.",
+    "categorySlug": "protocol/pds"
+  },
+  {
+    "name": "Taproot",
+    "sourceUrl": "https://atproto.at/",
+    "externalUrl": "https://atproto.at/",
+    "iconUrl": "/generated/listings/taproot-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/taproot-screenshot.jpg"
+    ],
+    "tagline": "Comprehensive AT Protocol explorer for repositories, records, PDSes, and relays.",
+    "fullDescription": "Taproot is a comprehensive AT Protocol explorer for browsing repositories, records, collections, PDSes, relays, and other infrastructure across the network. It also lets you look up handles, DIDs, and full at:// URIs from a mobile-friendly web app.",
+    "rawCategoryHint": "AT Protocol Explorer",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Taproot is a protocol-wide explorer for repositories, records, collections, PDSes, relays, and at:// URIs, so it fits the protocol/data-explorer category.",
+    "categorySlug": "protocol/data-explorer"
+  },
+  {
+    "name": "atp.tools",
+    "sourceUrl": "https://atp.tools/",
+    "externalUrl": "https://atp.tools/",
+    "iconUrl": "/generated/listings/atp-tools-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/atp-tools-screenshot.jpg"
+    ],
+    "tagline": "AT Protocol explorer for users, repositories, collections, and related tooling.",
+    "fullDescription": "atp.tools is a web-based AT Protocol explorer for searching users, repositories, and collections, with additional utilities like Jetstream and Counter for inspecting network activity and protocol data. It also supports logging in to explore account-scoped views from the browser.",
+    "rawCategoryHint": "AT Protocol Explorer",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "atp.tools is a protocol-wide explorer and utility suite for browsing AT Protocol identities, repos, collections, and infrastructure data, so it fits the protocol/data-explorer category.",
+    "categorySlug": "protocol/data-explorer"
+  },
+  {
+    "name": "Selfhosted.social",
+    "sourceUrl": "https://selfhosted.social/",
+    "externalUrl": "https://selfhosted.social/",
+    "iconUrl": "/generated/listings/selfhosted-social-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/selfhosted-social-screenshot.jpg"
+    ],
+    "tagline": "Open ATProto PDS with no invite code and nightly backups.",
+    "fullDescription": "Selfhosted.social is an open ATProto personal data server that welcomes new signups and migrations without an invite code. It is hosted on DigitalOcean in Atlanta and includes nightly server backups plus per-account backups through PDS MOOver.",
+    "rawCategoryHint": "PDS",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "hosting",
+    "vertical": null,
+    "classificationReason": "Selfhosted.social provides hosted AT Protocol accounts on its own personal data server, so it belongs in the protocol/pds category.",
+    "categorySlug": "protocol/pds"
+  },
+  {
+    "name": "PDS.RIP",
+    "sourceUrl": "https://pds.rip/",
+    "externalUrl": "https://pds.rip/",
+    "iconUrl": "/generated/listings/pds-rip-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/pds-rip-screenshot.jpg"
+    ],
+    "tagline": "Ephemeral sandbox PDS for AT Protocol testing and experimentation.",
+    "fullDescription": "PDS.RIP is a public sandbox personal data server for the AT Protocol with open registration and captcha protection for testing, prototyping, and experimentation. Accounts and all associated data are ephemeral and are permanently deleted after 7 days, so it is best suited for temporary use rather than primary hosting.",
+    "rawCategoryHint": "PDS",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "hosting",
+    "vertical": null,
+    "classificationReason": "PDS.RIP provides hosted AT Protocol accounts on its own personal data server, so it belongs in the protocol/pds category.",
+    "categorySlug": "protocol/pds"
+  },
+  {
+    "name": "@atproto/lex",
+    "sourceUrl": "https://www.npmjs.com/package/@atproto/lex",
+    "externalUrl": "https://www.npmjs.com/package/@atproto/lex",
+    "iconUrl": "/generated/listings/atproto-lex-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atproto-lex-screenshot.jpg"
+    ],
+    "tagline": "Type-safe Lexicon tooling for AT Protocol data and schemas.",
+    "fullDescription": "@atproto/lex is a preview package from the Bluesky atproto monorepo for working with AT Protocol Lexicon schemas. It can fetch and manage Lexicon documents, generate TypeScript validators and schema utilities, and provide compile-time and runtime type safety for AT Protocol data structures and XRPC usage.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "@atproto/lex is purpose-built for authoring, fetching, generating, and validating AT Protocol Lexicon schemas, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "tap",
+    "sourceUrl": "https://github.com/bluesky-social/indigo/blob/main/cmd/tap/README.md",
+    "externalUrl": "https://github.com/bluesky-social/indigo/blob/main/cmd/tap/README.md",
+    "iconUrl": "/generated/listings/tap-sync-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/tap-screenshot.jpg"
+    ],
+    "tagline": "AT Protocol sync utility for firehose ingestion, backfill, and filtered delivery.",
+    "fullDescription": "tap is an atproto sync utility from the Indigo repo that handles firehose connection, verification, historical backfill, filtering, and event delivery for the repos and collections you care about. It is designed to simplify AT Protocol sync workloads by exposing ordered JSON events over WebSocket or webhook instead of requiring consumers to implement binary parsing and signature validation themselves.",
+    "rawCategoryHint": "Sync",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "tap is purpose-built for syncing AT Protocol repo data from the firehose with validation, backfill, and filtered delivery, so it fits the protocol/sync category.",
+    "categorySlug": "protocol/sync"
+  },
+  {
+    "name": "@atproto/tap",
+    "sourceUrl": "https://github.com/bluesky-social/atproto/blob/main/packages/tap/README.md",
+    "externalUrl": "https://github.com/bluesky-social/atproto/blob/main/packages/tap/README.md",
+    "iconUrl": "/generated/listings/atproto-tap-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atproto-tap-screenshot.jpg"
+    ],
+    "tagline": "TypeScript client library for connecting to Tap sync servers.",
+    "fullDescription": "@atproto/tap is a TypeScript client library for Tap, the AT Protocol sync utility that handles firehose connections, cryptographic verification, backfill, and filtering. The library provides a typed client, channel handling, indexer helpers, webhook parsing utilities, and schema-aware event handling for consuming ordered JSON events from a Tap instance.",
+    "rawCategoryHint": "Sync",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "@atproto/tap is a developer library specifically for consuming and handling Tap sync events from AT Protocol infrastructure, so it fits the protocol/sync category.",
+    "categorySlug": "protocol/sync"
+  },
+  {
+    "name": "HappyView",
+    "sourceUrl": "https://happyview.dev/",
+    "externalUrl": "https://happyview.dev/",
+    "iconUrl": "/generated/listings/happyview-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/happyview-screenshot.png"
+    ],
+    "tagline": "Schema-first AppView platform for the AT Protocol with built-in sync and OAuth.",
+    "fullDescription": "HappyView is a schema-first platform for building AT Protocol AppViews by uploading lexicon schemas and getting XRPC endpoints, OAuth, real-time sync, historical backfill, indexing, and admin tooling without writing server boilerplate. It also supports Lua scripting, index hooks, PostgreSQL-backed indexing, and runtime lexicon updates for shipping protocol-native apps faster.",
+    "rawCategoryHint": "AppView",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "HappyView provides managed AppView infrastructure with XRPC endpoints, sync, indexing, and OAuth for AT Protocol applications, so it fits the protocol/appview category.",
+    "categorySlug": "protocol/appview"
+  },
+  {
+    "name": "Quickslice",
+    "sourceUrl": "https://tangled.org/slices.network/quickslice",
+    "externalUrl": "https://quickslice.slices.network/",
+    "iconUrl": "/generated/listings/quickslice-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/quickslice-screenshot.webp"
+    ],
+    "tagline": "Auto-indexing AppView platform with GraphQL and OAuth for AT Protocol records.",
+    "fullDescription": "Quickslice is a quick way to spin up an AT Protocol AppView by importing lexicon schemas and getting a GraphQL API, OAuth authentication, real-time network sync, indexing, and joins across record types without building backend infrastructure first. It supports SQLite or Postgres, writes records back to the user's PDS, and includes a web-based playground and admin UI for developing protocol-native apps.",
+    "rawCategoryHint": "AppView",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Quickslice provides managed AppView-style infrastructure for indexing AT Protocol records and exposing app APIs, so it fits the protocol/appview category.",
+    "categorySlug": "protocol/appview"
+  },
+  {
+    "name": "lexicon.js",
+    "sourceUrl": "https://tangled.org/chadtmiller.com/lexicon.js",
+    "externalUrl": "https://tangled.org/chadtmiller.com/lexicon.js",
+    "iconUrl": "/generated/listings/lexicon-js-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/lexicon-js-screenshot.png"
+    ],
+    "tagline": "Plain JavaScript validator for AT Protocol Lexicon schemas.",
+    "fullDescription": "lexicon.js is a plain JavaScript validator for AT Protocol Lexicon schemas, published on npm as @bigmoves/lexicon. It validates lexicon schema definitions and records against those schemas, and is aimed at lightweight spec-compliant lexicon work without depending on the broader official toolchain.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "lexicon.js is purpose-built for validating AT Protocol Lexicon schemas and records, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "lex-gql",
+    "sourceUrl": "https://tangled.org/chadtmiller.com/lex-gql",
+    "externalUrl": "https://tangled.org/chadtmiller.com/lex-gql",
+    "iconUrl": "/generated/listings/lex-gql-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/lex-gql-screenshot.png"
+    ],
+    "tagline": "Generate a complete GraphQL API from AT Protocol lexicons.",
+    "fullDescription": "lex-gql is a library for generating a complete GraphQL API from AT Protocol lexicons. It provides relay-style pagination, automatic joins between collections, filtering, sorting, aggregations, CRUD mutations, subscriptions, and batched join resolution for building protocol-native data APIs on top of lexicon-defined records.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "lex-gql is a reusable developer library for building GraphQL APIs from AT Protocol lexicons, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "pds.js",
+    "sourceUrl": "https://tangled.org/chadtmiller.com/pds.js",
+    "externalUrl": "https://tangled.org/chadtmiller.com/pds.js",
+    "iconUrl": "/generated/listings/pds-js-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/pds-js-screenshot.png"
+    ],
+    "tagline": "Minimal AT Protocol Personal Data Server written in JavaScript.",
+    "fullDescription": "pds.js is an experimental, minimal AT Protocol Personal Data Server implementation written in JavaScript for self-hosting and development. It includes core repo and sync endpoints, auth and OAuth flows, AppView proxying, blob storage, and deployment options for Node.js, Deno, and Cloudflare Workers through a modular multi-package architecture.",
+    "rawCategoryHint": "PDS",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "pds.js is a self-hostable implementation of an AT Protocol personal data server, so it belongs in the protocol/pds category.",
+    "categorySlug": "protocol/pds"
+  },
+  {
+    "name": "goat",
+    "sourceUrl": "https://github.com/bluesky-social/goat",
+    "externalUrl": "https://github.com/bluesky-social/goat",
+    "iconUrl": "/generated/listings/goat-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/goat-screenshot.jpg"
+    ],
+    "tagline": "General-purpose Go CLI for exploring and administering the AT Protocol.",
+    "fullDescription": "goat is a general-purpose Go CLI tool for the AT Protocol, sort of like curl for the network. It can fetch at:// URIs, inspect identities, monitor the firehose, migrate accounts, administer PDS instances, make raw XRPC calls, and support Lexicon development workflows such as pulling, linting, diffing, and publishing schemas.",
+    "rawCategoryHint": "CLI",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "goat is a command-line developer tool for interacting with many parts of the AT Protocol stack, so a dedicated protocol/cli category is cleaner than putting it in data-explorer.",
+    "categorySlug": "protocol/cli"
+  },
+  {
+    "name": "atcute",
+    "sourceUrl": "https://github.com/mary-ext/atcute",
+    "externalUrl": "https://github.com/mary-ext/atcute",
+    "iconUrl": "/generated/listings/atcute-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atcute-screenshot.png"
+    ],
+    "tagline": "Lightweight TypeScript packages for AT Protocol and Bluesky.",
+    "fullDescription": "atcute is a collection of lightweight TypeScript packages for the AT Protocol, covering XRPC clients, firehose and Jetstream clients, Tap clients, XRPC servers, OAuth helpers, lexicon tooling, identity resolution, core codecs, and Bluesky-specific utilities. It is designed as a modular toolkit so applications can compose only the protocol pieces they need instead of adopting a monolithic SDK.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "atcute is a reusable developer toolkit made up of many protocol libraries for AT Protocol clients, servers, lexicons, identity, and utilities, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "Inlay",
+    "sourceUrl": "https://inlay.at/",
+    "externalUrl": "https://inlay.at/",
+    "iconUrl": "/generated/listings/inlay-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/inlay-screenshot.jpg"
+    ],
+    "tagline": "Composable blocks for AT Protocol.",
+    "fullDescription": "Inlay is a standalone AT Protocol app for composing reusable blocks from live protocol data such as profiles, posts, replies, media, playlists, and raw records. You can point it at an at:// URI, combine presentation components, and build shareable layouts around AT Protocol content instead of treating posts and profiles as static screenshots.",
+    "rawCategoryHint": "Composable Blocks",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "embeds_sharing",
+    "vertical": null,
+    "classificationReason": "Inlay is a standalone app centered on composing and sharing reusable blocks built from AT Protocol profiles and records, so it fits best as its own app ecosystem entry at apps/inlay rather than under a generic Bluesky subcategory.",
+    "categorySlug": "apps/inlay"
+  },
+  {
+    "name": "atproto",
+    "sourceUrl": "https://atproto.blue/en/latest/",
+    "externalUrl": "https://github.com/MarshalX/atproto",
+    "iconUrl": "/generated/listings/atproto-blue-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/atproto-blue-screenshot.png"
+    ],
+    "tagline": "Autogenerated, type-hinted AT Protocol SDK for Python.",
+    "fullDescription": "atproto is a Python SDK for the AT Protocol that provides autogenerated XRPC clients, typed models, sync and async APIs, firehose streaming support, identity resolvers, lexicon tooling, and lower-level utilities for AT URIs, CIDs, CAR files, DAG-CBOR, signatures, and DID documents. It is designed as a reusable developer library so Python applications can interact with Bluesky and broader AT Protocol services through both high-level helpers and the underlying generated protocol methods.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "atproto is a reusable Python SDK and supporting library suite for working with AT Protocol clients, models, firehose streams, identities, lexicons, and core protocol data types, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "rsky",
+    "sourceUrl": "https://github.com/blacksky-algorithms/rsky",
+    "externalUrl": "https://github.com/blacksky-algorithms/rsky",
+    "iconUrl": "/generated/listings/rsky-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/rsky-screenshot.png"
+    ],
+    "tagline": "Rust implementation of the AT Protocol for community safety and self-governance.",
+    "fullDescription": "rsky is a Rust implementation of the AT Protocol that aims to provide both reusable crates and deployable services across the stack. The workspace includes libraries for crypto, identity, lexicons, syntax, and repo storage, alongside components such as a PDS, relay, feed generator, firehose consumers, labeler, repository explorer, and appview indexer, with an emphasis on community safety and self-governance.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "rsky is primarily a reusable Rust implementation and crate ecosystem for AT Protocol primitives and infrastructure components, so it fits the protocol/libraries category even though the monorepo also includes deployable services.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "AT Protocol Rust Crates",
+    "sourceUrl": "https://tangled.org/ngerakines.me/atproto-crates",
+    "externalUrl": "https://tangled.org/ngerakines.me/atproto-crates",
+    "iconUrl": "/generated/listings/atproto-crates-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atproto-crates-screenshot.png"
+    ],
+    "tagline": "Rust workspace of crates for building AT Protocol applications.",
+    "fullDescription": "AT Protocol Rust Crates is a Rust workspace of reusable crates for building AT Protocol applications and infrastructure. It provides building blocks for content-addressed data, identity management, repository operations, record signing, lexicon validation, OAuth flows, XRPC clients and services, real-time event processing, rich text utilities, and developer tooling, with components that can be composed into clients, PDSes, AIPs, event processors, and repository tools.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "AT Protocol Rust Crates is a reusable Rust crate workspace for many AT Protocol primitives and developer building blocks, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "atproto.dart",
+    "sourceUrl": "https://github.com/myConsciousness/atproto.dart",
+    "externalUrl": "https://github.com/myConsciousness/atproto.dart",
+    "iconUrl": "/generated/listings/atproto-dart-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atproto-dart-screenshot.png"
+    ],
+    "tagline": "Production-ready AT Protocol and Bluesky SDK for Flutter and Dart.",
+    "fullDescription": "atproto.dart is a comprehensive Dart and Flutter SDK for building AT Protocol and Bluesky applications, bots, and services. It includes core protocol primitives such as DIDs, NSIDs, AT URIs, Lexicons, and XRPC, along with package libraries for Bluesky clients, OAuth DPoP authentication, Firehose streaming, moderation tooling, service development, rich text handling, and related developer workflows across mobile, web, and backend environments.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "atproto.dart is a reusable SDK and package ecosystem for Dart and Flutter developers building AT Protocol clients, services, and tooling, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "ATProtoKit",
+    "sourceUrl": "https://github.com/MasterJ93/ATProtoKit",
+    "externalUrl": "https://github.com/MasterJ93/ATProtoKit",
+    "iconUrl": "/generated/listings/atprotokit-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/atprotokit-screenshot.png"
+    ],
+    "tagline": "Straightforward Swift library for using the AT Protocol and Bluesky.",
+    "fullDescription": "ATProtoKit is a Swift package for using the AT Protocol and Bluesky with an API shape designed to feel native to Swift. It focuses primarily on client-side AT Protocol usage, combining type-safe API and XRPC access for bots, server apps, and user-facing clients, with support for Apple platforms, Linux, and other Swift environments.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "ATProtoKit is a reusable Swift library for AT Protocol and Bluesky client development, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "swift-atproto",
+    "sourceUrl": "https://github.com/nnabeyang/swift-atproto",
+    "externalUrl": "https://github.com/nnabeyang/swift-atproto",
+    "iconUrl": "/generated/listings/swift-atproto-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/swift-atproto-screenshot.png"
+    ],
+    "tagline": "Swift library and code generator for building AT Protocol clients and servers.",
+    "fullDescription": "swift-atproto is a Swift package for working with the AT Protocol that combines a reusable library with plugin-based code generation from lexicon schemas. It supports Swift Package Manager and CocoaPods, can generate client and server code from configured AT Protocol lexicons, and is intended to help Swift developers build AT Protocol integrations with typed APIs instead of hand-authoring the protocol surface themselves.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "swift-atproto is a reusable Swift package and code generation library for AT Protocol client and server development, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "idunno.Bluesky",
+    "sourceUrl": "https://github.com/blowdart/idunno.Bluesky",
+    "externalUrl": "https://github.com/blowdart/idunno.Bluesky",
+    "iconUrl": "/generated/listings/idunno-bluesky-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/idunno-bluesky-screenshot.png"
+    ],
+    "tagline": ".NET SDK for Bluesky and the AT Protocol.",
+    "fullDescription": "idunno.Bluesky is a .NET 8, 9, and 10 library and SDK for Bluesky and the AT Protocol. It provides high-level support for creating and deleting posts, media uploads, timelines, feeds, notifications, follows, blocks, bookmarks, direct messages, handle or OAuth authentication, Jetstream consumption, and automatic session management with background token refreshes for .NET applications.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "idunno.Bluesky is a reusable .NET SDK for integrating Bluesky and AT Protocol capabilities into applications, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "ATProto Ruby SDK",
+    "sourceUrl": "https://ruby.sdk.blue/",
+    "externalUrl": "https://ruby.sdk.blue/",
+    "iconUrl": "/generated/listings/atproto-ruby-sdk-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/atproto-ruby-sdk-screenshot.jpg"
+    ],
+    "tagline": "Ruby gems for interacting with and building on Bluesky and the AT Protocol.",
+    "fullDescription": "ATProto Ruby SDK is a collection of Ruby gems for working with Bluesky APIs and building on the AT Protocol. It brings together focused libraries for XRPC requests, firehose and Jetstream streaming, DID and handle resolution, feed generator hosting, and Tap-based repo import, giving Ruby developers battle-tested building blocks instead of a single monolithic SDK.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "ATProto Ruby SDK is a reusable set of Ruby libraries for multiple parts of the AT Protocol stack, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "zat",
+    "sourceUrl": "https://tangled.org/zat.dev/zat",
+    "externalUrl": "https://tangled.org/zat.dev/zat",
+    "iconUrl": "/generated/listings/zat-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/zat-screenshot.png"
+    ],
+    "tagline": "AT Protocol building blocks for Zig.",
+    "fullDescription": "zat is a Zig library of AT Protocol building blocks that covers identifier parsing, handle and DID resolution, DAG-CBOR and CAR codecs, Merkle Search Tree operations, crypto and key handling, full repo verification, firehose and Jetstream clients, XRPC requests, and JSON extraction helpers. It is designed as a reusable low-level toolkit for building AT Protocol applications, validators, and infrastructure in Zig rather than a single high-level monolithic client.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "zat is a reusable Zig toolkit for many AT Protocol primitives and infrastructure concerns, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "atex",
+    "sourceUrl": "https://tangled.org/comet.sh/atex",
+    "externalUrl": "https://tangled.org/comet.sh/atex",
+    "iconUrl": "/generated/listings/atex-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atex-screenshot.png"
+    ],
+    "tagline": "Elixir toolkit for the AT Protocol.",
+    "fullDescription": "atex is an Elixir toolkit for the AT Protocol that bundles string primitives, identity resolution, lexicon-to-struct code generation, OAuth, XRPC clients, repository reading and manipulation, service auth, PLC access, and an XRPC server router. It is designed as a reusable library for building AT Protocol clients and services in Elixir rather than a single app-specific SDK.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "atex is a reusable Elixir toolkit for multiple AT Protocol primitives, clients, and server-side building blocks, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "Libphpsky",
+    "sourceUrl": "https://github.com/aazsamir/libphpsky",
+    "externalUrl": "https://github.com/aazsamir/libphpsky",
+    "iconUrl": "/generated/listings/libphpsky-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/libphpsky-screenshot.png"
+    ],
+    "tagline": "Statically typed PHP library for Bluesky and the AT Protocol.",
+    "fullDescription": "Libphpsky is a PHP library for interacting with Bluesky and the AT Protocol using generated types, queries, and procedures derived from the protocol schema. It includes built-in authorization with automatic session refresh, a meta client for reaching any endpoint, async support via Amp HTTP clients, WebSocket subscriptions, query caching, and custom lexicon support for PHP applications and frameworks.",
+    "rawCategoryHint": "Library",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Libphpsky is a reusable PHP SDK for AT Protocol and Bluesky integrations, so it fits the protocol/libraries category.",
+    "categorySlug": "protocol/libraries"
+  },
+  {
+    "name": "Jetstream",
+    "sourceUrl": "https://github.com/bluesky-social/jetstream",
+    "externalUrl": "https://github.com/bluesky-social/jetstream",
+    "iconUrl": "/generated/listings/jetstream-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/jetstream-dashboard.png"
+    ],
+    "tagline": "Simplified JSON event stream for the AT Protocol.",
+    "fullDescription": "Jetstream is a streaming service that consumes the AT Protocol com.atproto.sync.subscribeRepos firehose and converts CBOR-encoded MST data into lightweight JSON events that are easier to consume with standard tooling. It supports collection and DID filtering, cursor-based replay, zstd compression, subscriber-sourced filter updates, self-hosting, and public Bluesky-operated instances for developers who want sync data without implementing the full binary sync protocol.",
+    "rawCategoryHint": "Sync",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Jetstream is purpose-built for consuming and republishing AT Protocol sync data as a simpler event stream, so it fits the protocol/sync category.",
+    "categorySlug": "protocol/sync"
+  },
+  {
+    "name": "Lexicon Garden",
+    "sourceUrl": "https://lexicon.garden/",
+    "externalUrl": "https://lexicon.garden/",
+    "iconUrl": "/generated/listings/lexicon-garden-icon.jpg",
+    "screenshotUrls": [
+      "/generated/listings/lexicon-garden-screenshot.jpg"
+    ],
+    "tagline": "Browse and resolve ATProtocol lexicon schemas.",
+    "fullDescription": "Lexicon Garden is a discovery platform for ATProtocol lexicon schemas that indexes schemas published to the network and makes them easier to browse, search, validate, and understand. It also provides tools for schema resolution, validation, transmogrification, scope building, contributed examples, and MCP integration for developers working with lexicon-defined APIs and records.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Lexicon Garden is specifically focused on discovering, browsing, resolving, and validating AT Protocol lexicon schemas, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "UFOs",
+    "sourceUrl": "https://ufos.microcosm.blue/",
+    "externalUrl": "https://ufos.microcosm.blue/",
+    "iconUrl": "/generated/listings/ufos-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/ufos-screenshot.png"
+    ],
+    "tagline": "Explore AT Protocol lexicons and collection activity.",
+    "fullDescription": "UFOs is a web app for exploring AT Protocol lexicons through the collections currently seen across the network. It lets developers browse collections, inspect sample records, and track timeseries statistics for each collection, making it easier to understand how lexicon-defined records are actually used in the ATmosphere.",
+    "rawCategoryHint": "Lexicon Explorer",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "UFOs is specifically focused on browsing AT Protocol collections and understanding lexicon-defined record types through samples and activity statistics, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "BskyCharts",
+    "sourceUrl": "https://bskycharts.edavis.dev/bluesky-day.html",
+    "externalUrl": "https://bskycharts.edavis.dev/bluesky-day.html",
+    "iconUrl": "/generated/listings/bskycharts-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/bskycharts-screenshot.png"
+    ],
+    "tagline": "Public Bluesky charts for activity, growth, and network health.",
+    "fullDescription": "BskyCharts is a public monitoring dashboard for Bluesky activity and related network signals, published as a set of continuously refreshed charts. It tracks metrics such as overall activity, embed usage, labels added, operation rates, post languages, user growth, bsky.network PDS status, and PLC activity across day, week, month, and year views.",
+    "rawCategoryHint": "Analytics Dashboard",
+    "scope": "bluesky",
+    "productType": "standalone_app",
+    "domain": "analytics",
+    "vertical": null,
+    "classificationReason": "BskyCharts is a standalone Bluesky-focused web dashboard for monitoring activity, growth, and operational metrics, so it fits the apps/bluesky/analytics category.",
+    "categorySlug": "apps/bluesky/analytics"
+  },
+  {
+    "name": "Puzzmo",
+    "sourceUrl": "https://www.puzzmo.com/press",
+    "externalUrl": "https://www.puzzmo.com/",
+    "iconUrl": "/generated/listings/puzzmo-maskable-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/puzzmo-screenshot.jpg"
+    ],
+    "tagline": "The new place for thoughtful puzzles.",
+    "fullDescription": "Puzzmo is a web-based home for thoughtful puzzles that reimagines familiar daily formats while also publishing modern puzzle games and original experiments. Its lineup includes refreshed staples like the daily crossword alongside games such as Really Bad Chess and SpellTower, plus new puzzle concepts built as part of the broader Puzzmo ecosystem.",
+    "rawCategoryHint": "Puzzle Game",
+    "scope": "cross-network",
+    "productType": "standalone_app",
+    "domain": "games",
+    "vertical": null,
+    "classificationReason": "Puzzmo is a standalone consumer puzzle platform with its own recognizable product ecosystem, so it fits best as an app-root entry at apps/puzzmo rather than under a generic Bluesky or protocol category.",
+    "categorySlug": "apps/puzzmo"
+  },
+  {
+    "name": "teal.fm",
+    "sourceUrl": "https://teal.fm/",
+    "externalUrl": "https://teal.fm/",
+    "iconUrl": "/generated/listings/teal-fm-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/teal-fm-screenshot.jpg"
+    ],
+    "tagline": "Your music, beautifully tracked. All yours (soon).",
+    "fullDescription": "teal.fm is an upcoming music tracking and social discovery app built on ATProto. It is designed to sync your listening history across platforms like Spotify, Apple Music, YouTube Music, and more, while also helping you own your music data, discover tracks through shared taste, and generate beautiful cards for sharing your top artists and songs.",
+    "rawCategoryHint": "Music Tracking",
+    "scope": "cross-network",
+    "productType": "standalone_app",
+    "domain": "music",
+    "vertical": null,
+    "classificationReason": "teal.fm is a standalone music product with its own app ecosystem identity, combining cross-platform listening history, social discovery, and sharing features, so it fits best as an app-root entry at apps/teal-fm.",
+    "categorySlug": "apps/teal-fm"
+  },
+  {
+    "name": "Standard.site",
+    "sourceUrl": "https://standard.site/",
+    "externalUrl": "https://standard.site/",
+    "iconUrl": "/generated/listings/standard-site-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/standard-site-screenshot.png"
+    ],
+    "tagline": "Shared lexicons for long-form publishing on AT Protocol.",
+    "fullDescription": "Standard.site is a community-maintained schema project for long-form publishing on AT Protocol. It defines shared lexicons for publications, documents, and subscriptions so apps and platforms can make long-form content easier to discover, verify, index, and move across the ATmosphere without each implementation inventing incompatible schemas.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Standard.site is specifically focused on defining and coordinating shared AT Protocol lexicons for long-form publishing, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "ATGeo",
+    "sourceUrl": "https://atgeo.org/",
+    "externalUrl": "https://atgeo.org/",
+    "iconUrl": "/generated/listings/atgeo-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atgeo-screenshot.png"
+    ],
+    "tagline": "Geographic place lexicon and venue lookup service for AT Protocol.",
+    "fullDescription": "ATGeo provides a shared geographic place lexicon for AT Protocol applications along with a public gazetteer service that implements the spec. It defines how points of interest are represented and offers an XRPC API for searching and retrieving venue data from sources like OpenStreetMap, Overture Maps, and Foursquare so apps can use interoperable place records instead of inventing incompatible location models.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "ATGeo is specifically focused on defining and serving a reusable AT Protocol place lexicon for applications, so it fits the protocol/lexicon category even though it also exposes a hosted lookup API.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "Docs.surf",
+    "sourceUrl": "https://docs.surf/",
+    "externalUrl": "https://docs.surf/",
+    "iconUrl": "/generated/listings/docs-surf-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/docs-surf-screenshot.png"
+    ],
+    "tagline": "Aggregator for publications and documents on the open web.",
+    "fullDescription": "Docs.surf is a Standard.site aggregator that pulls valid publications and documents into a single chronological feed. It acts like an ATProto-native publishing reader and discovery surface, collecting long-form documents from across the open web without requiring users to manually subscribe to each source one by one.",
+    "rawCategoryHint": "Publishing Aggregator",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "discovery",
+    "vertical": null,
+    "classificationReason": "Docs.surf is a standalone reader and discovery app built around the Standard.site publishing ecosystem, so it fits best as an app-root entry at apps/docs-surf rather than as protocol infrastructure.",
+    "categorySlug": "apps/docs-surf"
+  }
+]

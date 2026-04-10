@@ -1,0 +1,505 @@
+import * as stylex from "@stylexjs/stylex";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  createFileRoute,
+  createLink,
+  Link as RouterLink,
+  notFound,
+} from "@tanstack/react-router";
+import { ChevronLeft } from "lucide-react";
+
+import { AppTagHero } from "../components/AppTagHero";
+import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
+import { ProtocolCategoryCard } from "../components/ProtocolCategoryCard";
+import { Avatar } from "../design-system/avatar";
+import { Card } from "../design-system/card";
+import { Flex } from "../design-system/flex";
+import { Grid } from "../design-system/grid";
+import { HeaderLayout } from "../design-system/header-layout";
+import { Link } from "../design-system/link";
+import { Page } from "../design-system/page";
+import { blue } from "../design-system/theme/colors/blue.stylex";
+import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
+import { pink } from "../design-system/theme/colors/pink.stylex";
+import { purple } from "../design-system/theme/colors/purple.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
+import {
+  gap,
+  horizontalSpace,
+  verticalSpace,
+} from "../design-system/theme/semantic-spacing.stylex";
+import { shadow } from "../design-system/theme/shadow.stylex";
+import { fontSize } from "../design-system/theme/typography.stylex";
+import { Body, SmallBody } from "../design-system/typography";
+import { Text } from "../design-system/typography/text";
+import {
+  directoryListingApi,
+  type DirectoryListingCard,
+  type DirectoryProtocolCategoryGroup,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getProtocolCategoryCoverAssetPathForSegment } from "../lib/protocol-category-hero-art";
+import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
+import { StarRating } from "#/design-system/star-rating";
+import { uiColor } from "../design-system/theme/color.stylex";
+
+export const Route = createFileRoute("/protocol/$category")({
+  loader: async ({ context, params }) => {
+    const data = await context.queryClient.ensureQueryData(
+      directoryListingApi.getProtocolCategoryPageQueryOptions({
+        category: params.category,
+      }),
+    );
+
+    if (!data) {
+      throw notFound();
+    }
+
+    return params;
+  },
+  component: ProtocolCategoryPage,
+});
+
+const LinkLink = createLink(Link);
+
+const styles = stylex.create({
+  pageContent: {
+    gap: {
+      default: gap["6xl"],
+      [breakpoints.xl]: gap["8xl"],
+    },
+  },
+  blurContainer: {
+    inset: 0,
+    overflow: "hidden",
+    position: "absolute",
+    zIndex: 0,
+  },
+  blur: {
+    backdropFilter: "blur(32px) saturate(500%)",
+    position: "absolute",
+    bottom: -48,
+    left: -48,
+    right: -48,
+    top: -48,
+  },
+  page: {
+    paddingBottom: verticalSpace["10xl"],
+    paddingTop: verticalSpace["6xl"],
+  },
+  navLinks: {
+    flexWrap: "wrap",
+  },
+  listingLink: {
+    display: "block",
+    height: "100%",
+    textDecoration: "none",
+  },
+  listingCard: {
+    height: "100%",
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  listingCardFeatured: {
+    borderRadius: radius["3xl"],
+    borderStyle: "solid",
+    borderWidth: 1,
+    color: uiColor.text2,
+    cornerShape: "squircle",
+    overflow: "hidden",
+    position: "relative",
+    boxShadow: shadow["2xl"],
+  },
+  listingCardBody: {
+    gap: gap["4xl"],
+    height: "100%",
+    paddingBottom: verticalSpace["xl"],
+    paddingLeft: horizontalSpace["xl"],
+    paddingRight: horizontalSpace["xl"],
+    paddingTop: verticalSpace["xl"],
+    position: "relative",
+  },
+  listingCardBodyFeatured: {
+    gap: gap["3xl"],
+    height: "100%",
+    justifyContent: "flex-end",
+    paddingBottom: verticalSpace["md"],
+    paddingLeft: horizontalSpace["md"],
+    paddingRight: horizontalSpace["md"],
+    paddingTop: verticalSpace["md"],
+    position: "relative",
+    zIndex: 1,
+  },
+  listingHeader: {
+    gap: gap["2xl"],
+    position: "relative",
+    zIndex: 1,
+  },
+  featuredInfoContent: {
+    position: "relative",
+    zIndex: 1,
+    paddingTop: verticalSpace["4xl"],
+    paddingBottom: verticalSpace["4xl"],
+  },
+  featuredImageFrame: {
+    height: "100%",
+    inset: 0,
+    objectFit: "cover",
+    position: "absolute",
+    width: "100%",
+  },
+  ambientGlow: {
+    filter: "blur(12px)",
+    opacity: 0.55,
+    position: "absolute",
+    right: "-3rem",
+    top: "-2rem",
+  },
+  ambientGlowInner: {
+    borderRadius: radius.full,
+    height: "9rem",
+    width: "9rem",
+  },
+  featuredInfoPanel: {
+    backdropFilter: "blur(18px) saturate(180%)",
+    backgroundColor:
+      "light-dark(rgba(255, 252, 255, 0.55), rgba(252, 252, 252, 0.4))",
+    borderColor: `color-mix(in srgb, ${uiColor.border1} 60%, transparent)`,
+    borderRadius: radius["xl"],
+    borderStyle: "solid",
+    borderWidth: 1,
+    boxShadow: `${shadow.lg}, 0 18px 48px color-mix(in srgb, ${uiColor.overlayBackdrop} 42%, transparent)`,
+    display: "flex",
+    flexDirection: "column",
+    gap: gap["4xl"],
+    height: "fit-content",
+    overflow: "hidden",
+    margin: verticalSpace["2xl"],
+    maxWidth: "34rem",
+    position: "relative",
+    paddingLeft: horizontalSpace["4xl"],
+    paddingRight: horizontalSpace["4xl"],
+    paddingTop: verticalSpace["4xl"],
+    paddingBottom: verticalSpace["4xl"],
+  },
+  featuredAvatarContainer: {
+    height: "100%",
+    aspectRatio: 1 / 1,
+    display: "flex",
+    flexDirection: "column",
+    position: "relative",
+  },
+  featuredAvatar: {
+    position: "absolute",
+    inset: 0,
+    height: "100%",
+    width: "100%",
+  },
+  featuredTitle: {
+    display: "block",
+    maxWidth: "18ch",
+  },
+  featuredTagline: {
+    color: uiColor.text1,
+    fontSize: fontSize["lg"],
+    margin: 0,
+    maxWidth: "32rem",
+    position: "relative",
+    zIndex: 1,
+  },
+  listingInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  listingFooter: {
+    alignItems: "center",
+  },
+  listingTagline: {
+    flexGrow: 1,
+  },
+  blueSurface: {
+    backgroundImage: `linear-gradient(135deg, ${blue.solid1} 0%, ${blue.solid2} 45%, ${blue.border3} 100%)`,
+    borderColor: blue.border1,
+  },
+  pinkSurface: {
+    backgroundImage: `linear-gradient(135deg, ${pink.solid1} 0%, ${pink.solid2} 45%, ${purple.solid1} 100%)`,
+    borderColor: pink.border1,
+  },
+  purpleSurface: {
+    backgroundImage: `linear-gradient(135deg, ${purple.solid1} 0%, ${purple.solid2} 45%, ${pink.border3} 100%)`,
+    borderColor: purple.border1,
+  },
+  greenSurface: {
+    backgroundImage: `linear-gradient(135deg, ${green.solid1} 0%, ${green.solid2} 45%, ${green.border3} 100%)`,
+    borderColor: green.border1,
+  },
+  blueGlow: {
+    backgroundImage: `radial-gradient(circle, ${blue.component3}, transparent 70%)`,
+  },
+  pinkGlow: {
+    backgroundImage: `radial-gradient(circle, ${pink.component3}, transparent 70%)`,
+  },
+  purpleGlow: {
+    backgroundImage: `radial-gradient(circle, ${purple.component3}, transparent 70%)`,
+  },
+  greenGlow: {
+    backgroundImage: `radial-gradient(circle, ${green.component3}, transparent 70%)`,
+  },
+  relatedSection: {
+    gap: gap["5xl"],
+  },
+  relatedHeader: {
+    maxWidth: "44rem",
+  },
+  relatedDescription: {
+    maxWidth: "40rem",
+  },
+  relatedGrid: {
+    display: "grid",
+    gap: gap["2xl"],
+    gridTemplateColumns: {
+      default: "1fr",
+      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.md]: "repeat(4, minmax(0, 1fr))",
+    },
+  },
+});
+
+function ProtocolCategoryPage() {
+  const params = Route.useLoaderData();
+  const { data } = useSuspenseQuery(
+    directoryListingApi.getProtocolCategoryPageQueryOptions({
+      category: params.category,
+    }),
+  );
+  const { data: allGroups } = useSuspenseQuery(
+    directoryListingApi.getProtocolCategoriesQueryOptions,
+  );
+
+  if (!data) {
+    throw notFound();
+  }
+
+  const heroImage = getProtocolCategoryCoverAssetPathForSegment(data.segment);
+  const description =
+    data.description.trim() || getProtocolCategoryDescription(data.categoryId);
+  const related = getRelatedProtocolCategories(data, allGroups);
+
+  return (
+    <HeaderLayout.Root>
+      <HeaderLayout.Page>
+        <Page.Root variant="large" style={styles.page}>
+          <Flex direction="column" style={styles.pageContent}>
+            <Flex direction="column" gap="4xl">
+              <Flex gap="xl" style={styles.navLinks}>
+                <LinkLink to="/protocol/tags">
+                  <ChevronLeft />
+                  All protocol categories
+                </LinkLink>
+              </Flex>
+
+              <AppTagHero
+                description={description}
+                eyebrow={formatProtocolListingCount(data.count)}
+                imageSrc={heroImage}
+                title={data.label}
+              />
+            </Flex>
+
+            <FeaturedListingGrid
+              getKey={(listing) => `${data.categoryId}-${listing.id}`}
+              items={data.listings}
+              renderItem={(listing, { featured }) => (
+                <ProtocolCategoryListingCard
+                  featured={featured}
+                  listing={listing}
+                />
+              )}
+            />
+
+            {related.length > 0 ? (
+              <RelatedProtocolSection groups={related} />
+            ) : null}
+          </Flex>
+        </Page.Root>
+      </HeaderLayout.Page>
+    </HeaderLayout.Root>
+  );
+}
+
+function RelatedProtocolSection({
+  groups,
+}: {
+  groups: DirectoryProtocolCategoryGroup[];
+}) {
+  return (
+    <Flex direction="column" gap="4xl" style={styles.relatedSection}>
+      <Flex direction="column" gap="4xl" style={styles.relatedHeader}>
+        <Text size="3xl" weight="semibold">
+          More protocol categories
+        </Text>
+        <Body variant="secondary" style={styles.relatedDescription}>
+          Explore neighboring infrastructure categories in the directory.
+        </Body>
+      </Flex>
+      <Grid style={styles.relatedGrid}>
+        {groups.map((group) => (
+          <ProtocolCategoryCard
+            key={group.categoryId}
+            category={{
+              count: group.count,
+              label: group.label,
+              segment: group.segment,
+            }}
+          />
+        ))}
+      </Grid>
+    </Flex>
+  );
+}
+
+function ProtocolCategoryListingCard({
+  listing,
+  featured = false,
+}: {
+  listing: DirectoryListingCard;
+  featured?: boolean;
+}) {
+  return (
+    <RouterLink
+      params={{ productId: getDirectoryListingSlug(listing) }}
+      to="/products/$productId"
+      {...stylex.props(styles.listingLink)}
+    >
+      <Card
+        style={[
+          styles.listingCard,
+          featured && styles.listingCardFeatured,
+          featured && getAccentSurface(listing.accent),
+        ]}
+      >
+        {featured && listing.imageUrl ? (
+          <img
+            alt=""
+            aria-hidden="true"
+            src={listing.imageUrl}
+            {...stylex.props(styles.featuredImageFrame)}
+          />
+        ) : null}
+        <div {...stylex.props(styles.ambientGlow)}>
+          <div
+            {...stylex.props(
+              styles.ambientGlowInner,
+              getAccentGlow(listing.accent),
+            )}
+          />
+        </div>
+        <Flex
+          direction="column"
+          style={[
+            styles.listingCardBody,
+            featured && styles.listingCardBodyFeatured,
+          ]}
+        >
+          {featured ? (
+            <></>
+          ) : (
+            <>
+              <Flex align="center" gap="2xl" style={styles.listingHeader}>
+                <Avatar
+                  alt={listing.name}
+                  fallback={getInitials(listing.name)}
+                  size="xl"
+                  src={listing.iconUrl || undefined}
+                />
+                <Flex direction="column" gap="md" style={styles.listingInfo}>
+                  <Text
+                    font="title"
+                    size={{ default: "lg", sm: "xl" }}
+                    weight="semibold"
+                  >
+                    {listing.name}
+                  </Text>
+                  <SmallBody variant="secondary">{listing.category}</SmallBody>
+                </Flex>
+              </Flex>
+              <Body variant="secondary" style={styles.listingTagline}>
+                {listing.tagline}
+              </Body>
+              <div />
+              <Flex gap="xl" justify="between" style={styles.listingFooter}>
+                <Text size="sm" weight="semibold">
+                  {listing.rating.toFixed(1)} rating
+                </Text>
+                <StarRating rating={listing.rating} />
+                <Text weight="semibold">{listing.priceLabel}</Text>
+              </Flex>
+            </>
+          )}
+        </Flex>
+      </Card>
+    </RouterLink>
+  );
+}
+
+function formatProtocolListingCount(count: number) {
+  return `${count} ${count === 1 ? "listing" : "listings"}`;
+}
+
+function getRelatedProtocolCategories(
+  current: DirectoryProtocolCategoryGroup,
+  groups: DirectoryProtocolCategoryGroup[],
+) {
+  const currentListingIds = new Set(
+    current.listings.map((listing) => listing.id),
+  );
+
+  return groups
+    .filter((group) => group.categoryId !== current.categoryId)
+    .sort((left, right) => {
+      const leftOverlap = left.listings.reduce(
+        (count, listing) => count + Number(currentListingIds.has(listing.id)),
+        0,
+      );
+      const rightOverlap = right.listings.reduce(
+        (count, listing) => count + Number(currentListingIds.has(listing.id)),
+        0,
+      );
+
+      if (rightOverlap !== leftOverlap) {
+        return rightOverlap - leftOverlap;
+      }
+
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+
+      return left.label.localeCompare(right.label);
+    })
+    .slice(0, 4);
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function getAccentSurface(accent: DirectoryListingCard["accent"]) {
+  if (accent === "pink") return styles.pinkSurface;
+  if (accent === "purple") return styles.purpleSurface;
+  if (accent === "green") return styles.greenSurface;
+
+  return styles.blueSurface;
+}
+
+function getAccentGlow(accent: DirectoryListingCard["accent"]) {
+  if (accent === "pink") return styles.pinkGlow;
+  if (accent === "purple") return styles.purpleGlow;
+  if (accent === "green") return styles.greenGlow;
+
+  return styles.blueGlow;
+}
