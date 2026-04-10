@@ -7,7 +7,7 @@
  * `fyi.atstore.listing.detail` event the channel delivers (no per-DID allowlist here).
  *
  * Env:
- *   TAP_URL=http://127.0.0.1:2480
+ *   TAP_URL=http://127.0.0.1:2480   # Railway Tap: use https://…railway.app (no :2480); normalized at startup
  *   TAP_ADMIN_PASSWORD=          # if Tap admin API is protected
  *   DATABASE_URL=…               # required; ingest writes to Postgres on every listing event
  *   TAP_TRUSTED_DIDS=did:plc:... # publishers whose listings get verification_status=verified
@@ -21,10 +21,14 @@ import type { IdentityEvent, RecordEvent } from '@atproto/tap'
 import type { Database } from '../src/db/index.server'
 import { COLLECTION, NSID } from '../src/lib/atproto/nsids'
 import {
+  normalizeTapUrlForRailway,
+  probeTapHealth,
+} from '#/lib/atproto/tap-railway-url'
+import {
   markListingRemovedFromTap,
   parseListingDetailRecord,
   upsertDirectoryListingFromTap,
-} from '../src/lib/atproto/tap-listing-sync'
+} from '#/lib/atproto/tap-listing-sync'
 
 function parseDidList(raw: string | undefined): string[] {
   if (!raw?.trim()) return []
@@ -58,9 +62,12 @@ async function main() {
     process.exit(1)
   }
 
-  const url = process.env.TAP_URL?.trim() || 'http://127.0.0.1:2480'
+  const rawTapUrl = process.env.TAP_URL?.trim() || 'http://127.0.0.1:2480'
+  const url = normalizeTapUrlForRailway(rawTapUrl)
   const adminPassword = process.env.TAP_ADMIN_PASSWORD?.trim()
   const trusted = new Set(parseDidList(process.env.TAP_TRUSTED_DIDS))
+
+  await probeTapHealth(url, adminPassword)
 
   let dbCache: Database | undefined
   async function getDb(): Promise<Database> {
