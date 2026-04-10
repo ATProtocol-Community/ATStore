@@ -71,6 +71,13 @@
       "when": 1775800862251,
       "tag": "0009_app_proto_listings",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775900000000,
+      "tag": "0010_category_slugs",
+      "breakpoints": true
     }
   ]
 }

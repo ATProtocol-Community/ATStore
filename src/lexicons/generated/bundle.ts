@@ -82,9 +82,14 @@ export const lexicons = [
               }
             },
             "categorySlug": {
-              "type": "string",
-              "maxLength": 256,
-              "description": "Single browse category key (e.g. protocol/pds)."
+              "type": "array",
+              "minLength": 1,
+              "maxLength": 32,
+              "items": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "description": "Browse category keys (e.g. protocol/pds). First entry is the primary category for legacy surfaces."
             },
             "createdAt": {
               "type": "string",

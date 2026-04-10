@@ -176,7 +176,10 @@ export const directoryListings = pgTable(
     scope: text('scope'),
     productType: text('product_type'),
     domain: text('domain'),
-    categorySlug: text('category_slug'),
+    categorySlugs: text('category_slugs')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     vertical: text('vertical'),
     classificationReason: text('classification_reason'),
     appTags: text('app_tags')
@@ -223,8 +226,9 @@ export const directoryListings = pgTable(
       table.productType,
       table.domain,
     ),
-    categorySlugIdx: index('directory_listings_category_slug_idx').on(
-      table.categorySlug,
+    categorySlugsIdx: index('directory_listings_category_slugs_idx').using(
+      'gin',
+      table.categorySlugs,
     ),
     atUriIdx: uniqueIndex('directory_listings_at_uri_idx').on(table.atUri),
     verificationIdx: index('directory_listings_verification_status_idx').on(

@@ -8,6 +8,20 @@ import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
 
 const PLACEHOLDER_ICON = 'https://placehold.co/64x64/png'
 
+function normalizeListingCategorySlugs(row: DirectoryListing): string[] {
+  const raw = row.categorySlugs ?? []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const s of raw) {
+    const t = s?.trim()
+    if (!t || seen.has(t)) continue
+    seen.add(t)
+    out.push(t)
+  }
+  return out.length > 0 ? out : ['misc']
+}
+const PLACEHOLDER_HERO = 'https://placehold.co/1200x630/png'
+
 export type FyiAtstoreListingDetail = {
   $type: 'fyi.atstore.listing.detail'
   slug: string
@@ -18,7 +32,8 @@ export type FyiAtstoreListingDetail = {
   icon: AtprotoBlob
   heroImage: AtprotoBlob
   screenshots?: AtprotoBlob[]
-  categorySlug: string
+  /** Lexicon field name; ordered list, first is primary for legacy surfaces. */
+  categorySlug: string[]
   createdAt: string
   updatedAt: string
   appTags?: string[]
@@ -32,6 +47,24 @@ function isHttpsUri(s: string | null | undefined): s is string {
   } catch {
     return false
   }
+}
+
+/** Site-relative paths served from `./public` (see `resolveUrlToImageBytes`). */
+function isPublicImagePath(s: string | null | undefined): s is string {
+  const t = s?.trim()
+  return Boolean(t?.startsWith('/'))
+}
+
+/** HTTPS URL or `/…` path usable with `resolveUrlToImageBytes`. */
+function pickImageUri(
+  ...candidates: (string | null | undefined)[]
+): string | undefined {
+  for (const c of candidates) {
+    if (!c?.trim()) continue
+    const t = c.trim()
+    if (isPublicImagePath(t) || isHttpsUri(t)) return t
+  }
+  return undefined
 }
 
 /** Prefer https; fall back to first valid URL in candidates. */
@@ -61,19 +94,22 @@ export async function buildListingDetailRecordWithBlobs(
   const externalUrl =
     pickUri(row.externalUrl, row.sourceUrl) ?? 'https://bsky.app'
   const iconUrl =
-    pickUri(row.iconUrl, row.screenshotUrls?.[0], externalUrl) ??
-    PLACEHOLDER_ICON
+    pickImageUri(row.iconUrl, row.screenshotUrls?.[0]) ?? PLACEHOLDER_ICON
+  // Hero must follow `heroImageUrl` (and `/generated/…` paths), not the icon/avatar.
+  // `pickUri` alone skipped relative URLs, so we wrongly fell back to `iconUrl`.
   const heroUrl =
-    pickUri(
+    pickImageUri(
       row.heroImageUrl,
       row.screenshotUrls?.[0],
-      row.iconUrl,
-      externalUrl,
-    ) ?? iconUrl
-  const screenshotUrls = row.screenshotUrls.filter((u) => isHttpsUri(u))
+      row.screenshotUrls?.[1],
+    ) ?? PLACEHOLDER_HERO
+  const heroKey = heroUrl.trim()
+  const screenshotUrls = row.screenshotUrls
+    .filter((u) => isHttpsUri(u) || isPublicImagePath(u))
+    .filter((u) => u.trim() !== heroKey)
 
   const tagline = row.tagline?.trim() || '—'
-  const categorySlug = row.categorySlug?.trim() || 'misc'
+  const categorySlug = normalizeListingCategorySlugs(row)
   const createdAt = row.createdAt.toISOString()
   const updatedAt = row.updatedAt.toISOString()
 

@@ -132,6 +132,17 @@ export function getDirectoryCategoryOption(categoryId: string | null | undefined
   return createOption(normalizedPathIds)
 }
 
+/** First non-empty assigned category; used for single-category UI and legacy `categorySlug` fields. */
+export function primaryCategorySlug(
+  slugs: string[] | null | undefined,
+): string | null {
+  if (!slugs?.length) {
+    return null
+  }
+  const first = slugs.find((s) => s?.trim())
+  return first?.trim() ?? null
+}
+
 export function getDirectoryBrowsePath(categoryId: string | null | undefined) {
   const option = getDirectoryCategoryOption(categoryId)
   const rootCategoryId = option?.pathIds[0]
@@ -152,9 +163,12 @@ export function getDirectoryBrowsePath(categoryId: string | null | undefined) {
  * (e.g. `apps/bluesky/tools` → `apps/bluesky`). Otherwise `null`.
  */
 export function getAppEcosystemRootCategoryId(
-  categorySlug: string | null | undefined,
+  categorySlug: string | string[] | null | undefined,
 ): string | null {
-  const option = getDirectoryCategoryOption(categorySlug)
+  const resolved = Array.isArray(categorySlug)
+    ? primaryCategorySlug(categorySlug)
+    : categorySlug?.trim() || null
+  const option = getDirectoryCategoryOption(resolved)
   if (!option || option.pathIds[0] !== 'apps' || option.pathIds.length < 2) {
     return null
   }

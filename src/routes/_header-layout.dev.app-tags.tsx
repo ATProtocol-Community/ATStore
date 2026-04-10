@@ -152,7 +152,9 @@ function DevAppTagsPage() {
 
   const visibleListings = useMemo(() => {
     return listings
-      .filter((listing) => listing.categorySlug?.split("/").length === 2)
+      .filter((listing) =>
+        listing.categorySlugs.some((cs) => cs.split("/").length === 2),
+      )
       .filter((listing) => {
         if (!showUntaggedOnly) {
           return true;
@@ -342,7 +344,10 @@ function DevAppTagsPage() {
                           </SmallBody>
                         )}
                         <SmallBody style={styles.helperText}>
-                          Category: {listing.categorySlug ?? "—"}
+                          Category:{" "}
+                          {listing.categorySlugs.length > 0
+                            ? listing.categorySlugs.join(", ")
+                            : "—"}
                         </SmallBody>
                       </Flex>
                     </Flex>

@@ -461,7 +461,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
         domain: record.domain,
         vertical: record.vertical,
         classificationReason: record.classificationReason,
-        categorySlug: record.categorySlug,
+        categorySlugs: record.categorySlug ? [record.categorySlug] : [],
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -480,7 +480,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
           domain: record.domain,
           vertical: record.vertical,
           classificationReason: record.classificationReason,
-          categorySlug: record.categorySlug,
+          categorySlugs: record.categorySlug ? [record.categorySlug] : [],
           updatedAt: now,
         },
         where: eq(directoryListings.sourceUrl, record.sourceUrl),

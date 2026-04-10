@@ -7,6 +7,11 @@ import * as schema from '#/db/schema'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
 
+const categorySlugLexicon = z.union([
+  z.array(z.string().min(1)).min(1),
+  z.string().min(1).transform((s) => [s]),
+])
+
 const listingBodySchema = z.object({
   slug: z.string().min(1),
   name: z.string(),
@@ -15,7 +20,7 @@ const listingBodySchema = z.object({
   externalUrl: z.string().min(1),
   icon: z.unknown(),
   heroImage: z.unknown(),
-  categorySlug: z.string(),
+  categorySlug: categorySlugLexicon,
   screenshots: z.array(z.unknown()).optional(),
   appTags: z.array(z.string()).optional(),
   createdAt: z.string(),
@@ -73,6 +78,7 @@ export async function upsertDirectoryListingFromTap(input: {
   const verificationStatus = trustedPublisher ? 'verified' : 'unverified'
   const now = new Date()
   const appTags = record.appTags ?? []
+  const categorySlugs = record.categorySlug
 
   await db
     .insert(schema.directoryListings)
@@ -85,7 +91,7 @@ export async function upsertDirectoryListingFromTap(input: {
       screenshotUrls: [],
       tagline: record.tagline,
       fullDescription: record.description,
-      categorySlug: record.categorySlug,
+      categorySlugs,
       heroImageUrl: null,
       atUri,
       repoDid: did,
@@ -104,7 +110,7 @@ export async function upsertDirectoryListingFromTap(input: {
         externalUrl: record.externalUrl,
         tagline: record.tagline,
         fullDescription: record.description ?? null,
-        categorySlug: record.categorySlug,
+        categorySlugs,
         atUri,
         repoDid: did,
         rkey,

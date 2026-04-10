@@ -24,7 +24,7 @@ type InputRecord = {
   domain: string | null
   vertical: string | null
   classificationReason: string | null
-  /** When present in JSON, applied on insert and upsert. When omitted, `category_slug` is unchanged on update. */
+  /** When present in JSON, applied on insert and upsert. When omitted, `category_slugs` is unchanged on update. */
   categorySlug?: string | null
 }
 
@@ -148,7 +148,11 @@ async function main(): Promise<void> {
     const slug = buildDirectoryListingSlug(row)
 
     const categoryPatch =
-      row.categorySlug !== undefined ? { categorySlug: row.categorySlug } : {}
+      row.categorySlug !== undefined
+        ? {
+            categorySlugs: row.categorySlug ? [row.categorySlug] : [],
+          }
+        : {}
 
     await db
       .insert(directoryListings)

@@ -6,18 +6,24 @@ export function getListingsForCategoryBranch(
   listings: DirectoryListingCard[],
 ): DirectoryListingCard[] {
   return listings.filter((listing) => {
-    const slug = listing.categorySlug
-    if (!slug) {
+    const slugs = listing.categorySlugs?.length
+      ? listing.categorySlugs
+      : listing.categorySlug
+        ? [listing.categorySlug]
+        : []
+    if (slugs.length === 0) {
       return false
     }
 
-    return slug === categoryId || slug.startsWith(`${categoryId}/`)
+    return slugs.some(
+      (slug) => slug === categoryId || slug.startsWith(`${categoryId}/`),
+    )
   })
 }
 
 /**
  * Picks a hero image for a category branch from listings that belong to that branch
- * (`categorySlug` equals the branch id or is nested under it).
+ * (any `categorySlugs` entry equals the branch id or is nested under it).
  */
 export function pickListingImageForCategoryBranch(
   categoryId: string,

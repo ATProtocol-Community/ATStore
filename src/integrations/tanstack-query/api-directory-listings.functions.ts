@@ -1,7 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
-import { and, desc, eq, ilike, like, ne, or, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
 import {
@@ -17,6 +18,7 @@ import {
   findDirectoryCategoryNode,
   getDirectoryCategoryDescendantIds,
   getDirectoryCategoryOption,
+  primaryCategorySlug,
   type DirectoryCategoryAccent,
   type DirectoryCategoryTreeNode,
 } from '../../lib/directory-categories'
@@ -47,6 +49,38 @@ function listingPublicWhere(
   return extra ? and(pub, extra) : pub
 }
 
+/** Listing has a two-segment path under `apps/…` or `protocol/…` (e.g. `apps/bluesky`). */
+function sqlCategorySlugsHasRootTwoSegment(
+  col: AnyPgColumn,
+  prefix: 'apps' | 'protocol',
+): SQL {
+  const pattern = `${prefix}/%`
+  return sql<boolean>`exists (
+    select 1 from unnest(${col}) as u(slug)
+    where cardinality(string_to_array(trim(both from u.slug::text), '/')) = 2
+      and trim(both from u.slug::text) like ${pattern}
+  )`
+}
+
+function sqlCategorySlugsMatchesLike(col: AnyPgColumn, pattern: string): SQL {
+  return sql<boolean>`exists (
+    select 1 from unnest(${col}) as u(slug) where trim(both from u.slug::text) like ${pattern}
+  )`
+}
+
+function categorySlugsOverlap(a: string[], b: string[]): boolean {
+  if (a.length === 0 || b.length === 0) {
+    return false
+  }
+  const bs = new Set(b)
+  for (const x of a) {
+    if (bs.has(x)) {
+      return true
+    }
+  }
+  return false
+}
+
 type DirectoryListingRow = {
   id: string
   name: string
@@ -58,7 +92,7 @@ type DirectoryListingRow = {
   scope: string | null
   productType: string | null
   domain: string | null
-  categorySlug: string | null
+  categorySlugs: string[]
 }
 
 type CategoryAccent = DirectoryCategoryAccent
@@ -71,8 +105,9 @@ export interface DirectoryListingCard {
   description: string
   iconUrl: string | null
   imageUrl: string | null
-  /** Canonical directory path; used for ecosystem/category UI. */
+  /** Primary path (first of `categorySlugs`); used for ecosystem/category UI. */
   categorySlug: string | null
+  categorySlugs: string[]
   category: string
   accent: CategoryAccent
   rating: number
@@ -89,7 +124,6 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   domain: string | null
   vertical: string | null
   classificationReason: string | null
-  categorySlug: string | null
   categoryPathLabel: string | null
   appTags: string[]
   createdAt: string | null
@@ -153,6 +187,7 @@ export interface DirectoryListingCategoryAssignment {
   description: string
   externalUrl: string | null
   categorySlug: string | null
+  categorySlugs: string[]
   categoryPathLabel: string | null
   legacyCategoryHint: string
 }
@@ -167,6 +202,7 @@ export interface DirectoryListingAppTagAssignment {
   appTags: string[]
   suggestedTags: string[]
   categorySlug: string | null
+  categorySlugs: string[]
   scope: string | null
   productType: string | null
   domain: string | null
@@ -266,12 +302,12 @@ function toDirectoryCategorySummary(input: {
   } satisfies DirectoryCategorySummary
 }
 
-function getListingCategory(row: Pick<DirectoryListingRow, 'categorySlug'>) {
-  return getDirectoryCategoryOption(row.categorySlug)
+function getListingCategory(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
+  return getDirectoryCategoryOption(primaryCategorySlug(row.categorySlugs))
 }
 
 function getCategoryLabel(
-  row: Pick<DirectoryListingRow, 'scope' | 'productType' | 'domain' | 'categorySlug'>,
+  row: Pick<DirectoryListingRow, 'scope' | 'productType' | 'domain' | 'categorySlugs'>,
 ) {
   const assignedCategory = getListingCategory(row)
   if (assignedCategory) {
@@ -289,7 +325,7 @@ function getCardAccent(input: string): CategoryAccent {
   return CATEGORY_ACCENTS[index]
 }
 
-function getListingAccent(row: Pick<DirectoryListingRow, 'name' | 'categorySlug' | 'scope' | 'productType' | 'domain'>) {
+function getListingAccent(row: Pick<DirectoryListingRow, 'name' | 'categorySlugs' | 'scope' | 'productType' | 'domain'>) {
   const assignedCategory = getListingCategory(row)
   if (assignedCategory) {
     return assignedCategory.accent
@@ -319,6 +355,7 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     sanitizeListingTagline(row.tagline) ||
     sanitizeListingTagline(row.fullDescription) ||
     'Discover a polished Bluesky tool.'
+  const slugs = row.categorySlugs ?? []
 
   return {
     id: row.id,
@@ -328,7 +365,8 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     description: getListingDescription(row),
     iconUrl: row.iconUrl,
     imageUrl: row.screenshotUrls[0] || null,
-    categorySlug: row.categorySlug,
+    categorySlugs: slugs,
+    categorySlug: primaryCategorySlug(slugs),
     category,
     accent: getListingAccent(row),
     rating: getPseudoRating(row.name),
@@ -371,7 +409,8 @@ type ExtractedPageCopy = {
 }
 
 function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail {
-  const assignedCategory = getDirectoryCategoryOption(row.categorySlug)
+  const primary = primaryCategorySlug(row.categorySlugs)
+  const assignedCategory = getDirectoryCategoryOption(primary)
 
   return {
     ...toListingCard(row),
@@ -386,7 +425,8 @@ function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail
     domain: row.domain ? formatMetadataLabel(row.domain) : null,
     vertical: row.vertical ? formatMetadataLabel(row.vertical) : null,
     classificationReason: row.classificationReason,
-    categorySlug: row.categorySlug,
+    categorySlugs: row.categorySlugs ?? [],
+    categorySlug: primary,
     categoryPathLabel: assignedCategory?.pathLabel || null,
     appTags: normalizeAppTags(row.appTags ?? []),
     createdAt: row.createdAt.toISOString(),
@@ -420,7 +460,9 @@ function requireCards(
 }
 
 function buildCategories(rows: DirectoryListingRow[], limit = 4) {
-  const tree = buildDirectoryCategoryTree(rows.map((row) => row.categorySlug))
+  const tree = buildDirectoryCategoryTree(
+    rows.flatMap((row) => row.categorySlugs ?? []),
+  )
   const assignedCategories = flattenDirectoryCategoryTree(tree)
     .filter((node) => node.depth > 0 && node.count > 0)
     .sort((left, right) => {
@@ -457,16 +499,11 @@ type DirectoryListingAppTagRow = DirectoryListingRow & {
   appTags: string[] | null
 }
 
-function isBrowseableAppRow(row: Pick<DirectoryListingRow, 'categorySlug'>) {
-  return Boolean(
-    row.categorySlug &&
-      row.categorySlug.startsWith('apps/') &&
-      row.categorySlug.split('/').length === 2,
+function isBrowseableAppRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
+  return row.categorySlugs.some(
+    (slug) =>
+      slug.startsWith('apps/') && slug.split('/').length === 2,
   )
-}
-
-function isRootCategoryPath(categorySlug: unknown, prefix: string) {
-  return sql<boolean>`array_length(string_to_array(${categorySlug}, '/'), 1) = 2 and ${categorySlug} like ${`${prefix}/%`}`
 }
 
 function buildAppTagGroups(rows: DirectoryListingAppTagRow[]) {
@@ -510,19 +547,17 @@ function buildAllApps(rows: DirectoryListingRow[]) {
     .map(toListingCard)
 }
 
-function isHomePageFeaturedAppRow(row: Pick<DirectoryListingRow, 'categorySlug'>) {
-  return Boolean(
-    row.categorySlug &&
-      row.categorySlug.startsWith('apps/') &&
-      row.categorySlug.split('/').length === 2,
+function isHomePageFeaturedAppRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
+  return row.categorySlugs.some(
+    (slug) =>
+      slug.startsWith('apps/') && slug.split('/').length === 2,
   )
 }
 
-function isBrowseableProtocolRow(row: Pick<DirectoryListingRow, 'categorySlug'>) {
-  return Boolean(
-    row.categorySlug &&
-      row.categorySlug.startsWith('protocol/') &&
-      row.categorySlug.split('/').length === 2,
+function isBrowseableProtocolRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
+  return row.categorySlugs.some(
+    (slug) =>
+      slug.startsWith('protocol/') && slug.split('/').length === 2,
   )
 }
 
@@ -530,19 +565,24 @@ function buildProtocolCategoryGroups(rows: DirectoryListingRow[]): DirectoryProt
   const groups = new Map<string, DirectoryListingCard[]>()
 
   for (const row of rows) {
-    if (!isBrowseableProtocolRow(row)) {
+    const protocolIds = row.categorySlugs.filter(
+      (slug) =>
+        slug.startsWith('protocol/') && slug.split('/').length === 2,
+    )
+    if (protocolIds.length === 0) {
       continue
     }
 
-    const categoryId = row.categorySlug!
     const card = toListingCard(row)
-    const listings = groups.get(categoryId)
-    if (listings) {
-      listings.push(card)
-      continue
-    }
+    for (const categoryId of protocolIds) {
+      const listings = groups.get(categoryId)
+      if (listings) {
+        listings.push(card)
+        continue
+      }
 
-    groups.set(categoryId, [card])
+      groups.set(categoryId, [card])
+    }
   }
 
   return [...groups.entries()]
@@ -599,7 +639,7 @@ function getListingSelect(table: any) {
     scope: table.scope,
     productType: table.productType,
     domain: table.domain,
-    categorySlug: table.categorySlug,
+    categorySlugs: table.categorySlugs,
   }
 }
 
@@ -1217,7 +1257,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
         .where(
           listingPublicWhere(
             table,
-            isRootCategoryPath(table.categorySlug, 'apps'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
           ),
         )
         .orderBy(desc(table.updatedAt), desc(table.createdAt))
@@ -1228,7 +1268,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
         .where(
           listingPublicWhere(
             table,
-            isRootCategoryPath(table.categorySlug, 'apps'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
           ),
         )
         .orderBy(desc(table.createdAt))
@@ -1242,7 +1282,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
         .where(
           listingPublicWhere(
             table,
-            isRootCategoryPath(table.categorySlug, 'apps'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
           ),
         )
         .orderBy(desc(table.updatedAt), desc(table.createdAt))
@@ -1253,7 +1293,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
         .where(
           listingPublicWhere(
             table,
-            isRootCategoryPath(table.categorySlug, 'protocol'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'protocol'),
           ),
         )
         .orderBy(desc(table.updatedAt), desc(table.createdAt)),
@@ -1373,12 +1413,14 @@ const getDirectoryCategoryTree = createServerFn({ method: 'GET' })
     const table = context.schema.directoryListings
     const rows = await context.db
       .select({
-        categorySlug: table.categorySlug,
+        categorySlugs: table.categorySlugs,
       })
       .from(table)
       .where(listingPublicWhere(table))
 
-    return buildDirectoryCategoryTree(rows.map((row) => row.categorySlug))
+    return buildDirectoryCategoryTree(
+      rows.flatMap((row) => row.categorySlugs ?? []),
+    )
   })
 
 const getDirectoryCategoryTreeQueryOptions = queryOptions({
@@ -1397,7 +1439,9 @@ const getDirectoryCategoryPage = createServerFn({ method: 'GET' })
       .where(listingPublicWhere(table))
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
-    const tree = buildDirectoryCategoryTree(rows.map((row) => row.categorySlug))
+    const tree = buildDirectoryCategoryTree(
+      rows.flatMap((row) => row.categorySlugs ?? []),
+    )
     const category = findDirectoryCategoryNode(tree, data.categoryId)
 
     if (!category) {
@@ -1406,8 +1450,10 @@ const getDirectoryCategoryPage = createServerFn({ method: 'GET' })
 
     const descendantIds = new Set(getDirectoryCategoryDescendantIds(tree, category.id))
     const listings = rows
-      .filter(
-        (row) => row.categorySlug !== null && descendantIds.has(row.categorySlug),
+      .filter((row) =>
+        (row.categorySlugs ?? []).some((slug: string) =>
+          descendantIds.has(slug),
+        ),
       )
       .map(toListingCard)
 
@@ -1438,7 +1484,12 @@ const getAppsByTag = createServerFn({ method: 'GET' })
         appTags: table.appTags,
       })
       .from(table)
-      .where(listingPublicWhere(table, like(table.categorySlug, 'apps/%')))
+      .where(
+        listingPublicWhere(
+          table,
+          sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
+        ),
+      )
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     return buildAppTagGroups(rows)
@@ -1462,7 +1513,12 @@ const getAllApps = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(listingPublicWhere(table, like(table.categorySlug, 'apps/%')))
+      .where(
+        listingPublicWhere(
+          table,
+          sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
+        ),
+      )
       .orderBy(
         input.sort === 'newest'
           ? desc(table.createdAt)
@@ -1493,7 +1549,12 @@ const getAppsByTagPage = createServerFn({ method: 'GET' })
         appTags: table.appTags,
       })
       .from(table)
-      .where(listingPublicWhere(table, like(table.categorySlug, 'apps/%')))
+      .where(
+        listingPublicWhere(
+          table,
+          sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
+        ),
+      )
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     const groups = buildAppTagGroups(rows)
@@ -1525,7 +1586,12 @@ const getProtocolCategories = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(listingPublicWhere(table, like(table.categorySlug, 'protocol/%')))
+      .where(
+        listingPublicWhere(
+          table,
+          sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
+        ),
+      )
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     return buildProtocolCategoryGroups(rows)
@@ -1544,7 +1610,12 @@ const getProtocolCategoryPage = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(listingPublicWhere(table, like(table.categorySlug, 'protocol/%')))
+      .where(
+        listingPublicWhere(
+          table,
+          sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
+        ),
+      )
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     const groups = buildProtocolCategoryGroups(rows)
@@ -1569,7 +1640,12 @@ const getAllProtocolListings = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(listingPublicWhere(table, like(table.categorySlug, 'protocol/%')))
+      .where(
+        listingPublicWhere(
+          table,
+          sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
+        ),
+      )
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
 
     return buildAllProtocolListings(rows)
@@ -1604,7 +1680,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         scope: table.scope,
         productType: table.productType,
         domain: table.domain,
-        categorySlug: table.categorySlug,
+        categorySlugs: table.categorySlugs,
         vertical: table.vertical,
         classificationReason: table.classificationReason,
         appTags: table.appTags,
@@ -1646,7 +1722,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         scope: table.scope,
         productType: table.productType,
         domain: table.domain,
-        categorySlug: table.categorySlug,
+        categorySlugs: table.categorySlugs,
         vertical: table.vertical,
         classificationReason: table.classificationReason,
         appTags: table.appTags,
@@ -1694,7 +1770,7 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
         .select({
           id: table.id,
           appTags: table.appTags,
-          categorySlug: table.categorySlug,
+          categorySlugs: table.categorySlugs,
         })
         .from(table)
         .where(listingPublicWhere(table, eq(table.id, data.id)))
@@ -1740,7 +1816,10 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
         return {
           card: toListingCard(row),
           overlapCount,
-          sameCategory: row.categorySlug === currentRow.categorySlug,
+          sameCategory: categorySlugsOverlap(
+            row.categorySlugs,
+            currentRow.categorySlugs,
+          ),
           updatedAt: row.updatedAt,
           createdAt: row.createdAt,
         }
@@ -1802,7 +1881,10 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
                 ilike(table.tagline, `%${search}%`),
                 ilike(table.productType, `%${search}%`),
                 ilike(table.domain, `%${search}%`),
-                ilike(table.categorySlug, `%${search}%`),
+                ilike(
+                  sql<string>`array_to_string(${table.categorySlugs}, ' ')`,
+                  `%${search}%`,
+                ),
               )
             : undefined,
         ),
@@ -1838,7 +1920,7 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
         tagline: table.tagline,
         fullDescription: table.fullDescription,
         externalUrl: table.externalUrl,
-        categorySlug: table.categorySlug,
+        categorySlugs: table.categorySlugs,
         scope: table.scope,
         productType: table.productType,
         domain: table.domain,
@@ -1849,7 +1931,9 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
 
     return rows
       .map((row) => {
-        const assignedCategory = getDirectoryCategoryOption(row.categorySlug)
+        const slugs = row.categorySlugs ?? []
+        const primary = primaryCategorySlug(slugs)
+        const assignedCategory = getDirectoryCategoryOption(primary)
         const legacyCategoryHint = [
           row.scope ? formatMetadataLabel(row.scope) : null,
           row.productType ? formatMetadataLabel(row.productType) : null,
@@ -1871,7 +1955,8 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
             sanitizeListingTagline(row.tagline) ||
             'No description yet.',
           externalUrl: row.externalUrl,
-          categorySlug: row.categorySlug,
+          categorySlugs: slugs,
+          categorySlug: primary,
           categoryPathLabel: assignedCategory?.pathLabel || null,
           legacyCategoryHint: legacyCategoryHint || 'Unclassified',
         } satisfies DirectoryListingCategoryAssignment
@@ -1911,7 +1996,7 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
         fullDescription: table.fullDescription,
         externalUrl: table.externalUrl,
         appTags: table.appTags,
-        categorySlug: table.categorySlug,
+        categorySlugs: table.categorySlugs,
         scope: table.scope,
         productType: table.productType,
         domain: table.domain,
@@ -1928,13 +2013,15 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
 
     const assignments: DirectoryListingAppTagAssignment[] = rows.map((row) => {
       const assigned = normalizeAppTags(row.appTags ?? [])
+      const slugs = row.categorySlugs ?? []
+      const primary = primaryCategorySlug(slugs)
       const metadataSuggestions = suggestAppTagsFromListing({
         scope: row.scope,
         productType: row.productType,
         domain: row.domain,
         vertical: row.vertical,
         rawCategoryHint: row.rawCategoryHint,
-        categorySlug: row.categorySlug,
+        categorySlug: primary,
       })
 
       return {
@@ -1952,7 +2039,8 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
         externalUrl: row.externalUrl,
         appTags: assigned,
         suggestedTags: suggestedTagsForListing(assigned, metadataSuggestions, popular, 24),
-        categorySlug: row.categorySlug,
+        categorySlugs: slugs,
+        categorySlug: primary,
         scope: row.scope,
         productType: row.productType,
         domain: row.domain,
@@ -1972,7 +2060,11 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
 
       return left.name.localeCompare(right.name)
     })
-    .filter((listing) => listing.categorySlug?.split("/").length === 2 && !listing.categorySlug?.startsWith("protocol/"));
+    .filter((listing) =>
+      listing.categorySlugs.some(
+        (cs) => cs.split('/').length === 2 && !cs.startsWith('protocol/'),
+      ),
+    )
 
   })
 
@@ -1989,7 +2081,7 @@ const updateDirectoryListingAppTags = createServerFn({ method: 'POST' })
 
     const nextTags = normalizeAppTags(data.appTags)
     const full = await getFullDirectoryListing(context, data.id)
-    const cs = full.categorySlug
+    const cs = primaryCategorySlug(full.categorySlugs)
     if (
       !cs ||
       cs.startsWith('protocol/') ||
@@ -2018,7 +2110,7 @@ const updateDirectoryListingCategoryAssignment = createServerFn({ method: 'POST'
     const full = await getFullDirectoryListing(context, data.id)
     const effective = nextCategorySlug ?? 'misc'
 
-    await publishDirectoryListingDetail(full, { categorySlug: effective })
+    await publishDirectoryListingDetail(full, { categorySlugs: [effective] })
 
     return {
       id: data.id,

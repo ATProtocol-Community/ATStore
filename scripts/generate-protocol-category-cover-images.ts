@@ -175,21 +175,22 @@ async function generateImage(prompt: string) {
 
 async function getSpecsFromDatabase(): Promise<ProtocolCategoryCoverArtSpec[]> {
   const rows = await db
-    .select({ categorySlug: directoryListings.categorySlug })
+    .select({ categorySlugs: directoryListings.categorySlugs })
     .from(directoryListings);
 
   const segments = new Set<string>();
 
   for (const row of rows) {
-    const slug = row.categorySlug;
-    if (!slug?.startsWith("protocol/")) {
-      continue;
+    for (const slug of row.categorySlugs ?? []) {
+      if (!slug?.startsWith("protocol/")) {
+        continue;
+      }
+      const parts = slug.split("/").filter(Boolean);
+      if (parts.length !== 2 || parts[0] !== "protocol") {
+        continue;
+      }
+      segments.add(parts[1]!);
     }
-    const parts = slug.split("/").filter(Boolean);
-    if (parts.length !== 2 || parts[0] !== "protocol") {
-      continue;
-    }
-    segments.add(parts[1]!);
   }
 
   for (const spec of PROTOCOL_CATEGORY_COVER_SPECS) {
