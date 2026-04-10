@@ -24,8 +24,6 @@
     "backfill:listing-icons": "tsx scripts/backfill-listing-icons.ts",
     "backfill:listing-taxonomy": "tsx scripts/backfill-listing-taxonomy.ts",
     "backfill:bluesky-external-urls": "tsx scripts/scrape-bluesky-directory/backfill-external-urls.ts",
-    "db:import:bluesky-directory": "tsx scripts/import-bluesky-directory.ts",
-    "db:import:atproto-brussels-apps": "tsx scripts/ingest-atproto-brussels-apps.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:migrate:kit": "drizzle-kit migrate",
@@ -36,7 +34,6 @@
     "lex:lint": "node scripts/goat-lex.mjs lex lint",
     "lex:status": "node scripts/goat-lex.mjs lex status",
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
-    "atproto:seed-atstore": "tsx -r dotenv/config scripts/seed-atstore-listings.ts",
     "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts"
   },
   "dependencies": {

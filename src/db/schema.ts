@@ -160,10 +160,7 @@ export const embeddings = pgTable(
   }),
 )
 
-/**
- * Tap-sync mirror of `fyi.atstore.listing.detail` — slim read model while `directory_listings`
- * remains the full legacy row (imports, dev tooling, app reads during migration).
- */
+/** Tap-sync mirror of `fyi.atstore.listing.detail` — public listing read model. */
 export const storeListings = pgTable(
   'store_listings',
   {
@@ -220,82 +217,14 @@ export const storeListings = pgTable(
   }),
 )
 
-/** Full directory row (legacy imports, moderation, taxonomy hints). Kept during migration to `store_listings`. */
-export const directoryListings = pgTable(
-  'directory_listings',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    sourceUrl: text('source_url').notNull(),
-    name: text('name').notNull(),
-    slug: text('slug').notNull(),
-    externalUrl: text('external_url'),
-    iconUrl: text('icon_url'),
-    screenshotUrls: text('screenshot_urls').array().notNull(),
-    tagline: text('tagline'),
-    fullDescription: text('full_description'),
-    rawCategoryHint: text('raw_category_hint'),
-    scope: text('scope'),
-    productType: text('product_type'),
-    domain: text('domain'),
-    categorySlugs: text('category_slugs')
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
-    vertical: text('vertical'),
-    classificationReason: text('classification_reason'),
-    appTags: text('app_tags')
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
-    atUri: text('at_uri'),
-    repoDid: text('repo_did'),
-    rkey: text('rkey'),
-    heroImageUrl: text('hero_image_url'),
-    verificationStatus: text('verification_status')
-      .notNull()
-      .default('verified'),
-    sourceAccountDid: text('source_account_did'),
-    claimedByDid: text('claimed_by_did'),
-    claimedAt: timestamp('claimed_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => ({
-    sourceUrlIdx: uniqueIndex('directory_listings_source_url_idx').on(
-      table.sourceUrl,
-    ),
-    slugIdx: uniqueIndex('directory_listings_slug_idx').on(table.slug),
-    externalUrlIdx: index('directory_listings_external_url_idx').on(
-      table.externalUrl,
-    ),
-    taxonomyIdx: index('directory_listings_taxonomy_idx').on(
-      table.scope,
-      table.productType,
-      table.domain,
-    ),
-    categorySlugsIdx: index('directory_listings_category_slugs_idx').using(
-      'gin',
-      table.categorySlugs,
-    ),
-    atUriIdx: uniqueIndex('directory_listings_at_uri_idx').on(table.atUri),
-    verificationIdx: index('directory_listings_verification_status_idx').on(
-      table.verificationStatus,
-    ),
-  }),
-)
-
 /** App-side claim workflow against @store-hosted listings (protocol layer is separate). */
 export const listingClaims = pgTable(
   'listing_claims',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    directoryListingId: uuid('directory_listing_id')
+    storeListingId: uuid('store_listing_id')
       .notNull()
-      .references(() => directoryListings.id, { onDelete: 'cascade' }),
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
     claimantDid: text('claimant_did').notNull(),
     status: text('status').notNull().default('pending'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -306,8 +235,8 @@ export const listingClaims = pgTable(
       .notNull(),
   },
   (table) => ({
-    listingIdx: index('listing_claims_directory_listing_id_idx').on(
-      table.directoryListingId,
+    listingIdx: index('listing_claims_store_listing_id_idx').on(
+      table.storeListingId,
     ),
     statusIdx: index('listing_claims_status_idx').on(table.status),
   }),
@@ -323,7 +252,5 @@ export type Embedding = typeof embeddings.$inferSelect
 export type NewEmbedding = typeof embeddings.$inferInsert
 export type StoreListing = typeof storeListings.$inferSelect
 export type NewStoreListing = typeof storeListings.$inferInsert
-export type DirectoryListing = typeof directoryListings.$inferSelect
-export type NewDirectoryListing = typeof directoryListings.$inferInsert
 export type ListingClaim = typeof listingClaims.$inferSelect
 export type NewListingClaim = typeof listingClaims.$inferInsert

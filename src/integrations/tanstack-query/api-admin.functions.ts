@@ -40,7 +40,7 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
     const pendingClaims = await db
       .select({
         id: claims.id,
-        directoryListingId: claims.directoryListingId,
+        storeListingId: claims.storeListingId,
         claimantDid: claims.claimantDid,
         status: claims.status,
         createdAt: claims.createdAt,
@@ -103,7 +103,7 @@ const setClaimStatus = createServerFn({ method: 'POST' })
           claimedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(listingTable.id, claim.directoryListingId))
+        .where(eq(listingTable.id, claim.storeListingId))
     }
 
     return { ok: true as const }

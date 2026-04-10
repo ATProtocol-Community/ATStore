@@ -65,18 +65,6 @@ This setup also includes `pgvector` support:
 
 The `embeddings` table includes a `vector(...)` column and an `hnsw` cosine index for similarity search.
 
-To load the current Bluesky Directory export into Postgres:
-
-```bash
-npm run db:import:bluesky-directory
-```
-
-Use `--input` if you want to import a different JSON file:
-
-```bash
-npm run db:import:bluesky-directory -- --input out/bluesky-directory-scrape.json
-```
-
 ## Styling
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.

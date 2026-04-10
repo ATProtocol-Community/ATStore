@@ -437,7 +437,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
     return
   }
 
-  const [{ db, dbClient }, { directoryListings }] = await Promise.all([
+  const [{ db, dbClient }, { storeListings }] = await Promise.all([
     import('../src/db/index.server'),
     import('../src/db/schema'),
   ])
@@ -445,7 +445,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
 
   try {
     await db
-      .insert(directoryListings)
+      .insert(storeListings)
       .values({
         sourceUrl: record.sourceUrl,
         name: record.name,
@@ -455,35 +455,23 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
         screenshotUrls: record.screenshotUrls,
         tagline: record.tagline,
         fullDescription: record.fullDescription,
-        rawCategoryHint: record.rawCategoryHint,
-        scope: record.scope,
-        productType: record.productType,
-        domain: record.domain,
-        vertical: record.vertical,
-        classificationReason: record.classificationReason,
         categorySlugs: record.categorySlug ? [record.categorySlug] : [],
         updatedAt: now,
       })
       .onConflictDoUpdate({
-        target: directoryListings.sourceUrl,
+        target: storeListings.sourceUrl,
         set: {
           name: record.name,
-          slug: sql`coalesce(${directoryListings.slug}, ${slug})`,
+          slug: sql`coalesce(${storeListings.slug}, ${slug})`,
           externalUrl: record.externalUrl,
           iconUrl: record.iconUrl,
           screenshotUrls: record.screenshotUrls,
           tagline: record.tagline,
           fullDescription: record.fullDescription,
-          rawCategoryHint: record.rawCategoryHint,
-          scope: record.scope,
-          productType: record.productType,
-          domain: record.domain,
-          vertical: record.vertical,
-          classificationReason: record.classificationReason,
           categorySlugs: record.categorySlug ? [record.categorySlug] : [],
           updatedAt: now,
         },
-        where: eq(directoryListings.sourceUrl, record.sourceUrl),
+        where: eq(storeListings.sourceUrl, record.sourceUrl),
       })
   } finally {
     await dbClient.end({ timeout: 5 })
@@ -515,7 +503,7 @@ async function main() {
   if (args.shouldImport) {
     await importRecord(record, args.dryRun)
     if (!args.dryRun) {
-      console.log(`Imported "${record.name}" into directory_listings.`)
+      console.log(`Imported "${record.name}" into store_listings.`)
     }
   } else {
     console.log('Skipped DB import.')

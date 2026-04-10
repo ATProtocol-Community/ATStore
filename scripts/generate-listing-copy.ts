@@ -6,7 +6,7 @@ import { desc, eq } from 'drizzle-orm'
 import { chromium } from 'playwright'
 
 import { db, dbClient } from '../src/db/index.server'
-import { directoryListings } from '../src/db/schema'
+import { storeListings } from '../src/db/schema'
 import {
   isMeaningfulListingCopy,
   sanitizeListingDescription,
@@ -33,6 +33,22 @@ type CandidateListing = {
   scope: string | null
   productType: string | null
   domain: string | null
+}
+
+function taxonomyHintsFromCategorySlugs(
+  slugs: string[] | null | undefined,
+): Pick<CandidateListing, 'rawCategoryHint' | 'scope' | 'productType' | 'domain'> {
+  const primary = slugs?.[0]?.trim()
+  if (!primary) {
+    return { rawCategoryHint: null, scope: null, productType: null, domain: null }
+  }
+  const parts = primary.split('/').map((s) => s.trim()).filter(Boolean)
+  return {
+    rawCategoryHint: null,
+    scope: primary,
+    productType: parts[0] ?? null,
+    domain: parts[1] ?? null,
+  }
 }
 
 type ScriptArgs = {
@@ -488,21 +504,27 @@ async function buildImprovedCopy(
 async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[]> {
   const rows = await db
     .select({
-      id: directoryListings.id,
-      name: directoryListings.name,
-      sourceUrl: directoryListings.sourceUrl,
-      externalUrl: directoryListings.externalUrl,
-      tagline: directoryListings.tagline,
-      fullDescription: directoryListings.fullDescription,
-      rawCategoryHint: directoryListings.rawCategoryHint,
-      scope: directoryListings.scope,
-      productType: directoryListings.productType,
-      domain: directoryListings.domain,
+      id: storeListings.id,
+      name: storeListings.name,
+      sourceUrl: storeListings.sourceUrl,
+      externalUrl: storeListings.externalUrl,
+      tagline: storeListings.tagline,
+      fullDescription: storeListings.fullDescription,
+      categorySlugs: storeListings.categorySlugs,
     })
-    .from(directoryListings)
-    .orderBy(desc(directoryListings.updatedAt), desc(directoryListings.createdAt))
+    .from(storeListings)
+    .orderBy(desc(storeListings.updatedAt), desc(storeListings.createdAt))
 
   return rows
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      sourceUrl: row.sourceUrl,
+      externalUrl: row.externalUrl,
+      tagline: row.tagline,
+      fullDescription: row.fullDescription,
+      ...taxonomyHintsFromCategorySlugs(row.categorySlugs),
+    }))
     .filter((row) => (args.id ? row.id === args.id : true))
     .filter((row) => needsCopyRefresh(row, args.force))
     .slice(0, args.limit ?? Number.POSITIVE_INFINITY)
@@ -526,15 +548,15 @@ async function processListing(
   }
 
   await db
-    .update(directoryListings)
+    .update(storeListings)
     .set({
       tagline: nextCopy.tagline,
       fullDescription: nextCopy.fullDescription,
       updatedAt: new Date(),
     })
-    .where(eq(directoryListings.id, listing.id))
+    .where(eq(storeListings.id, listing.id))
 
-  console.log(`Updated copy for ${listing.name}.`)
+  console.log(`Updated store_listings copy for ${listing.name}.`)
 }
 
 async function main(): Promise<void> {

@@ -138,7 +138,7 @@ function AdminPage() {
                   <div>
                     <Body>{c.claimantDid}</Body>
                     <SmallBody>
-                      listing {c.directoryListingId} · {c.status}
+                      listing {c.storeListingId} · {c.status}
                     </SmallBody>
                   </div>
                   <Flex gap="md">

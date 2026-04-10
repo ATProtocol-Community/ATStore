@@ -5,7 +5,7 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { db, dbClient } from "../src/db/index.server";
-import { directoryListings } from "../src/db/schema";
+import { storeListings } from "../src/db/schema";
 
 type TaxonomyKind = "productType" | "domain" | "scope";
 type CategoryAccent = "blue" | "pink" | "purple" | "green";
@@ -63,20 +63,40 @@ function getSectionTitle(kind: TaxonomyKind) {
 async function main() {
   const rows = await db
     .select({
-      productType: directoryListings.productType,
-      domain: directoryListings.domain,
-      scope: directoryListings.scope,
+      categorySlugs: storeListings.categorySlugs,
     })
-    .from(directoryListings);
+    .from(storeListings);
+
+  const productTypeCounts = new Map<string, number>();
+  const domainCounts = new Map<string, number>();
+  const scopeCounts = new Map<string, number>();
+
+  for (const row of rows) {
+    for (const slug of row.categorySlugs ?? []) {
+      const trimmed = slug?.trim();
+      if (!trimmed) continue;
+      scopeCounts.set(trimmed, (scopeCounts.get(trimmed) || 0) + 1);
+      const parts = trimmed.split("/").map((s) => s.trim()).filter(Boolean);
+      if (parts[0]) {
+        productTypeCounts.set(
+          parts[0],
+          (productTypeCounts.get(parts[0]) || 0) + 1,
+        );
+      }
+      if (parts[1]) {
+        domainCounts.set(parts[1], (domainCounts.get(parts[1]) || 0) + 1);
+      }
+    }
+  }
+
+  const countMaps = {
+    productType: productTypeCounts,
+    domain: domainCounts,
+    scope: scopeCounts,
+  } as const;
 
   const sections = (["productType", "domain", "scope"] as const).map((kind) => {
-    const counts = new Map<string, number>();
-
-    for (const row of rows) {
-      const rawValue = row[kind];
-      if (!rawValue) continue;
-      counts.set(rawValue, (counts.get(rawValue) || 0) + 1);
-    }
+    const counts = countMaps[kind];
 
     const categories = [...counts.entries()]
       .sort((left, right) => {

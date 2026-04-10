@@ -10,7 +10,7 @@ import {
   getAppTagHeroArtSpecForTag,
 } from "../src/lib/app-tag-hero-art";
 import { db, dbClient } from "../src/db/index.server";
-import { directoryListings } from "../src/db/schema";
+import { storeListings } from "../src/db/schema";
 import { sql } from "drizzle-orm";
 
 const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview" as const;
@@ -169,9 +169,9 @@ async function generateImage(prompt: string) {
 async function getSpecsFromDatabase() {
   const rows = await db
     .select({
-      tag: sql<string>`unnest(${directoryListings.appTags})`,
+      tag: sql<string>`unnest(${storeListings.appTags})`,
     })
-    .from(directoryListings);
+    .from(storeListings);
 
   const distinctTags = [...new Set(rows.map((row) => row.tag).filter(Boolean))].sort(
     (a, b) => a.localeCompare(b),

@@ -4,7 +4,7 @@ import "dotenv/config";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { directoryListings } from "../src/db/schema";
+import { storeListings } from "../src/db/schema";
 import { db, dbClient } from "../src/db/index.server";
 import { getDirectoryCategoryOption } from "../src/lib/directory-categories";
 import {
@@ -175,8 +175,8 @@ async function generateImage(prompt: string) {
 
 async function getSpecsFromDatabase(): Promise<ProtocolCategoryCoverArtSpec[]> {
   const rows = await db
-    .select({ categorySlugs: directoryListings.categorySlugs })
-    .from(directoryListings);
+    .select({ categorySlugs: storeListings.categorySlugs })
+    .from(storeListings);
 
   const segments = new Set<string>();
 

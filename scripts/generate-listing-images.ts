@@ -9,7 +9,7 @@ import { desc, eq } from "drizzle-orm"
 import { chromium } from "playwright"
 
 import { db, dbClient } from "../src/db/index.server"
-import { directoryListings } from "../src/db/schema"
+import { storeListings } from "../src/db/schema"
 
 const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview" as const
 const PAGE_SCREENSHOT_DIR = path.resolve(
@@ -40,7 +40,21 @@ type CandidateListing = {
   domain: string | null
   scope: string | null
   existingGeneratedImageUrl?: string
-  manualRecordIndex?: number
+}
+
+function taxonomyHintsFromCategorySlugs(
+  slugs: string[] | null | undefined,
+): Pick<CandidateListing, "productType" | "domain" | "scope"> {
+  const primary = slugs?.[0]?.trim()
+  if (!primary) {
+    return { productType: null, domain: null, scope: null }
+  }
+  const parts = primary.split("/").map((s) => s.trim()).filter(Boolean)
+  return {
+    productType: parts[0] ?? null,
+    domain: parts[1] ?? null,
+    scope: primary,
+  }
 }
 
 type ScriptArgs = {
@@ -138,12 +152,12 @@ function printHelp(): void {
 Usage: npm run generate:listing-images -- [options]
 
 Options:
-      --dry-run       Capture screenshots and generate files, but do not update the database or JSON
+      --dry-run       Capture screenshots and generate files, but do not update store_listings
       --force         Reprocess even if a generated marketing image already exists
   -c, --concurrency <n> Run up to n listings in parallel (default: 4)
   -l, --limit <n>     Process at most n listings
       --id <listing>  Process a single listing id
-  -i, --input <path>  Process a manual listings JSON file instead of the database
+  -i, --input <path>  Same as DB mode, but listing rows are read from JSON; each row must exist in store_listings (matched by sourceUrl)
   -h, --help          Show help
 `)
 }
@@ -194,15 +208,6 @@ async function findExistingGeneratedImageUrl(
   }
 
   return null
-}
-
-function slugify(value: string): string {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-
-  return normalized || "listing"
 }
 
 function getContentHash(input: string): string {
@@ -466,31 +471,48 @@ async function saveGeneratedImage(
 
 async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[]> {
   if (args.input) {
-    const rows = await readManualListingRecords(args.input)
+    const manualRows = await readManualListingRecords(args.input)
     const candidates: CandidateListing[] = []
 
-    for (const [index, row] of rows.entries()) {
+    for (const row of manualRows) {
       if (args.id && row.sourceUrl !== args.id) {
         continue
       }
 
-      if (getListingUrl(row) === null) {
+      const [match] = await db
+        .select({
+          id: storeListings.id,
+          slug: storeListings.slug,
+          categorySlugs: storeListings.categorySlugs,
+          screenshotUrls: storeListings.screenshotUrls,
+        })
+        .from(storeListings)
+        .where(eq(storeListings.sourceUrl, row.sourceUrl))
+        .limit(1)
+
+      if (!match) {
+        console.warn(
+          `[generate:listing-images] No store_listings row for sourceUrl=${row.sourceUrl}; skip (import listing first).`,
+        )
         continue
       }
 
+      const hints = taxonomyHintsFromCategorySlugs(match.categorySlugs)
       const candidate: CandidateListing = {
-        id: row.sourceUrl,
+        id: match.id,
         name: row.name,
-        assetBaseName: `${slugify(row.name)}-screenshot`,
+        assetBaseName: `${match.slug}-screenshot`,
         sourceUrl: row.sourceUrl,
         externalUrl: row.externalUrl,
-        screenshotUrls: row.screenshotUrls,
+        screenshotUrls:
+          match.screenshotUrls.length > 0 ? match.screenshotUrls : row.screenshotUrls,
         tagline: row.tagline,
         fullDescription: row.fullDescription,
-        productType: row.productType,
-        domain: row.domain,
-        scope: row.scope,
-        manualRecordIndex: index,
+        ...hints,
+      }
+
+      if (getListingUrl(candidate) === null) {
+        continue
       }
 
       const existingGeneratedImageUrl = args.force
@@ -518,19 +540,18 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
 
   const rows = await db
     .select({
-      id: directoryListings.id,
-      name: directoryListings.name,
-      sourceUrl: directoryListings.sourceUrl,
-      externalUrl: directoryListings.externalUrl,
-      screenshotUrls: directoryListings.screenshotUrls,
-      tagline: directoryListings.tagline,
-      fullDescription: directoryListings.fullDescription,
-      productType: directoryListings.productType,
-      domain: directoryListings.domain,
-      scope: directoryListings.scope,
+      id: storeListings.id,
+      slug: storeListings.slug,
+      name: storeListings.name,
+      sourceUrl: storeListings.sourceUrl,
+      externalUrl: storeListings.externalUrl,
+      screenshotUrls: storeListings.screenshotUrls,
+      tagline: storeListings.tagline,
+      fullDescription: storeListings.fullDescription,
+      categorySlugs: storeListings.categorySlugs,
     })
-    .from(directoryListings)
-    .orderBy(desc(directoryListings.updatedAt), desc(directoryListings.createdAt))
+    .from(storeListings)
+    .orderBy(desc(storeListings.updatedAt), desc(storeListings.createdAt))
 
   const candidates: CandidateListing[] = []
 
@@ -539,15 +560,28 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
       continue
     }
 
-    if (getListingUrl(row) === null) {
+    const hints = taxonomyHintsFromCategorySlugs(row.categorySlugs)
+    const candidate: CandidateListing = {
+      id: row.id,
+      name: row.name,
+      assetBaseName: `${row.slug}-screenshot`,
+      sourceUrl: row.sourceUrl,
+      externalUrl: row.externalUrl,
+      screenshotUrls: row.screenshotUrls,
+      tagline: row.tagline,
+      fullDescription: row.fullDescription,
+      ...hints,
+    }
+
+    if (getListingUrl(candidate) === null) {
       continue
     }
 
-      if (!args.force && (await findExistingGeneratedImageUrl(row))) {
+    if (!args.force && (await findExistingGeneratedImageUrl(candidate))) {
       continue
     }
 
-    candidates.push(row)
+    candidates.push(candidate)
 
     if (candidates.length >= (args.limit ?? Number.POSITIVE_INFINITY)) {
       break
@@ -560,24 +594,18 @@ async function getCandidateListings(args: ScriptArgs): Promise<CandidateListing[
 async function processListing(
   listing: CandidateListing,
   args: ScriptArgs,
-): Promise<{ manualRecordIndex: number; publicPath: string } | null> {
+): Promise<void> {
   if (!args.force && listing.existingGeneratedImageUrl) {
     console.log(
       `Reusing existing generated image for ${listing.name} -> ${listing.existingGeneratedImageUrl}`,
     )
-
-    return typeof listing.manualRecordIndex === "number"
-      ? {
-          manualRecordIndex: listing.manualRecordIndex,
-          publicPath: listing.existingGeneratedImageUrl,
-        }
-      : null
+    return
   }
 
   const pageUrl = getListingUrl(listing)
   if (!pageUrl) {
     console.log(`Skipping ${listing.name} (${listing.id}) because it has no usable URL.`)
-    return null
+    return
   }
 
   console.log(`Processing ${listing.name} (${listing.id}) -> ${pageUrl}`)
@@ -592,34 +620,19 @@ async function processListing(
 
   if (args.dryRun) {
     console.log(`Dry run enabled; leaving database row unchanged for ${listing.name}.`)
-    return null
-  }
-
-  if (typeof listing.manualRecordIndex === "number") {
-    return {
-      manualRecordIndex: listing.manualRecordIndex,
-      publicPath,
-    }
+    return
   }
 
   await db
-    .update(directoryListings)
+    .update(storeListings)
     .set({
+      heroImageUrl: publicPath,
       screenshotUrls: [publicPath],
       updatedAt: new Date(),
     })
-    .where(eq(directoryListings.id, listing.id))
+    .where(eq(storeListings.id, listing.id))
 
-  console.log(`Updated screenshotUrls for ${listing.name}.`)
-  return null
-}
-
-async function writeManualListingRecords(
-  inputPath: string,
-  records: ManualListingRecord[],
-): Promise<void> {
-  const absoluteInputPath = path.resolve(process.cwd(), inputPath)
-  await writeFile(absoluteInputPath, JSON.stringify(records, null, 2) + "\n")
+  console.log(`Updated store_listings hero + screenshot URLs for ${listing.name}.`)
 }
 
 async function main(): Promise<void> {
@@ -641,8 +654,6 @@ async function main(): Promise<void> {
   console.log(`Found ${candidates.length} listing(s) to process.`)
   const concurrency = Math.min(args.concurrency, candidates.length)
   let nextIndex = 0
-  const manualRecords = args.input ? await readManualListingRecords(args.input) : null
-  const manualUpdates = new Map<number, string>()
 
   async function worker(): Promise<void> {
     while (nextIndex < candidates.length) {
@@ -654,10 +665,7 @@ async function main(): Promise<void> {
       }
 
       try {
-        const result = await processListing(listing, args)
-        if (result) {
-          manualUpdates.set(result.manualRecordIndex, result.publicPath)
-        }
+        await processListing(listing, args)
       } catch (error) {
         console.error(`Failed for ${listing.name} (${listing.id}).`)
         console.error(error)
@@ -666,19 +674,6 @@ async function main(): Promise<void> {
   }
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()))
-
-  if (manualRecords && manualUpdates.size > 0 && !args.dryRun) {
-    for (const [recordIndex, publicPath] of manualUpdates) {
-      const record = manualRecords[recordIndex]
-      if (!record) {
-        continue
-      }
-      record.screenshotUrls = [publicPath]
-    }
-
-    await writeManualListingRecords(args.input, manualRecords)
-    console.log(`Updated ${manualUpdates.size} manual listing record(s) in ${args.input}.`)
-  }
 }
 
 await main()
