@@ -26,7 +26,7 @@ import {
 } from '#/lib/atproto/tap-railway-url'
 import {
   markListingRemovedFromTap,
-  parseListingDetailRecord,
+  tryParseListingDetailRecord,
   upsertDirectoryListingFromTap,
 } from '#/lib/atproto/tap-listing-sync'
 
@@ -149,19 +149,39 @@ async function main() {
       )
       return
     }
-    const parsed = parseListingDetailRecord(body)
-    if (!parsed) {
+    const parseResult = tryParseListingDetailRecord(body)
+    if (!parseResult.ok) {
       console.warn(
-        `[tap] skip invalid listing.detail payload rkey=${evt.rkey} did=${evt.did}`,
+        `[tap] skip listing.detail rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
       )
-      if (isVerbose()) {
+      if (parseResult.stage === 'zod' && parseResult.zodError) {
+        console.warn('[tap] zod field errors:', parseResult.zodError.flatten())
+      }
+      if (parseResult.blobSummary) {
         console.warn(
-          `[tap] payload keys: ${Object.keys(body).join(', ') || '(empty)'}`,
+          `[tap] blob detail (${parseResult.blobField ?? '?'}): ${parseResult.blobSummary}`,
         )
+      }
+      console.warn(
+        `[tap] payload top-level keys: ${Object.keys(body).join(', ') || '(empty)'}`,
+      )
+      if (body.$type !== undefined) {
+        console.warn(`[tap] record $type: ${String(body.$type)}`)
+      }
+      if (isVerbose()) {
+        try {
+          const snapshot = JSON.stringify(body)
+          console.warn(
+            `[tap] full record JSON (${snapshot.length} chars): ${snapshot.slice(0, 8000)}${snapshot.length > 8000 ? '…' : ''}`,
+          )
+        } catch {
+          console.warn('[tap] full record: <could not JSON.stringify>')
+        }
       }
       return
     }
 
+    const parsed = parseResult.record
     const verifiedLabel = trusted.has(evt.did) ? 'verified' : 'unverified'
     console.log(
       `[tap] upsert store_listings slug=${parsed.slug} did=${evt.did} rkey=${evt.rkey} ${verifiedLabel}`,
@@ -189,7 +209,7 @@ async function main() {
   })
 
   const channel = tap.channel(indexer, {
-    onReconnectError: (error, n, initialSetup) => {
+    onReconnectError: (error: unknown, n: number, initialSetup: boolean) => {
       console.error(
         `[tap] WebSocket reconnect error (attempt ${n}, initialSetup=${initialSetup})`,
         error,

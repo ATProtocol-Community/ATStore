@@ -1,4 +1,8 @@
-import { isBlob } from '@atcute/lexicons/interfaces'
+import {
+  isBlob,
+  isLegacyBlob,
+  type Blob as AtprotoBlob,
+} from '@atcute/lexicons/interfaces'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -7,15 +11,96 @@ import * as schema from '#/db/schema'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
 
-const categorySlugLexicon = z.union([
-  z.array(z.string().min(1)).min(1),
-  z.string().min(1).transform((s) => [s]),
-])
+/**
+ * `isBlob()` requires `$type: "blob"`, exactly four keys, etc. Tap / repo JSON often omits
+ * `$type` or adds fields — ingest only needs scalars for Postgres; accept any blob ref we can recognize.
+ */
+/** Short shape summary for logs (no blob bytes). */
+export function summarizeBlobRefForDebug(raw: unknown): string {
+  if (raw === null || raw === undefined) return 'null'
+  if (typeof raw !== 'object') return `typeof ${typeof raw}`
+  const o = raw as Record<string, unknown>
+  const keys = Object.keys(o)
+  const keySample = keys.slice(0, 12).join(', ') || '(no keys)'
+  const mime =
+    typeof o.mimeType === 'string' ? o.mimeType : `mimeType=${typeof o.mimeType}`
+  const ref = o.ref
+  const refKeys =
+    ref && typeof ref === 'object'
+      ? Object.keys(ref as object).slice(0, 8).join(', ')
+      : String(ref)
+  const link =
+    ref && typeof ref === 'object'
+      ? (ref as Record<string, unknown>).$link
+      : undefined
+  const linkShort =
+    typeof link === 'string'
+      ? `${link.slice(0, 16)}…`
+      : link === undefined
+        ? 'none'
+        : String(link)
+  const cid = typeof o.cid === 'string' ? `${o.cid.slice(0, 16)}…` : 'none'
+  let refExtra = ''
+  if (ref && typeof ref === 'object') {
+    const r = ref as Record<string, unknown>
+    if (r.hash !== undefined) {
+      const h = r.hash
+      if (h instanceof Uint8Array) {
+        refExtra = ` ref.hash=Uint8Array(${h.byteLength})`
+      } else if (typeof h === 'object' && h !== null && 'length' in h) {
+        refExtra = ` ref.hash=array-like(${(h as { length?: number }).length ?? '?'})`
+      } else {
+        refExtra = ` ref.hash=${typeof h}`
+      }
+    }
+    if (r.code !== undefined || r.version !== undefined) {
+      refExtra += ` code=${String(r.code)} version=${String(r.version)}`
+    }
+  }
+  const t = o.$type
+  return `{ $type=${t ?? 'n/a'} keys=${keys.length} [${keySample}] ${mime} ref.keys=[${refKeys}] ref.$link=${linkShort} top.cid=${cid}${refExtra} }`
+}
+
+/** True if `ref` looks like a CID pointer (JSON, DAG-CBOR, or Tap/indigo multihash struct). */
+function refLooksLikeBlobPointer(ref: object): boolean {
+  const r = ref as Record<string, unknown>
+  if (typeof r.$link === 'string' && r.$link.length > 0) return true
+  if (r.bytes !== undefined) return true
+  // Tap / indigo often serialize blob refs as { code, version, hash } (multihash) instead of { $link }.
+  if (r.hash !== undefined) return true
+  return false
+}
+
+function blobRefAcceptableForTap(raw: unknown): boolean {
+  if (isBlob(raw) || isLegacyBlob(raw)) return true
+  if (typeof raw !== 'object' || raw === null) return false
+  const o = raw as Record<string, unknown>
+  if (typeof o.mimeType !== 'string' || o.mimeType.length === 0) return false
+  if (typeof o.cid === 'string' && o.cid.length > 0) return true
+  const ref = o.ref
+  if (ref && typeof ref === 'object' && refLooksLikeBlobPointer(ref)) return true
+  return false
+}
+
+const categorySlugLexicon = z
+  .union([z.array(z.string()), z.string(), z.null()])
+  .transform((v): string[] => {
+    if (v == null) return ['misc']
+    const arr = Array.isArray(v) ? v : [v]
+    const out = arr.map((s) => String(s).trim()).filter(Boolean)
+    return out.length > 0 ? out : ['misc']
+  })
 
 const listingBodySchema = z.object({
   slug: z.string().min(1),
   name: z.string(),
-  tagline: z.string(),
+  tagline: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((s) => {
+      const t = s == null ? '' : String(s)
+      return t.trim() === '' ? '—' : t
+    }),
   description: z.string().optional(),
   externalUrl: z.string().min(1),
   icon: z.unknown(),
@@ -27,15 +112,85 @@ const listingBodySchema = z.object({
   updatedAt: z.string(),
 })
 
-export function parseListingDetailRecord(
+export type ListingDetailParseResult =
+  | { ok: true; record: FyiAtstoreListingDetail }
+  | {
+      ok: false
+      reason: string
+      stage: 'no_body' | 'zod' | 'blob_icon' | 'blob_hero' | 'blob_screenshot'
+      zodError?: z.ZodError
+      screenshotIndex?: number
+      blobField?: 'icon' | 'heroImage' | 'screenshots'
+      blobSummary?: string
+    }
+
+/**
+ * Same as {@link parseListingDetailRecord} but returns why parsing failed (for logging).
+ */
+export function tryParseListingDetailRecord(
   body: Record<string, unknown> | undefined,
-): FyiAtstoreListingDetail | null {
-  if (!body) return null
+): ListingDetailParseResult {
+  if (!body) {
+    return {
+      ok: false,
+      reason: 'record body is missing',
+      stage: 'no_body',
+    }
+  }
+
   const parsed = listingBodySchema.safeParse(body)
-  if (!parsed.success) return null
+  if (!parsed.success) {
+    const issues = parsed.error.flatten()
+    const fieldErrors = issues.fieldErrors
+    const formErrors = issues.formErrors
+    const detail = [
+      ...Object.entries(fieldErrors).flatMap(([k, v]) =>
+        v?.map((m) => `${k}: ${m}`) ?? [],
+      ),
+      ...(formErrors ?? []),
+    ].join('; ')
+    return {
+      ok: false,
+      reason: detail || parsed.error.message,
+      stage: 'zod',
+      zodError: parsed.error,
+    }
+  }
+
   const d = parsed.data
-  if (!isBlob(d.icon) || !isBlob(d.heroImage)) return null
-  if (d.screenshots?.some((s) => !isBlob(s))) return null
+  if (!blobRefAcceptableForTap(d.icon)) {
+    return {
+      ok: false,
+      reason: `icon blob not recognized (${summarizeBlobRefForDebug(d.icon)})`,
+      stage: 'blob_icon',
+      blobField: 'icon',
+      blobSummary: summarizeBlobRefForDebug(d.icon),
+    }
+  }
+  if (!blobRefAcceptableForTap(d.heroImage)) {
+    return {
+      ok: false,
+      reason: `heroImage blob not recognized (${summarizeBlobRefForDebug(d.heroImage)})`,
+      stage: 'blob_hero',
+      blobField: 'heroImage',
+      blobSummary: summarizeBlobRefForDebug(d.heroImage),
+    }
+  }
+
+  if (d.screenshots?.length) {
+    const badIdx = d.screenshots.findIndex((s) => !blobRefAcceptableForTap(s))
+    if (badIdx >= 0) {
+      const s = d.screenshots[badIdx]
+      return {
+        ok: false,
+        reason: `screenshots[${badIdx}] blob not recognized (${summarizeBlobRefForDebug(s)})`,
+        stage: 'blob_screenshot',
+        screenshotIndex: badIdx,
+        blobField: 'screenshots',
+        blobSummary: summarizeBlobRefForDebug(s),
+      }
+    }
+  }
 
   const rec: FyiAtstoreListingDetail = {
     $type: 'fyi.atstore.listing.detail',
@@ -43,18 +198,25 @@ export function parseListingDetailRecord(
     name: d.name,
     tagline: d.tagline,
     externalUrl: d.externalUrl,
-    icon: d.icon,
-    heroImage: d.heroImage,
+    icon: d.icon as AtprotoBlob,
+    heroImage: d.heroImage as AtprotoBlob,
     categorySlug: d.categorySlug,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   }
   if (d.description) rec.description = d.description
   if (d.screenshots?.length) {
-    rec.screenshots = d.screenshots.filter(isBlob)
+    rec.screenshots = d.screenshots.filter(blobRefAcceptableForTap) as AtprotoBlob[]
   }
   if (d.appTags?.length) rec.appTags = d.appTags
-  return rec
+  return { ok: true, record: rec }
+}
+
+export function parseListingDetailRecord(
+  body: Record<string, unknown> | undefined,
+): FyiAtstoreListingDetail | null {
+  const r = tryParseListingDetailRecord(body)
+  return r.ok ? r.record : null
 }
 
 function atUriFor(did: string, rkey: string) {
