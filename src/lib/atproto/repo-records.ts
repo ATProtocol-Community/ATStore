@@ -1,8 +1,63 @@
+import {
+  ComAtprotoRepoCreateRecord,
+  ComAtprotoRepoDeleteRecord,
+  ComAtprotoRepoGetRecord,
+  ComAtprotoRepoPutRecord,
+} from '@atcute/atproto'
 import type { Client } from '@atcute/client'
 import { ok } from '@atcute/client'
+import type { InferInput } from '@atcute/lexicons/validations'
+import * as TID from '@atcute/tid'
 
 import { COLLECTION, NSID } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
+
+type RepoCreateRecordInput = InferInput<
+  (typeof ComAtprotoRepoCreateRecord.mainSchema.input)['schema']
+>
+type RepoGetRecordParams = InferInput<typeof ComAtprotoRepoGetRecord.mainSchema.params>
+type RepoPutRecordInput = InferInput<
+  (typeof ComAtprotoRepoPutRecord.mainSchema.input)['schema']
+>
+type RepoDeleteRecordInput = InferInput<
+  (typeof ComAtprotoRepoDeleteRecord.mainSchema.input)['schema']
+>
+
+/** Runtime values are validated by the PDS; narrow plain strings to lexicon-branded types. */
+function lexCreateRecordInput(args: {
+  repo: string
+  collection: string
+  rkey: string
+  record: unknown
+}): RepoCreateRecordInput {
+  return args as RepoCreateRecordInput
+}
+
+function lexGetRecordParams(args: {
+  repo: string
+  collection: string
+  rkey: string
+}): RepoGetRecordParams {
+  return args as RepoGetRecordParams
+}
+
+function lexPutRecordInput(args: {
+  repo: string
+  collection: string
+  rkey: string
+  record: Record<string, unknown>
+  swapRecord: string
+}): RepoPutRecordInput {
+  return args as RepoPutRecordInput
+}
+
+function lexDeleteRecordInput(args: {
+  repo: string
+  collection: string
+  rkey: string
+}): RepoDeleteRecordInput {
+  return args as RepoDeleteRecordInput
+}
 
 export type FyiAtstoreProfile = {
   $type: typeof NSID.profile
@@ -24,36 +79,36 @@ async function repoUpsertRecord(
   },
 ): Promise<{ uri: string }> {
   const existing = await client.get('com.atproto.repo.getRecord', {
-    params: {
+    params: lexGetRecordParams({
       repo: input.repo,
       collection: input.collection,
       rkey: input.rkey,
-    },
+    }),
   })
 
   if (existing.ok && existing.data?.cid) {
     const res = await ok(
       client.post('com.atproto.repo.putRecord', {
-        input: {
+        input: lexPutRecordInput({
           repo: input.repo,
           collection: input.collection,
           rkey: input.rkey,
           record: input.record,
           swapRecord: existing.data.cid,
-        },
+        }),
       }),
     )
     return { uri: res.uri }
   }
 
   const res = await ok(
-    client.post('com.atproto.repo.createRecord', {
-      input: {
+    client.call(ComAtprotoRepoCreateRecord, {
+      input: lexCreateRecordInput({
         repo: input.repo,
         collection: input.collection,
         rkey: input.rkey,
         record: input.record,
-      },
+      }),
     }),
   )
   return { uri: res.uri }
@@ -78,12 +133,13 @@ export async function createListingDetailRecord(
   record: FyiAtstoreListingDetail,
 ): Promise<{ uri: string; cid: string }> {
   const res = await ok(
-    client.post('com.atproto.repo.createRecord', {
-      input: {
+    client.call(ComAtprotoRepoCreateRecord, {
+      input: lexCreateRecordInput({
         repo,
         collection: COLLECTION.listingDetail,
+        rkey: TID.now(),
         record,
-      },
+      }),
     }),
   )
   return { uri: res.uri, cid: res.cid }
@@ -109,12 +165,13 @@ export async function createListingReviewRecord(
   if (t) record.text = t
 
   const res = await ok(
-    client.post('com.atproto.repo.createRecord', {
-      input: {
+    client.call(ComAtprotoRepoCreateRecord, {
+      input: lexCreateRecordInput({
         repo,
         collection: COLLECTION.listingReview,
+        rkey: TID.now(),
         record,
-      },
+      }),
     }),
   )
   return { uri: res.uri, cid: res.cid }
@@ -143,7 +200,7 @@ export async function deleteRecord(
 ): Promise<void> {
   await ok(
     client.post('com.atproto.repo.deleteRecord', {
-      input: { repo, collection, rkey },
+      input: lexDeleteRecordInput({ repo, collection, rkey }),
     }),
   )
 }

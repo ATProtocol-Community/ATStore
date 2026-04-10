@@ -290,8 +290,13 @@ function AuthPage() {
                   size="lg"
                   placeholder="your.handle.com"
                   label={
-                    <Flex direction="row" gap="md" justify="between">
-                      <Text size="sm">Handle</Text>
+                    <Flex
+                      direction="row"
+                      gap="md"
+                      align="center"
+                      justify="between"
+                    >
+                      <Text size="sm">Atmosphere Account</Text>
                       <Dialog
                         trigger={
                           <IconButton
