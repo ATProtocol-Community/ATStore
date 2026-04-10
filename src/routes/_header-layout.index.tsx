@@ -456,147 +456,146 @@ function HomePage() {
   const protocolListings = [data.protocolFeatured, ...data.protocolSpotlights];
 
   return (
-      <HeaderLayout.Page>
-        <Page.Root variant="large">
-          <Flex direction="column" gap="5xl" style={styles.pageHeader}>
-            <Heading1>Apps on the Atmosphere</Heading1>
+    <HeaderLayout.Page>
+      <Page.Root variant="large">
+        <Flex direction="column" gap="5xl" style={styles.pageHeader}>
+          <Heading1>Apps on the Atmosphere</Heading1>
+          <Text
+            variant="secondary"
+            size="2xl"
+            leading="sm"
+            style={styles.headerDescription}
+          >
+            Discover the best apps the atmosphere has to offer. With every
+            product you own your data and use the same identity across all apps.
+          </Text>
+        </Flex>
+
+        <Flex direction="column" style={styles.pageSections}>
+          <section {...stylex.props(styles.section)}>
+            <FeaturedListingGrid
+              items={[data.featured, ...data.spotlights]}
+              getKey={(listing, index) =>
+                index === 0
+                  ? `featured-${listing.id}`
+                  : `spotlight-${listing.id}`
+              }
+              isFeatured={(_, index) => index === 0}
+              renderItem={(listing, { featured }) =>
+                featured ? (
+                  <HeroCard listing={listing} />
+                ) : (
+                  <SpotlightCard listing={listing} />
+                )
+              }
+            />
+          </section>
+
+          <section {...stylex.props(styles.section)}>
+            <SectionHeader
+              eyebrow="Browse Apps"
+              title="Find apps you'll love"
+              to="/apps/tags"
+            />
+            <Grid style={styles.categoriesGrid}>
+              {data.tags.map((tag) => (
+                <AppTagCard key={tag.tag} tag={tag} />
+              ))}
+            </Grid>
+          </section>
+
+          <section {...stylex.props(styles.section)}>
+            <SectionHeader
+              eyebrow="Popular Right Now"
+              title="Trending across the ecosystem"
+              to="/apps/all"
+              search={{ sort: "popular" }}
+            />
+            <Grid style={styles.popularGrid}>
+              <Flex direction="column" gap="md">
+                {data.popular.map((listing, index) => (
+                  <PopularListItem
+                    key={listing.id}
+                    listing={listing}
+                    rank={index + 1}
+                  />
+                ))}
+              </Flex>
+              <PromoCard listing={promoListing} />
+            </Grid>
+          </section>
+
+          <section {...stylex.props(styles.section)}>
+            <SectionHeader
+              eyebrow="New & Noteworthy"
+              title="Fresh apps just added"
+              to="/apps/all"
+              search={{ sort: "newest" }}
+            />
+            <Grid style={styles.newGrid}>
+              {data.fresh.map((listing) => (
+                <NewListingCard key={listing.id} listing={listing} />
+              ))}
+            </Grid>
+          </section>
+
+          <Flex direction="column" gap="5xl" style={styles.protocolHeader}>
+            <Heading1>Dive into the Protocol</Heading1>
             <Text
               variant="secondary"
               size="2xl"
               leading="sm"
               style={styles.headerDescription}
             >
-              Discover the best apps the atmosphere has to offer. With every
-              product you own your data and use the same identity across all
-              apps.
+              The Atmosphere is built on an open Protocol, so you can use it to
+              build your own apps and services.
             </Text>
           </Flex>
 
-          <Flex direction="column" style={styles.pageSections}>
-            <section {...stylex.props(styles.section)}>
-              <FeaturedListingGrid
-                items={[data.featured, ...data.spotlights]}
-                getKey={(listing, index) =>
-                  index === 0
-                    ? `featured-${listing.id}`
-                    : `spotlight-${listing.id}`
-                }
-                isFeatured={(_, index) => index === 0}
-                renderItem={(listing, { featured }) =>
-                  featured ? (
-                    <HeroCard listing={listing} />
-                  ) : (
-                    <SpotlightCard listing={listing} />
-                  )
-                }
-              />
-            </section>
+          <section {...stylex.props(styles.section)}>
+            <FeaturedListingGrid
+              items={protocolListings}
+              getKey={(listing, index) =>
+                index === 0
+                  ? `protocol-featured-${listing.id}`
+                  : `protocol-spotlight-${listing.id}`
+              }
+              isFeatured={(_, index) => index === 0}
+              renderItem={(listing, { featured }) =>
+                featured ? (
+                  <HeroCard
+                    listing={listing}
+                    badgeLabel="Featured Protocol Tool"
+                  />
+                ) : (
+                  <SpotlightCard listing={listing} />
+                )
+              }
+            />
+          </section>
 
-            <section {...stylex.props(styles.section)}>
-              <SectionHeader
-                eyebrow="Browse Apps"
-                title="Find apps you'll love"
-                to="/apps/tags"
-              />
+          <section {...stylex.props(styles.section)}>
+            <SectionHeader
+              eyebrow="Browse Protocol"
+              title="Infrastructure & developer tooling"
+              to="/protocol/tags"
+            />
+            {data.protocolCategories.length > 0 ? (
               <Grid style={styles.categoriesGrid}>
-                {data.tags.map((tag) => (
-                  <AppTagCard key={tag.tag} tag={tag} />
+                {data.protocolCategories.map((cat) => (
+                  <ProtocolCategoryCard key={cat.segment} category={cat} />
                 ))}
               </Grid>
-            </section>
-
-            <section {...stylex.props(styles.section)}>
-              <SectionHeader
-                eyebrow="Popular Right Now"
-                title="Trending across the ecosystem"
-                to="/apps/all"
-                search={{ sort: "popular" }}
-              />
-              <Grid style={styles.popularGrid}>
-                <Flex direction="column" gap="md">
-                  {data.popular.map((listing, index) => (
-                    <PopularListItem
-                      key={listing.id}
-                      listing={listing}
-                      rank={index + 1}
-                    />
-                  ))}
-                </Flex>
-                <PromoCard listing={promoListing} />
-              </Grid>
-            </section>
-
-            <section {...stylex.props(styles.section)}>
-              <SectionHeader
-                eyebrow="New & Noteworthy"
-                title="Fresh apps just added"
-                to="/apps/all"
-                search={{ sort: "newest" }}
-              />
-              <Grid style={styles.newGrid}>
-                {data.fresh.map((listing) => (
-                  <NewListingCard key={listing.id} listing={listing} />
-                ))}
-              </Grid>
-            </section>
-
-            <Flex direction="column" gap="5xl" style={styles.protocolHeader}>
-              <Heading1>Dive into the Protocol</Heading1>
-              <Text
-                variant="secondary"
-                size="2xl"
-                leading="sm"
-                style={styles.headerDescription}
-              >
-                The Atmosphere is built on an open Protocol, so you can use it
-                to build your own apps and services.
-              </Text>
-            </Flex>
-
-            <section {...stylex.props(styles.section)}>
-              <FeaturedListingGrid
-                items={protocolListings}
-                getKey={(listing, index) =>
-                  index === 0
-                    ? `protocol-featured-${listing.id}`
-                    : `protocol-spotlight-${listing.id}`
-                }
-                isFeatured={(_, index) => index === 0}
-                renderItem={(listing, { featured }) =>
-                  featured ? (
-                    <HeroCard
-                      listing={listing}
-                      badgeLabel="Featured Protocol Tool"
-                    />
-                  ) : (
-                    <SpotlightCard listing={listing} />
-                  )
-                }
-              />
-            </section>
-
-            <section {...stylex.props(styles.section)}>
-              <SectionHeader
-                eyebrow="Browse Protocol"
-                title="Infrastructure & developer tooling"
-                to="/protocol/tags"
-              />
-              {data.protocolCategories.length > 0 ? (
-                <Grid style={styles.categoriesGrid}>
-                  {data.protocolCategories.map((cat) => (
-                    <ProtocolCategoryCard key={cat.segment} category={cat} />
-                  ))}
-                </Grid>
-              ) : (
-                <Body variant="secondary">
-                  Protocol categories will appear here as listings are added to
-                  the directory.
-                </Body>
-              )}
-            </section>
-          </Flex>
-        </Page.Root>
-      </HeaderLayout.Page>
+            ) : (
+              <Body variant="secondary">
+                Protocol categories will appear here as listings are added to
+                the directory.
+              </Body>
+            )}
+          </section>
+        </Flex>
+      </Page.Root>
+    </HeaderLayout.Page>
   );
 }
 
@@ -681,9 +680,9 @@ function HeroCard({
       {...stylex.props(styles.bentoLink)}
     >
       <Card style={[styles.accentCard, styles.heroCard]}>
-        {listing.imageUrl ? (
+        {listing.heroImageUrl ? (
           <img
-            src={listing.imageUrl}
+            src={listing.heroImageUrl}
             alt=""
             {...stylex.props(styles.imageLayer)}
           />

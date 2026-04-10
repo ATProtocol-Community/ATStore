@@ -217,18 +217,7 @@ const styles = stylex.create({
     inset: 0,
     position: "absolute",
   },
-  ambientGlow: {
-    filter: "blur(12px)",
-    opacity: 0.55,
-    position: "absolute",
-    right: "-3rem",
-    top: "-2rem",
-  },
-  ambientGlowInner: {
-    borderRadius: radius.full,
-    height: "9rem",
-    width: "9rem",
-  },
+
   blurContainer: {
     inset: 0,
     overflow: "hidden",
@@ -494,22 +483,14 @@ function CategoryListingCard({
           featured && getAccentSurface(listing.accent),
         ]}
       >
-        {featured && listing.imageUrl ? (
+        {featured && listing.heroImageUrl ? (
           <img
-            src={listing.imageUrl}
+            src={listing.heroImageUrl}
             alt=""
             aria-hidden="true"
             {...stylex.props(styles.featuredImageFrame)}
           />
         ) : null}
-        <div {...stylex.props(styles.ambientGlow)}>
-          <div
-            {...stylex.props(
-              styles.ambientGlowInner,
-              getAccentGlow(listing.accent),
-            )}
-          />
-        </div>
         <Flex
           direction="column"
           style={[

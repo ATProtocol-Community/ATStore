@@ -149,18 +149,6 @@ const styles = stylex.create({
     position: "absolute",
     width: "100%",
   },
-  ambientGlow: {
-    filter: "blur(12px)",
-    opacity: 0.55,
-    position: "absolute",
-    right: "-3rem",
-    top: "-2rem",
-  },
-  ambientGlowInner: {
-    borderRadius: radius.full,
-    height: "9rem",
-    width: "9rem",
-  },
   featuredInfoPanel: {
     backdropFilter: "blur(18px) saturate(180%)",
     backgroundColor:
@@ -288,41 +276,41 @@ function ProtocolCategoryPage() {
 
   return (
     <HeaderLayout.Page>
-        <Page.Root variant="large" style={styles.page}>
-          <Flex direction="column" style={styles.pageContent}>
-            <Flex direction="column" gap="4xl">
-              <Flex gap="xl" style={styles.navLinks}>
-                <LinkLink to="/protocol/tags">
-                  <ChevronLeft />
-                  All protocol categories
-                </LinkLink>
-              </Flex>
-
-              <AppTagHero
-                description={description}
-                eyebrow={formatProtocolListingCount(data.count)}
-                imageSrc={heroImage}
-                title={data.label}
-              />
+      <Page.Root variant="large" style={styles.page}>
+        <Flex direction="column" style={styles.pageContent}>
+          <Flex direction="column" gap="4xl">
+            <Flex gap="xl" style={styles.navLinks}>
+              <LinkLink to="/protocol/tags">
+                <ChevronLeft />
+                All protocol categories
+              </LinkLink>
             </Flex>
 
-            <FeaturedListingGrid
-              getKey={(listing) => `${data.categoryId}-${listing.id}`}
-              items={data.listings}
-              renderItem={(listing, { featured }) => (
-                <ProtocolCategoryListingCard
-                  featured={featured}
-                  listing={listing}
-                />
-              )}
+            <AppTagHero
+              description={description}
+              eyebrow={formatProtocolListingCount(data.count)}
+              imageSrc={heroImage}
+              title={data.label}
             />
-
-            {related.length > 0 ? (
-              <RelatedProtocolSection groups={related} />
-            ) : null}
           </Flex>
-        </Page.Root>
-      </HeaderLayout.Page>
+
+          <FeaturedListingGrid
+            getKey={(listing) => `${data.categoryId}-${listing.id}`}
+            items={data.listings}
+            renderItem={(listing, { featured }) => (
+              <ProtocolCategoryListingCard
+                featured={featured}
+                listing={listing}
+              />
+            )}
+          />
+
+          {related.length > 0 ? (
+            <RelatedProtocolSection groups={related} />
+          ) : null}
+        </Flex>
+      </Page.Root>
+    </HeaderLayout.Page>
   );
 }
 
@@ -377,22 +365,14 @@ function ProtocolCategoryListingCard({
           featured && getAccentSurface(listing.accent),
         ]}
       >
-        {featured && listing.imageUrl ? (
+        {featured && listing.heroImageUrl ? (
           <img
             alt=""
             aria-hidden="true"
-            src={listing.imageUrl}
+            src={listing.heroImageUrl}
             {...stylex.props(styles.featuredImageFrame)}
           />
         ) : null}
-        <div {...stylex.props(styles.ambientGlow)}>
-          <div
-            {...stylex.props(
-              styles.ambientGlowInner,
-              getAccentGlow(listing.accent),
-            )}
-          />
-        </div>
         <Flex
           direction="column"
           style={[

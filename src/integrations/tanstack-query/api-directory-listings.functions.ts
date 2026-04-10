@@ -96,6 +96,8 @@ type DirectoryListingRow = {
   name: string
   slug: string | null
   iconUrl: string | null
+  /** Dedicated hero/cover from `store_listings.hero_image_url` (Tap / publish). */
+  heroImageUrl: string | null
   screenshotUrls: string[]
   tagline: string | null
   fullDescription: string | null
@@ -114,7 +116,8 @@ export interface DirectoryListingCard {
   tagline: string
   description: string
   iconUrl: string | null
-  imageUrl: string | null
+  /** Resolved hero for cards: `store_listings.hero_image_url`, else first screenshot. */
+  heroImageUrl: string | null
   /** Primary path (first of `categorySlugs`); used for ecosystem/category UI. */
   categorySlug: string | null
   categorySlugs: string[]
@@ -374,7 +377,7 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     tagline,
     description: getListingDescription(row),
     iconUrl: row.iconUrl,
-    imageUrl: row.screenshotUrls[0] || null,
+    heroImageUrl: row.heroImageUrl ?? row.screenshotUrls[0] ?? null,
     categorySlugs: slugs,
     categorySlug: primaryCategorySlug(slugs),
     category,
@@ -643,6 +646,7 @@ function getListingSelect(table: typeof dbSchema.storeListings) {
     name: table.name,
     slug: table.slug,
     iconUrl: table.iconUrl,
+    heroImageUrl: table.heroImageUrl,
     screenshotUrls: table.screenshotUrls,
     tagline: table.tagline,
     fullDescription: table.fullDescription,
@@ -1316,8 +1320,12 @@ const getHomePageData = createServerFn({ method: 'GET' })
     const dedupedRecentRows = dedupeListings(recentRows)
     const dedupedRecentAppRows = dedupedRecentRows.filter(isHomePageFeaturedAppRow)
     const featuredSource =
-      dedupedRecentAppRows.find((row) => row.screenshotUrls.length > 0 || row.iconUrl) ||
-      dedupedRecentAppRows[0]
+      dedupedRecentAppRows.find(
+        (row) =>
+          row.heroImageUrl ||
+          row.screenshotUrls.length > 0 ||
+          row.iconUrl,
+      ) || dedupedRecentAppRows[0]
 
     if (!featuredSource) {
       throw new Error('No homepage featured listing found')
@@ -1683,6 +1691,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         slug: table.slug,
         externalUrl: table.externalUrl,
         iconUrl: table.iconUrl,
+        heroImageUrl: table.heroImageUrl,
         screenshotUrls: table.screenshotUrls,
         tagline: table.tagline,
         fullDescription: table.fullDescription,
@@ -1720,6 +1729,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         slug: table.slug,
         externalUrl: table.externalUrl,
         iconUrl: table.iconUrl,
+        heroImageUrl: table.heroImageUrl,
         screenshotUrls: table.screenshotUrls,
         tagline: table.tagline,
         fullDescription: table.fullDescription,
@@ -2167,7 +2177,7 @@ const regenerateDirectoryListingHeroImage = createServerFn({ method: 'POST' })
 
     return {
       id: data.id,
-      imageUrl: publicPath,
+      heroImageUrl: publicPath,
     }
   })
 

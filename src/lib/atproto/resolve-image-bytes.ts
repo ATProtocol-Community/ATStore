@@ -7,6 +7,7 @@ const EXT_TO_MIME: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
 }
 
 function mimeFromPath(filePath: string): string {

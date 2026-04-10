@@ -173,18 +173,6 @@ const styles = stylex.create({
   heroOverlay: {
     background: `linear-gradient(90deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 88%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 78%, transparent) 34%, color-mix(in srgb, ${uiColor.overlayBackdrop} 38%, transparent) 68%, color-mix(in srgb, ${uiColor.overlayBackdrop} 16%, transparent) 100%), linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 20%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 18%, transparent) 32%, color-mix(in srgb, ${uiColor.overlayBackdrop} 96%, transparent) 100%)`,
   },
-  ambientGlow: {
-    filter: "blur(12px)",
-    opacity: 0.55,
-    position: "absolute",
-    right: "-3rem",
-    top: "-2rem",
-  },
-  ambientGlowInner: {
-    borderRadius: radius.full,
-    height: "9rem",
-    width: "9rem",
-  },
   featuredInfoPanel: {
     backdropFilter: "blur(18px) saturate(180%)",
     backgroundColor:
@@ -364,38 +352,38 @@ function AppsTagPage() {
 
   return (
     <HeaderLayout.Page>
-        <Page.Root variant="large" style={styles.page}>
-          <Flex direction="column" style={styles.pageContent}>
-            <Flex direction="column" gap="4xl">
-              <Flex gap="xl" style={styles.navLinks}>
-                <LinkLink to="/apps/tags">
-                  <ChevronLeft />
-                  All tags
-                </LinkLink>
-              </Flex>
-
-              <AppTagHero
-                eyebrow={formatAppTagCount(data.count)}
-                title={formatAppTagLabel(data.tag)}
-                description={getAppTagDescription(data.tag)}
-                imageSrc={getAppTagHeroAssetPathForTag(data.tag)}
-              />
+      <Page.Root variant="large" style={styles.page}>
+        <Flex direction="column" style={styles.pageContent}>
+          <Flex direction="column" gap="4xl">
+            <Flex gap="xl" style={styles.navLinks}>
+              <LinkLink to="/apps/tags">
+                <ChevronLeft />
+                All tags
+              </LinkLink>
             </Flex>
 
-            <FeaturedListingGrid
-              items={data.listings}
-              getKey={(listing) => `${data.tag}-${listing.id}`}
-              renderItem={(listing, { featured }) => (
-                <AppTagListingCard featured={featured} listing={listing} />
-              )}
+            <AppTagHero
+              eyebrow={formatAppTagCount(data.count)}
+              title={formatAppTagLabel(data.tag)}
+              description={getAppTagDescription(data.tag)}
+              imageSrc={getAppTagHeroAssetPathForTag(data.tag)}
             />
-
-            {relatedTags.length > 0 ? (
-              <RelatedTagsSection groups={relatedTags} />
-            ) : null}
           </Flex>
-        </Page.Root>
-      </HeaderLayout.Page>
+
+          <FeaturedListingGrid
+            items={data.listings}
+            getKey={(listing) => `${data.tag}-${listing.id}`}
+            renderItem={(listing, { featured }) => (
+              <AppTagListingCard featured={featured} listing={listing} />
+            )}
+          />
+
+          {relatedTags.length > 0 ? (
+            <RelatedTagsSection groups={relatedTags} />
+          ) : null}
+        </Flex>
+      </Page.Root>
+    </HeaderLayout.Page>
   );
 }
 
@@ -419,22 +407,15 @@ function AppTagListingCard({
           featured && getAccentSurface(listing.accent),
         ]}
       >
-        {featured && listing.imageUrl ? (
+        {featured && listing.heroImageUrl ? (
           <img
-            src={listing.imageUrl}
+            src={listing.heroImageUrl}
             alt=""
             aria-hidden="true"
             {...stylex.props(styles.featuredImageFrame)}
           />
         ) : null}
-        <div {...stylex.props(styles.ambientGlow)}>
-          <div
-            {...stylex.props(
-              styles.ambientGlowInner,
-              getAccentGlow(listing.accent),
-            )}
-          />
-        </div>
+
         <Flex
           direction="column"
           style={[

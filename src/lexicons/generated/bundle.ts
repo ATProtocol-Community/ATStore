@@ -51,7 +51,8 @@ export const lexicons = [
                 "image/png",
                 "image/jpeg",
                 "image/webp",
-                "image/gif"
+                "image/gif",
+                "image/svg+xml"
               ],
               "maxSize": 2000000,
               "description": "Square / app icon (uploaded to repo via com.atproto.repo.uploadBlob)."
@@ -62,7 +63,8 @@ export const lexicons = [
                 "image/png",
                 "image/jpeg",
                 "image/webp",
-                "image/gif"
+                "image/gif",
+                "image/svg+xml"
               ],
               "maxSize": 12000000,
               "description": "Hero / cover image blob."
@@ -76,7 +78,8 @@ export const lexicons = [
                   "image/png",
                   "image/jpeg",
                   "image/webp",
-                  "image/gif"
+                  "image/gif",
+                  "image/svg+xml"
                 ],
                 "maxSize": 12000000
               }

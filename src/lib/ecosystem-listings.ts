@@ -36,9 +36,9 @@ export function pickListingImageForCategoryBranch(
 
   const inBranch = getListingsForCategoryBranch(categoryId, listings)
 
-  const withScreenshot = inBranch.find((listing) => listing.imageUrl)
-  if (withScreenshot?.imageUrl) {
-    return withScreenshot.imageUrl
+  const withScreenshot = inBranch.find((listing) => listing.heroImageUrl)
+  if (withScreenshot?.heroImageUrl) {
+    return withScreenshot.heroImageUrl
   }
 
   const withIcon = inBranch.find((listing) => listing.iconUrl)

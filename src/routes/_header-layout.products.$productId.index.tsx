@@ -694,11 +694,11 @@ function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
 
   return (
     <Flex direction="column" gap="6xl">
-      {listing.imageUrl && (
+      {listing.heroImageUrl && (
         <div {...stylex.props(styles.hero, getHeroSurface(listing.accent))}>
           <img
             alt={`${listing.name} preview`}
-            src={listing.imageUrl}
+            src={listing.heroImageUrl}
             {...stylex.props(styles.heroImage)}
           />
           <div {...stylex.props(styles.heroOverlay)} />
