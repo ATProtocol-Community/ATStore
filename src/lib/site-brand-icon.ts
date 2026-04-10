@@ -8,6 +8,74 @@ import sharp from 'sharp'
 /** Many hosts only serve /favicon.ico to browser-like clients. */
 const BROWSER_LIKE_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+
+const TANGLED_HOST = 'tangled.org'
+
+function tangledHostnameNormalized(host: string): string {
+  return host.toLowerCase().replace(/^www\./, '')
+}
+
+/** e.g. https://tangled.org/owner/repo — not the marketing homepage only. */
+export function isTangledRepositoryPageUrl(pageUrl: string): boolean {
+  try {
+    const u = new URL(pageUrl.trim())
+    if (tangledHostnameNormalized(u.hostname) !== TANGLED_HOST) {
+      return false
+    }
+    const parts = u.pathname.split('/').filter(Boolean)
+    return parts.length >= 2
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Tangled site-wide favicon / static branding — not the repo project's own art.
+ * When the listing URL is a repo on Tangled, skip these so we fall back to Gemini + screenshot.
+ */
+function isTangledSiteWideBrandingIconAsset(assetUrl: string): boolean {
+  try {
+    const u = new URL(assetUrl)
+    if (tangledHostnameNormalized(u.hostname) !== TANGLED_HOST) {
+      return false
+    }
+    const p = u.pathname.toLowerCase()
+    if (p === '/favicon.ico' || p.startsWith('/favicon')) {
+      return true
+    }
+    if (p.includes('apple-touch-icon')) {
+      return true
+    }
+    if (p.includes('android-chrome') || p.includes('mstile')) {
+      return true
+    }
+    if (p.startsWith('/static/logos/') || p.startsWith('/static/favicon')) {
+      return true
+    }
+    // Root marketing logos on the Tangled host (not repo-specific assets).
+    if (
+      p === '/logo.svg' ||
+      p === '/logo.png' ||
+      p === '/logo.webp' ||
+      p === '/logo@2x.png' ||
+      p === '/images/logo.png' ||
+      p === '/images/logo.svg' ||
+      p === '/assets/logo.png' ||
+      p === '/assets/logo.svg' ||
+      p === '/static/logo.png' ||
+      p === '/static/logo.svg' ||
+      p === '/brand/logo.png' ||
+      p === '/brand/logo.svg' ||
+      p === '/img/logo.png' ||
+      p === '/img/logo.svg'
+    ) {
+      return true
+    }
+    return false
+  } catch {
+    return false
+  }
+}
 const PAGE_TIMEOUT_MS = 20_000
 const ICON_TIMEOUT_MS = 15_000
 const MANIFEST_TIMEOUT_MS = 10_000
@@ -410,7 +478,7 @@ function bufferLooksLikePng(buffer: Buffer): boolean {
 
 async function probeImageUrl(
   url: string,
-): Promise<{ contentType: string; bytes: Buffer } | null> {
+): Promise<{ contentType: string; bytes: Buffer; finalUrl: string } | null> {
   try {
     const response = await fetch(url, {
       redirect: 'follow',
@@ -467,6 +535,7 @@ async function probeImageUrl(
     return {
       contentType: effectiveType,
       bytes: body,
+      finalUrl,
     }
   } catch {
     return null
@@ -517,9 +586,17 @@ export async function discoverSiteBrandIconAsset(
     ...collectConventionalFallbackCandidates(baseUrl),
   ])
 
+  const skipTangledPlatformIcons = isTangledRepositoryPageUrl(baseUrl)
+
   for (const candidate of rankedCandidates) {
     const probed = await probeImageUrl(candidate.url)
     if (!probed) continue
+    if (
+      skipTangledPlatformIcons &&
+      isTangledSiteWideBrandingIconAsset(probed.finalUrl)
+    ) {
+      continue
+    }
     return {
       bytes: probed.bytes,
       contentType: probed.contentType,

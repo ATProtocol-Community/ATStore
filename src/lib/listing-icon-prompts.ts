@@ -23,20 +23,18 @@ export function buildIconPolishFromSiteAssetPrompt(input: {
 
   return `You are given an existing site icon, favicon, or logo image (it may be very small, pixelated, or multi-resolution .ico).
 
-Task: Upscale and clean up faithfully for a software directory (small UI sizes). Preserve the brand mark, colors, and silhouette. Do not invent a different logo or unrelated symbol.
+Task — **upscale and sharpen only** (like a higher-res export + mild sharpening). The output must be **visually the same artwork** as the input: same shapes, same layout, same proportions, same colors (no recoloring), same style (flat vs gradient vs pixel art). **Do not redesign, simplify, “improve”, add detail, remove detail, change line weight, round or square off corners differently, add outlines, glows, textures, or shadows that were not in the source.**
+
+If the source is pixel art or a crisp tiny favicon, preserve that character — only make it **sharper** and **larger**, not smoother in a way that changes the design.
 
 Format (required):
 - Output must be exactly 1:1 — a square image (equal width and height).
 - Do not add a separate container shape: no rounded-square plate, squircle, circle mask, glossy bubble, or drop-shadow tile behind the mark. The logo/mark sits on a flat fill or transparent background filling the square — not inside a second artificial shape.
 - Padding is only empty margin around the mark, not an extra outlined or beveled "icon backing."
 
-Style:
-- Crisp edges; if the source is tiny, refine the intended mark without drifting to a new design.
-- Transparent or flat background as appropriate; no fake device frames.
-
 Constraints:
 - No browser chrome, page screenshots, or unrelated decoration.
-- No extra readable text unless it was essential in the tiny source mark.
+- No new readable text; keep any text from the source only if it was already there, unchanged in wording.
 
 Listing metadata:
 ${meta}`
