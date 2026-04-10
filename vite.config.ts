@@ -6,6 +6,7 @@ import { defineConfig } from 'vite'
 import { devtools } from '@tanstack/devtools-vite'
 import stylexPlugin from '@stylexjs/unplugin'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { nitro } from "nitro/vite";
 
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
@@ -36,6 +37,7 @@ const config = defineConfig({
       },
     }),
     devtools(),
+    nitro(),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
     tanstackStart(),
     viteReact(),

@@ -1250,7 +1250,6 @@ const getHomePageData = createServerFn({ method: 'GET' })
     }
 
     const featured = toListingCard(featuredSource)
-    console.log('dedupedRecentAppRows', dedupedRecentAppRows)
     const remainingAppRows = dedupedRecentAppRows.filter(
       (row) => row.id !== featuredSource.id,
     )
