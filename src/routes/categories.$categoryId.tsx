@@ -519,40 +519,7 @@ function CategoryListingCard({
             featured && styles.listingCardBodyFeatured,
           ]}
         >
-          {featured ? (
-            <Flex direction="column" gap="4xl" style={styles.featuredInfoPanel}>
-              <div {...stylex.props(styles.blurContainer)}>
-                <div {...stylex.props(styles.blur)} />
-              </div>
-
-              <Flex gap="2xl" align="center" style={styles.listingHeader}>
-                <div {...stylex.props(styles.featuredAvatarContainer)}>
-                  <Avatar
-                    alt={listing.name}
-                    fallback={getInitials(listing.name)}
-                    size="xl"
-                    src={listing.iconUrl || undefined}
-                    style={styles.featuredAvatar}
-                  />
-                </div>
-                <Flex
-                  direction="column"
-                  gap="2xl"
-                  style={styles.featuredInfoContent}
-                >
-                  <Text
-                    font="title"
-                    size={{ default: "4xl", sm: "6xl" }}
-                    weight="semibold"
-                    style={styles.featuredTitle}
-                  >
-                    {listing.name}
-                  </Text>
-                  <Body style={styles.featuredTagline}>{listing.tagline}</Body>
-                </Flex>
-              </Flex>
-            </Flex>
-          ) : (
+          {featured ? null : (
             <>
               <Flex gap="2xl" align="center" style={styles.listingHeader}>
                 <Avatar
