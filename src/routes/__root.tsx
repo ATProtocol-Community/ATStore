@@ -115,19 +115,17 @@ const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getIte
 
 const FOOTER_LINK_GROUPS = [
   {
-    title: "Browse",
+    title: "Apps",
     links: [
-      { href: "/apps/tags", label: "Browse app tags" },
-      { href: "/apps/all", label: "All apps" },
-      { href: "/protocol/tags", label: "Browse protocol" },
-      { href: "/protocol/listings", label: "Protocol listings" },
+      { href: "/apps/all", label: "All Apps" },
+      { href: "/apps/tags", label: "Categories" },
     ],
   },
   {
-    title: "Explore",
+    title: "Protocol",
     links: [
-      { href: "/categories/all", label: "Directory branches" },
-      { href: "/about", label: "About the directory" },
+      { href: "/protocol/listings", label: "All Tools" },
+      { href: "/protocol/tags", label: "Categories" },
     ],
   },
 ] as const;
