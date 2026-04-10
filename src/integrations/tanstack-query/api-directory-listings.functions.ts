@@ -32,7 +32,7 @@ import {
 } from '../../lib/directory-listing-slugs'
 import { dbMiddleware } from './db-middleware'
 import type { Database } from '#/db/index.server'
-import type { DirectoryListing } from '#/db/schema'
+import type { StoreListing } from '#/db/schema'
 import * as dbSchema from '#/db/schema'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import {
@@ -41,8 +41,18 @@ import {
 } from '#/lib/atproto/publish-directory-listing'
 import { deleteRecord } from '#/lib/atproto/repo-records'
 
+/** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
+const storeListingLegacyDetailColumns = {
+  rawCategoryHint: sql<string | null>`null::text`.as('rawCategoryHint'),
+  scope: sql<string | null>`null::text`.as('scope'),
+  productType: sql<string | null>`null::text`.as('productType'),
+  domain: sql<string | null>`null::text`.as('domain'),
+  vertical: sql<string | null>`null::text`.as('vertical'),
+  classificationReason: sql<string | null>`null::text`.as('classificationReason'),
+}
+
 function listingPublicWhere(
-  table: typeof dbSchema.directoryListings,
+  table: typeof dbSchema.storeListings,
   extra?: SQL,
 ) {
   const pub = eq(table.verificationStatus, 'verified')
@@ -627,7 +637,7 @@ function buildHomePageTagSummaries(
   throw new Error('No app tag summaries found')
 }
 
-function getListingSelect(table: any) {
+function getListingSelect(table: typeof dbSchema.storeListings) {
   return {
     id: table.id,
     name: table.name,
@@ -636,9 +646,9 @@ function getListingSelect(table: any) {
     screenshotUrls: table.screenshotUrls,
     tagline: table.tagline,
     fullDescription: table.fullDescription,
-    scope: table.scope,
-    productType: table.productType,
-    domain: table.domain,
+    scope: sql<string | null>`null::text`.as('scope'),
+    productType: sql<string | null>`null::text`.as('productType'),
+    domain: sql<string | null>`null::text`.as('domain'),
     categorySlugs: table.categorySlugs,
   }
 }
@@ -652,8 +662,8 @@ function assertDevelopmentOnly() {
 async function getFullDirectoryListing(
   context: { db: Database; schema: typeof dbSchema },
   id: string,
-): Promise<DirectoryListing> {
-  const table = context.schema.directoryListings
+): Promise<StoreListing> {
+  const table = context.schema.storeListings
   const [row] = await context.db
     .select()
     .from(table)
@@ -996,10 +1006,10 @@ async function generateListingTextField(input: {
 }
 
 async function getDirectoryListingGenerationCandidate(
-  context: any,
+  context: { db: Database; schema: typeof dbSchema },
   id: string,
 ): Promise<DirectoryListingGenerationCandidate> {
-  const table = context.schema.directoryListings
+  const table = context.schema.storeListings
   const [listing] = await context.db
     .select({
       id: table.id,
@@ -1009,10 +1019,10 @@ async function getDirectoryListingGenerationCandidate(
       screenshotUrls: table.screenshotUrls,
       tagline: table.tagline,
       fullDescription: table.fullDescription,
-      rawCategoryHint: table.rawCategoryHint,
-      scope: table.scope,
-      productType: table.productType,
-      domain: table.domain,
+      rawCategoryHint: sql<string | null>`null::text`.as('rawCategoryHint'),
+      scope: sql<string | null>`null::text`.as('scope'),
+      productType: sql<string | null>`null::text`.as('productType'),
+      domain: sql<string | null>`null::text`.as('domain'),
     })
     .from(table)
     .where(eq(table.id, id))
@@ -1247,7 +1257,7 @@ async function saveGeneratedListingAsset(
 const getHomePageData = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const listingSelect = getListingSelect(table)
 
     const [recentRows, newestRows, tagRows, protocolRows] = await Promise.all([
@@ -1384,14 +1394,14 @@ const getHomePageData = createServerFn({ method: 'GET' })
   })
 
 const getHomePageQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'home'],
+  queryKey: ['storeListings', 'home'],
   queryFn: async () => getHomePageData(),
 })
 
 const getDirectoryCategories = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
@@ -1403,14 +1413,14 @@ const getDirectoryCategories = createServerFn({ method: 'GET' })
   })
 
 const getDirectoryCategoriesQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'categories'],
+  queryKey: ['storeListings', 'categories'],
   queryFn: async () => getDirectoryCategories(),
 })
 
 const getDirectoryCategoryTree = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select({
         categorySlugs: table.categorySlugs,
@@ -1424,7 +1434,7 @@ const getDirectoryCategoryTree = createServerFn({ method: 'GET' })
   })
 
 const getDirectoryCategoryTreeQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'categoryTree'],
+  queryKey: ['storeListings', 'categoryTree'],
   queryFn: async () => getDirectoryCategoryTree(),
 })
 
@@ -1432,7 +1442,7 @@ const getDirectoryCategoryPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryCategoryPageInput)
   .handler(async ({ data, context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
@@ -1469,7 +1479,7 @@ function getDirectoryCategoryPageQueryOptions(
   const normalizedInput = getDirectoryCategoryPageInput.parse(input)
 
   return queryOptions({
-    queryKey: ['directoryListings', 'categoryPage', normalizedInput],
+    queryKey: ['storeListings', 'categoryPage', normalizedInput],
     queryFn: async () => getDirectoryCategoryPage({ data: normalizedInput }),
   })
 }
@@ -1477,7 +1487,7 @@ function getDirectoryCategoryPageQueryOptions(
 const getAppsByTag = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select({
         ...getListingSelect(table),
@@ -1496,7 +1506,7 @@ const getAppsByTag = createServerFn({ method: 'GET' })
   })
 
 const getAppsByTagQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'appsByTag'],
+  queryKey: ['storeListings', 'appsByTag'],
   queryFn: async () => getAppsByTag(),
 })
 
@@ -1509,7 +1519,7 @@ const getAllApps = createServerFn({ method: 'GET' })
   .inputValidator(getAllAppsInput)
   .handler(async ({ data, context }) => {
     const input = getAllAppsInput.parse(data)
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
@@ -1533,7 +1543,7 @@ function getAllAppsQueryOptions(input: z.input<typeof getAllAppsInput> = {}) {
   const normalizedInput = getAllAppsInput.parse(input)
 
   return queryOptions({
-    queryKey: ['directoryListings', 'allApps', normalizedInput],
+    queryKey: ['storeListings', 'allApps', normalizedInput],
     queryFn: async () => getAllApps({ data: normalizedInput }),
   })
 }
@@ -1542,7 +1552,7 @@ const getAppsByTagPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getAppsByTagPageInput)
   .handler(async ({ data, context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select({
         ...getListingSelect(table),
@@ -1574,7 +1584,7 @@ function getAppsByTagPageQueryOptions(input: z.input<typeof getAppsByTagPageInpu
   const normalizedInput = getAppsByTagPageInput.parse(input)
 
   return queryOptions({
-    queryKey: ['directoryListings', 'appsByTagPage', normalizedInput],
+    queryKey: ['storeListings', 'appsByTagPage', normalizedInput],
     queryFn: async () => getAppsByTagPage({ data: normalizedInput }),
   })
 }
@@ -1582,7 +1592,7 @@ function getAppsByTagPageQueryOptions(input: z.input<typeof getAppsByTagPageInpu
 const getProtocolCategories = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
@@ -1598,7 +1608,7 @@ const getProtocolCategories = createServerFn({ method: 'GET' })
   })
 
 const getProtocolCategoriesQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'protocolCategories'],
+  queryKey: ['storeListings', 'protocolCategories'],
   queryFn: async () => getProtocolCategories(),
 })
 
@@ -1606,7 +1616,7 @@ const getProtocolCategoryPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getProtocolCategoryPageInput)
   .handler(async ({ data, context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
@@ -1628,7 +1638,7 @@ function getProtocolCategoryPageQueryOptions(
   const normalizedInput = getProtocolCategoryPageInput.parse(input)
 
   return queryOptions({
-    queryKey: ['directoryListings', 'protocolCategoryPage', normalizedInput],
+    queryKey: ['storeListings', 'protocolCategoryPage', normalizedInput],
     queryFn: async () => getProtocolCategoryPage({ data: normalizedInput }),
   })
 }
@@ -1636,7 +1646,7 @@ function getProtocolCategoryPageQueryOptions(
 const getAllProtocolListings = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
@@ -1652,7 +1662,7 @@ const getAllProtocolListings = createServerFn({ method: 'GET' })
   })
 
 const getAllProtocolListingsQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'allProtocol'],
+  queryKey: ['storeListings', 'allProtocol'],
   queryFn: async () => getAllProtocolListings(),
 })
 
@@ -1664,7 +1674,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data, context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const [row] = await context.db
       .select({
         id: table.id,
@@ -1676,13 +1686,8 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         screenshotUrls: table.screenshotUrls,
         tagline: table.tagline,
         fullDescription: table.fullDescription,
-        rawCategoryHint: table.rawCategoryHint,
-        scope: table.scope,
-        productType: table.productType,
-        domain: table.domain,
         categorySlugs: table.categorySlugs,
-        vertical: table.vertical,
-        classificationReason: table.classificationReason,
+        ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
@@ -1706,7 +1711,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data, context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const [row] = await context.db
       .select({
         id: table.id,
@@ -1718,13 +1723,8 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         screenshotUrls: table.screenshotUrls,
         tagline: table.tagline,
         fullDescription: table.fullDescription,
-        rawCategoryHint: table.rawCategoryHint,
-        scope: table.scope,
-        productType: table.productType,
-        domain: table.domain,
         categorySlugs: table.categorySlugs,
-        vertical: table.vertical,
-        classificationReason: table.classificationReason,
+        ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
@@ -1742,14 +1742,14 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
 
 function getDirectoryListingDetailQueryOptions(id: string) {
   return queryOptions({
-    queryKey: ['directoryListings', 'detail', id],
+    queryKey: ['storeListings', 'detail', id],
     queryFn: async () => getDirectoryListingDetail({ data: { id } }),
   })
 }
 
 function getDirectoryListingDetailBySlugQueryOptions(slug: string) {
   return queryOptions({
-    queryKey: ['directoryListings', 'detailBySlug', slug],
+    queryKey: ['storeListings', 'detailBySlug', slug],
     queryFn: async () => getDirectoryListingDetailBySlug({ data: { slug } }),
   })
 }
@@ -1762,7 +1762,7 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
       return []
     }
 
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const listingSelect = getListingSelect(table)
 
     const [currentRow, candidateRows] = await Promise.all([
@@ -1856,7 +1856,7 @@ function getRelatedDirectoryListingsQueryOptions(
   const normalizedInput = getRelatedDirectoryListingsInput.parse(input)
 
   return queryOptions({
-    queryKey: ['directoryListings', 'related', normalizedInput],
+    queryKey: ['storeListings', 'related', normalizedInput],
     queryFn: async () => getRelatedDirectoryListings({ data: normalizedInput }),
   })
 }
@@ -1865,7 +1865,7 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(listDirectoryListingsInput)
   .handler(async ({ data, context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const search = data.query?.trim()
     const listingSelect = getListingSelect(table)
 
@@ -1879,10 +1879,13 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
             ? or(
                 ilike(table.name, `%${search}%`),
                 ilike(table.tagline, `%${search}%`),
-                ilike(table.productType, `%${search}%`),
-                ilike(table.domain, `%${search}%`),
+                ilike(table.fullDescription, `%${search}%`),
                 ilike(
                   sql<string>`array_to_string(${table.categorySlugs}, ' ')`,
+                  `%${search}%`,
+                ),
+                ilike(
+                  sql<string>`array_to_string(${table.appTags}, ' ')`,
                   `%${search}%`,
                 ),
               )
@@ -1901,7 +1904,7 @@ function getListDirectoryListingsQueryOptions(
   const normalizedInput = listDirectoryListingsInput.parse(input)
 
   return queryOptions({
-    queryKey: ['directoryListings', 'list', normalizedInput],
+    queryKey: ['storeListings', 'list', normalizedInput],
     queryFn: async () => listDirectoryListings({ data: normalizedInput }),
   })
 }
@@ -1911,7 +1914,7 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     assertDevelopmentOnly()
 
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select({
         id: table.id,
@@ -1921,9 +1924,9 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
         fullDescription: table.fullDescription,
         externalUrl: table.externalUrl,
         categorySlugs: table.categorySlugs,
-        scope: table.scope,
-        productType: table.productType,
-        domain: table.domain,
+        scope: sql<string | null>`null::text`.as('scope'),
+        productType: sql<string | null>`null::text`.as('productType'),
+        domain: sql<string | null>`null::text`.as('domain'),
         updatedAt: table.updatedAt,
       })
       .from(table)
@@ -1975,7 +1978,7 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
   })
 
 const getDirectoryListingCategoryAssignmentsQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'categoryAssignments'],
+  queryKey: ['storeListings', 'categoryAssignments'],
   queryFn: async () => getDirectoryListingCategoryAssignments(),
 })
 
@@ -1986,7 +1989,7 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     assertDevelopmentOnly()
 
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     const rows = await context.db
       .select({
         id: table.id,
@@ -1997,11 +2000,11 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
         externalUrl: table.externalUrl,
         appTags: table.appTags,
         categorySlugs: table.categorySlugs,
-        scope: table.scope,
-        productType: table.productType,
-        domain: table.domain,
-        vertical: table.vertical,
-        rawCategoryHint: table.rawCategoryHint,
+        scope: sql<string | null>`null::text`.as('scope'),
+        productType: sql<string | null>`null::text`.as('productType'),
+        domain: sql<string | null>`null::text`.as('domain'),
+        vertical: sql<string | null>`null::text`.as('vertical'),
+        rawCategoryHint: sql<string | null>`null::text`.as('rawCategoryHint'),
       })
       .from(table)
       .orderBy(desc(table.updatedAt), desc(table.createdAt))
@@ -2069,7 +2072,7 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
   })
 
 const getDirectoryListingAppTagAssignmentsQueryOptions = queryOptions({
-  queryKey: ['directoryListings', 'appTagAssignments'],
+  queryKey: ['storeListings', 'appTagAssignments'],
   queryFn: async () => getDirectoryListingAppTagAssignments(),
 })
 

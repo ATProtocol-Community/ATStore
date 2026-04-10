@@ -1,6 +1,6 @@
 import { Client, CredentialManager } from '@atcute/client'
 
-import type { DirectoryListing } from '#/db/schema'
+import type { StoreListing } from '#/db/schema'
 import { buildListingDetailRecordWithBlobs } from '#/lib/atproto/listing-record'
 import {
   createListingDetailRecord,
@@ -29,9 +29,9 @@ export async function createAtstorePublishClient(): Promise<{
 }
 
 function mergeListingRow(
-  row: DirectoryListing,
-  patch?: Partial<DirectoryListing>,
-): DirectoryListing {
+  row: StoreListing,
+  patch?: Partial<StoreListing>,
+): StoreListing {
   if (!patch) return row
   return { ...row, ...patch }
 }
@@ -40,8 +40,8 @@ function mergeListingRow(
  * Publish `fyi.atstore.listing.detail` to the store repo. Postgres is updated by Tap ingest, not here.
  */
 export async function publishDirectoryListingDetail(
-  row: DirectoryListing,
-  patch?: Partial<DirectoryListing>,
+  row: StoreListing,
+  patch?: Partial<StoreListing>,
 ): Promise<{ uri: string }> {
   const { client, repoDid } = await createAtstorePublishClient()
   const merged = mergeListingRow(row, patch)

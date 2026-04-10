@@ -160,6 +160,67 @@ export const embeddings = pgTable(
   }),
 )
 
+/**
+ * Tap-sync mirror of `fyi.atstore.listing.detail` — slim read model while `directory_listings`
+ * remains the full legacy row (imports, dev tooling, app reads during migration).
+ */
+export const storeListings = pgTable(
+  'store_listings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    sourceUrl: text('source_url').notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    externalUrl: text('external_url'),
+    iconUrl: text('icon_url'),
+    screenshotUrls: text('screenshot_urls').array().notNull().default(sql`'{}'::text[]`),
+    tagline: text('tagline'),
+    fullDescription: text('full_description'),
+    categorySlugs: text('category_slugs')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    appTags: text('app_tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    atUri: text('at_uri'),
+    repoDid: text('repo_did'),
+    rkey: text('rkey'),
+    heroImageUrl: text('hero_image_url'),
+    verificationStatus: text('verification_status')
+      .notNull()
+      .default('verified'),
+    sourceAccountDid: text('source_account_did'),
+    claimedByDid: text('claimed_by_did'),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    sourceUrlIdx: uniqueIndex('store_listings_source_url_idx').on(table.sourceUrl),
+    slugIdx: uniqueIndex('store_listings_slug_idx').on(table.slug),
+    externalUrlIdx: index('store_listings_external_url_idx').on(table.externalUrl),
+    categorySlugsIdx: index('store_listings_category_slugs_idx').using(
+      'gin',
+      table.categorySlugs,
+    ),
+    atUriIdx: uniqueIndex('store_listings_at_uri_idx').on(table.atUri),
+    verificationIdx: index('store_listings_verification_status_idx').on(
+      table.verificationStatus,
+    ),
+    repoRkeyIdx: uniqueIndex('store_listings_repo_did_rkey_idx').on(
+      table.repoDid,
+      table.rkey,
+    ),
+  }),
+)
+
+/** Full directory row (legacy imports, moderation, taxonomy hints). Kept during migration to `store_listings`. */
 export const directoryListings = pgTable(
   'directory_listings',
   {
@@ -186,24 +247,14 @@ export const directoryListings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    /** Indexed AT Protocol record URI (`at://did/...`). */
     atUri: text('at_uri'),
-    /** Repo DID for `atUri` (usually same as `source_account_did` for @store). */
     repoDid: text('repo_did'),
-    /** Record key in `fyi.atstore.listing.detail`. */
     rkey: text('rkey'),
-    /** Cached hero image URL (matches lexicon `heroImage`). */
     heroImageUrl: text('hero_image_url'),
-    /**
-     * Store moderation: `verified` (shown), `unverified` (awaiting review),
-     * `rejected` (hidden from public listing surfaces).
-     */
     verificationStatus: text('verification_status')
       .notNull()
       .default('verified'),
-    /** DID of the account hosting this record (e.g. @store). */
     sourceAccountDid: text('source_account_did'),
-    /** Set when a listing is claimed by another repo. */
     claimedByDid: text('claimed_by_did'),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -270,6 +321,8 @@ export type AuthSession = typeof session.$inferSelect
 export type AuthAccount = typeof account.$inferSelect
 export type Embedding = typeof embeddings.$inferSelect
 export type NewEmbedding = typeof embeddings.$inferInsert
+export type StoreListing = typeof storeListings.$inferSelect
+export type NewStoreListing = typeof storeListings.$inferInsert
 export type DirectoryListing = typeof directoryListings.$inferSelect
 export type NewDirectoryListing = typeof directoryListings.$inferInsert
 export type ListingClaim = typeof listingClaims.$inferSelect

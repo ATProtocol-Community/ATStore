@@ -209,7 +209,7 @@ function DevCategoriesPage() {
       });
 
       setLastSavedId(listing.id);
-      await queryClient.invalidateQueries({ queryKey: ["directoryListings"] });
+      await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
     } finally {
       setSavingId(null);
     }
@@ -226,7 +226,7 @@ function DevCategoriesPage() {
         },
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["directoryListings"] });
+      await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
     } finally {
       setDeletingId(null);
     }

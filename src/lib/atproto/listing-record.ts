@@ -1,14 +1,14 @@
 import type { Client } from '@atcute/client'
 import type { Blob as AtprotoBlob } from '@atcute/lexicons/interfaces'
 
-import type { DirectoryListing } from '#/db/schema'
+import type { StoreListing } from '#/db/schema'
 
 import { uploadImageBlob } from '#/lib/atproto/blob-upload'
 import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
 
 const PLACEHOLDER_ICON = 'https://placehold.co/64x64/png'
 
-function normalizeListingCategorySlugs(row: DirectoryListing): string[] {
+function normalizeListingCategorySlugs(row: StoreListing): string[] {
   const raw = row.categorySlugs ?? []
   const seen = new Set<string>()
   const out: string[] = []
@@ -89,7 +89,7 @@ export type ListingDetailDbUrls = {
  */
 export async function buildListingDetailRecordWithBlobs(
   client: Client,
-  row: DirectoryListing,
+  row: StoreListing,
 ): Promise<{ record: FyiAtstoreListingDetail; dbUrls: ListingDetailDbUrls }> {
   const externalUrl =
     pickUri(row.externalUrl, row.sourceUrl) ?? 'https://bsky.app'

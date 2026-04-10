@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Long-running Tap consumer: WebSocket to your Tap deployment, logs record events,
- * optionally upserts `directory_listings` for `fyi.atstore.listing.detail`.
+ * optionally upserts `store_listings` only for `fyi.atstore.listing.detail` (does not write `directory_listings`).
  *
  * Env:
  *   TAP_URL=http://127.0.0.1:2480

@@ -78,6 +78,13 @@
       "when": 1775900000000,
       "tag": "0010_category_slugs",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776000000000,
+      "tag": "0011_store_listings",
+      "breakpoints": true
     }
   ]
 }

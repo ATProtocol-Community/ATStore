@@ -62,8 +62,8 @@ function atUriFor(did: string, rkey: string) {
 }
 
 /**
- * Upsert a directory row from a Tap `fyi.atstore.listing.detail` create/update payload.
- * Image blobs are not converted to URLs here — web assets stay null until backfilled separately.
+ * Upsert `store_listings` from Tap (`fyi.atstore.listing.detail` only — does not touch `directory_listings`).
+ * Image blobs are not converted to URLs here; cached URL columns stay null until backfilled separately.
  */
 export async function upsertDirectoryListingFromTap(input: {
   db: Database
@@ -81,7 +81,7 @@ export async function upsertDirectoryListingFromTap(input: {
   const categorySlugs = record.categorySlug
 
   await db
-    .insert(schema.directoryListings)
+    .insert(schema.storeListings)
     .values({
       sourceUrl,
       name: record.name,
@@ -97,13 +97,12 @@ export async function upsertDirectoryListingFromTap(input: {
       repoDid: did,
       rkey,
       sourceAccountDid: did,
-      classificationReason: 'tap-sync',
       verificationStatus,
       appTags,
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: schema.directoryListings.slug,
+      target: schema.storeListings.slug,
       set: {
         sourceUrl,
         name: record.name,
@@ -115,7 +114,6 @@ export async function upsertDirectoryListingFromTap(input: {
         repoDid: did,
         rkey,
         sourceAccountDid: did,
-        classificationReason: 'tap-sync',
         verificationStatus,
         appTags,
         updatedAt: now,
@@ -124,7 +122,7 @@ export async function upsertDirectoryListingFromTap(input: {
 }
 
 /**
- * Remove the mirrored `directory_listings` row when the listing record is deleted on the PDS (matched by repo + rkey).
+ * Remove the mirrored `store_listings` row when the listing record is deleted on the PDS (matched by repo + rkey).
  */
 export async function markListingRemovedFromTap(input: {
   db: Database
@@ -132,10 +130,10 @@ export async function markListingRemovedFromTap(input: {
   rkey: string
 }) {
   const { db, did, rkey } = input
-  await db.delete(schema.directoryListings).where(
+  await db.delete(schema.storeListings).where(
     and(
-      eq(schema.directoryListings.repoDid, did),
-      eq(schema.directoryListings.rkey, rkey),
+      eq(schema.storeListings.repoDid, did),
+      eq(schema.storeListings.rkey, rkey),
     ),
   )
 }

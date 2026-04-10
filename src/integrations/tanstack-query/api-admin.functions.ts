@@ -21,7 +21,7 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
     const { db, schema } = context
-    const listings = schema.directoryListings
+    const listings = schema.storeListings
     const claims = schema.listingClaims
 
     const unverified = await db
@@ -61,7 +61,7 @@ const setListingVerification = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(setListingVerificationInput)
   .handler(async ({ data, context }) => {
-    const table = context.schema.directoryListings
+    const table = context.schema.storeListings
     await context.db
       .update(table)
       .set({
@@ -78,7 +78,7 @@ const setClaimStatus = createServerFn({ method: 'POST' })
   .handler(async ({ data, context }) => {
     const { db, schema } = context
     const claimTable = schema.listingClaims
-    const listingTable = schema.directoryListings
+    const listingTable = schema.storeListings
 
     const [claim] = await db
       .select()

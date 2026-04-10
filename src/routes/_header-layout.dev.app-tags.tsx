@@ -221,7 +221,7 @@ function DevAppTagsPage() {
         return next;
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["directoryListings"] });
+      await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
     } finally {
       setSavingId(null);
     }
