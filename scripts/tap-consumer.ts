@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
  * Tap consumer: WebSocket to your Tap deployment. Ingests `fyi.atstore.listing.detail`
- * create/update/delete events into `store_listings` (never `directory_listings`).
+ * into `store_listings` and `fyi.atstore.listing.review` into `store_listing_reviews`
+ * (aggregates on `store_listings`).
  * Logs identity events; other record collections are skipped except `fyi.atstore.profile` (quiet).
  * Which repos and records appear is configured on the Tap side; this client ingests every
- * `fyi.atstore.listing.detail` event the channel delivers (no per-DID allowlist here).
+ * matching collection event the channel delivers (no per-DID allowlist here).
  *
  * Env:
  *   TAP_URL=http://127.0.0.1:2480   # Railway Tap: use https://…railway.app (no :2480); normalized at startup
@@ -24,6 +25,11 @@ import {
   normalizeTapUrlForRailway,
   probeTapHealth,
 } from '#/lib/atproto/tap-railway-url'
+import {
+  deleteListingReviewFromTap,
+  tryParseListingReviewRecord,
+  upsertListingReviewFromTap,
+} from '#/lib/atproto/tap-review-sync'
 import {
   markListingRemovedFromTap,
   tryParseListingDetailRecord,
@@ -90,8 +96,12 @@ async function main() {
   }
 
   const tap = new Tap(url, adminPassword ? { adminPassword } : {})
-  const wantCollection = COLLECTION.listingDetail
+  const ingestCollections = new Set<string>([
+    COLLECTION.listingDetail,
+    COLLECTION.listingReview,
+  ])
   let firstListingDetailEvent = true
+  let firstListingReviewEvent = true
 
   const indexer = new SimpleIndexer()
 
@@ -108,116 +118,188 @@ async function main() {
       return
     }
 
-    if (evt.collection !== wantCollection) {
-      if (
-        evt.collection.startsWith('fyi.atstore.') &&
-        evt.collection !== wantCollection
-      ) {
+    if (!ingestCollections.has(evt.collection)) {
+      if (evt.collection.startsWith('fyi.atstore.')) {
         console.warn(
-          `[tap] unexpected fyi.atstore collection (want ${wantCollection}): ${evt.collection} rkey=${evt.rkey} did=${evt.did}`,
+          `[tap] unexpected fyi.atstore collection (ingest ${[...ingestCollections].join(', ')}): ${evt.collection} rkey=${evt.rkey} did=${evt.did}`,
         )
       } else if (isVerbose()) {
         console.log(
-          `[tap] skip collection=${evt.collection} (ingest only ${wantCollection})`,
+          `[tap] skip collection=${evt.collection} (ingest only ${[...ingestCollections].join(', ')})`,
         )
       }
       return
-    }
-
-    if (evt.action !== 'delete' && !evt.live) {
-      console.log(
-        `[tap] listing.detail backfill/non-live event (still ingesting) live=false rkey=${evt.rkey} did=${evt.did}`,
-      )
     }
 
     const db = await getDb()
 
-    if (evt.action === 'delete') {
-      console.log(
-        `[tap] delete store_listings match repo_did=${evt.did} rkey=${evt.rkey}`,
-      )
-      await markListingRemovedFromTap({
-        db,
-        did: evt.did,
-        rkey: evt.rkey,
-      })
-      console.log(`[tap] delete applied rkey=${evt.rkey}`)
-      return
-    }
-
-    if (firstListingDetailEvent) {
-      firstListingDetailEvent = false
-      console.log(
-        `[tap] first listing.detail event — if you see none after publishing, check Tap is configured to relay that repo and collection ${wantCollection}`,
-      )
-    }
-
-    const raw = evt.record
-    const body =
-      raw === undefined ? undefined : cloneRecordForIngest(raw)
-    if (raw !== undefined && isVerbose()) {
-      const mode =
-        typeof structuredClone === 'function' ? 'structuredClone' : 'JSON'
-      console.log(`[tap] record clone mode=${mode}`)
-    }
-    if (body === undefined) {
-      console.warn(
-        `[tap] listing.detail missing record body rkey=${evt.rkey} did=${evt.did} action=${evt.action}`,
-      )
-      return
-    }
-    const parseResult = tryParseListingDetailRecord(body)
-    if (!parseResult.ok) {
-      console.warn(
-        `[tap] skip listing.detail rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
-      )
-      if (parseResult.stage === 'zod' && parseResult.zodError) {
-        console.warn('[tap] zod field errors:', parseResult.zodError.flatten())
-      }
-      if (parseResult.blobSummary) {
-        console.warn(
-          `[tap] blob detail (${parseResult.blobField ?? '?'}): ${parseResult.blobSummary}`,
+    if (evt.collection === COLLECTION.listingReview) {
+      if (evt.action !== 'delete' && !evt.live) {
+        console.log(
+          `[tap] listing.review backfill/non-live event (still ingesting) live=false rkey=${evt.rkey} did=${evt.did}`,
         )
       }
-      console.warn(
-        `[tap] payload top-level keys: ${Object.keys(body).join(', ') || '(empty)'}`,
-      )
-      if (body.$type !== undefined) {
-        console.warn(`[tap] record $type: ${String(body.$type)}`)
+
+      if (evt.action === 'delete') {
+        console.log(
+          `[tap] delete store_listing_reviews match author_did=${evt.did} rkey=${evt.rkey}`,
+        )
+        await deleteListingReviewFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+        })
+        console.log(`[tap] review delete applied rkey=${evt.rkey}`)
+        return
       }
-      if (isVerbose()) {
-        try {
-          const snapshot = JSON.stringify(body)
-          console.warn(
-            `[tap] full record JSON (${snapshot.length} chars): ${snapshot.slice(0, 8000)}${snapshot.length > 8000 ? '…' : ''}`,
-          )
-        } catch {
-          console.warn('[tap] full record: <could not JSON.stringify>')
+
+      if (firstListingReviewEvent) {
+        firstListingReviewEvent = false
+        console.log(
+          `[tap] first listing.review event — ensure Tap relays ${COLLECTION.listingReview}`,
+        )
+      }
+
+      const raw = evt.record
+      const body =
+        raw === undefined ? undefined : cloneRecordForIngest(raw)
+      if (raw !== undefined && isVerbose()) {
+        const mode =
+          typeof structuredClone === 'function' ? 'structuredClone' : 'JSON'
+        console.log(`[tap] record clone mode=${mode}`)
+      }
+      if (body === undefined) {
+        console.warn(
+          `[tap] listing.review missing record body rkey=${evt.rkey} did=${evt.did} action=${evt.action}`,
+        )
+        return
+      }
+      const parseResult = tryParseListingReviewRecord(body)
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip listing.review rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
+        )
+        if (parseResult.stage === 'zod' && parseResult.zodError) {
+          console.warn('[tap] zod field errors:', parseResult.zodError.flatten())
         }
+        return
+      }
+
+      console.log(
+        `[tap] upsert store_listing_reviews subject=${parseResult.record.subject} did=${evt.did} rkey=${evt.rkey}`,
+      )
+      try {
+        await upsertListingReviewFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parseResult.record,
+        })
+        console.log(`[tap] review upsert ok rkey=${evt.rkey}`)
+      } catch (err) {
+        console.error(
+          `[tap] review upsert failed rkey=${evt.rkey} did=${evt.did}`,
+          err,
+        )
+        throw err
       }
       return
     }
 
-    const parsed = parseResult.record
-    const verifiedLabel = trusted.has(evt.did) ? 'verified' : 'unverified'
-    console.log(
-      `[tap] upsert store_listings slug=${parsed.slug} did=${evt.did} rkey=${evt.rkey} ${verifiedLabel}`,
-    )
-    try {
-      await upsertDirectoryListingFromTap({
-        db,
-        did: evt.did,
-        rkey: evt.rkey,
-        record: parsed,
-        trustedPublisher: trusted.has(evt.did),
-      })
-      console.log(`[tap] upsert ok slug=${parsed.slug} rkey=${evt.rkey}`)
-    } catch (err) {
-      console.error(
-        `[tap] upsert failed slug=${parsed.slug} rkey=${evt.rkey} did=${evt.did}`,
-        err,
+    if (evt.collection === COLLECTION.listingDetail) {
+      if (evt.action !== 'delete' && !evt.live) {
+        console.log(
+          `[tap] listing.detail backfill/non-live event (still ingesting) live=false rkey=${evt.rkey} did=${evt.did}`,
+        )
+      }
+
+      if (evt.action === 'delete') {
+        console.log(
+          `[tap] delete store_listings match repo_did=${evt.did} rkey=${evt.rkey}`,
+        )
+        await markListingRemovedFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+        })
+        console.log(`[tap] delete applied rkey=${evt.rkey}`)
+        return
+      }
+
+      if (firstListingDetailEvent) {
+        firstListingDetailEvent = false
+        console.log(
+          `[tap] first listing.detail event — if you see none after publishing, check Tap is configured to relay that repo and collection ${COLLECTION.listingDetail}`,
+        )
+      }
+
+      const raw = evt.record
+      const body =
+        raw === undefined ? undefined : cloneRecordForIngest(raw)
+      if (raw !== undefined && isVerbose()) {
+        const mode =
+          typeof structuredClone === 'function' ? 'structuredClone' : 'JSON'
+        console.log(`[tap] record clone mode=${mode}`)
+      }
+      if (body === undefined) {
+        console.warn(
+          `[tap] listing.detail missing record body rkey=${evt.rkey} did=${evt.did} action=${evt.action}`,
+        )
+        return
+      }
+      const parseResult = tryParseListingDetailRecord(body)
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip listing.detail rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
+        )
+        if (parseResult.stage === 'zod' && parseResult.zodError) {
+          console.warn('[tap] zod field errors:', parseResult.zodError.flatten())
+        }
+        if (parseResult.blobSummary) {
+          console.warn(
+            `[tap] blob detail (${parseResult.blobField ?? '?'}): ${parseResult.blobSummary}`,
+          )
+        }
+        console.warn(
+          `[tap] payload top-level keys: ${Object.keys(body).join(', ') || '(empty)'}`,
+        )
+        if (body.$type !== undefined) {
+          console.warn(`[tap] record $type: ${String(body.$type)}`)
+        }
+        if (isVerbose()) {
+          try {
+            const snapshot = JSON.stringify(body)
+            console.warn(
+              `[tap] full record JSON (${snapshot.length} chars): ${snapshot.slice(0, 8000)}${snapshot.length > 8000 ? '…' : ''}`,
+            )
+          } catch {
+            console.warn('[tap] full record: <could not JSON.stringify>')
+          }
+        }
+        return
+      }
+
+      const parsed = parseResult.record
+      const verifiedLabel = trusted.has(evt.did) ? 'verified' : 'unverified'
+      console.log(
+        `[tap] upsert store_listings slug=${parsed.slug} did=${evt.did} rkey=${evt.rkey} ${verifiedLabel}`,
       )
-      throw err
+      try {
+        await upsertDirectoryListingFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parsed,
+          trustedPublisher: trusted.has(evt.did),
+        })
+        console.log(`[tap] upsert ok slug=${parsed.slug} rkey=${evt.rkey}`)
+      } catch (err) {
+        console.error(
+          `[tap] upsert failed slug=${parsed.slug} rkey=${evt.rkey} did=${evt.did}`,
+          err,
+        )
+        throw err
+      }
     }
   })
 
@@ -246,7 +328,7 @@ async function main() {
   process.on('SIGTERM', () => void shutdown())
 
   console.log(
-    `[tap] config: url=${url} ingestCollection=${wantCollection} trustedPublishers=${trusted.size} verbose=${isVerbose()}`,
+    `[tap] config: url=${url} ingestCollections=${[...ingestCollections].join(', ')} trustedPublishers=${trusted.size} verbose=${isVerbose()}`,
   )
   console.log(
     `[tap] WebSocket channel starting (blocking) — you should see [record] lines as repos update…`,

@@ -1,7 +1,9 @@
 import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
+  doublePrecision,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -191,6 +193,10 @@ export const storeListings = pgTable(
     sourceAccountDid: text('source_account_did'),
     claimedByDid: text('claimed_by_did'),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    /** Denormalized from `store_listing_reviews` (Tap ingest). */
+    reviewCount: integer('review_count').notNull().default(0),
+    /** Null when `reviewCount` is 0; else mean of star ratings (1–5). */
+    averageRating: doublePrecision('average_rating'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -212,6 +218,45 @@ export const storeListings = pgTable(
     ),
     repoRkeyIdx: uniqueIndex('store_listings_repo_did_rkey_idx').on(
       table.repoDid,
+      table.rkey,
+    ),
+  }),
+)
+
+/** Tap-sync mirror of `fyi.atstore.listing.review` — one row per review record. */
+export const storeListingReviews = pgTable(
+  'store_listing_reviews',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    storeListingId: uuid('store_listing_id')
+      .notNull()
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
+    /** Repo DID of the reviewer (event `did`). */
+    authorDid: text('author_did').notNull(),
+    rkey: text('rkey').notNull(),
+    atUri: text('at_uri').notNull(),
+    rating: integer('rating').notNull(),
+    text: text('text'),
+    /** From record `createdAt` (ISO string → timestamp). */
+    reviewCreatedAt: timestamp('review_created_at', {
+      withTimezone: true,
+    }).notNull(),
+    authorDisplayName: text('author_display_name'),
+    authorAvatarUrl: text('author_avatar_url'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingIdx: index('store_listing_reviews_store_listing_id_idx').on(
+      table.storeListingId,
+    ),
+    atUriIdx: uniqueIndex('store_listing_reviews_at_uri_idx').on(table.atUri),
+    repoRkeyIdx: uniqueIndex('store_listing_reviews_repo_rkey_idx').on(
+      table.authorDid,
       table.rkey,
     ),
   }),
@@ -252,5 +297,7 @@ export type Embedding = typeof embeddings.$inferSelect
 export type NewEmbedding = typeof embeddings.$inferInsert
 export type StoreListing = typeof storeListings.$inferSelect
 export type NewStoreListing = typeof storeListings.$inferInsert
+export type StoreListingReview = typeof storeListingReviews.$inferSelect
+export type NewStoreListingReview = typeof storeListingReviews.$inferInsert
 export type ListingClaim = typeof listingClaims.$inferSelect
 export type NewListingClaim = typeof listingClaims.$inferInsert

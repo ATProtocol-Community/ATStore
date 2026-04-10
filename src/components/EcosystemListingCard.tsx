@@ -94,9 +94,13 @@ export function EcosystemListingCard({
               <Flex align="center" gap="lg" style={styles.ratingRow}>
                 <SmallBody variant="secondary">{listing.category}</SmallBody>
                 <SmallBody variant="secondary">
-                  {listing.rating.toFixed(1)}
+                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
                 </SmallBody>
-                <StarRating rating={listing.rating} />
+                <StarRating
+                  rating={listing.rating}
+                  reviewCount={listing.reviewCount}
+                  showReviewCount
+                />
               </Flex>
             </Flex>
           </Flex>
@@ -109,7 +113,9 @@ export function EcosystemListingCard({
 
           <Flex justify="between" gap="xl" style={styles.listingFooter}>
             <Text size="sm" weight="semibold">
-              {listing.rating.toFixed(1)} rating
+              {listing.rating != null
+                ? `${listing.rating.toFixed(1)} rating`
+                : "No reviews yet"}
             </Text>
             <Text weight="semibold">{listing.priceLabel}</Text>
           </Flex>

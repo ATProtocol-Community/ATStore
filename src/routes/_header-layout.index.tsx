@@ -815,7 +815,9 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
         </Flex>
         <div {...stylex.props(styles.ratingRow)}>
           <Flex align="center" gap="md">
-            <Text weight="semibold">{listing.rating.toFixed(1)}</Text>
+            <Text weight="semibold">
+              {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+            </Text>
             <SmallBody style={styles.heroDescription}>
               {getListingMetadataLabel(listing)}
             </SmallBody>
@@ -855,7 +857,7 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
           <Flex align="center" justify="between" gap="xl">
             <Flex align="center" gap="sm">
               <Text size="sm" weight="semibold">
-                {listing.rating.toFixed(1)}
+                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
               </Text>
               <SmallBody variant="secondary">Rating</SmallBody>
             </Flex>

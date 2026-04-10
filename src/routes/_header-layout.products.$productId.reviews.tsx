@@ -1,12 +1,14 @@
 import * as stylex from "@stylexjs/stylex";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   createLink,
   notFound,
   redirect,
+  useNavigate,
 } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
+import { useState } from "react";
 
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
@@ -15,7 +17,7 @@ import { Flex } from "../design-system/flex";
 import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { StarRating } from "../design-system/star-rating";
+import { StarRating, StarRatingInput } from "../design-system/star-rating";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 import {
@@ -26,8 +28,11 @@ import {
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { Body } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getPlaceholderReviews } from "../lib/product-reviews";
+import {
+  directoryListingApi,
+  type DirectoryListingReview,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { user } from "../integrations/tanstack-query/api-user.functions";
 import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
@@ -51,6 +56,10 @@ export const Route = createFileRoute(
     if (!listing) {
       throw notFound();
     }
+
+    await context.queryClient.ensureQueryData(
+      directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
+    );
 
     const productSlug = getDirectoryListingSlug(listing);
 
@@ -117,15 +126,47 @@ const styles = stylex.create({
 
 function ProductReviewsPage() {
   const { productId, productSlug } = Route.useLoaderData();
-  const { data: listing } = useSuspenseQuery(
-    directoryListingApi.getDirectoryListingDetailQueryOptions(productId),
-  );
+  const navigate = useNavigate();
+  const detailQuery =
+    directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
+  const reviewsQuery =
+    directoryListingApi.getDirectoryListingReviewsQueryOptions(productId);
+
+  const { data: listing } = useSuspenseQuery(detailQuery);
+  const { data: reviews } = useSuspenseQuery(reviewsQuery);
+  const { data: session } = useQuery(user.getSessionQueryOptions);
+
+  const [draftRating, setDraftRating] = useState(5);
+  const [draftText, setDraftText] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const submitReview = useMutation({
+    mutationFn: async () => {
+      setFormError(null);
+      await directoryListingApi.createDirectoryListingReview({
+        data: {
+          listingId: productId,
+          rating: draftRating,
+          text: draftText.trim() === "" ? null : draftText.trim(),
+        },
+      });
+    },
+    onSuccess: () => {
+      navigate({
+        to: "/products/$productId",
+        params: { productId: productSlug },
+      });
+    },
+    onError: (e: unknown) => {
+      setFormError(
+        e instanceof Error ? e.message : "Could not publish review.",
+      );
+    },
+  });
 
   if (!listing) {
     throw notFound();
   }
-
-  const reviews = getPlaceholderReviews(listing);
 
   return (
     <HeaderLayout.Page>
@@ -169,67 +210,143 @@ function ProductReviewsPage() {
                   </Text>
                   <Flex gap="md" align="center" style={styles.ratingRow}>
                     <Flex gap="xs">
-                      <Text weight="semibold">{listing.rating.toFixed(1)}</Text>
+                      <Text weight="semibold">
+                        {listing.rating != null
+                          ? listing.rating.toFixed(1)
+                          : "—"}
+                      </Text>
                       <Text size="sm" variant="secondary">
-                        ({reviews.length})
+                        ({listing.reviewCount})
                       </Text>
                     </Flex>
                     <StarRating
                       rating={listing.rating}
+                      reviewCount={listing.reviewCount}
                       showReviewCount={false}
                     />
                   </Flex>
                 </Flex>
-                <Button isDisabled size="lg" variant="secondary">
-                  Create review
-                </Button>
               </Flex>
+            </Flex>
+
+            <Flex direction="column" gap="3xl" id="write-review">
+              {session?.user ? (
+                listing.atUri ? (
+                  <Card style={styles.reviewCard}>
+                    <Flex direction="column" style={styles.reviewCardBody}>
+                      <Text weight="semibold" size="lg">
+                        Write a review
+                      </Text>
+                      <Flex gap="2xl" align="center">
+                        <Text size="sm" variant="secondary">
+                          Rating
+                        </Text>
+                        <StarRatingInput
+                          value={draftRating}
+                          onChange={setDraftRating}
+                          aria-label="Your star rating"
+                        />
+                      </Flex>
+                      <label htmlFor="review-body">
+                        <Text size="sm" variant="secondary">
+                          Review (optional)
+                        </Text>
+                      </label>
+                      <textarea
+                        id="review-body"
+                        value={draftText}
+                        onChange={(e) => setDraftText(e.target.value)}
+                        rows={4}
+                        style={{
+                          width: "100%",
+                          maxWidth: "100%",
+                          resize: "vertical",
+                          padding: horizontalSpace["2xl"],
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderStyle: "solid",
+                          borderColor: "var(--color-ui-border, #ccc)",
+                          fontFamily: "inherit",
+                          fontSize: "1rem",
+                        }}
+                      />
+                      {formError ? (
+                        <Text size="sm" variant="secondary">
+                          {formError}
+                        </Text>
+                      ) : null}
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        isPending={submitReview.isPending}
+                        onPress={() => submitReview.mutate()}
+                      >
+                        Publish review
+                      </Button>
+                    </Flex>
+                  </Card>
+                ) : (
+                  <Body variant="secondary">
+                    This listing is not linked to an AT Protocol record yet, so
+                    reviews cannot be published.
+                  </Body>
+                )
+              ) : (
+                <AppLink
+                  to="/login"
+                  search={{
+                    redirect: `/products/${productSlug}/reviews#write-review`,
+                  }}
+                >
+                  Sign in to write a review
+                </AppLink>
+              )}
             </Flex>
 
             <Flex direction="column" gap="2xl">
               {reviews.map((review) => (
-                <Card
-                  key={`${listing.id}-review-page-${review.author}`}
-                  style={styles.reviewCard}
-                >
-                  <Flex direction="column" style={styles.reviewCardBody}>
-                    <Flex gap="2xl" style={styles.reviewHeader}>
-                      <Avatar
-                        alt={review.author}
-                        fallback={getInitials(review.author)}
-                        size="lg"
-                      />
-                      <Flex
-                        direction="column"
-                        gap="lg"
-                        style={styles.reviewAuthor}
-                      >
-                        <Text weight="semibold">{review.author}</Text>
-                        <Text size="sm" variant="secondary">
-                          {review.role}
-                        </Text>
-                      </Flex>
-                      <StarRating
-                        rating={review.rating}
-                        showReviewCount={false}
-                      />
-                    </Flex>
-                    <Body style={styles.reviewQuote}>{review.quote}</Body>
-                    <Text
-                      size="sm"
-                      variant="secondary"
-                      style={styles.reviewMeta}
-                    >
-                      {review.context}
-                    </Text>
-                  </Flex>
-                </Card>
+                <ReviewListCard key={review.id} review={review} />
               ))}
             </Flex>
           </Flex>
         </Flex>
       </Page.Root>
     </HeaderLayout.Page>
+  );
+}
+
+function ReviewListCard({ review }: { review: DirectoryListingReview }) {
+  const authorLabel =
+    review.authorDisplayName?.trim() ||
+    (review.authorDid.length > 16
+      ? `${review.authorDid.slice(0, 10)}…`
+      : review.authorDid);
+
+  return (
+    <Card style={styles.reviewCard}>
+      <Flex direction="column" style={styles.reviewCardBody}>
+        <Flex gap="2xl" style={styles.reviewHeader}>
+          <Avatar
+            alt={authorLabel}
+            fallback={getInitials(authorLabel)}
+            size="lg"
+            src={review.authorAvatarUrl || undefined}
+          />
+          <Flex direction="column" gap="lg" style={styles.reviewAuthor}>
+            <Text weight="semibold">{authorLabel}</Text>
+          </Flex>
+          <StarRating rating={review.rating} showReviewCount={false} />
+        </Flex>
+        {review.text ? (
+          <Body style={styles.reviewQuote}>{review.text}</Body>
+        ) : null}
+        <Text size="sm" variant="secondary" style={styles.reviewMeta}>
+          {new Date(review.reviewCreatedAt).toLocaleDateString(undefined, {
+            dateStyle: "medium",
+          })}
+        </Text>
+      </Flex>
+    </Card>
   );
 }
 

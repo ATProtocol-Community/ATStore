@@ -408,9 +408,15 @@ function ProtocolCategoryListingCard({
               <div />
               <Flex gap="xl" justify="between" style={styles.listingFooter}>
                 <Text size="sm" weight="semibold">
-                  {listing.rating.toFixed(1)} rating
+                  {listing.rating != null
+                    ? `${listing.rating.toFixed(1)} rating`
+                    : "No reviews yet"}
                 </Text>
-                <StarRating rating={listing.rating} />
+                <StarRating
+                  rating={listing.rating}
+                  reviewCount={listing.reviewCount}
+                  showReviewCount
+                />
                 <Text weight="semibold">{listing.priceLabel}</Text>
               </Flex>
             </>

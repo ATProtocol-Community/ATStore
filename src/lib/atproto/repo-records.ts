@@ -89,6 +89,37 @@ export async function createListingDetailRecord(
   return { uri: res.uri, cid: res.cid }
 }
 
+export async function createListingReviewRecord(
+  client: Client,
+  repo: string,
+  input: {
+    subject: string
+    rating: number
+    createdAt: string
+    text?: string | null
+  },
+): Promise<{ uri: string; cid: string }> {
+  const record: Record<string, unknown> = {
+    $type: NSID.listingReview,
+    subject: input.subject,
+    rating: input.rating,
+    createdAt: input.createdAt,
+  }
+  const t = input.text?.trim()
+  if (t) record.text = t
+
+  const res = await ok(
+    client.post('com.atproto.repo.createRecord', {
+      input: {
+        repo,
+        collection: COLLECTION.listingReview,
+        record,
+      },
+    }),
+  )
+  return { uri: res.uri, cid: res.cid }
+}
+
 /** Replace an existing `fyi.atstore.listing.detail` (same rkey). */
 export async function putListingDetailRecord(
   client: Client,

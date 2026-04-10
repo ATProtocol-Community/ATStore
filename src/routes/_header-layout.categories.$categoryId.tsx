@@ -514,9 +514,13 @@ function CategoryListingCard({
                   </Text>
                   <Flex align="center" gap="lg">
                     <SmallBody variant="secondary">
-                      {listing.rating.toFixed(1)}
+                      {listing.rating != null ? listing.rating.toFixed(1) : "—"}
                     </SmallBody>
-                    <StarRating rating={listing.rating} />
+                    <StarRating
+                      rating={listing.rating}
+                      reviewCount={listing.reviewCount}
+                      showReviewCount
+                    />
                   </Flex>
                 </Flex>
               </Flex>

@@ -92,6 +92,13 @@
       "when": 1776100000000,
       "tag": "0012_drop_directory_listings",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776200000000,
+      "tag": "0013_store_listing_reviews",
+      "breakpoints": true
     }
   ]
 }

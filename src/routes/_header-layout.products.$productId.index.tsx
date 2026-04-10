@@ -44,16 +44,14 @@ import {
   directoryListingApi,
   type DirectoryListingCard,
   type DirectoryListingDetail,
+  type DirectoryListingReview,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   getAppEcosystemRootCategoryId,
   getAppSegmentFromEcosystemRootCategoryId,
 } from "../lib/directory-categories";
 import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
-import {
-  getPlaceholderReviews,
-  PRODUCT_REVIEW_PREVIEW_COUNT,
-} from "../lib/product-reviews";
+import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import {
   getDirectoryListingSlug,
@@ -89,6 +87,10 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       }),
     );
 
+    await context.queryClient.ensureQueryData(
+      directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
+    );
+
     const ecosystemRootId = getAppEcosystemRootCategoryId(listing.categorySlug);
     if (ecosystemRootId) {
       await context.queryClient.ensureQueryData(
@@ -112,6 +114,15 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
 });
 
 const styles = stylex.create({
+  noReviews: {
+    paddingTop: verticalSpace["8xl"],
+    paddingBottom: verticalSpace["8xl"],
+    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: uiColor.border2,
+    borderRadius: radius["xl"],
+    cornerShape: "squircle",
+  },
   ecosystemSection: {
     marginTop: verticalSpace["5xl"],
   },
@@ -461,14 +472,17 @@ function ProductPage() {
       id: productId,
       limit: 3,
     });
+  const reviewsQueryOptions =
+    directoryListingApi.getDirectoryListingReviewsQueryOptions(productId);
   const { data: listing } = useSuspenseQuery(detailQueryOptions);
   const { data: relatedProducts } = useSuspenseQuery(relatedQueryOptions);
+  const { data: listingReviews } = useSuspenseQuery(reviewsQueryOptions);
 
   if (!listing) {
     throw notFound();
   }
 
-  const reviews = getPlaceholderReviews(listing);
+  const previewReviews = listingReviews.slice(0, PRODUCT_REVIEW_PREVIEW_COUNT);
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
@@ -702,9 +716,12 @@ function ProductPage() {
                   <Flex gap="md" style={styles.ratingRow}>
                     <StarRating
                       rating={listing.rating}
-                      showReviewCount={false}
+                      reviewCount={listing.reviewCount}
+                      showReviewCount
                     />
-                    <Text weight="semibold">{listing.rating.toFixed(1)}</Text>
+                    <Text weight="semibold">
+                      {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                    </Text>
                   </Flex>
                 </Flex>
                 <ButtonLink
@@ -718,50 +735,35 @@ function ProductPage() {
               </Flex>
             </Flex>
 
-            <Grid style={styles.reviewsGrid}>
-              {reviews.slice(0, PRODUCT_REVIEW_PREVIEW_COUNT).map((review) => (
-                <Card
-                  key={`${listing.id}-review-${review.author}`}
-                  style={styles.reviewCard}
-                >
-                  <Flex direction="column" style={styles.reviewCardBody}>
-                    <Flex gap="2xl" style={styles.reviewHeader}>
-                      <Avatar
-                        alt={review.author}
-                        fallback={getInitials(review.author)}
-                        size="lg"
-                      />
-                      <Flex
-                        direction="column"
-                        gap="lg"
-                        style={styles.reviewAuthor}
-                      >
-                        <Text weight="semibold">{review.author}</Text>
-                        <Text size="sm" variant="secondary">
-                          {review.role}
-                        </Text>
-                      </Flex>
-                      <StarRating
-                        rating={review.rating}
-                        showReviewCount={false}
-                      />
-                    </Flex>
-                    <Body style={styles.reviewQuote}>{review.quote}</Body>
-                    <Text
-                      size="sm"
-                      variant="secondary"
-                      style={styles.reviewMeta}
-                    >
-                      {review.context}
-                    </Text>
-                  </Flex>
-                </Card>
-              ))}
-            </Grid>
+            {previewReviews.length > 0 ? (
+              <Flex direction="column" gap="2xl">
+                {previewReviews.map((review) => (
+                  <ReviewPreviewCard key={review.id} review={review} />
+                ))}
+              </Flex>
+            ) : (
+              <Flex
+                direction="column"
+                justify="center"
+                align="center"
+                gap="2xl"
+                style={styles.noReviews}
+              >
+                <Body variant="secondary">
+                  Be the first to review this product.
+                </Body>
+              </Flex>
+            )}
 
-            <Button isDisabled size="lg" variant="secondary">
+            <ButtonLink
+              to="/products/$productId/reviews"
+              params={{ productId: productSlug }}
+              hash="write-review"
+              size="lg"
+              variant="secondary"
+            >
               Create review
-            </Button>
+            </ButtonLink>
           </Flex>
           {relatedProducts.length > 0 ? (
             <RelatedProductsSection listings={relatedProducts} />
@@ -1030,6 +1032,41 @@ function ProductEcosystemSection({
   );
 }
 
+function ReviewPreviewCard({ review }: { review: DirectoryListingReview }) {
+  const authorLabel =
+    review.authorDisplayName?.trim() ||
+    (review.authorDid.length > 16
+      ? `${review.authorDid.slice(0, 10)}…`
+      : review.authorDid);
+
+  return (
+    <Card style={styles.reviewCard}>
+      <Flex direction="column" style={styles.reviewCardBody}>
+        <Flex gap="2xl" style={styles.reviewHeader}>
+          <Avatar
+            alt={authorLabel}
+            fallback={getInitials(authorLabel)}
+            size="lg"
+            src={review.authorAvatarUrl || undefined}
+          />
+          <Flex direction="column" gap="lg" style={styles.reviewAuthor}>
+            <Text weight="semibold">{authorLabel}</Text>
+          </Flex>
+          <StarRating rating={review.rating} showReviewCount={false} />
+        </Flex>
+        {review.text ? (
+          <Body style={styles.reviewQuote}>{review.text}</Body>
+        ) : null}
+        <Text size="sm" variant="secondary" style={styles.reviewMeta}>
+          {new Date(review.reviewCreatedAt).toLocaleDateString(undefined, {
+            dateStyle: "medium",
+          })}
+        </Text>
+      </Flex>
+    </Card>
+  );
+}
+
 function RelatedProductsSection({
   listings,
 }: {
@@ -1077,7 +1114,9 @@ function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
           </Body>
           <Flex justify="between" gap="xl" style={styles.relatedFooter}>
             <Text size="sm" weight="semibold">
-              {listing.rating.toFixed(1)} rating
+              {listing.rating != null
+                ? `${listing.rating.toFixed(1)} rating`
+                : "No reviews yet"}
             </Text>
             <Text weight="semibold">{listing.priceLabel}</Text>
           </Flex>

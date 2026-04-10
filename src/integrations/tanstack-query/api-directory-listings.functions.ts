@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
+import { getRequest } from '@tanstack/react-start/server'
 import { and, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
@@ -30,6 +31,7 @@ import {
 import {
   buildDirectoryListingSlug,
 } from '../../lib/directory-listing-slugs'
+import { getAtprotoSessionForRequest } from '#/middleware/auth'
 import { dbMiddleware } from './db-middleware'
 import type { Database } from '#/db/index.server'
 import type { StoreListing } from '#/db/schema'
@@ -39,7 +41,10 @@ import {
   createAtstorePublishClient,
   publishDirectoryListingDetail,
 } from '#/lib/atproto/publish-directory-listing'
-import { deleteRecord } from '#/lib/atproto/repo-records'
+import {
+  createListingReviewRecord,
+  deleteRecord,
+} from '#/lib/atproto/repo-records'
 import { geminiFlashGenerateImageFromPromptAndImage } from '#/lib/gemini-flash-image-gen'
 import { buildIconPolishFromSiteAssetPrompt } from '#/lib/listing-icon-prompts'
 import { captureListingPageScreenshotForGeneration } from '#/lib/listing-page-screenshot'
@@ -47,6 +52,7 @@ import {
   discoverSiteBrandIconAsset,
   rasterizeBrandIconForGeminiInput,
 } from '#/lib/site-brand-icon'
+import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -112,6 +118,8 @@ type DirectoryListingRow = {
   productType: string | null
   domain: string | null
   categorySlugs: string[]
+  reviewCount: number
+  averageRating: number | null
 }
 
 type CategoryAccent = DirectoryCategoryAccent
@@ -130,11 +138,15 @@ export interface DirectoryListingCard {
   categorySlugs: string[]
   category: string
   accent: CategoryAccent
-  rating: number
+  /** Mean star rating when there is at least one review; otherwise null. */
+  rating: number | null
+  reviewCount: number
   priceLabel: string
 }
 
 export interface DirectoryListingDetail extends DirectoryListingCard {
+  /** Canonical AT URI for `fyi.atstore.listing.detail` when Tap-synced; needed to publish reviews. */
+  atUri: string | null
   screenshots: string[]
   externalUrl: string | null
   sourceUrl: string | null
@@ -148,6 +160,16 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   appTags: string[]
   createdAt: string | null
   updatedAt: string | null
+}
+
+export interface DirectoryListingReview {
+  id: string
+  authorDid: string
+  rating: number
+  text: string | null
+  reviewCreatedAt: string
+  authorDisplayName: string | null
+  authorAvatarUrl: string | null
 }
 
 export interface DirectoryCategorySummary {
@@ -295,6 +317,16 @@ const getRelatedDirectoryListingsInput = z.object({
   limit: z.number().int().min(1).max(8).default(4),
 })
 
+const getDirectoryListingReviewsInput = z.object({
+  id: z.string().min(1),
+})
+
+const createDirectoryListingReviewInput = z.object({
+  listingId: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  text: z.string().max(8000).optional().nullable(),
+})
+
 const fallbackCategoryIds = ['apps', 'protocol']
 
 function formatMetadataLabel(value: string) {
@@ -366,13 +398,6 @@ function getListingAccent(row: Pick<DirectoryListingRow, 'name' | 'categorySlugs
   return getCardAccent(`${row.name}-${getCategoryLabel(row)}`)
 }
 
-function getPseudoRating(input: string) {
-  const offset =
-    Array.from(input).reduce((sum, character) => sum + character.charCodeAt(0), 0) % 4
-
-  return Number((4.6 + offset * 0.1).toFixed(1))
-}
-
 function getListingDescription(row: DirectoryListingRow) {
   return (
     sanitizeListingDescription(row.fullDescription) ||
@@ -388,6 +413,12 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     sanitizeListingTagline(row.fullDescription) ||
     'Discover a polished Bluesky tool.'
   const slugs = row.categorySlugs ?? []
+  const reviewCount = row.reviewCount ?? 0
+  const averageRating = row.averageRating
+  const rating =
+    reviewCount > 0 && averageRating != null && !Number.isNaN(Number(averageRating))
+      ? Number(Number(averageRating).toFixed(1))
+      : null
 
   return {
     id: row.id,
@@ -401,12 +432,14 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     categorySlug: primaryCategorySlug(slugs),
     category,
     accent: getListingAccent(row),
-    rating: getPseudoRating(row.name),
+    rating,
+    reviewCount,
     priceLabel: 'GET',
   }
 }
 
 type DirectoryListingDetailRow = DirectoryListingRow & {
+  atUri: string | null
   sourceUrl: string
   externalUrl: string | null
   rawCategoryHint: string | null
@@ -446,6 +479,7 @@ function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail
 
   return {
     ...toListingCard(row),
+    atUri: row.atUri,
     screenshots: row.screenshotUrls,
     externalUrl: row.externalUrl,
     sourceUrl: row.sourceUrl,
@@ -673,6 +707,8 @@ function getListingSelect(table: typeof dbSchema.storeListings) {
     productType: sql<string | null>`null::text`.as('productType'),
     domain: sql<string | null>`null::text`.as('domain'),
     categorySlugs: table.categorySlugs,
+    reviewCount: table.reviewCount,
+    averageRating: table.averageRating,
   }
 }
 
@@ -1592,6 +1628,9 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         tagline: table.tagline,
         fullDescription: table.fullDescription,
         categorySlugs: table.categorySlugs,
+        atUri: table.atUri,
+        reviewCount: table.reviewCount,
+        averageRating: table.averageRating,
         ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
         createdAt: table.createdAt,
@@ -1630,6 +1669,9 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         tagline: table.tagline,
         fullDescription: table.fullDescription,
         categorySlugs: table.categorySlugs,
+        atUri: table.atUri,
+        reviewCount: table.reviewCount,
+        averageRating: table.averageRating,
         ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
         createdAt: table.createdAt,
@@ -1659,6 +1701,130 @@ function getDirectoryListingDetailBySlugQueryOptions(slug: string) {
     queryFn: async () => getDirectoryListingDetailBySlug({ data: { slug } }),
   })
 }
+
+const getDirectoryListingReviews = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(getDirectoryListingReviewsInput)
+  .handler(async ({ data, context }) => {
+    if (!isUuid(data.id)) {
+      return []
+    }
+
+    const table = context.schema.storeListings
+    const [listing] = await context.db
+      .select({ id: table.id })
+      .from(table)
+      .where(listingPublicWhere(table, eq(table.id, data.id)))
+      .limit(1)
+
+    if (!listing) {
+      return []
+    }
+
+    const rev = context.schema.storeListingReviews
+    const rows = await context.db
+      .select({
+        id: rev.id,
+        authorDid: rev.authorDid,
+        rating: rev.rating,
+        text: rev.text,
+        reviewCreatedAt: rev.reviewCreatedAt,
+        authorDisplayName: rev.authorDisplayName,
+        authorAvatarUrl: rev.authorAvatarUrl,
+      })
+      .from(rev)
+      .where(eq(rev.storeListingId, listing.id))
+      .orderBy(desc(rev.reviewCreatedAt))
+
+    const enriched: DirectoryListingReview[] = await Promise.all(
+      rows.map(async (row) => {
+        const profile = await fetchBlueskyPublicProfileFields(row.authorDid)
+        const displayName =
+          row.authorDisplayName?.trim() ||
+          profile?.displayName?.trim() ||
+          profile?.handle ||
+          null
+        const avatarUrl =
+          row.authorAvatarUrl?.trim() || profile?.avatarUrl || null
+
+        return {
+          id: row.id,
+          authorDid: row.authorDid,
+          rating: row.rating,
+          text: row.text,
+          reviewCreatedAt: row.reviewCreatedAt.toISOString(),
+          authorDisplayName: displayName,
+          authorAvatarUrl: avatarUrl,
+        }
+      }),
+    )
+
+    return enriched
+  })
+
+function getDirectoryListingReviewsQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ['storeListings', 'reviews', id],
+    queryFn: async () => getDirectoryListingReviews({ data: { id } }),
+  })
+}
+
+const createDirectoryListingReview = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(createDirectoryListingReviewInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session) {
+      throw new Error('Sign in to post a review.')
+    }
+
+    const table = context.schema.storeListings
+    const [listing] = await context.db
+      .select({
+        id: table.id,
+        atUri: table.atUri,
+      })
+      .from(table)
+      .where(listingPublicWhere(table, eq(table.id, data.listingId)))
+      .limit(1)
+
+    if (!listing) {
+      throw new Error('Listing not found.')
+    }
+
+    const atUri = listing.atUri?.trim()
+    if (!atUri) {
+      throw new Error(
+        'This listing has no AT Protocol URI yet; reviews are unavailable until it is published to the network.',
+      )
+    }
+
+    const rev = context.schema.storeListingReviews
+    const [existing] = await context.db
+      .select({ id: rev.id })
+      .from(rev)
+      .where(
+        and(
+          eq(rev.storeListingId, listing.id),
+          eq(rev.authorDid, session.did),
+        ),
+      )
+      .limit(1)
+
+    if (existing) {
+      throw new Error('You already reviewed this listing.')
+    }
+
+    const createdAt = new Date().toISOString()
+    const { uri } = await createListingReviewRecord(session.client, session.did, {
+      subject: atUri,
+      rating: data.rating,
+      createdAt,
+      text: data.text,
+    })
+
+    return { uri }
+  })
 
 const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
@@ -2246,6 +2412,9 @@ export const directoryListingApi = {
   getDirectoryListingDetailQueryOptions,
   getDirectoryListingDetailBySlug,
   getDirectoryListingDetailBySlugQueryOptions,
+  getDirectoryListingReviews,
+  getDirectoryListingReviewsQueryOptions,
+  createDirectoryListingReview,
   getRelatedDirectoryListings,
   getRelatedDirectoryListingsQueryOptions,
   listDirectoryListings,

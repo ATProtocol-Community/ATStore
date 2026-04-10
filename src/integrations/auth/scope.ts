@@ -7,7 +7,7 @@ export const scope = [
     collection: [
       'fyi.atstore.profile',
       'fyi.atstore.listing.detail',
-      'com.atproto.lexicon.schema',
+      'fyi.atstore.listing.review',
     ],
     action: ['create', 'update', 'delete'],
   }),

@@ -117,6 +117,47 @@ export const lexicons = [
   },
   {
     "lexicon": 1,
+    "id": "fyi.atstore.listing.review",
+    "defs": {
+      "main": {
+        "type": "record",
+        "description": "A user review of an AT Store directory listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
+        "key": "tid",
+        "record": {
+          "type": "object",
+          "required": [
+            "subject",
+            "rating",
+            "createdAt"
+          ],
+          "properties": {
+            "subject": {
+              "type": "string",
+              "format": "at-uri",
+              "description": "AT URI of the fyi.atstore.listing.detail record being reviewed."
+            },
+            "rating": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "description": "Star rating 1–5."
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 8000,
+              "description": "Optional written review; omit for a stars-only rating."
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "datetime"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "lexicon": 1,
     "id": "fyi.atstore.profile",
     "defs": {
       "main": {

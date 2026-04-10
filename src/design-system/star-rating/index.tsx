@@ -77,8 +77,8 @@ const styles = stylex.create({
 export interface StarRatingProps extends StyleXComponentProps<
   React.HTMLAttributes<HTMLDivElement>
 > {
-  /** Rating from 0 to 5 (supports 0.5 steps) */
-  rating: number;
+  /** Rating from 0 to 5 (supports 0.5 steps). Null shows empty stars. */
+  rating: number | null;
   /** Optional review count to display */
   reviewCount?: number;
   /** Size of the star icons in pixels */
@@ -98,7 +98,7 @@ export function StarRating({
   style,
   ...props
 }: StarRatingProps) {
-  const clamped = Math.min(5, Math.max(0, rating));
+  const clamped = Math.min(5, Math.max(0, rating == null ? 0 : rating));
   const fullStars = Math.floor(clamped);
   const remainder = clamped - fullStars;
   const showHalf = remainder >= 0.25 && remainder < 0.75;
@@ -141,13 +141,11 @@ export function StarRating({
           />
         ))}
       </div>
-      {showReviewCount &&
-        typeof reviewCount === "number" &&
-        reviewCount > 0 && (
-          <Text size="xs" variant="secondary">
-            ({reviewCount})
-          </Text>
-        )}
+      {showReviewCount && typeof reviewCount === "number" && (
+        <Text size="xs" variant="secondary">
+          ({reviewCount})
+        </Text>
+      )}
     </Flex>
   );
 }
