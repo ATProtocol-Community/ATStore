@@ -36,7 +36,6 @@
     "lex:lint": "node scripts/goat-lex.mjs lex lint",
     "lex:status": "node scripts/goat-lex.mjs lex status",
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
-    "atproto:publish-lexicons:skip-dns": "node scripts/goat-lex.mjs lex publish --skip-dns-check",
     "atproto:seed-atstore": "tsx -r dotenv/config scripts/seed-atstore-listings.ts",
     "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts"
   },

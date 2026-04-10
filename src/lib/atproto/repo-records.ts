@@ -89,6 +89,21 @@ export async function createListingDetailRecord(
   return { uri: res.uri, cid: res.cid }
 }
 
+/** Replace an existing `fyi.atstore.listing.detail` (same rkey). */
+export async function putListingDetailRecord(
+  client: Client,
+  repo: string,
+  rkey: string,
+  record: FyiAtstoreListingDetail,
+): Promise<{ uri: string }> {
+  return repoUpsertRecord(client, {
+    repo,
+    collection: COLLECTION.listingDetail,
+    rkey,
+    record: record as Record<string, unknown>,
+  })
+}
+
 export async function deleteRecord(
   client: Client,
   repo: string,

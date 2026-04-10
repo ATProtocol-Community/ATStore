@@ -5,7 +5,7 @@ export const lexicons = [
     "defs": {
       "main": {
         "type": "record",
-        "description": "Public protocol or app listing in the AT Store directory.",
+        "description": "Public protocol or app listing in the AT Store directory. Images are stored as repo blobs (Kitchen-style); the web app caches HTTPS URLs in Postgres separately.",
         "key": "tid",
         "record": {
           "type": "object",
@@ -46,23 +46,39 @@ export const lexicons = [
               "description": "Primary product or project URL."
             },
             "icon": {
-              "type": "string",
-              "format": "uri",
-              "maxLength": 2048
+              "type": "blob",
+              "accept": [
+                "image/png",
+                "image/jpeg",
+                "image/webp",
+                "image/gif"
+              ],
+              "maxSize": 2000000,
+              "description": "Square / app icon (uploaded to repo via com.atproto.repo.uploadBlob)."
             },
             "heroImage": {
-              "type": "string",
-              "format": "uri",
-              "maxLength": 2048,
-              "description": "Hero / cover image (HTTPS URL)."
+              "type": "blob",
+              "accept": [
+                "image/png",
+                "image/jpeg",
+                "image/webp",
+                "image/gif"
+              ],
+              "maxSize": 12000000,
+              "description": "Hero / cover image blob."
             },
             "screenshots": {
               "type": "array",
               "maxLength": 20,
               "items": {
-                "type": "string",
-                "format": "uri",
-                "maxLength": 2048
+                "type": "blob",
+                "accept": [
+                  "image/png",
+                  "image/jpeg",
+                  "image/webp",
+                  "image/gif"
+                ],
+                "maxSize": 12000000
               }
             },
             "categorySlug": {
@@ -77,6 +93,14 @@ export const lexicons = [
             "updatedAt": {
               "type": "string",
               "format": "datetime"
+            },
+            "appTags": {
+              "type": "array",
+              "maxLength": 64,
+              "items": {
+                "type": "string",
+                "maxLength": 96
+              }
             }
           }
         }

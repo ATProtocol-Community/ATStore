@@ -1,4 +1,10 @@
+import type { Client } from '@atcute/client'
+import type { Blob as AtprotoBlob } from '@atcute/lexicons/interfaces'
+
 import type { DirectoryListing } from '#/db/schema'
+
+import { uploadImageBlob } from '#/lib/atproto/blob-upload'
+import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
 
 const PLACEHOLDER_ICON = 'https://placehold.co/64x64/png'
 
@@ -9,12 +15,13 @@ export type FyiAtstoreListingDetail = {
   tagline: string
   description?: string
   externalUrl: string
-  icon: string
-  heroImage: string
+  icon: AtprotoBlob
+  heroImage: AtprotoBlob
+  screenshots?: AtprotoBlob[]
   categorySlug: string
-  screenshots?: string[]
   createdAt: string
   updatedAt: string
+  appTags?: string[]
 }
 
 function isHttpsUri(s: string | null | undefined): s is string {
@@ -37,29 +44,61 @@ export function pickUri(
   return undefined
 }
 
+export type ListingDetailDbUrls = {
+  /** Same HTTPS (or `/…`) URLs we use for the web directory + DB columns. */
+  iconUrl: string
+  heroImageUrl: string
+  screenshotUrls: string[]
+}
+
 /**
- * Map a `directory_listings` row to a `fyi.atstore.listing.detail` record.
- * Uses sensible fallbacks so legacy rows without every asset still validate.
+ * Build a lexicon record with blobs (Kitchen-style uploadBlob) plus the string URLs to store in Postgres for the site.
  */
-export function directoryListingToDetailRecord(
+export async function buildListingDetailRecordWithBlobs(
+  client: Client,
   row: DirectoryListing,
-): FyiAtstoreListingDetail {
+): Promise<{ record: FyiAtstoreListingDetail; dbUrls: ListingDetailDbUrls }> {
   const externalUrl =
     pickUri(row.externalUrl, row.sourceUrl) ?? 'https://bsky.app'
-  const icon =
+  const iconUrl =
     pickUri(row.iconUrl, row.screenshotUrls?.[0], externalUrl) ??
     PLACEHOLDER_ICON
-  const hero =
+  const heroUrl =
     pickUri(
       row.heroImageUrl,
       row.screenshotUrls?.[0],
       row.iconUrl,
       externalUrl,
-    ) ?? icon
+    ) ?? iconUrl
+  const screenshotUrls = row.screenshotUrls.filter((u) => isHttpsUri(u))
+
   const tagline = row.tagline?.trim() || '—'
   const categorySlug = row.categorySlug?.trim() || 'misc'
   const createdAt = row.createdAt.toISOString()
   const updatedAt = row.updatedAt.toISOString()
+
+  const iconBytes = await resolveUrlToImageBytes(iconUrl)
+  const heroBytes = await resolveUrlToImageBytes(heroUrl)
+  if (!iconBytes.mimeType.startsWith('image/')) {
+    throw new Error(`Icon is not an image: ${iconBytes.mimeType} (${iconUrl})`)
+  }
+  if (!heroBytes.mimeType.startsWith('image/')) {
+    throw new Error(`Hero is not an image: ${heroBytes.mimeType} (${heroUrl})`)
+  }
+
+  const icon = await uploadImageBlob(client, iconBytes.bytes, iconBytes.mimeType)
+  const heroImage = await uploadImageBlob(
+    client,
+    heroBytes.bytes,
+    heroBytes.mimeType,
+  )
+
+  const screenshots: AtprotoBlob[] = []
+  for (const u of screenshotUrls) {
+    const { bytes, mimeType } = await resolveUrlToImageBytes(u)
+    if (!mimeType.startsWith('image/')) continue
+    screenshots.push(await uploadImageBlob(client, bytes, mimeType))
+  }
 
   const record: FyiAtstoreListingDetail = {
     $type: 'fyi.atstore.listing.detail',
@@ -68,7 +107,7 @@ export function directoryListingToDetailRecord(
     tagline,
     externalUrl,
     icon,
-    heroImage: hero,
+    heroImage,
     categorySlug,
     createdAt,
     updatedAt,
@@ -76,9 +115,16 @@ export function directoryListingToDetailRecord(
 
   const desc = row.fullDescription?.trim()
   if (desc) record.description = desc
+  if (screenshots.length > 0) record.screenshots = screenshots
+  const tags = row.appTags?.filter((t): t is string => Boolean(t?.trim()))
+  if (tags && tags.length > 0) record.appTags = tags
 
-  const shots = row.screenshotUrls.filter((u) => isHttpsUri(u))
-  if (shots.length > 0) record.screenshots = shots
-
-  return record
+  return {
+    record,
+    dbUrls: {
+      iconUrl,
+      heroImageUrl: heroUrl,
+      screenshotUrls,
+    },
+  }
 }

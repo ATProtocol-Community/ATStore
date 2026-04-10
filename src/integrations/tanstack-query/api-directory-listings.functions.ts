@@ -29,7 +29,15 @@ import {
   buildDirectoryListingSlug,
 } from '../../lib/directory-listing-slugs'
 import { dbMiddleware } from './db-middleware'
+import type { Database } from '#/db/index.server'
+import type { DirectoryListing } from '#/db/schema'
 import * as dbSchema from '#/db/schema'
+import { COLLECTION } from '#/lib/atproto/nsids'
+import {
+  createAtstorePublishClient,
+  publishDirectoryListingDetail,
+} from '#/lib/atproto/publish-directory-listing'
+import { deleteRecord } from '#/lib/atproto/repo-records'
 
 function listingPublicWhere(
   table: typeof dbSchema.directoryListings,
@@ -599,6 +607,22 @@ function assertDevelopmentOnly() {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('This action is only available in development.')
   }
+}
+
+async function getFullDirectoryListing(
+  context: { db: Database; schema: typeof dbSchema },
+  id: string,
+): Promise<DirectoryListing> {
+  const table = context.schema.directoryListings
+  const [row] = await context.db
+    .select()
+    .from(table)
+    .where(eq(table.id, id))
+    .limit(1)
+  if (!row) {
+    throw new Error(`Listing not found: ${id}`)
+  }
+  return row
 }
 
 function getListingGenerationUrl(listing: DirectoryListingGenerationCandidate) {
@@ -1964,27 +1988,19 @@ const updateDirectoryListingAppTags = createServerFn({ method: 'POST' })
     assertDevelopmentOnly()
 
     const nextTags = normalizeAppTags(data.appTags)
-    const table = context.schema.directoryListings
-
-    const [row] = await context.db
-      .select({ categorySlug: table.categorySlug })
-      .from(table)
-      .where(eq(table.id, data.id))
-      .limit(1)
-
-    if (!row ) {
+    const full = await getFullDirectoryListing(context, data.id)
+    const cs = full.categorySlug
+    if (
+      !cs ||
+      cs.startsWith('protocol/') ||
+      cs.split('/').length !== 2
+    ) {
       throw new Error(
-        `App tags can only be edited for listings in an allowed Apps sub-branch, not Protocol.`,
+        'App tags can only be edited for listings in an allowed Apps sub-branch, not Protocol.',
       )
     }
 
-    await context.db
-      .update(table)
-      .set({
-        appTags: nextTags,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.id, data.id))
+    await publishDirectoryListingDetail(full, { appTags: nextTags })
 
     return {
       id: data.id,
@@ -1999,15 +2015,10 @@ const updateDirectoryListingCategoryAssignment = createServerFn({ method: 'POST'
     assertDevelopmentOnly()
 
     const nextCategorySlug = data.categorySlug?.trim() || null
-    const table = context.schema.directoryListings
+    const full = await getFullDirectoryListing(context, data.id)
+    const effective = nextCategorySlug ?? 'misc'
 
-    await context.db
-      .update(table)
-      .set({
-        categorySlug: nextCategorySlug,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.id, data.id))
+    await publishDirectoryListingDetail(full, { categorySlug: effective })
 
     return {
       id: data.id,
@@ -2021,9 +2032,15 @@ const deleteDirectoryListing = createServerFn({ method: 'POST' })
   .handler(async ({ data, context }) => {
     assertDevelopmentOnly()
 
-    const table = context.schema.directoryListings
+    const full = await getFullDirectoryListing(context, data.id)
+    if (!full.rkey) {
+      throw new Error(
+        'Listing has no ATProto record (missing rkey). Nothing to delete on the PDS.',
+      )
+    }
 
-    await context.db.delete(table).where(eq(table.id, data.id))
+    const { client, repoDid } = await createAtstorePublishClient()
+    await deleteRecord(client, repoDid, COLLECTION.listingDetail, full.rkey)
 
     return {
       id: data.id,
@@ -2049,15 +2066,9 @@ const regenerateDirectoryListingHeroImage = createServerFn({ method: 'POST' })
       prompt: buildMarketingPrompt(listing, pageUrl),
     })
     const publicPath = await saveGeneratedListingAsset(listing, generatedImage, 'hero')
-    const table = context.schema.directoryListings
+    const full = await getFullDirectoryListing(context, data.id)
 
-    await context.db
-      .update(table)
-      .set({
-        screenshotUrls: [publicPath],
-        updatedAt: new Date(),
-      })
-      .where(eq(table.id, data.id))
+    await publishDirectoryListingDetail(full, { screenshotUrls: [publicPath] })
 
     return {
       id: data.id,
@@ -2084,15 +2095,9 @@ const regenerateDirectoryListingIcon = createServerFn({ method: 'POST' })
       prompt: buildIconPrompt(listing, pageUrl),
     })
     const publicPath = await saveGeneratedListingAsset(listing, generatedImage, 'icon')
-    const table = context.schema.directoryListings
+    const full = await getFullDirectoryListing(context, data.id)
 
-    await context.db
-      .update(table)
-      .set({
-        iconUrl: publicPath,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.id, data.id))
+    await publishDirectoryListingDetail(full, { iconUrl: publicPath })
 
     return {
       id: data.id,
@@ -2111,15 +2116,9 @@ const regenerateDirectoryListingTagline = createServerFn({ method: 'POST' })
       field: 'tagline',
       listing,
     })
-    const table = context.schema.directoryListings
+    const full = await getFullDirectoryListing(context, data.id)
 
-    await context.db
-      .update(table)
-      .set({
-        tagline: nextTagline.value,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.id, data.id))
+    await publishDirectoryListingDetail(full, { tagline: nextTagline.value })
 
     return {
       id: data.id,
@@ -2139,15 +2138,11 @@ const regenerateDirectoryListingDescription = createServerFn({ method: 'POST' })
       field: 'description',
       listing,
     })
-    const table = context.schema.directoryListings
+    const full = await getFullDirectoryListing(context, data.id)
 
-    await context.db
-      .update(table)
-      .set({
-        fullDescription: nextDescription.value,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.id, data.id))
+    await publishDirectoryListingDetail(full, {
+      fullDescription: nextDescription.value,
+    })
 
     return {
       id: data.id,

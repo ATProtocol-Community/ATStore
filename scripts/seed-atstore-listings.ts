@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 /**
  * Create `fyi.atstore.listing.detail` records on the AT Store account for rows missing `at_uri`.
- * Optionally ensures `fyi.atstore.profile` (self).
+ * Uploads icon, hero, and screenshots via `com.atproto.repo.uploadBlob` (Kitchen-style) before createRecord.
  *
  * Env: ATSTORE_IDENTIFIER, ATSTORE_APP_PASSWORD, optional ATSTORE_SERVICE,
  * optional ATSTORE_PROFILE_DISPLAY_NAME (default "AT Store").
+ * Optional: ATSTORE_SEED_LIMIT=N — only process the first N pending rows (e.g. 1 for a smoke test).
+ *
+ * Does not write Postgres: Tap ingest updates `directory_listings` after records appear on the PDS.
  */
 import 'dotenv/config'
-import { eq, isNull } from 'drizzle-orm'
+import { isNull } from 'drizzle-orm'
 
 import { db } from '../src/db/index.server'
 import * as schema from '../src/db/schema'
-import { parseAtUri } from '../src/lib/atproto/at-uri'
-import { directoryListingToDetailRecord } from '../src/lib/atproto/listing-record'
+import { buildListingDetailRecordWithBlobs } from '../src/lib/atproto/listing-record'
 import {
   createListingDetailRecord,
   putProfileSelfRecord,
@@ -28,6 +30,10 @@ async function main() {
     )
     process.exit(1)
   }
+
+  const limitRaw = process.env.ATSTORE_SEED_LIMIT?.trim()
+  const limit =
+    limitRaw && /^\d+$/.test(limitRaw) ? Math.max(0, parseInt(limitRaw, 10)) : undefined
 
   const service = process.env.ATSTORE_SERVICE?.trim() || 'https://bsky.social'
   const displayName =
@@ -53,33 +59,27 @@ async function main() {
   console.log(`Ensured fyi.atstore.profile on ${repo}`)
 
   const table = schema.directoryListings
-  const pending = await db
+  const allPending = await db
     .select()
     .from(table)
     .where(isNull(table.atUri))
     .orderBy(table.slug)
 
+  const pending =
+    limit !== undefined ? allPending.slice(0, limit) : allPending
+
+  if (limit !== undefined) {
+    console.log(
+      `ATSTORE_SEED_LIMIT=${limit} — processing up to ${limit} pending row(s).`,
+    )
+  }
+
   let okCount = 0
   for (const row of pending) {
-    const record = directoryListingToDetailRecord(row)
     try {
+      const { record } = await buildListingDetailRecordWithBlobs(client, row)
       const { uri } = await createListingDetailRecord(client, repo, record)
-      const parsed = parseAtUri(uri)
-      if (!parsed) {
-        throw new Error(`Bad at-uri: ${uri}`)
-      }
-      await db
-        .update(table)
-        .set({
-          atUri: uri,
-          repoDid: parsed.repo,
-          rkey: parsed.rkey,
-          sourceAccountDid: repo,
-          heroImageUrl: record.heroImage,
-          updatedAt: new Date(),
-        })
-        .where(eq(table.id, row.id))
-      console.log(`${row.slug} -> ${uri}`)
+      console.log(`${row.slug} -> ${uri} (Tap will sync Postgres)`)
       okCount += 1
     } catch (err) {
       console.error(`Failed ${row.slug}:`, err)

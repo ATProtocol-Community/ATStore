@@ -1,3 +1,4 @@
+import { isBlob } from '@atcute/lexicons/interfaces'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -12,10 +13,11 @@ const listingBodySchema = z.object({
   tagline: z.string(),
   description: z.string().optional(),
   externalUrl: z.string().min(1),
-  icon: z.string().min(1),
-  heroImage: z.string().min(1),
+  icon: z.unknown(),
+  heroImage: z.unknown(),
   categorySlug: z.string(),
-  screenshots: z.array(z.string()).optional(),
+  screenshots: z.array(z.unknown()).optional(),
+  appTags: z.array(z.string()).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -27,6 +29,9 @@ export function parseListingDetailRecord(
   const parsed = listingBodySchema.safeParse(body)
   if (!parsed.success) return null
   const d = parsed.data
+  if (!isBlob(d.icon) || !isBlob(d.heroImage)) return null
+  if (d.screenshots?.some((s) => !isBlob(s))) return null
+
   const rec: FyiAtstoreListingDetail = {
     $type: 'fyi.atstore.listing.detail',
     slug: d.slug,
@@ -40,7 +45,10 @@ export function parseListingDetailRecord(
     updatedAt: d.updatedAt,
   }
   if (d.description) rec.description = d.description
-  if (d.screenshots?.length) rec.screenshots = d.screenshots
+  if (d.screenshots?.length) {
+    rec.screenshots = d.screenshots.filter(isBlob)
+  }
+  if (d.appTags?.length) rec.appTags = d.appTags
   return rec
 }
 
@@ -50,7 +58,7 @@ function atUriFor(did: string, rkey: string) {
 
 /**
  * Upsert a directory row from a Tap `fyi.atstore.listing.detail` create/update payload.
- * Conflicts on `slug` (stable lexicon key).
+ * Image blobs are not converted to URLs here — web assets stay null until backfilled separately.
  */
 export async function upsertDirectoryListingFromTap(input: {
   db: Database
@@ -62,9 +70,9 @@ export async function upsertDirectoryListingFromTap(input: {
   const { db, did, rkey, record, trustedPublisher } = input
   const atUri = atUriFor(did, rkey)
   const sourceUrl = record.externalUrl.trim()
-  const screenshots = record.screenshots?.filter(Boolean) ?? []
   const verificationStatus = trustedPublisher ? 'verified' : 'unverified'
   const now = new Date()
+  const appTags = record.appTags ?? []
 
   await db
     .insert(schema.directoryListings)
@@ -73,18 +81,19 @@ export async function upsertDirectoryListingFromTap(input: {
       name: record.name,
       slug: record.slug,
       externalUrl: record.externalUrl,
-      iconUrl: record.icon,
-      screenshotUrls: screenshots,
+      iconUrl: null,
+      screenshotUrls: [],
       tagline: record.tagline,
       fullDescription: record.description,
       categorySlug: record.categorySlug,
-      heroImageUrl: record.heroImage,
+      heroImageUrl: null,
       atUri,
       repoDid: did,
       rkey,
       sourceAccountDid: did,
       classificationReason: 'tap-sync',
       verificationStatus,
+      appTags,
       updatedAt: now,
     })
     .onConflictDoUpdate({
@@ -93,25 +102,23 @@ export async function upsertDirectoryListingFromTap(input: {
         sourceUrl,
         name: record.name,
         externalUrl: record.externalUrl,
-        iconUrl: record.icon,
-        screenshotUrls: screenshots,
         tagline: record.tagline,
         fullDescription: record.description ?? null,
         categorySlug: record.categorySlug,
-        heroImageUrl: record.heroImage,
         atUri,
         repoDid: did,
         rkey,
         sourceAccountDid: did,
         classificationReason: 'tap-sync',
         verificationStatus,
+        appTags,
         updatedAt: now,
       },
     })
 }
 
 /**
- * Mark a listing hidden when the record is deleted on the PDS (matched by repo + rkey).
+ * Remove the mirrored `directory_listings` row when the listing record is deleted on the PDS (matched by repo + rkey).
  */
 export async function markListingRemovedFromTap(input: {
   db: Database
@@ -119,17 +126,10 @@ export async function markListingRemovedFromTap(input: {
   rkey: string
 }) {
   const { db, did, rkey } = input
-  await db
-    .update(schema.directoryListings)
-    .set({
-      verificationStatus: 'rejected',
-      atUri: null,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(schema.directoryListings.repoDid, did),
-        eq(schema.directoryListings.rkey, rkey),
-      ),
-    )
+  await db.delete(schema.directoryListings).where(
+    and(
+      eq(schema.directoryListings.repoDid, did),
+      eq(schema.directoryListings.rkey, rkey),
+    ),
+  )
 }
