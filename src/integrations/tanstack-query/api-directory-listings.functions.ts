@@ -1249,7 +1249,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
       'homepage fresh listings',
     )
 
-    const tags = buildHomePageTagSummaries(tagRows, 4)
+    const tags = buildHomePageTagSummaries(tagRows, 8)
     const dedupedProtocolRows = dedupeListings(protocolRows)
     const protocolFeaturedSource =
       dedupedProtocolRows.find((row) => row.screenshotUrls.length > 0 || row.iconUrl) ||
@@ -1271,7 +1271,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
     const protocolGroups = buildProtocolCategoryGroups(protocolRows)
     const protocolCategories: DirectoryProtocolCategorySummary[] =
       protocolGroups.length > 0
-        ? protocolGroups.slice(0, 6).map(({ segment, label, count }) => ({
+        ? protocolGroups.slice(0, 8 ).map(({ segment, label, count }) => ({
             segment,
             label,
             count,
