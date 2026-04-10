@@ -139,9 +139,12 @@ function EcosystemIndexPage() {
           <Flex direction="column" gap="8xl">
             <Flex direction="column" gap="4xl">
               <Flex gap="xl" justify="between" style={styles.navLinks}>
-                <AppLink to="/">
+                <AppLink
+                  to="/products/$productId"
+                  params={{ productId: appSegment }}
+                >
                   <ChevronLeft />
-                  Home
+                  {category.label}
                 </AppLink>
                 <IconButtonLink
                   params={{ app: appSegment }}
