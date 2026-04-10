@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "vite dev --port 3000 --host",
-    "build": "vite build",
+    "build": "git lfs pull && vite build",
     "preview": "vite preview",
     "start": "node .output/server/index.mjs",
     "test": "vitest run",
