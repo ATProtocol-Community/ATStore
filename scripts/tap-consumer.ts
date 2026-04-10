@@ -43,6 +43,20 @@ function isVerbose() {
   return v === '1' || v === 'true' || process.env.DEBUG === 'tap'
 }
 
+/** Prefer structuredClone so Uint8Array blob refs survive; JSON loses bytes (see blob-cdn-url numeric recovery). */
+function cloneRecordForIngest(
+  raw: NonNullable<RecordEvent['record']>,
+): Record<string, unknown> {
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(raw) as Record<string, unknown>
+    } catch {
+      /* fall through */
+    }
+  }
+  return JSON.parse(JSON.stringify(raw)) as Record<string, unknown>
+}
+
 function formatRecordLog(evt: RecordEvent) {
   const uri = `at://${evt.did}/${evt.collection}/${evt.rkey}`
   const revShort =
@@ -140,9 +154,12 @@ async function main() {
 
     const raw = evt.record
     const body =
-      raw === undefined
-        ? undefined
-        : (JSON.parse(JSON.stringify(raw)) as Record<string, unknown>)
+      raw === undefined ? undefined : cloneRecordForIngest(raw)
+    if (raw !== undefined && isVerbose()) {
+      const mode =
+        typeof structuredClone === 'function' ? 'structuredClone' : 'JSON'
+      console.log(`[tap] record clone mode=${mode}`)
+    }
     if (body === undefined) {
       console.warn(
         `[tap] listing.detail missing record body rkey=${evt.rkey} did=${evt.did} action=${evt.action}`,

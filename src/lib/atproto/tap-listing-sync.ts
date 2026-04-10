@@ -8,6 +8,11 @@ import { z } from 'zod'
 
 import type { Database } from '#/db/index.server'
 import * as schema from '#/db/schema'
+import {
+  blobLikeToBskyCdnUrl,
+  explainMissingBlobUrl,
+  getBlobCidString,
+} from '#/lib/atproto/blob-cdn-url'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
 
@@ -225,7 +230,7 @@ function atUriFor(did: string, rkey: string) {
 
 /**
  * Upsert `store_listings` from Tap (`fyi.atstore.listing.detail` only — does not touch `directory_listings`).
- * Image blobs are not converted to URLs here; cached URL columns stay null until backfilled separately.
+ * Resolves icon / hero / screenshots to Bluesky CDN URLs from blob refs (Kitchen-style).
  */
 export async function upsertDirectoryListingFromTap(input: {
   db: Database
@@ -242,6 +247,19 @@ export async function upsertDirectoryListingFromTap(input: {
   const appTags = record.appTags ?? []
   const categorySlugs = record.categorySlug
 
+  const iconUrl = blobLikeToBskyCdnUrl(record.icon, did)
+  const heroImageUrl = blobLikeToBskyCdnUrl(record.heroImage, did)
+  const screenshotUrls = (record.screenshots ?? [])
+    .map((b) => blobLikeToBskyCdnUrl(b, did))
+    .filter((u): u is string => Boolean(u))
+
+  const iconCid = getBlobCidString(record.icon)
+  const heroCid = getBlobCidString(record.heroImage)
+  const shotsParsed = (record.screenshots ?? []).length
+  console.log(
+    `[tap-ingest] slug=${record.slug} rkey=${rkey} images: icon=${iconUrl ? `cdn(${iconCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.icon)}`} hero=${heroImageUrl ? `cdn(${heroCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.heroImage)}`} screenshots=${screenshotUrls.length}/${shotsParsed}`,
+  )
+
   await db
     .insert(schema.storeListings)
     .values({
@@ -249,12 +267,12 @@ export async function upsertDirectoryListingFromTap(input: {
       name: record.name,
       slug: record.slug,
       externalUrl: record.externalUrl,
-      iconUrl: null,
-      screenshotUrls: [],
+      iconUrl,
+      screenshotUrls,
       tagline: record.tagline,
       fullDescription: record.description,
       categorySlugs,
-      heroImageUrl: null,
+      heroImageUrl,
       atUri,
       repoDid: did,
       rkey,
@@ -269,6 +287,9 @@ export async function upsertDirectoryListingFromTap(input: {
         sourceUrl,
         name: record.name,
         externalUrl: record.externalUrl,
+        iconUrl,
+        heroImageUrl,
+        screenshotUrls,
         tagline: record.tagline,
         fullDescription: record.description ?? null,
         categorySlugs,
