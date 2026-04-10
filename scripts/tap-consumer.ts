@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * Long-running Tap consumer: WebSocket to your Tap deployment, logs record events,
- * optionally upserts `store_listings` only for `fyi.atstore.listing.detail` (does not write `directory_listings`).
+ * Tap consumer: WebSocket to your Tap deployment. Ingests `fyi.atstore.listing.detail`
+ * create/update/delete events into `store_listings` (never `directory_listings`).
+ * Logs identity events; other record collections are skipped except `fyi.atstore.profile` (quiet).
+ * Which repos and records appear is configured on the Tap side; this client ingests every
+ * `fyi.atstore.listing.detail` event the channel delivers (no per-DID allowlist here).
  *
  * Env:
  *   TAP_URL=http://127.0.0.1:2480
  *   TAP_ADMIN_PASSWORD=          # if Tap admin API is protected
- *   TAP_TRACK_DIDS=did:plc:...,did:plc:...   # passed to Tap /repos/add on startup
- *   TAP_SYNC_DB=true             # write Postgres (requires DATABASE_URL)
+ *   DATABASE_URL=…               # required; ingest writes to Postgres on every listing event
  *   TAP_TRUSTED_DIDS=did:plc:... # publishers whose listings get verification_status=verified
  *   TAP_VERBOSE=1                # log ignored fyi.atstore.* collections, extra record fields
  */
@@ -49,11 +51,16 @@ function formatRecordLog(evt: RecordEvent) {
 }
 
 async function main() {
+  if (!process.env.DATABASE_URL?.trim()) {
+    console.error(
+      '[tap] DATABASE_URL is required — this consumer persists listing events to Postgres.',
+    )
+    process.exit(1)
+  }
+
   const url = process.env.TAP_URL?.trim() || 'http://127.0.0.1:2480'
   const adminPassword = process.env.TAP_ADMIN_PASSWORD?.trim()
-  const trackDids = parseDidList(process.env.TAP_TRACK_DIDS)
   const trusted = new Set(parseDidList(process.env.TAP_TRUSTED_DIDS))
-  const syncDb = process.env.TAP_SYNC_DB === '1' || process.env.TAP_SYNC_DB === 'true'
 
   let dbCache: Database | undefined
   async function getDb(): Promise<Database> {
@@ -102,13 +109,6 @@ async function main() {
       )
     }
 
-    if (!syncDb) {
-      console.warn(
-        `[tap] TAP_SYNC_DB is off — set TAP_SYNC_DB=true to write store_listings (listing.detail rkey=${evt.rkey})`,
-      )
-      return
-    }
-
     const db = await getDb()
 
     if (evt.action === 'delete') {
@@ -127,7 +127,7 @@ async function main() {
     if (firstListingDetailEvent) {
       firstListingDetailEvent = false
       console.log(
-        `[tap] first listing.detail event — if you see none after publishing, check Tap tracks this DID (TAP_TRACK_DIDS / Tap admin) and collection ${wantCollection}`,
+        `[tap] first listing.detail event — if you see none after publishing, check Tap is configured to relay that repo and collection ${wantCollection}`,
       )
     }
 
@@ -181,16 +181,6 @@ async function main() {
     console.error('[tap] error', err)
   })
 
-  if (trackDids.length > 0) {
-    console.log(`[tap] POST /repos/add DIDs (${trackDids.length}): ${trackDids.join(', ')}`)
-    await tap.addRepos(trackDids)
-    console.log('[tap] addRepos finished (HTTP OK)')
-  } else {
-    console.warn(
-      '[tap] TAP_TRACK_DIDS empty — Tap must track the repo that publishes listings (set TAP_TRACK_DIDS=did:plc:… or add repos in Tap), or this consumer will not receive listing events.',
-    )
-  }
-
   const channel = tap.channel(indexer, {
     onReconnectError: (error, n, initialSetup) => {
       console.error(
@@ -203,10 +193,8 @@ async function main() {
   const shutdown = async () => {
     console.log('[tap] shutting down…')
     await channel.destroy()
-    if (syncDb) {
-      const { dbClient } = await import('../src/db/index.server')
-      await dbClient.end({ timeout: 5 })
-    }
+    const { dbClient } = await import('../src/db/index.server')
+    await dbClient.end({ timeout: 5 })
     process.exit(0)
   }
 
@@ -214,7 +202,7 @@ async function main() {
   process.on('SIGTERM', () => void shutdown())
 
   console.log(
-    `[tap] config: url=${url} ingestCollection=${wantCollection} syncDb=${syncDb} hasDatabaseUrl=${Boolean(process.env.DATABASE_URL?.trim())} trustedPublishers=${trusted.size} verbose=${isVerbose()}`,
+    `[tap] config: url=${url} ingestCollection=${wantCollection} trustedPublishers=${trusted.size} verbose=${isVerbose()}`,
   )
   console.log(
     `[tap] WebSocket channel starting (blocking) — you should see [record] lines as repos update…`,
