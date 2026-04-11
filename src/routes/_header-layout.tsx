@@ -42,7 +42,7 @@ const FOOTER_LINK_GROUPS = [
     ],
   },
   {
-    title: "Protocol",
+    title: "Protocol Tools",
     links: [
       { href: "/protocol/listings", label: "All Tools" },
       { href: "/protocol/tags", label: "Categories" },
@@ -77,7 +77,7 @@ function HeaderLayoutRoute() {
               to="/protocol/tags"
               isActive={pathname.startsWith("/protocol/")}
             >
-              Protocol
+              Protocol Tools
             </NavbarLinkLink>
           </NavbarNavigation>
           <NavbarAuth />

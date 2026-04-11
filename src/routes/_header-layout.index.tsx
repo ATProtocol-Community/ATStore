@@ -511,7 +511,7 @@ function HomePage() {
               leading="sm"
               style={styles.headerDescription}
             >
-              Discover the best apps the atmosphere has to offer. With every
+              Discover the best apps the Atmosphere has to offer. With every
               product you own your data and use the same identity across all
               apps.
             </Text>
