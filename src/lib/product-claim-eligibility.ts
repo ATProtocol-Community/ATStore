@@ -70,8 +70,6 @@ export async function findEligibleProductClaimsForDid(
         eq(t.repoDid, atstoreDid),
         isNotNull(t.atUri),
         isNotNull(t.rkey),
-        isNotNull(t.claimKey),
-        sql`trim(${t.claimKey}) <> ''`,
         not(sqlCategorySlugsHasProtocolBrowseableSegment(t.categorySlugs)),
       ),
     )
