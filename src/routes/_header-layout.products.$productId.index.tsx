@@ -932,16 +932,32 @@ function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
           <Body style={styles.heroTagline}>{listing.tagline}</Body>
         </Flex>
 
-        {primaryLink && (
-          <ButtonLink
-            to={primaryLink}
-            size="xl"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {listing.priceLabel} <ExternalLink />
-          </ButtonLink>
-        )}
+        <Flex direction="column" align="end" gap="md">
+          {primaryLink ? (
+            <ButtonLink
+              to={primaryLink}
+              size="xl"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {listing.priceLabel} <ExternalLink />
+            </ButtonLink>
+          ) : null}
+          {listing.productAccountDid ? (
+            <Button
+              href={`https://bsky.app/profile/${encodeURIComponent(listing.productAccountDid)}`}
+              size="xl"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Bluesky
+              {listing.productAccountHandle
+                ? ` @${listing.productAccountHandle.replace(/^@/, "")}`
+                : ""}{" "}
+              <ExternalLink />
+            </Button>
+          ) : null}
+        </Flex>
       </Flex>
     </Flex>
   );

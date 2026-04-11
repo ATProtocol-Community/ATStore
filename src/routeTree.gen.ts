@@ -16,6 +16,7 @@ import { Route as HeaderLayoutAdminRouteImport } from './routes/_header-layout.a
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
 import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
 import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
+import { Route as HeaderLayoutDevListingProductAccountsRouteImport } from './routes/_header-layout.dev.listing-product-accounts'
 import { Route as HeaderLayoutDevCategoriesRouteImport } from './routes/_header-layout.dev.categories'
 import { Route as HeaderLayoutDevAppTagsRouteImport } from './routes/_header-layout.dev.app-tags'
 import { Route as HeaderLayoutCategoriesCategoryIdRouteImport } from './routes/_header-layout.categories.$categoryId'
@@ -70,6 +71,12 @@ const HeaderLayoutProtocolCategoryRoute =
   HeaderLayoutProtocolCategoryRouteImport.update({
     id: '/protocol/$category',
     path: '/protocol/$category',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutDevListingProductAccountsRoute =
+  HeaderLayoutDevListingProductAccountsRouteImport.update({
+    id: '/dev/listing-product-accounts',
+    path: '/dev/listing-product-accounts',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
 const HeaderLayoutDevCategoriesRoute =
@@ -184,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
+  '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
@@ -210,6 +218,7 @@ export interface FileRoutesByTo {
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
+  '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
@@ -237,6 +246,7 @@ export interface FileRoutesById {
   '/_header-layout/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/_header-layout/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/_header-layout/dev/categories': typeof HeaderLayoutDevCategoriesRoute
+  '/_header-layout/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
   '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/categories/$categoryId'
     | '/dev/app-tags'
     | '/dev/categories'
+    | '/dev/listing-product-accounts'
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/categories/$categoryId'
     | '/dev/app-tags'
     | '/dev/categories'
+    | '/dev/listing-product-accounts'
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
@@ -317,6 +329,7 @@ export interface FileRouteTypes {
     | '/_header-layout/categories/$categoryId'
     | '/_header-layout/dev/app-tags'
     | '/_header-layout/dev/categories'
+    | '/_header-layout/dev/listing-product-accounts'
     | '/_header-layout/protocol/$category'
     | '/_header-layout/protocol/listings'
     | '/_header-layout/protocol/tags'
@@ -393,6 +406,13 @@ declare module '@tanstack/react-router' {
       path: '/protocol/$category'
       fullPath: '/protocol/$category'
       preLoaderRoute: typeof HeaderLayoutProtocolCategoryRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/dev/listing-product-accounts': {
+      id: '/_header-layout/dev/listing-product-accounts'
+      path: '/dev/listing-product-accounts'
+      fullPath: '/dev/listing-product-accounts'
+      preLoaderRoute: typeof HeaderLayoutDevListingProductAccountsRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/dev/categories': {
@@ -554,6 +574,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutCategoriesCategoryIdRoute: typeof HeaderLayoutCategoriesCategoryIdRoute
   HeaderLayoutDevAppTagsRoute: typeof HeaderLayoutDevAppTagsRoute
   HeaderLayoutDevCategoriesRoute: typeof HeaderLayoutDevCategoriesRoute
+  HeaderLayoutDevListingProductAccountsRoute: typeof HeaderLayoutDevListingProductAccountsRoute
   HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
   HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
   HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
@@ -572,6 +593,8 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutCategoriesCategoryIdRoute: HeaderLayoutCategoriesCategoryIdRoute,
   HeaderLayoutDevAppTagsRoute: HeaderLayoutDevAppTagsRoute,
   HeaderLayoutDevCategoriesRoute: HeaderLayoutDevCategoriesRoute,
+  HeaderLayoutDevListingProductAccountsRoute:
+    HeaderLayoutDevListingProductAccountsRoute,
   HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
   HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
   HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,

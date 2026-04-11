@@ -13,6 +13,7 @@ import {
   explainMissingBlobUrl,
   getBlobCidString,
 } from '#/lib/atproto/blob-cdn-url'
+import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
 
@@ -115,6 +116,14 @@ const listingBodySchema = z.object({
   appTags: z.array(z.string()).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  productAccountDid: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((s) => {
+      if (s == null) return undefined
+      const t = String(s).trim()
+      return t.length > 0 ? t : undefined
+    }),
 })
 
 export type ListingDetailParseResult =
@@ -214,6 +223,7 @@ export function tryParseListingDetailRecord(
     rec.screenshots = d.screenshots.filter(blobRefAcceptableForTap) as AtprotoBlob[]
   }
   if (d.appTags?.length) rec.appTags = d.appTags
+  if (d.productAccountDid) rec.productAccountDid = d.productAccountDid
   return { ok: true, record: rec }
 }
 
@@ -260,6 +270,14 @@ export async function upsertDirectoryListingFromTap(input: {
     `[tap-ingest] slug=${record.slug} rkey=${rkey} images: icon=${iconUrl ? `cdn(${iconCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.icon)}`} hero=${heroImageUrl ? `cdn(${heroCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.heroImage)}`} screenshots=${screenshotUrls.length}/${shotsParsed}`,
   )
 
+  const productDid = record.productAccountDid?.trim() ?? null
+  let productAccountHandle: string | null = null
+  if (productDid) {
+    const profile = await fetchBlueskyPublicProfileFields(productDid)
+    const h = profile?.handle?.trim()
+    productAccountHandle = h && h.length > 0 ? h : null
+  }
+
   await db
     .insert(schema.storeListings)
     .values({
@@ -279,6 +297,8 @@ export async function upsertDirectoryListingFromTap(input: {
       sourceAccountDid: did,
       verificationStatus,
       appTags,
+      productAccountDid: productDid,
+      productAccountHandle,
       updatedAt: now,
     })
     .onConflictDoUpdate({
@@ -299,6 +319,8 @@ export async function upsertDirectoryListingFromTap(input: {
         sourceAccountDid: did,
         verificationStatus,
         appTags,
+        productAccountDid: productDid,
+        productAccountHandle,
         updatedAt: now,
       },
     })

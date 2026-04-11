@@ -48,6 +48,8 @@ export type FyiAtstoreListingDetail = {
   createdAt: string
   updatedAt: string
   appTags?: string[]
+  /** Bluesky DID for the product (not the store publisher). */
+  productAccountDid?: string
 }
 
 function isHttpsUri(s: string | null | undefined): s is string {
@@ -190,6 +192,9 @@ export async function buildListingDetailRecordWithBlobs(
   if (screenshots.length > 0) record.screenshots = screenshots
   const tags = row.appTags?.filter((t): t is string => Boolean(t?.trim()))
   if (tags && tags.length > 0) record.appTags = tags
+
+  const productDid = row.productAccountDid?.trim()
+  if (productDid) record.productAccountDid = productDid
 
   return {
     record,

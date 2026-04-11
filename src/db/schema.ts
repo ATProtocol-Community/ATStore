@@ -193,6 +193,10 @@ export const storeListings = pgTable(
     sourceAccountDid: text('source_account_did'),
     claimedByDid: text('claimed_by_did'),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    /** Official Bluesky account for the product (from `fyi.atstore.listing.detail`). */
+    productAccountDid: text('product_account_did'),
+    /** Resolved via public API at Tap ingest; not stored on the ATProto record. */
+    productAccountHandle: text('product_account_handle'),
     /** Denormalized from `store_listing_reviews` (Tap ingest). */
     reviewCount: integer('review_count').notNull().default(0),
     /** Null when `reviewCount` is 0; else mean of star ratings (1–5). */
@@ -220,6 +224,40 @@ export const storeListings = pgTable(
       table.repoDid,
       table.rkey,
     ),
+  }),
+)
+
+/** Queued Bluesky account candidates for manual verification (dev tooling + discovery script). */
+export const storeListingProductAccountCandidates = pgTable(
+  'store_listing_product_account_candidates',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    storeListingId: uuid('store_listing_id')
+      .notNull()
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
+    candidateDid: text('candidate_did').notNull(),
+    candidateHandle: text('candidate_handle'),
+    status: text('status').notNull().default('pending'),
+    /** `url_heuristic` | `google_search` | `llm` | `manual` | `import_json` */
+    source: text('source').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (table) => ({
+    listingDidUnique: uniqueIndex(
+      'store_listing_product_account_candidates_listing_did_idx',
+    ).on(table.storeListingId, table.candidateDid),
+    statusCreatedIdx: index(
+      'store_listing_product_account_candidates_status_created_idx',
+    ).on(table.status, table.createdAt),
+    listingIdx: index(
+      'store_listing_product_account_candidates_store_listing_id_idx',
+    ).on(table.storeListingId),
   }),
 )
 
@@ -301,3 +339,7 @@ export type StoreListingReview = typeof storeListingReviews.$inferSelect
 export type NewStoreListingReview = typeof storeListingReviews.$inferInsert
 export type ListingClaim = typeof listingClaims.$inferSelect
 export type NewListingClaim = typeof listingClaims.$inferInsert
+export type StoreListingProductAccountCandidate =
+  typeof storeListingProductAccountCandidates.$inferSelect
+export type NewStoreListingProductAccountCandidate =
+  typeof storeListingProductAccountCandidates.$inferInsert

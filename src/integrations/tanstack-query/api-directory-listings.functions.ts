@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { and, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
@@ -148,6 +148,9 @@ export interface DirectoryListingCard {
 export interface DirectoryListingDetail extends DirectoryListingCard {
   /** Canonical AT URI for `fyi.atstore.listing.detail` when Tap-synced; needed to publish reviews. */
   atUri: string | null
+  /** Official product Bluesky DID (`fyi.atstore.listing.detail`); handle is Postgres-only. */
+  productAccountDid: string | null
+  productAccountHandle: string | null
   screenshots: string[]
   externalUrl: string | null
   sourceUrl: string | null
@@ -451,6 +454,8 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
 
 type DirectoryListingDetailRow = DirectoryListingRow & {
   atUri: string | null
+  productAccountDid: string | null
+  productAccountHandle: string | null
   sourceUrl: string
   externalUrl: string | null
   rawCategoryHint: string | null
@@ -491,6 +496,8 @@ function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail
   return {
     ...toListingCard(row),
     atUri: row.atUri,
+    productAccountDid: row.productAccountDid,
+    productAccountHandle: row.productAccountHandle,
     screenshots: row.screenshotUrls,
     externalUrl: row.externalUrl,
     sourceUrl: row.sourceUrl,
@@ -1640,6 +1647,8 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         fullDescription: table.fullDescription,
         categorySlugs: table.categorySlugs,
         atUri: table.atUri,
+        productAccountDid: table.productAccountDid,
+        productAccountHandle: table.productAccountHandle,
         reviewCount: table.reviewCount,
         averageRating: table.averageRating,
         ...storeListingLegacyDetailColumns,
@@ -1681,6 +1690,8 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         fullDescription: table.fullDescription,
         categorySlugs: table.categorySlugs,
         atUri: table.atUri,
+        productAccountDid: table.productAccountDid,
+        productAccountHandle: table.productAccountHandle,
         reviewCount: table.reviewCount,
         averageRating: table.averageRating,
         ...storeListingLegacyDetailColumns,
@@ -2504,6 +2515,149 @@ const regenerateDirectoryListingDescription = createServerFn({ method: 'POST' })
     }
   })
 
+const confirmProductAccountCandidateInput = z.object({
+  candidateId: z.string().uuid(),
+})
+
+const rejectProductAccountCandidateInput = z.object({
+  candidateId: z.string().uuid(),
+})
+
+export type ProductAccountCandidateQueueItem = {
+  candidateId: string
+  storeListingId: string
+  candidateDid: string
+  candidateHandle: string | null
+  source: string
+  createdAt: string
+  listingName: string
+  listingSlug: string
+  iconUrl: string | null
+  externalUrl: string | null
+  sourceUrl: string
+}
+
+const getNextProductAccountCandidate = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    assertDevelopmentOnly()
+
+    const c = context.schema.storeListingProductAccountCandidates
+    const l = context.schema.storeListings
+    const [row] = await context.db
+      .select({
+        candidateId: c.id,
+        storeListingId: c.storeListingId,
+        candidateDid: c.candidateDid,
+        candidateHandle: c.candidateHandle,
+        source: c.source,
+        createdAt: c.createdAt,
+        listingName: l.name,
+        listingSlug: l.slug,
+        iconUrl: l.iconUrl,
+        externalUrl: l.externalUrl,
+        sourceUrl: l.sourceUrl,
+      })
+      .from(c)
+      .innerJoin(l, eq(c.storeListingId, l.id))
+      .where(eq(c.status, 'pending'))
+      .orderBy(asc(c.createdAt))
+      .limit(1)
+
+    if (!row) return null
+    return {
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    } satisfies ProductAccountCandidateQueueItem
+  })
+
+const getNextProductAccountCandidateQueryOptions = queryOptions({
+  queryKey: ['storeListings', 'dev', 'nextProductAccountCandidate'],
+  queryFn: async () => getNextProductAccountCandidate(),
+})
+
+const confirmProductAccountCandidate = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(confirmProductAccountCandidateInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const c = context.schema.storeListingProductAccountCandidates
+    const t = context.schema.storeListings
+    const [candidate] = await context.db
+      .select()
+      .from(c)
+      .where(eq(c.id, data.candidateId))
+      .limit(1)
+
+    if (!candidate || candidate.status !== 'pending') {
+      throw new Error('Candidate not found or not pending.')
+    }
+
+    const full = await getFullDirectoryListing(context, candidate.storeListingId)
+    const did = candidate.candidateDid.trim()
+    if (!did.startsWith('did:')) {
+      throw new Error('Invalid candidate DID.')
+    }
+
+    await publishDirectoryListingDetail(full, { productAccountDid: did })
+
+    const profile = await fetchBlueskyPublicProfileFields(did)
+    const handle =
+      profile?.handle?.trim() && profile.handle.length > 0
+        ? profile.handle.trim()
+        : null
+    const now = new Date()
+
+    await context.db
+      .update(t)
+      .set({
+        productAccountDid: did,
+        productAccountHandle: handle,
+        updatedAt: now,
+      })
+      .where(eq(t.id, candidate.storeListingId))
+
+    await context.db
+      .update(c)
+      .set({ status: 'verified', resolvedAt: now, updatedAt: now })
+      .where(eq(c.id, candidate.id))
+
+    await context.db
+      .update(c)
+      .set({ status: 'superseded', updatedAt: now })
+      .where(
+        and(
+          eq(c.storeListingId, candidate.storeListingId),
+          eq(c.status, 'pending'),
+          ne(c.id, candidate.id),
+        ),
+      )
+
+    return { ok: true as const }
+  })
+
+const rejectProductAccountCandidate = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(rejectProductAccountCandidateInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+
+    const c = context.schema.storeListingProductAccountCandidates
+    const now = new Date()
+    const result = await context.db
+      .update(c)
+      .set({ status: 'rejected', resolvedAt: now, updatedAt: now })
+      .where(and(eq(c.id, data.candidateId), eq(c.status, 'pending')))
+      .returning({ id: c.id })
+
+    if (result.length === 0) {
+      throw new Error('Candidate not found.')
+    }
+
+    return { ok: true as const }
+  })
+
 export const directoryListingApi = {
   getHomePageData,
   getHomePageQueryOptions,
@@ -2551,4 +2705,8 @@ export const directoryListingApi = {
   commitDirectoryListingIcon,
   regenerateDirectoryListingTagline,
   regenerateDirectoryListingDescription,
+  getNextProductAccountCandidate,
+  getNextProductAccountCandidateQueryOptions,
+  confirmProductAccountCandidate,
+  rejectProductAccountCandidate,
 }

@@ -109,6 +109,11 @@ export const lexicons = [
                 "type": "string",
                 "maxLength": 96
               }
+            },
+            "productAccountDid": {
+              "type": "string",
+              "maxLength": 2048,
+              "description": "Bluesky DID for the product, app, or tool (not the AT Store publisher). Handle is resolved and stored in Postgres only."
             }
           }
         }

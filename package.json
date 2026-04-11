@@ -34,7 +34,8 @@
     "lex:lint": "node scripts/goat-lex.mjs lex lint",
     "lex:status": "node scripts/goat-lex.mjs lex status",
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
-    "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts"
+    "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts",
+    "discover:product-bsky": "tsx -r dotenv/config scripts/discover-product-bsky-candidates.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

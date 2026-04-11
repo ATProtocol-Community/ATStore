@@ -86,3 +86,29 @@ export async function fetchBlueskyHandleForDid(
     return null
   }
 }
+
+/**
+ * Resolve a handle (e.g. `name.bsky.social`) to a DID via public ATProto API.
+ */
+export async function resolveBlueskyHandleToDid(
+  handle: string,
+): Promise<string | null> {
+  const trimmed = handle.trim().replace(/^@/, '')
+  if (!trimmed) return null
+  try {
+    const url = new URL(
+      'xrpc/com.atproto.identity.resolveHandle',
+      'https://public.api.bsky.app',
+    )
+    url.searchParams.set('handle', trimmed)
+    const response = await fetch(url.toString(), {
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) return null
+    const data = (await response.json()) as { did?: string }
+    const did = data.did?.trim()
+    return did && did.startsWith('did:') ? did : null
+  } catch {
+    return null
+  }
+}
