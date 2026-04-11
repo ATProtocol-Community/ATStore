@@ -13,7 +13,6 @@ import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
@@ -130,42 +129,40 @@ function ProtocolTagsPage() {
   );
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.pageGap}>
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" justify="between" style={styles.navLinks}>
-              <LinkLink to="/">
-                <ChevronLeft />
-                Home
-              </LinkLink>
-              <LinkLink to="/protocol/listings">All tools</LinkLink>
-            </Flex>
-
-            <AppTagHero
-              description="Browse protocol listings by top-level category — PDS, AppView, and other infrastructure."
-              eyebrow="Protocol categories"
-              imageSrc={getProtocolPageHeroArtSpec("tags")?.assetPath}
-              title="Explore the stack"
-            />
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.pageGap}>
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" justify="between" style={styles.navLinks}>
+            <LinkLink to="/">
+              <ChevronLeft />
+              Home
+            </LinkLink>
+            <LinkLink to="/protocol/listings">All tools</LinkLink>
           </Flex>
 
-          {groups.length > 0 ? (
-            <Flex direction="column" style={styles.pageGap}>
-              {groups.map((group) => (
-                <ProtocolCategorySection key={group.categoryId} group={group} />
-              ))}
-            </Flex>
-          ) : (
-            <Flex direction="column" style={styles.emptyState}>
-              <Body variant="secondary">
-                No protocol listings are available yet.
-              </Body>
-            </Flex>
-          )}
+          <AppTagHero
+            description="Browse protocol listings by top-level category — PDS, AppView, and other infrastructure."
+            eyebrow="Protocol categories"
+            imageSrc={getProtocolPageHeroArtSpec("tags")?.assetPath}
+            title="Explore the stack"
+          />
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        {groups.length > 0 ? (
+          <Flex direction="column" style={styles.pageGap}>
+            {groups.map((group) => (
+              <ProtocolCategorySection key={group.categoryId} group={group} />
+            ))}
+          </Flex>
+        ) : (
+          <Flex direction="column" style={styles.emptyState}>
+            <Body variant="secondary">
+              No protocol listings are available yet.
+            </Body>
+          </Flex>
+        )}
+      </Flex>
+    </Page.Root>
   );
 }
 

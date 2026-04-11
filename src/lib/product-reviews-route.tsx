@@ -106,42 +106,40 @@ export function ProductReviewsPageChrome({
   }
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="small" style={styles.page}>
-        <Flex direction="column" gap="7xl">
-          <Flex style={styles.backLinkRow}>
-            <AppLink
-              to="/products/$productId"
-              params={{ productId: productSlug }}
-            >
-              <ChevronLeft />
-              Back to product
-            </AppLink>
-          </Flex>
-
-          <Flex gap="2xl" align="center">
-            <Avatar
-              alt={listing.name}
-              fallback={getInitials(listing.name)}
-              size="xl"
-              src={listing.iconUrl || undefined}
-            />
-            <Flex direction="column" gap="2xl">
-              <Text
-                font="title"
-                size={{ default: "4xl", sm: "4xl" }}
-                weight="semibold"
-              >
-                {listing.name}
-              </Text>
-              <Body>{listing.tagline}</Body>
-            </Flex>
-          </Flex>
-
-          {children}
+    <Page.Root variant="small" style={styles.page}>
+      <Flex direction="column" gap="7xl">
+        <Flex style={styles.backLinkRow}>
+          <AppLink
+            to="/products/$productId"
+            params={{ productId: productSlug }}
+          >
+            <ChevronLeft />
+            Back to product
+          </AppLink>
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        <Flex gap="2xl" align="center">
+          <Avatar
+            alt={listing.name}
+            fallback={getInitials(listing.name)}
+            size="xl"
+            src={listing.iconUrl || undefined}
+          />
+          <Flex direction="column" gap="2xl">
+            <Text
+              font="title"
+              size={{ default: "4xl", sm: "4xl" }}
+              weight="semibold"
+            >
+              {listing.name}
+            </Text>
+            <Body>{listing.tagline}</Body>
+          </Flex>
+        </Flex>
+
+        {children}
+      </Flex>
+    </Page.Root>
   );
 }
 

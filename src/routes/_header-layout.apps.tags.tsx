@@ -12,7 +12,6 @@ import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
@@ -139,45 +138,43 @@ function AppsAllPage() {
   );
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.gap}>
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" justify="between" style={styles.navLinks}>
-              <LinkLink to="/">
-                <ChevronLeft />
-                Home
-              </LinkLink>
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.gap}>
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" justify="between" style={styles.navLinks}>
+            <LinkLink to="/">
+              <ChevronLeft />
+              Home
+            </LinkLink>
 
-              <LinkLink to="/apps/all" search={{ sort: "popular" }}>
-                All apps
-              </LinkLink>
-            </Flex>
-
-            <AppTagHero
-              eyebrow="Collections"
-              title="Find your new favorite app"
-              description="Explore cross-cutting app tags like analytics, moderation, and automation. Listings can appear in more than one group when they fit multiple workflows."
-              imageSrc={getAppTagHeroArtSpec("all")?.assetPath}
-            />
+            <LinkLink to="/apps/all" search={{ sort: "popular" }}>
+              All apps
+            </LinkLink>
           </Flex>
 
-          {groups.length > 0 ? (
-            <Flex direction="column" style={styles.gap}>
-              {groups.map((group) => (
-                <AppTagSection key={group.tag} group={group} />
-              ))}
-            </Flex>
-          ) : (
-            <Flex direction="column" style={styles.emptyState}>
-              <Body variant="secondary">
-                No tagged app listings are available yet.
-              </Body>
-            </Flex>
-          )}
+          <AppTagHero
+            eyebrow="Collections"
+            title="Find your new favorite app"
+            description="Explore cross-cutting app tags like analytics, moderation, and automation. Listings can appear in more than one group when they fit multiple workflows."
+            imageSrc={getAppTagHeroArtSpec("all")?.assetPath}
+          />
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        {groups.length > 0 ? (
+          <Flex direction="column" style={styles.gap}>
+            {groups.map((group) => (
+              <AppTagSection key={group.tag} group={group} />
+            ))}
+          </Flex>
+        ) : (
+          <Flex direction="column" style={styles.emptyState}>
+            <Body variant="secondary">
+              No tagged app listings are available yet.
+            </Body>
+          </Flex>
+        )}
+      </Flex>
+    </Page.Root>
   );
 }
 

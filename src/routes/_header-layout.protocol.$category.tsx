@@ -15,7 +15,6 @@ import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { blue } from "../design-system/theme/colors/blue.stylex";
@@ -294,42 +293,40 @@ function ProtocolCategoryPage() {
   const related = getRelatedProtocolCategories(data, allGroups);
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.pageContent}>
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" style={styles.navLinks}>
-              <LinkLink to="/protocol/tags">
-                <ChevronLeft />
-                All protocol categories
-              </LinkLink>
-            </Flex>
-
-            <AppTagHero
-              description={description}
-              eyebrow={formatProtocolListingCount(data.count)}
-              imageSrc={heroImage}
-              title={data.label}
-            />
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.pageContent}>
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" style={styles.navLinks}>
+            <LinkLink to="/protocol/tags">
+              <ChevronLeft />
+              All protocol categories
+            </LinkLink>
           </Flex>
 
-          <FeaturedListingGrid
-            getKey={(listing) => `${data.categoryId}-${listing.id}`}
-            items={data.listings}
-            renderItem={(listing, { featured }) => (
-              <ProtocolCategoryListingCard
-                featured={featured}
-                listing={listing}
-              />
-            )}
+          <AppTagHero
+            description={description}
+            eyebrow={formatProtocolListingCount(data.count)}
+            imageSrc={heroImage}
+            title={data.label}
           />
-
-          {related.length > 0 ? (
-            <RelatedProtocolSection groups={related} />
-          ) : null}
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        <FeaturedListingGrid
+          getKey={(listing) => `${data.categoryId}-${listing.id}`}
+          items={data.listings}
+          renderItem={(listing, { featured }) => (
+            <ProtocolCategoryListingCard
+              featured={featured}
+              listing={listing}
+            />
+          )}
+        />
+
+        {related.length > 0 ? (
+          <RelatedProtocolSection groups={related} />
+        ) : null}
+      </Flex>
+    </Page.Root>
   );
 }
 

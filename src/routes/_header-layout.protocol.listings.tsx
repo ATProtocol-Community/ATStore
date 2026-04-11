@@ -13,7 +13,6 @@ import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
@@ -164,73 +163,71 @@ function ProtocolListingsPage() {
   }, [listings, normalizedQuery]);
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" gap="7xl">
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" justify="between" style={styles.navLinks}>
-              <LinkLink to="/">
-                <ChevronLeft />
-                Home
-              </LinkLink>
-              <LinkLink to="/protocol/tags">Browse by category</LinkLink>
-            </Flex>
-
-            <AppTagHero
-              description="Search every protocol listing in the directory — infrastructure, tooling, and services filed under protocol/*."
-              eyebrow={`${listings.length} protocol listings`}
-              imageSrc={getProtocolPageHeroArtSpec("listings")?.assetPath}
-              title="Search protocol listings"
-            />
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" gap="7xl">
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" justify="between" style={styles.navLinks}>
+            <LinkLink to="/">
+              <ChevronLeft />
+              Home
+            </LinkLink>
+            <LinkLink to="/protocol/tags">Browse by category</LinkLink>
           </Flex>
 
-          <Flex direction="column" gap="4xl">
-            <Flex align="center" gap="2xl" style={styles.resultsHeader}>
-              <Flex
-                align="center"
-                direction="row"
-                gap="2xl"
-                style={styles.searchFieldRow}
-              >
-                <SearchField
-                  aria-label="Search all protocol listings"
-                  onChange={setQuery}
-                  placeholder="Search protocol listings"
-                  value={query}
-                  variant="secondary"
-                  size="lg"
-                />
-                <SmallBody style={styles.resultCount}>
-                  {getResultsLabel(
-                    filtered.length,
-                    listings.length,
-                    normalizedQuery,
-                  )}
-                </SmallBody>
-              </Flex>
-            </Flex>
-
-            {filtered.length > 0 ? (
-              <Grid style={styles.listingGrid}>
-                {filtered.map((listing) => (
-                  <ProtocolListingCard key={listing.id} listing={listing} />
-                ))}
-              </Grid>
-            ) : (
-              <Flex direction="column" style={styles.emptyState}>
-                <Text size="2xl" weight="semibold">
-                  No listings matched your search
-                </Text>
-                <Body variant="secondary">
-                  Try a different keyword, or browse categories to explore by
-                  area instead.
-                </Body>
-              </Flex>
-            )}
-          </Flex>
+          <AppTagHero
+            description="Search every protocol listing in the directory — infrastructure, tooling, and services filed under protocol/*."
+            eyebrow={`${listings.length} protocol listings`}
+            imageSrc={getProtocolPageHeroArtSpec("listings")?.assetPath}
+            title="Search protocol listings"
+          />
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        <Flex direction="column" gap="4xl">
+          <Flex align="center" gap="2xl" style={styles.resultsHeader}>
+            <Flex
+              align="center"
+              direction="row"
+              gap="2xl"
+              style={styles.searchFieldRow}
+            >
+              <SearchField
+                aria-label="Search all protocol listings"
+                onChange={setQuery}
+                placeholder="Search protocol listings"
+                value={query}
+                variant="secondary"
+                size="lg"
+              />
+              <SmallBody style={styles.resultCount}>
+                {getResultsLabel(
+                  filtered.length,
+                  listings.length,
+                  normalizedQuery,
+                )}
+              </SmallBody>
+            </Flex>
+          </Flex>
+
+          {filtered.length > 0 ? (
+            <Grid style={styles.listingGrid}>
+              {filtered.map((listing) => (
+                <ProtocolListingCard key={listing.id} listing={listing} />
+              ))}
+            </Grid>
+          ) : (
+            <Flex direction="column" style={styles.emptyState}>
+              <Text size="2xl" weight="semibold">
+                No listings matched your search
+              </Text>
+              <Body variant="secondary">
+                Try a different keyword, or browse categories to explore by area
+                instead.
+              </Body>
+            </Flex>
+          )}
+        </Flex>
+      </Flex>
+    </Page.Root>
   );
 }
 

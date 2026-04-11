@@ -12,7 +12,6 @@ import { BlueskyIcon } from "#/components/bluesky-icon";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { Avatar } from "../design-system/avatar";
 import { Flex } from "../design-system/flex";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Page } from "../design-system/page";
 import {
   gap,
@@ -204,118 +203,116 @@ function UserProfilePage() {
   const blueskyProfileUrl = `https://bsky.app/profile/${blueskyProfileId}`;
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="small" style={styles.page}>
-        <Flex direction="column" style={styles.hero}>
-          <Flex gap="2xl" align="center">
-            <Avatar
-              alt={mainTitle}
-              fallback={mainTitle.charAt(0).toUpperCase()}
-              size="xl"
-              src={page.avatarUrl || undefined}
-            />
-            <Flex direction="column" style={styles.titleBlock}>
-              <Heading3>{mainTitle}</Heading3>
-              {subtitle ? (
-                <Text size="sm" variant="secondary">
-                  {subtitle}
-                </Text>
-              ) : null}
-            </Flex>
-
-            <AriaLink
-              {...stylex.props(buttonStyles, styles.iconButton)}
-              href={blueskyProfileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <BlueskyIcon />
-            </AriaLink>
+    <Page.Root variant="small" style={styles.page}>
+      <Flex direction="column" style={styles.hero}>
+        <Flex gap="2xl" align="center">
+          <Avatar
+            alt={mainTitle}
+            fallback={mainTitle.charAt(0).toUpperCase()}
+            size="xl"
+            src={page.avatarUrl || undefined}
+          />
+          <Flex direction="column" style={styles.titleBlock}>
+            <Heading3>{mainTitle}</Heading3>
+            {subtitle ? (
+              <Text size="sm" variant="secondary">
+                {subtitle}
+              </Text>
+            ) : null}
           </Flex>
-        </Flex>
 
-        {ownedProducts && ownedProducts.length > 0 ? (
-          <Flex direction="column" gap="4xl" style={styles.ownedSection}>
-            <Heading3>Products</Heading3>
-            <div {...stylex.props(styles.ownedGrid)}>
-              {ownedProducts.map((p) => (
-                <RouterLink
-                  key={p.id}
-                  to="/products/$productId"
-                  params={{ productId: getDirectoryListingSlug(p) }}
-                  {...stylex.props(styles.ownedCard)}
+          <AriaLink
+            {...stylex.props(buttonStyles, styles.iconButton)}
+            href={blueskyProfileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <BlueskyIcon />
+          </AriaLink>
+        </Flex>
+      </Flex>
+
+      {ownedProducts && ownedProducts.length > 0 ? (
+        <Flex direction="column" gap="4xl" style={styles.ownedSection}>
+          <Heading3>Products</Heading3>
+          <div {...stylex.props(styles.ownedGrid)}>
+            {ownedProducts.map((p) => (
+              <RouterLink
+                key={p.id}
+                to="/products/$productId"
+                params={{ productId: getDirectoryListingSlug(p) }}
+                {...stylex.props(styles.ownedCard)}
+              >
+                {p.iconUrl ? (
+                  <img
+                    src={p.iconUrl}
+                    alt=""
+                    {...stylex.props(styles.ownedIcon)}
+                  />
+                ) : null}
+                <Flex
+                  direction="column"
+                  gap="xl"
+                  style={styles.ownedTextColumn}
                 >
-                  {p.iconUrl ? (
-                    <img
-                      src={p.iconUrl}
-                      alt=""
-                      {...stylex.props(styles.ownedIcon)}
-                    />
-                  ) : null}
-                  <Flex
-                    direction="column"
-                    gap="xl"
-                    style={styles.ownedTextColumn}
-                  >
-                    <Flex justify="between" align="center" gap="lg">
-                      <Text size="lg" weight="bold">
-                        {p.name}
-                      </Text>
-                      <Text size="sm" variant="secondary">
-                        {p.reviewCount === 0
-                          ? "No reviews"
-                          : `${p.reviewCount} review${p.reviewCount === 1 ? "" : "s"}`}
-                        {p.averageRating != null && p.reviewCount > 0
-                          ? ` · ${Number(p.averageRating).toFixed(1)} ★`
-                          : ""}
-                      </Text>
-                    </Flex>
-                    {p.tagline ? (
-                      <Text size="sm" variant="secondary">
-                        {p.tagline}
-                      </Text>
-                    ) : null}
+                  <Flex justify="between" align="center" gap="lg">
+                    <Text size="lg" weight="bold">
+                      {p.name}
+                    </Text>
+                    <Text size="sm" variant="secondary">
+                      {p.reviewCount === 0
+                        ? "No reviews"
+                        : `${p.reviewCount} review${p.reviewCount === 1 ? "" : "s"}`}
+                      {p.averageRating != null && p.reviewCount > 0
+                        ? ` · ${Number(p.averageRating).toFixed(1)} ★`
+                        : ""}
+                    </Text>
                   </Flex>
-                </RouterLink>
-              ))}
-            </div>
-          </Flex>
-        ) : null}
-
-        <Flex direction="column" gap="4xl" style={styles.reviews}>
-          <Heading3>Reviews</Heading3>
-          {page.reviews.length > 0 ? (
-            page.reviews.map((review) => (
-              <DirectoryListingReviewCard
-                key={review.id}
-                listingId={review.listing.id}
-                reviewedListing={review.listing}
-                review={review}
-                viewerDid={session?.user?.did ?? null}
-                onEditReview={() => {
-                  void navigate({
-                    to: "/products/$productId/reviews/$reviewId/edit",
-                    params: {
-                      productId: getDirectoryListingSlug(review.listing),
-                      reviewId: review.id,
-                    },
-                  });
-                }}
-              />
-            ))
-          ) : (
-            <Flex
-              direction="column"
-              gap="2xl"
-              justify="center"
-              align="center"
-              style={styles.noReviews}
-            >
-              <Body variant="secondary">No reviews yet.</Body>
-            </Flex>
-          )}
+                  {p.tagline ? (
+                    <Text size="sm" variant="secondary">
+                      {p.tagline}
+                    </Text>
+                  ) : null}
+                </Flex>
+              </RouterLink>
+            ))}
+          </div>
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+      ) : null}
+
+      <Flex direction="column" gap="4xl" style={styles.reviews}>
+        <Heading3>Reviews</Heading3>
+        {page.reviews.length > 0 ? (
+          page.reviews.map((review) => (
+            <DirectoryListingReviewCard
+              key={review.id}
+              listingId={review.listing.id}
+              reviewedListing={review.listing}
+              review={review}
+              viewerDid={session?.user?.did ?? null}
+              onEditReview={() => {
+                void navigate({
+                  to: "/products/$productId/reviews/$reviewId/edit",
+                  params: {
+                    productId: getDirectoryListingSlug(review.listing),
+                    reviewId: review.id,
+                  },
+                });
+              }}
+            />
+          ))
+        ) : (
+          <Flex
+            direction="column"
+            gap="2xl"
+            justify="center"
+            align="center"
+            style={styles.noReviews}
+          >
+            <Body variant="secondary">No reviews yet.</Body>
+          </Flex>
+        )}
+      </Flex>
+    </Page.Root>
   );
 }

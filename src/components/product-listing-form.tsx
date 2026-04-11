@@ -433,386 +433,382 @@ export function ProductListingForm({
   }
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="small" style={styles.page}>
-        <Form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit({
-              name,
-              tagline,
-              fullDescription,
-              externalUrl,
-              productHandle,
-              categorySlug,
-              pendingHeroBlob: pendingHeroBlobRef.current,
-              pendingIconBlob: pendingIconBlobRef.current,
-            });
-          }}
-        >
-          <Flex direction="column" gap="5xl" style={styles.section}>
-            <Heading1>{title}</Heading1>
-            <Text size="base" variant="secondary">
-              {description}
-            </Text>
+    <Page.Root variant="small" style={styles.page}>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit({
+            name,
+            tagline,
+            fullDescription,
+            externalUrl,
+            productHandle,
+            categorySlug,
+            pendingHeroBlob: pendingHeroBlobRef.current,
+            pendingIconBlob: pendingIconBlobRef.current,
+          });
+        }}
+      >
+        <Flex direction="column" gap="5xl" style={styles.section}>
+          <Heading1>{title}</Heading1>
+          <Text size="base" variant="secondary">
+            {description}
+          </Text>
 
-            <Card style={styles.card} size="lg">
-              <CardBody>
-                <Flex direction="column" gap="4xl">
-                  <Text weight="semibold" size="lg">
-                    Categorization
-                  </Text>
-                  <Flex wrap align="center" gap="xl">
-                    <Select
-                      label="Type"
-                      items={[
-                        { id: "app", label: "App" },
-                        { id: "app-tool", label: "App Tool" },
-                        { id: "protocol", label: "Protocol Tool" },
-                      ]}
-                      placeholder="Select type"
-                      value={categoryKind}
-                      onChange={(value) => {
-                        if (
-                          value === "app" ||
-                          value === "app-tool" ||
-                          value === "protocol"
-                        ) {
-                          setCategoryKind(value);
-                        }
-                      }}
-                      isRequired
-                      style={styles.grow}
-                    >
-                      {(item) => <SelectItem>{item.label}</SelectItem>}
-                    </Select>
-                    {categoryKind === "app" || categoryKind === "app-tool" ? (
-                      <>
-                        {categoryKind === "app" ? (
-                          <TextField
-                            style={styles.grow}
-                            label="App Slug"
-                            value={appName}
-                            onChange={setAppName}
-                            placeholder="bluesky"
-                            isRequired
-                          />
-                        ) : (
-                          <Select
-                            style={styles.grow}
-                            label="App"
-                            items={appSlugOptions}
-                            placeholder="Select app"
-                            value={selectedAppSlugOption}
-                            onChange={(value) => {
-                              if (typeof value !== "string") return;
-                              setAppName(value);
-                            }}
-                            isRequired
-                          >
-                            {(item) => <SelectItem>{item.label}</SelectItem>}
-                          </Select>
-                        )}
-                        {categoryKind === "app-tool" ? (
-                          <ComboBox
-                            allowsCustomValue
-                            allowsEmptyCollection
-                            style={styles.grow}
-                            label="Category"
-                            items={appCategoryOptions}
-                            renderEmptyState={() => (
-                              <div {...stylex.props(styles.emptyStateMessage)}>
-                                {appSlugKey
-                                  ? "No defined categories for this app yet."
-                                  : "Type an app slug to see known categories."}
-                              </div>
-                            )}
-                            inputValue={appCategoryLabel}
-                            value={selectedAppCategoryOption}
-                            onInputChange={(value) => {
-                              setAppCategoryLabel(value);
-                              setAppCategorySlug(toKebabCaseSegment(value));
-                            }}
-                            onChange={(key) => {
-                              if (key === null) return;
-                              const nextSlug = String(key);
-                              const nextLabel =
-                                appCategoryOptions.find(
-                                  (option) => option.id === nextSlug,
-                                )?.label ?? nextSlug;
-                              setAppCategorySlug(nextSlug);
-                              setAppCategoryLabel(nextLabel);
-                            }}
-                            placeholder="clients"
-                            isRequired
-                          >
-                            {(item) => (
-                              <ComboBoxItem id={item.id}>
-                                {item.label}
-                              </ComboBoxItem>
-                            )}
-                          </ComboBox>
-                        ) : null}
-                      </>
-                    ) : (
-                      <ComboBox
-                        allowsCustomValue
-                        style={styles.grow}
-                        label="Category"
-                        items={protocolCategoryOptions}
-                        inputValue={protocolCategory}
-                        selectedKey={selectedProtocolCategoryOption}
-                        onInputChange={setProtocolCategory}
-                        onSelectionChange={(key) => {
-                          if (key === null) return;
-                          setProtocolCategory(String(key));
-                        }}
-                        placeholder="PDS"
-                        isRequired
-                      >
-                        {(item) => (
-                          <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
-                        )}
-                      </ComboBox>
-                    )}
-                  </Flex>
-                  {categoryKind === "app-tool" ? (
-                    <Flex direction="column" gap="xl">
-                      <Text size="sm" variant="secondary">
-                        Saved as{" "}
-                        <code>
-                          apps/{appName || "<app>"}/
-                          {appCategorySlug || "<category>"}
-                        </code>
-                      </Text>
-                      {isCustomAppCategory ? (
-                        <Text size="sm" variant="critical">
-                          New category detected. Please try to stick to defined
-                          categories when possible.
-                        </Text>
-                      ) : null}
-                    </Flex>
-                  ) : categoryKind === "app" ? (
-                    <Text size="sm" variant="secondary">
-                      Saved as <code>apps/{appName || "<app>"}</code>
-                    </Text>
-                  ) : (
-                    <Flex direction="column" gap="xl">
-                      <Text size="sm" variant="secondary">
-                        Saved in group{" "}
-                        <code>protocol/{protocolCategory || "<category>"}</code>
-                      </Text>
-                      {isCustomProtocolCategory ? (
-                        <Text size="sm" variant="critical">
-                          New category detected. Please try to stick to defined
-                          categories when possible.
-                        </Text>
-                      ) : null}
-                    </Flex>
-                  )}
-                </Flex>
-              </CardBody>
-            </Card>
-
-            <Card style={styles.card} size="lg">
-              <CardBody>
-                <Flex direction="column" gap="2xl" style={styles.imageSection}>
-                  <Text weight="semibold" size="lg">
-                    Images
-                  </Text>
-                  <Flex direction="column" style={styles.imageAsset}>
-                    <Flex style={styles.imageAssetHeader}>
-                      <Flex style={styles.requiredLabel}>
-                        <Text size="sm" variant="secondary">
-                          Hero (16:9)
-                        </Text>
-                        <Text size="sm" variant="critical">
-                          *
-                        </Text>
-                      </Flex>
-                    </Flex>
-                    <FileDropZone
-                      acceptedFileTypes={["image/*"]}
-                      isDisabled={isSubmitting}
-                      onAddFiles={(files) => {
-                        onPickFile("hero", files[0]);
-                      }}
-                      style={[styles.imageDropZone, styles.imageDropZoneHero]}
-                    >
-                      {pendingHeroPreviewUrl || initialValues.heroImageUrl ? (
-                        <img
-                          src={
-                            pendingHeroPreviewUrl ??
-                            initialValues.heroImageUrl ??
-                            ""
-                          }
-                          alt=""
-                          {...stylex.props(styles.imagePreviewHero)}
+          <Card style={styles.card} size="lg">
+            <CardBody>
+              <Flex direction="column" gap="4xl">
+                <Text weight="semibold" size="lg">
+                  Categorization
+                </Text>
+                <Flex wrap align="center" gap="xl">
+                  <Select
+                    label="Type"
+                    items={[
+                      { id: "app", label: "App" },
+                      { id: "app-tool", label: "App Tool" },
+                      { id: "protocol", label: "Protocol Tool" },
+                    ]}
+                    placeholder="Select type"
+                    value={categoryKind}
+                    onChange={(value) => {
+                      if (
+                        value === "app" ||
+                        value === "app-tool" ||
+                        value === "protocol"
+                      ) {
+                        setCategoryKind(value);
+                      }
+                    }}
+                    isRequired
+                    style={styles.grow}
+                  >
+                    {(item) => <SelectItem>{item.label}</SelectItem>}
+                  </Select>
+                  {categoryKind === "app" || categoryKind === "app-tool" ? (
+                    <>
+                      {categoryKind === "app" ? (
+                        <TextField
+                          style={styles.grow}
+                          label="App Slug"
+                          value={appName}
+                          onChange={setAppName}
+                          placeholder="bluesky"
+                          isRequired
                         />
                       ) : (
-                        <div {...stylex.props(styles.imagePreviewHero)} />
+                        <Select
+                          style={styles.grow}
+                          label="App"
+                          items={appSlugOptions}
+                          placeholder="Select app"
+                          value={selectedAppSlugOption}
+                          onChange={(value) => {
+                            if (typeof value !== "string") return;
+                            setAppName(value);
+                          }}
+                          isRequired
+                        >
+                          {(item) => <SelectItem>{item.label}</SelectItem>}
+                        </Select>
                       )}
-                      <FileDropDefaultTrigger aria-label="Select hero image">
-                        Change hero
-                      </FileDropDefaultTrigger>
-                    </FileDropZone>
-                  </Flex>
-                  <Flex direction="column" style={styles.imageAsset}>
-                    <Flex style={styles.imageAssetHeader}>
-                      <Flex style={styles.requiredLabel}>
-                        <Text size="sm" variant="secondary">
-                          Icon (square)
-                        </Text>
-                        <Text size="sm" variant="critical">
-                          *
-                        </Text>
-                      </Flex>
-                    </Flex>
-                    <FileDropZone
-                      acceptedFileTypes={["image/*"]}
-                      isDisabled={isSubmitting}
-                      onAddFiles={(files) => {
-                        onPickFile("icon", files[0]);
+                      {categoryKind === "app-tool" ? (
+                        <ComboBox
+                          allowsCustomValue
+                          allowsEmptyCollection
+                          style={styles.grow}
+                          label="Category"
+                          items={appCategoryOptions}
+                          renderEmptyState={() => (
+                            <div {...stylex.props(styles.emptyStateMessage)}>
+                              {appSlugKey
+                                ? "No defined categories for this app yet."
+                                : "Type an app slug to see known categories."}
+                            </div>
+                          )}
+                          inputValue={appCategoryLabel}
+                          value={selectedAppCategoryOption}
+                          onInputChange={(value) => {
+                            setAppCategoryLabel(value);
+                            setAppCategorySlug(toKebabCaseSegment(value));
+                          }}
+                          onChange={(key) => {
+                            if (key === null) return;
+                            const nextSlug = String(key);
+                            const nextLabel =
+                              appCategoryOptions.find(
+                                (option) => option.id === nextSlug,
+                              )?.label ?? nextSlug;
+                            setAppCategorySlug(nextSlug);
+                            setAppCategoryLabel(nextLabel);
+                          }}
+                          placeholder="clients"
+                          isRequired
+                        >
+                          {(item) => (
+                            <ComboBoxItem id={item.id}>
+                              {item.label}
+                            </ComboBoxItem>
+                          )}
+                        </ComboBox>
+                      ) : null}
+                    </>
+                  ) : (
+                    <ComboBox
+                      allowsCustomValue
+                      style={styles.grow}
+                      label="Category"
+                      items={protocolCategoryOptions}
+                      inputValue={protocolCategory}
+                      selectedKey={selectedProtocolCategoryOption}
+                      onInputChange={setProtocolCategory}
+                      onSelectionChange={(key) => {
+                        if (key === null) return;
+                        setProtocolCategory(String(key));
                       }}
-                      style={[styles.imageDropZone, styles.imageDropZoneIcon]}
+                      placeholder="PDS"
+                      isRequired
                     >
-                      <Flex style={styles.imageIconRow}>
-                        {pendingIconPreviewUrl || initialValues.iconUrl ? (
-                          <img
-                            src={
-                              pendingIconPreviewUrl ??
-                              initialValues.iconUrl ??
-                              ""
-                            }
-                            alt=""
-                            {...stylex.props(styles.imagePreviewIcon)}
-                          />
-                        ) : (
-                          <div {...stylex.props(styles.imagePreviewIcon)} />
-                        )}
-                      </Flex>
-                      <FileDropDefaultTrigger aria-label="Select icon image">
-                        Change icon
-                      </FileDropDefaultTrigger>
-                    </FileDropZone>
-                  </Flex>
+                      {(item) => (
+                        <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
+                      )}
+                    </ComboBox>
+                  )}
                 </Flex>
-              </CardBody>
-            </Card>
+                {categoryKind === "app-tool" ? (
+                  <Flex direction="column" gap="xl">
+                    <Text size="sm" variant="secondary">
+                      Saved as{" "}
+                      <code>
+                        apps/{appName || "<app>"}/
+                        {appCategorySlug || "<category>"}
+                      </code>
+                    </Text>
+                    {isCustomAppCategory ? (
+                      <Text size="sm" variant="critical">
+                        New category detected. Please try to stick to defined
+                        categories when possible.
+                      </Text>
+                    ) : null}
+                  </Flex>
+                ) : categoryKind === "app" ? (
+                  <Text size="sm" variant="secondary">
+                    Saved as <code>apps/{appName || "<app>"}</code>
+                  </Text>
+                ) : (
+                  <Flex direction="column" gap="xl">
+                    <Text size="sm" variant="secondary">
+                      Saved in group{" "}
+                      <code>protocol/{protocolCategory || "<category>"}</code>
+                    </Text>
+                    {isCustomProtocolCategory ? (
+                      <Text size="sm" variant="critical">
+                        New category detected. Please try to stick to defined
+                        categories when possible.
+                      </Text>
+                    ) : null}
+                  </Flex>
+                )}
+              </Flex>
+            </CardBody>
+          </Card>
 
-            {cropSourceBlob && cropKind ? (
-              <ImageCropperDialog
-                key={`${String(cropSession)}-${cropKind}`}
-                image={cropSourceBlob}
-                aspectRatio={cropKind === "hero" ? 16 / 9 : 1}
-                title={cropKind === "hero" ? "Crop hero image" : "Crop icon"}
-                description="Drag to reposition, use the slider to zoom, then save."
-                isOpen={cropperOpen}
-                onOpenChange={(open) => {
-                  setCropperOpen(open);
-                  if (!open) {
-                    setCropSourceBlob(null);
-                    setCropKind(null);
-                  }
-                }}
-                onSubmit={async (cropped) => {
-                  const nextPreviewUrl = URL.createObjectURL(cropped);
-                  if (cropKind === "hero") {
-                    if (pendingHeroPreviewUrl) {
-                      URL.revokeObjectURL(pendingHeroPreviewUrl);
-                    }
-                    pendingHeroBlobRef.current = cropped;
-                    setPendingHeroPreviewUrl(nextPreviewUrl);
-                  } else {
-                    if (pendingIconPreviewUrl) {
-                      URL.revokeObjectURL(pendingIconPreviewUrl);
-                    }
-                    pendingIconBlobRef.current = cropped;
-                    setPendingIconPreviewUrl(nextPreviewUrl);
-                  }
-                  setCropperOpen(false);
+          <Card style={styles.card} size="lg">
+            <CardBody>
+              <Flex direction="column" gap="2xl" style={styles.imageSection}>
+                <Text weight="semibold" size="lg">
+                  Images
+                </Text>
+                <Flex direction="column" style={styles.imageAsset}>
+                  <Flex style={styles.imageAssetHeader}>
+                    <Flex style={styles.requiredLabel}>
+                      <Text size="sm" variant="secondary">
+                        Hero (16:9)
+                      </Text>
+                      <Text size="sm" variant="critical">
+                        *
+                      </Text>
+                    </Flex>
+                  </Flex>
+                  <FileDropZone
+                    acceptedFileTypes={["image/*"]}
+                    isDisabled={isSubmitting}
+                    onAddFiles={(files) => {
+                      onPickFile("hero", files[0]);
+                    }}
+                    style={[styles.imageDropZone, styles.imageDropZoneHero]}
+                  >
+                    {pendingHeroPreviewUrl || initialValues.heroImageUrl ? (
+                      <img
+                        src={
+                          pendingHeroPreviewUrl ??
+                          initialValues.heroImageUrl ??
+                          ""
+                        }
+                        alt=""
+                        {...stylex.props(styles.imagePreviewHero)}
+                      />
+                    ) : (
+                      <div {...stylex.props(styles.imagePreviewHero)} />
+                    )}
+                    <FileDropDefaultTrigger aria-label="Select hero image">
+                      Change hero
+                    </FileDropDefaultTrigger>
+                  </FileDropZone>
+                </Flex>
+                <Flex direction="column" style={styles.imageAsset}>
+                  <Flex style={styles.imageAssetHeader}>
+                    <Flex style={styles.requiredLabel}>
+                      <Text size="sm" variant="secondary">
+                        Icon (square)
+                      </Text>
+                      <Text size="sm" variant="critical">
+                        *
+                      </Text>
+                    </Flex>
+                  </Flex>
+                  <FileDropZone
+                    acceptedFileTypes={["image/*"]}
+                    isDisabled={isSubmitting}
+                    onAddFiles={(files) => {
+                      onPickFile("icon", files[0]);
+                    }}
+                    style={[styles.imageDropZone, styles.imageDropZoneIcon]}
+                  >
+                    <Flex style={styles.imageIconRow}>
+                      {pendingIconPreviewUrl || initialValues.iconUrl ? (
+                        <img
+                          src={
+                            pendingIconPreviewUrl ?? initialValues.iconUrl ?? ""
+                          }
+                          alt=""
+                          {...stylex.props(styles.imagePreviewIcon)}
+                        />
+                      ) : (
+                        <div {...stylex.props(styles.imagePreviewIcon)} />
+                      )}
+                    </Flex>
+                    <FileDropDefaultTrigger aria-label="Select icon image">
+                      Change icon
+                    </FileDropDefaultTrigger>
+                  </FileDropZone>
+                </Flex>
+              </Flex>
+            </CardBody>
+          </Card>
+
+          {cropSourceBlob && cropKind ? (
+            <ImageCropperDialog
+              key={`${String(cropSession)}-${cropKind}`}
+              image={cropSourceBlob}
+              aspectRatio={cropKind === "hero" ? 16 / 9 : 1}
+              title={cropKind === "hero" ? "Crop hero image" : "Crop icon"}
+              description="Drag to reposition, use the slider to zoom, then save."
+              isOpen={cropperOpen}
+              onOpenChange={(open) => {
+                setCropperOpen(open);
+                if (!open) {
                   setCropSourceBlob(null);
                   setCropKind(null);
-                }}
-              />
-            ) : null}
+                }
+              }}
+              onSubmit={async (cropped) => {
+                const nextPreviewUrl = URL.createObjectURL(cropped);
+                if (cropKind === "hero") {
+                  if (pendingHeroPreviewUrl) {
+                    URL.revokeObjectURL(pendingHeroPreviewUrl);
+                  }
+                  pendingHeroBlobRef.current = cropped;
+                  setPendingHeroPreviewUrl(nextPreviewUrl);
+                } else {
+                  if (pendingIconPreviewUrl) {
+                    URL.revokeObjectURL(pendingIconPreviewUrl);
+                  }
+                  pendingIconBlobRef.current = cropped;
+                  setPendingIconPreviewUrl(nextPreviewUrl);
+                }
+                setCropperOpen(false);
+                setCropSourceBlob(null);
+                setCropKind(null);
+              }}
+            />
+          ) : null}
 
-            <Card style={styles.card} size="lg">
-              <CardBody>
-                <Flex direction="column" gap="4xl">
-                  <Text weight="semibold" size="lg">
-                    Listing Details
-                  </Text>
-                  <Flex direction="column" style={styles.form}>
-                    <TextField
-                      label="Name"
-                      value={name}
-                      onChange={setName}
-                      isRequired
-                    />
-                    <UserHandleAutocomplete
-                      label="Product handle"
-                      value={productHandle}
-                      onValueChange={setProductHandle}
-                      placeholder="your.handle.com"
-                      size="lg"
-                    />
-                    <TextField
-                      label="Tagline"
-                      value={tagline}
-                      onChange={setTagline}
-                      isRequired
-                    />
-                    <TextField
-                      label="Primary URL"
-                      value={externalUrl}
-                      onChange={setExternalUrl}
-                      isRequired
-                    />
-                    <TextArea
-                      label="Description"
-                      value={fullDescription}
-                      onChange={setFullDescription}
-                      rows={10}
-                    />
-                    {errorMessage ? (
-                      <Text size="sm" variant="critical">
-                        {errorMessage}
-                      </Text>
-                    ) : null}
-                    {successMessage ? (
-                      <Text size="sm" variant="secondary">
-                        {successMessage}
-                      </Text>
-                    ) : null}
-                  </Flex>
+          <Card style={styles.card} size="lg">
+            <CardBody>
+              <Flex direction="column" gap="4xl">
+                <Text weight="semibold" size="lg">
+                  Listing Details
+                </Text>
+                <Flex direction="column" style={styles.form}>
+                  <TextField
+                    label="Name"
+                    value={name}
+                    onChange={setName}
+                    isRequired
+                  />
+                  <UserHandleAutocomplete
+                    label="Product handle"
+                    value={productHandle}
+                    onValueChange={setProductHandle}
+                    placeholder="your.handle.com"
+                    size="lg"
+                  />
+                  <TextField
+                    label="Tagline"
+                    value={tagline}
+                    onChange={setTagline}
+                    isRequired
+                  />
+                  <TextField
+                    label="Primary URL"
+                    value={externalUrl}
+                    onChange={setExternalUrl}
+                    isRequired
+                  />
+                  <TextArea
+                    label="Description"
+                    value={fullDescription}
+                    onChange={setFullDescription}
+                    rows={10}
+                  />
+                  {errorMessage ? (
+                    <Text size="sm" variant="critical">
+                      {errorMessage}
+                    </Text>
+                  ) : null}
+                  {successMessage ? (
+                    <Text size="sm" variant="secondary">
+                      {successMessage}
+                    </Text>
+                  ) : null}
                 </Flex>
-              </CardBody>
-            </Card>
+              </Flex>
+            </CardBody>
+          </Card>
+        </Flex>
+        <Page.StickyFooter>
+          <Flex gap="md" wrap style={styles.stickyFooterActions}>
+            <Button
+              variant="secondary"
+              isDisabled={isSubmitting}
+              size="lg"
+              onPress={onCancel}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              variant="primary"
+              isPending={isSubmitting}
+              isDisabled={!hasValidCategoryInputs || !hasRequiredImages}
+              type="submit"
+            >
+              {submitLabel}
+            </Button>
           </Flex>
-          <Page.StickyFooter>
-            <Flex gap="md" wrap style={styles.stickyFooterActions}>
-              <Button
-                variant="secondary"
-                isDisabled={isSubmitting}
-                size="lg"
-                onPress={onCancel}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="lg"
-                variant="primary"
-                isPending={isSubmitting}
-                isDisabled={!hasValidCategoryInputs || !hasRequiredImages}
-                type="submit"
-              >
-                {submitLabel}
-              </Button>
-            </Flex>
-          </Page.StickyFooter>
-        </Form>
-      </Page.Root>
-    </HeaderLayout.Page>
+        </Page.StickyFooter>
+      </Form>
+    </Page.Root>
   );
 }

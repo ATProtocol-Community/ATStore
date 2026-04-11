@@ -8,7 +8,6 @@ import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { TextField } from "../design-system/text-field";
@@ -228,228 +227,220 @@ function DevAppTagsPage() {
   }
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.pageContent}>
-          <Flex gap="xl" style={styles.filterBar}>
-            <AppLink to={"/categories/all" as never}>
-              Back to categories
-            </AppLink>
-            <AppLink to="/dev/categories">Recategorize categories</AppLink>
-            <AppLink to="/">Home</AppLink>
-          </Flex>
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.pageContent}>
+        <Flex gap="xl" style={styles.filterBar}>
+          <AppLink to={"/categories/all" as never}>Back to categories</AppLink>
+          <AppLink to="/dev/categories">Recategorize categories</AppLink>
+          <AppLink to="/">Home</AppLink>
+        </Flex>
 
-          <Flex direction="column" style={styles.pageHeader}>
-            <Heading1>App tag categorization</Heading1>
-          </Flex>
+        <Flex direction="column" style={styles.pageHeader}>
+          <Heading1>App tag categorization</Heading1>
+        </Flex>
 
-          <Flex gap="2xl" style={styles.statsRow}>
-            <Card style={styles.statCard}>
-              <Flex direction="column" gap="sm">
-                <SmallBody>Total</SmallBody>
-                <Text size="3xl" weight="semibold">
-                  {stats.total}
-                </Text>
+        <Flex gap="2xl" style={styles.statsRow}>
+          <Card style={styles.statCard}>
+            <Flex direction="column" gap="sm">
+              <SmallBody>Total</SmallBody>
+              <Text size="3xl" weight="semibold">
+                {stats.total}
+              </Text>
+            </Flex>
+          </Card>
+          <Card style={styles.statCard}>
+            <Flex direction="column" gap="sm">
+              <SmallBody>Tagged</SmallBody>
+              <Text size="3xl" weight="semibold">
+                {stats.tagged}
+              </Text>
+            </Flex>
+          </Card>
+          <Card style={styles.statCard}>
+            <Flex direction="column" gap="sm">
+              <SmallBody>Untagged</SmallBody>
+              <Text size="3xl" weight="semibold">
+                {stats.untagged}
+              </Text>
+            </Flex>
+          </Card>
+        </Flex>
+
+        <Flex align="center" gap="md" style={styles.filterBar}>
+          <Button
+            size="sm"
+            variant={showUntaggedOnly ? "primary" : "secondary"}
+            onPress={() => {
+              setShowUntaggedOnly(true);
+            }}
+          >
+            Untagged only
+          </Button>
+          <Button
+            size="sm"
+            variant={!showUntaggedOnly ? "primary" : "secondary"}
+            onPress={() => {
+              setShowUntaggedOnly(false);
+            }}
+          >
+            All listings
+          </Button>
+        </Flex>
+
+        <Flex direction="column" style={styles.listingList}>
+          {visibleListings.length === 0 ? (
+            <Card style={styles.listingCard}>
+              <Flex direction="column" gap="md" style={styles.listingCardBody}>
+                <Text weight="semibold">No listings match this filter</Text>
+                <SmallBody style={styles.helperText}>
+                  Switch to &quot;All listings&quot; or tag remaining rows.
+                </SmallBody>
               </Flex>
             </Card>
-            <Card style={styles.statCard}>
-              <Flex direction="column" gap="sm">
-                <SmallBody>Tagged</SmallBody>
-                <Text size="3xl" weight="semibold">
-                  {stats.tagged}
-                </Text>
-              </Flex>
-            </Card>
-            <Card style={styles.statCard}>
-              <Flex direction="column" gap="sm">
-                <SmallBody>Untagged</SmallBody>
-                <Text size="3xl" weight="semibold">
-                  {stats.untagged}
-                </Text>
-              </Flex>
-            </Card>
-          </Flex>
+          ) : null}
+          {visibleListings.map((listing) => {
+            const draft = getDraft(listing);
+            const isSaving = savingId === listing.id;
+            const isDirty = !tagsEqual(draft, listing.appTags);
+            const suggestedAvailable = listing.suggestedTags.filter(
+              (tag) => !draft.includes(tag),
+            );
+            const customValue = customInputById[listing.id] ?? "";
 
-          <Flex align="center" gap="md" style={styles.filterBar}>
-            <Button
-              size="sm"
-              variant={showUntaggedOnly ? "primary" : "secondary"}
-              onPress={() => {
-                setShowUntaggedOnly(true);
-              }}
-            >
-              Untagged only
-            </Button>
-            <Button
-              size="sm"
-              variant={!showUntaggedOnly ? "primary" : "secondary"}
-              onPress={() => {
-                setShowUntaggedOnly(false);
-              }}
-            >
-              All listings
-            </Button>
-          </Flex>
-
-          <Flex direction="column" style={styles.listingList}>
-            {visibleListings.length === 0 ? (
-              <Card style={styles.listingCard}>
-                <Flex
-                  direction="column"
-                  gap="md"
-                  style={styles.listingCardBody}
-                >
-                  <Text weight="semibold">No listings match this filter</Text>
-                  <SmallBody style={styles.helperText}>
-                    Switch to &quot;All listings&quot; or tag remaining rows.
-                  </SmallBody>
-                </Flex>
-              </Card>
-            ) : null}
-            {visibleListings.map((listing) => {
-              const draft = getDraft(listing);
-              const isSaving = savingId === listing.id;
-              const isDirty = !tagsEqual(draft, listing.appTags);
-              const suggestedAvailable = listing.suggestedTags.filter(
-                (tag) => !draft.includes(tag),
-              );
-              const customValue = customInputById[listing.id] ?? "";
-
-              return (
-                <Card key={listing.id} style={styles.listingCard}>
-                  <Flex direction="column" style={styles.listingCardBody}>
-                    <Flex gap="2xl" style={styles.listingHeader}>
-                      <Avatar
-                        alt={listing.name}
-                        fallback={getInitials(listing.name)}
-                        size="xl"
-                        src={listing.iconUrl || undefined}
-                      />
-                      <Flex
-                        direction="column"
-                        gap="md"
-                        style={styles.listingMeta}
-                      >
-                        <Text size="xl" weight="semibold">
-                          {listing.name}
-                        </Text>
-                        <Body variant="secondary">{listing.tagline}</Body>
-                        {listing.externalUrl ? (
-                          <Link href={listing.externalUrl}>
-                            Open external URL
-                          </Link>
-                        ) : (
-                          <SmallBody style={styles.helperText}>
-                            No resolved external URL yet.
-                          </SmallBody>
-                        )}
+            return (
+              <Card key={listing.id} style={styles.listingCard}>
+                <Flex direction="column" style={styles.listingCardBody}>
+                  <Flex gap="2xl" style={styles.listingHeader}>
+                    <Avatar
+                      alt={listing.name}
+                      fallback={getInitials(listing.name)}
+                      size="xl"
+                      src={listing.iconUrl || undefined}
+                    />
+                    <Flex
+                      direction="column"
+                      gap="md"
+                      style={styles.listingMeta}
+                    >
+                      <Text size="xl" weight="semibold">
+                        {listing.name}
+                      </Text>
+                      <Body variant="secondary">{listing.tagline}</Body>
+                      {listing.externalUrl ? (
+                        <Link href={listing.externalUrl}>
+                          Open external URL
+                        </Link>
+                      ) : (
                         <SmallBody style={styles.helperText}>
-                          Category:{" "}
-                          {listing.categorySlugs.length > 0
-                            ? listing.categorySlugs.join(", ")
-                            : "—"}
+                          No resolved external URL yet.
                         </SmallBody>
-                      </Flex>
+                      )}
+                      <SmallBody style={styles.helperText}>
+                        Category:{" "}
+                        {listing.categorySlugs.length > 0
+                          ? listing.categorySlugs.join(", ")
+                          : "—"}
+                      </SmallBody>
                     </Flex>
+                  </Flex>
 
-                    <Flex direction="column" gap="sm">
-                      <Text weight="semibold">Tags</Text>
-                      <Flex gap="sm" style={styles.tagRow}>
-                        {draft.length === 0 ? (
-                          <SmallBody style={styles.helperText}>
-                            No tags yet.
-                          </SmallBody>
-                        ) : null}
-                        {draft.map((tag) => (
+                  <Flex direction="column" gap="sm">
+                    <Text weight="semibold">Tags</Text>
+                    <Flex gap="sm" style={styles.tagRow}>
+                      {draft.length === 0 ? (
+                        <SmallBody style={styles.helperText}>
+                          No tags yet.
+                        </SmallBody>
+                      ) : null}
+                      {draft.map((tag) => (
+                        <Button
+                          key={tag}
+                          size="sm"
+                          variant="tertiary"
+                          onPress={() => {
+                            removeTag(listing, tag);
+                          }}
+                        >
+                          <Flex align="center" gap="xs" style={styles.chip}>
+                            <span>{formatTagLabel(tag)}</span>
+                            <X aria-hidden size={14} />
+                          </Flex>
+                        </Button>
+                      ))}
+                    </Flex>
+                  </Flex>
+
+                  <Flex direction="column" gap="sm">
+                    <Text weight="semibold">Suggested</Text>
+                    {suggestedAvailable.length === 0 ? (
+                      <SmallBody style={styles.helperText}>
+                        No suggestions left, or add a custom tag below.
+                      </SmallBody>
+                    ) : (
+                      <Flex gap="sm" style={styles.suggestedRow}>
+                        {suggestedAvailable.map((tag) => (
                           <Button
                             key={tag}
                             size="sm"
-                            variant="tertiary"
+                            variant="secondary"
                             onPress={() => {
-                              removeTag(listing, tag);
+                              addTag(listing, tag);
                             }}
                           >
-                            <Flex align="center" gap="xs" style={styles.chip}>
-                              <span>{formatTagLabel(tag)}</span>
-                              <X aria-hidden size={14} />
-                            </Flex>
+                            + {formatTagLabel(tag)}
                           </Button>
                         ))}
                       </Flex>
-                    </Flex>
-
-                    <Flex direction="column" gap="sm">
-                      <Text weight="semibold">Suggested</Text>
-                      {suggestedAvailable.length === 0 ? (
-                        <SmallBody style={styles.helperText}>
-                          No suggestions left, or add a custom tag below.
-                        </SmallBody>
-                      ) : (
-                        <Flex gap="sm" style={styles.suggestedRow}>
-                          {suggestedAvailable.map((tag) => (
-                            <Button
-                              key={tag}
-                              size="sm"
-                              variant="secondary"
-                              onPress={() => {
-                                addTag(listing, tag);
-                              }}
-                            >
-                              + {formatTagLabel(tag)}
-                            </Button>
-                          ))}
-                        </Flex>
-                      )}
-                    </Flex>
-
-                    <Flex align="end" gap="md">
-                      <TextField
-                        label="Add custom tag"
-                        value={customValue}
-                        onChange={(value) => {
-                          setCustomInputById((current) => ({
-                            ...current,
-                            [listing.id]: value,
-                          }));
-                        }}
-                        placeholder="e.g. analytics"
-                      />
-                      <Button
-                        size="md"
-                        variant="secondary"
-                        onPress={() => {
-                          addTag(listing, customValue);
-                          setCustomInputById((current) => ({
-                            ...current,
-                            [listing.id]: "",
-                          }));
-                        }}
-                      >
-                        Add
-                      </Button>
-                    </Flex>
-
-                    <Flex align="center" gap="md">
-                      <Button
-                        isDisabled={!isDirty || isSaving}
-                        variant="primary"
-                        onPress={() => {
-                          void saveListing(listing);
-                        }}
-                      >
-                        {isSaving ? "Saving…" : "Save tags"}
-                      </Button>
-                      <Text size="sm" style={styles.saveStatus}>
-                        {lastSavedId === listing.id ? "Saved." : ""}
-                      </Text>
-                    </Flex>
+                    )}
                   </Flex>
-                </Card>
-              );
-            })}
-          </Flex>
+
+                  <Flex align="end" gap="md">
+                    <TextField
+                      label="Add custom tag"
+                      value={customValue}
+                      onChange={(value) => {
+                        setCustomInputById((current) => ({
+                          ...current,
+                          [listing.id]: value,
+                        }));
+                      }}
+                      placeholder="e.g. analytics"
+                    />
+                    <Button
+                      size="md"
+                      variant="secondary"
+                      onPress={() => {
+                        addTag(listing, customValue);
+                        setCustomInputById((current) => ({
+                          ...current,
+                          [listing.id]: "",
+                        }));
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </Flex>
+
+                  <Flex align="center" gap="md">
+                    <Button
+                      isDisabled={!isDirty || isSaving}
+                      variant="primary"
+                      onPress={() => {
+                        void saveListing(listing);
+                      }}
+                    >
+                      {isSaving ? "Saving…" : "Save tags"}
+                    </Button>
+                    <Text size="sm" style={styles.saveStatus}>
+                      {lastSavedId === listing.id ? "Saved." : ""}
+                    </Text>
+                  </Flex>
+                </Flex>
+              </Card>
+            );
+          })}
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+      </Flex>
+    </Page.Root>
   );
 }

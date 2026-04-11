@@ -14,7 +14,6 @@ import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
@@ -197,96 +196,94 @@ function AppsAllPage() {
   }, [apps, normalizedQuery]);
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" gap="7xl">
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" justify="between" style={styles.navLinks}>
-              <LinkLink to="/">
-                <ChevronLeft />
-                Home
-              </LinkLink>
-              <LinkLink to="/apps/tags">Browse by tag</LinkLink>
-            </Flex>
-
-            <AppTagHero
-              eyebrow={`${apps.length} curated app listings`}
-              title="Browse All Apps"
-              description="Scan the full Bluesky app catalog in one place, then narrow it down with search or jump into editorial collections by tag."
-              imageSrc={getAppTagHeroArtSpec("all-apps")?.assetPath}
-            />
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" gap="7xl">
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" justify="between" style={styles.navLinks}>
+            <LinkLink to="/">
+              <ChevronLeft />
+              Home
+            </LinkLink>
+            <LinkLink to="/apps/tags">Browse by tag</LinkLink>
           </Flex>
 
-          <Flex direction="column" gap="4xl">
-            <Flex align="center" gap="2xl" style={styles.resultsHeader}>
-              <Flex
-                direction="row"
-                gap="2xl"
-                align="center"
-                style={styles.searchField}
-              >
-                <SearchField
-                  aria-label="Search all apps"
-                  onChange={setQuery}
-                  placeholder="Search apps"
-                  value={query}
-                  variant="secondary"
-                  size="lg"
-                />
-                <SmallBody style={styles.resultCount}>
-                  {getResultsLabel(
-                    filteredApps.length,
-                    apps.length,
-                    normalizedQuery,
-                  )}
-                </SmallBody>
-              </Flex>
-              <Flex gap="xl" style={styles.resultsActions}>
-                <Select
-                  aria-label="Sort apps"
-                  items={sortOptions}
-                  placeholder="Sort apps"
-                  size="lg"
-                  style={styles.sortSelect}
-                  value={search.sort}
-                  variant="secondary"
-                  onChange={(key) => {
-                    if (key !== "popular" && key !== "newest") {
-                      return;
-                    }
-
-                    void router.navigate({
-                      to: "/apps/all",
-                      search: { sort: key },
-                    });
-                  }}
-                >
-                  {(item) => <SelectItem>{item.label}</SelectItem>}
-                </Select>
-              </Flex>
-            </Flex>
-
-            {filteredApps.length > 0 ? (
-              <Grid style={styles.listingGrid}>
-                {filteredApps.map((listing) => (
-                  <AllAppsListingCard key={listing.id} listing={listing} />
-                ))}
-              </Grid>
-            ) : (
-              <Flex direction="column" style={styles.emptyState}>
-                <Text size="2xl" weight="semibold">
-                  No apps matched your search
-                </Text>
-                <Body variant="secondary">
-                  Try a different keyword, or browse the editorial collections
-                  to explore by workflow instead.
-                </Body>
-              </Flex>
-            )}
-          </Flex>
+          <AppTagHero
+            eyebrow={`${apps.length} curated app listings`}
+            title="Browse All Apps"
+            description="Scan the full Bluesky app catalog in one place, then narrow it down with search or jump into editorial collections by tag."
+            imageSrc={getAppTagHeroArtSpec("all-apps")?.assetPath}
+          />
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        <Flex direction="column" gap="4xl">
+          <Flex align="center" gap="2xl" style={styles.resultsHeader}>
+            <Flex
+              direction="row"
+              gap="2xl"
+              align="center"
+              style={styles.searchField}
+            >
+              <SearchField
+                aria-label="Search all apps"
+                onChange={setQuery}
+                placeholder="Search apps"
+                value={query}
+                variant="secondary"
+                size="lg"
+              />
+              <SmallBody style={styles.resultCount}>
+                {getResultsLabel(
+                  filteredApps.length,
+                  apps.length,
+                  normalizedQuery,
+                )}
+              </SmallBody>
+            </Flex>
+            <Flex gap="xl" style={styles.resultsActions}>
+              <Select
+                aria-label="Sort apps"
+                items={sortOptions}
+                placeholder="Sort apps"
+                size="lg"
+                style={styles.sortSelect}
+                value={search.sort}
+                variant="secondary"
+                onChange={(key) => {
+                  if (key !== "popular" && key !== "newest") {
+                    return;
+                  }
+
+                  void router.navigate({
+                    to: "/apps/all",
+                    search: { sort: key },
+                  });
+                }}
+              >
+                {(item) => <SelectItem>{item.label}</SelectItem>}
+              </Select>
+            </Flex>
+          </Flex>
+
+          {filteredApps.length > 0 ? (
+            <Grid style={styles.listingGrid}>
+              {filteredApps.map((listing) => (
+                <AllAppsListingCard key={listing.id} listing={listing} />
+              ))}
+            </Grid>
+          ) : (
+            <Flex direction="column" style={styles.emptyState}>
+              <Text size="2xl" weight="semibold">
+                No apps matched your search
+              </Text>
+              <Body variant="secondary">
+                Try a different keyword, or browse the editorial collections to
+                explore by workflow instead.
+              </Body>
+            </Flex>
+          )}
+        </Flex>
+      </Flex>
+    </Page.Root>
   );
 }
 

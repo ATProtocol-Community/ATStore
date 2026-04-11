@@ -16,7 +16,6 @@ import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { ComboBox, ComboBoxItem } from "../design-system/combobox";
 import { Flex } from "../design-system/flex";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { uiColor } from "../design-system/theme/color.stylex";
@@ -257,361 +256,279 @@ function DevCategoriesPage() {
   }
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.pageContent}>
-          <Flex gap="xl">
-            <AppLink to={"/categories/all" as never}>
-              Back to categories
-            </AppLink>
-            <AppLink to="/dev/app-tags">App tags</AppLink>
-            <AppLink to="/">Home</AppLink>
-          </Flex>
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.pageContent}>
+        <Flex gap="xl">
+          <AppLink to={"/categories/all" as never}>Back to categories</AppLink>
+          <AppLink to="/dev/app-tags">App tags</AppLink>
+          <AppLink to="/">Home</AppLink>
+        </Flex>
 
-          <Flex direction="column" style={styles.pageHeader}>
-            <Heading1>Recategorize Directory Listings</Heading1>
-            <Body variant="secondary">
-              This dev-only tool lets you move every listing into the curated
-              hierarchy. Counts on the public category pages update from the
-              saved `categorySlug` values here.
-            </Body>
-            <Body style={styles.helperText}>
-              Assign a listing to the most specific branch that fits. You can
-              still use parent nodes like Apps, Bluesky, or Protocol when a more
-              specific child category does not exist yet.
-            </Body>
-          </Flex>
+        <Flex direction="column" style={styles.pageHeader}>
+          <Heading1>Recategorize Directory Listings</Heading1>
+          <Body variant="secondary">
+            This dev-only tool lets you move every listing into the curated
+            hierarchy. Counts on the public category pages update from the saved
+            `categorySlug` values here.
+          </Body>
+          <Body style={styles.helperText}>
+            Assign a listing to the most specific branch that fits. You can
+            still use parent nodes like Apps, Bluesky, or Protocol when a more
+            specific child category does not exist yet.
+          </Body>
+        </Flex>
 
-          <Flex gap="2xl" style={styles.statsRow}>
-            <Card style={styles.statCard}>
-              <Flex direction="column" gap="sm">
-                <SmallBody>Total</SmallBody>
-                <Text size="3xl" weight="semibold">
-                  {stats.total}
-                </Text>
-              </Flex>
-            </Card>
-            <Card style={styles.statCard}>
-              <Flex direction="column" gap="sm">
-                <SmallBody>Assigned</SmallBody>
-                <Text size="3xl" weight="semibold">
-                  {stats.assigned}
-                </Text>
-              </Flex>
-            </Card>
-            <Card style={styles.statCard}>
-              <Flex direction="column" gap="sm">
-                <SmallBody>Unassigned</SmallBody>
-                <Text size="3xl" weight="semibold">
-                  {stats.unassigned}
-                </Text>
-              </Flex>
-            </Card>
-          </Flex>
+        <Flex gap="2xl" style={styles.statsRow}>
+          <Card style={styles.statCard}>
+            <Flex direction="column" gap="sm">
+              <SmallBody>Total</SmallBody>
+              <Text size="3xl" weight="semibold">
+                {stats.total}
+              </Text>
+            </Flex>
+          </Card>
+          <Card style={styles.statCard}>
+            <Flex direction="column" gap="sm">
+              <SmallBody>Assigned</SmallBody>
+              <Text size="3xl" weight="semibold">
+                {stats.assigned}
+              </Text>
+            </Flex>
+          </Card>
+          <Card style={styles.statCard}>
+            <Flex direction="column" gap="sm">
+              <SmallBody>Unassigned</SmallBody>
+              <Text size="3xl" weight="semibold">
+                {stats.unassigned}
+              </Text>
+            </Flex>
+          </Card>
+        </Flex>
 
-          <Flex direction="column" style={styles.listingList}>
-            {uncategorizedListings.length > 0 ? (
-              uncategorizedListings.map((listing, index) => {
-                const draft =
-                  draftCategories[listing.id] ??
-                  parseStructuredDirectoryCategory(
-                    primaryCategorySlug(listing.categorySlugs),
-                  );
-                const nextCategorySlug =
-                  buildStructuredDirectoryCategorySlug(draft);
-                const isSaving = savingId === listing.id;
-                const isDeleting = deletingId === listing.id;
-                const isDirty =
-                  nextCategorySlug !==
-                  primaryCategorySlug(listing.categorySlugs);
-                const duplicateCandidates = getPotentialDuplicates(
-                  listing,
-                  listings,
-                ).slice(0, 5);
-                const selectedAppNameOption =
-                  categorySuggestions.appNameOptions.find(
-                    (option) =>
-                      option.label.toLowerCase() ===
-                      draft.appName.trim().toLowerCase(),
-                  )?.id || null;
-                const selectedProtocolCategoryOption =
-                  categorySuggestions.protocolCategoryOptions.find(
-                    (option) =>
-                      option.label.toLowerCase() ===
-                      draft.protocolCategory.trim().toLowerCase(),
-                  )?.id || null;
-                const appCategoryOptions =
-                  categorySuggestions.appCategoryOptionsByAppName[
-                    selectedAppNameOption || ""
-                  ] || [];
-                const selectedAppCategoryOption =
-                  appCategoryOptions.find(
-                    (option) =>
-                      option.label.toLowerCase() ===
-                      draft.appCategory.trim().toLowerCase(),
-                  )?.id || null;
+        <Flex direction="column" style={styles.listingList}>
+          {uncategorizedListings.length > 0 ? (
+            uncategorizedListings.map((listing, index) => {
+              const draft =
+                draftCategories[listing.id] ??
+                parseStructuredDirectoryCategory(
+                  primaryCategorySlug(listing.categorySlugs),
+                );
+              const nextCategorySlug =
+                buildStructuredDirectoryCategorySlug(draft);
+              const isSaving = savingId === listing.id;
+              const isDeleting = deletingId === listing.id;
+              const isDirty =
+                nextCategorySlug !== primaryCategorySlug(listing.categorySlugs);
+              const duplicateCandidates = getPotentialDuplicates(
+                listing,
+                listings,
+              ).slice(0, 5);
+              const selectedAppNameOption =
+                categorySuggestions.appNameOptions.find(
+                  (option) =>
+                    option.label.toLowerCase() ===
+                    draft.appName.trim().toLowerCase(),
+                )?.id || null;
+              const selectedProtocolCategoryOption =
+                categorySuggestions.protocolCategoryOptions.find(
+                  (option) =>
+                    option.label.toLowerCase() ===
+                    draft.protocolCategory.trim().toLowerCase(),
+                )?.id || null;
+              const appCategoryOptions =
+                categorySuggestions.appCategoryOptionsByAppName[
+                  selectedAppNameOption || ""
+                ] || [];
+              const selectedAppCategoryOption =
+                appCategoryOptions.find(
+                  (option) =>
+                    option.label.toLowerCase() ===
+                    draft.appCategory.trim().toLowerCase(),
+                )?.id || null;
 
-                return (
-                  <Card key={listing.id} style={styles.listingCard}>
-                    <Flex direction="column" style={styles.listingCardBody}>
-                      <Flex direction="column" gap="md">
+              return (
+                <Card key={listing.id} style={styles.listingCard}>
+                  <Flex direction="column" style={styles.listingCardBody}>
+                    <Flex direction="column" gap="md">
+                      <SmallBody style={styles.legacyHint}>
+                        Uncategorized listing {index + 1} of{" "}
+                        {uncategorizedListings.length}
+                      </SmallBody>
+                      <Text size="sm" style={styles.saveStatus}>
+                        {stats.unassigned} remaining
+                      </Text>
+                      {listing.externalUrl ? (
+                        <Link href={listing.externalUrl}>
+                          Open external URL
+                        </Link>
+                      ) : (
                         <SmallBody style={styles.legacyHint}>
-                          Uncategorized listing {index + 1} of{" "}
-                          {uncategorizedListings.length}
+                          No resolved external URL yet.
                         </SmallBody>
-                        <Text size="sm" style={styles.saveStatus}>
-                          {stats.unassigned} remaining
+                      )}
+                    </Flex>
+                    <Flex gap="2xl" style={styles.listingHeader}>
+                      <Avatar
+                        alt={listing.name}
+                        fallback={getInitials(listing.name)}
+                        size="xl"
+                        src={listing.iconUrl || undefined}
+                      />
+                      <Flex
+                        direction="column"
+                        gap="md"
+                        style={styles.listingMeta}
+                      >
+                        <Text size="xl" weight="semibold">
+                          {listing.name}
                         </Text>
-                        {listing.externalUrl ? (
-                          <Link href={listing.externalUrl}>
-                            Open external URL
-                          </Link>
-                        ) : (
-                          <SmallBody style={styles.legacyHint}>
-                            No resolved external URL yet.
-                          </SmallBody>
-                        )}
-                      </Flex>
-                      <Flex gap="2xl" style={styles.listingHeader}>
-                        <Avatar
-                          alt={listing.name}
-                          fallback={getInitials(listing.name)}
-                          size="xl"
-                          src={listing.iconUrl || undefined}
-                        />
-                        <Flex
-                          direction="column"
-                          gap="md"
-                          style={styles.listingMeta}
-                        >
-                          <Text size="xl" weight="semibold">
-                            {listing.name}
-                          </Text>
-                          <Body variant="secondary">{listing.tagline}</Body>
-                          <Body>{listing.description}</Body>
-                          <SmallBody style={styles.legacyHint}>
-                            Legacy tags: {listing.legacyCategoryHint}
-                          </SmallBody>
-                          <SmallBody style={styles.legacyHint}>
-                            Current category:{" "}
-                            {listing.categoryPathLabel || "Unassigned"}
-                          </SmallBody>
-                        </Flex>
-                      </Flex>
-
-                      <Flex direction="column" style={styles.duplicateSection}>
-                        <Text weight="semibold">Potential duplicates</Text>
-                        <SmallBody style={styles.helperText}>
-                          Matches are inferred from similar names, matching
-                          taglines, and external URLs.
+                        <Body variant="secondary">{listing.tagline}</Body>
+                        <Body>{listing.description}</Body>
+                        <SmallBody style={styles.legacyHint}>
+                          Legacy tags: {listing.legacyCategoryHint}
                         </SmallBody>
-                        {duplicateCandidates.length > 0 ? (
-                          <Flex direction="column" style={styles.duplicateList}>
-                            {duplicateCandidates.map((candidate) => (
-                              <div
-                                key={candidate.listing.id}
-                                {...stylex.props(styles.duplicateCard)}
-                              >
-                                <Flex direction="column" gap="sm">
-                                  <Text weight="semibold">
-                                    {candidate.listing.name}
-                                  </Text>
-                                  <SmallBody style={styles.legacyHint}>
-                                    Current category:{" "}
-                                    {candidate.listing.categoryPathLabel ||
-                                      "Unassigned"}
-                                  </SmallBody>
-                                  <SmallBody style={styles.legacyHint}>
-                                    {candidate.listing.tagline}
-                                  </SmallBody>
-                                  <Flex
-                                    gap="sm"
-                                    style={styles.duplicateReasonList}
-                                  >
-                                    {candidate.reasons.map((reason) => (
-                                      <div
-                                        key={`${candidate.listing.id}-${reason}`}
-                                        {...stylex.props(
-                                          styles.duplicateReason,
-                                        )}
-                                      >
-                                        <SmallBody>{reason}</SmallBody>
-                                      </div>
-                                    ))}
-                                  </Flex>
-                                  {candidate.listing.externalUrl ? (
-                                    <Link href={candidate.listing.externalUrl}>
-                                      Open candidate URL
-                                    </Link>
-                                  ) : null}
-                                </Flex>
-                              </div>
-                            ))}
-                          </Flex>
-                        ) : (
-                          <SmallBody style={styles.legacyHint}>
-                            No likely duplicates found for this listing.
-                          </SmallBody>
-                        )}
+                        <SmallBody style={styles.legacyHint}>
+                          Current category:{" "}
+                          {listing.categoryPathLabel || "Unassigned"}
+                        </SmallBody>
                       </Flex>
+                    </Flex>
 
-                      <div {...stylex.props(styles.listingFields)}>
-                        <ComboBox
-                          allowsCustomValue
-                          aria-label={`Kind for ${listing.name}`}
-                          inputValue={draft.kind}
-                          items={categorySuggestions.kindOptions}
-                          label="Kind"
-                          placeholder="apps or protocol"
-                          selectedKey={
-                            draft.kind === "apps" || draft.kind === "protocol"
-                              ? draft.kind
-                              : null
+                    <Flex direction="column" style={styles.duplicateSection}>
+                      <Text weight="semibold">Potential duplicates</Text>
+                      <SmallBody style={styles.helperText}>
+                        Matches are inferred from similar names, matching
+                        taglines, and external URLs.
+                      </SmallBody>
+                      {duplicateCandidates.length > 0 ? (
+                        <Flex direction="column" style={styles.duplicateList}>
+                          {duplicateCandidates.map((candidate) => (
+                            <div
+                              key={candidate.listing.id}
+                              {...stylex.props(styles.duplicateCard)}
+                            >
+                              <Flex direction="column" gap="sm">
+                                <Text weight="semibold">
+                                  {candidate.listing.name}
+                                </Text>
+                                <SmallBody style={styles.legacyHint}>
+                                  Current category:{" "}
+                                  {candidate.listing.categoryPathLabel ||
+                                    "Unassigned"}
+                                </SmallBody>
+                                <SmallBody style={styles.legacyHint}>
+                                  {candidate.listing.tagline}
+                                </SmallBody>
+                                <Flex
+                                  gap="sm"
+                                  style={styles.duplicateReasonList}
+                                >
+                                  {candidate.reasons.map((reason) => (
+                                    <div
+                                      key={`${candidate.listing.id}-${reason}`}
+                                      {...stylex.props(styles.duplicateReason)}
+                                    >
+                                      <SmallBody>{reason}</SmallBody>
+                                    </div>
+                                  ))}
+                                </Flex>
+                                {candidate.listing.externalUrl ? (
+                                  <Link href={candidate.listing.externalUrl}>
+                                    Open candidate URL
+                                  </Link>
+                                ) : null}
+                              </Flex>
+                            </div>
+                          ))}
+                        </Flex>
+                      ) : (
+                        <SmallBody style={styles.legacyHint}>
+                          No likely duplicates found for this listing.
+                        </SmallBody>
+                      )}
+                    </Flex>
+
+                    <div {...stylex.props(styles.listingFields)}>
+                      <ComboBox
+                        allowsCustomValue
+                        aria-label={`Kind for ${listing.name}`}
+                        inputValue={draft.kind}
+                        items={categorySuggestions.kindOptions}
+                        label="Kind"
+                        placeholder="apps or protocol"
+                        selectedKey={
+                          draft.kind === "apps" || draft.kind === "protocol"
+                            ? draft.kind
+                            : null
+                        }
+                        style={styles.selectField}
+                        onInputChange={(value) => {
+                          updateDraft(listing.id, {
+                            kind: value,
+                            appName:
+                              value.trim().toLowerCase() === "apps"
+                                ? draft.appName
+                                : "",
+                            appCategory:
+                              value.trim().toLowerCase() === "apps"
+                                ? draft.appCategory
+                                : "",
+                            protocolCategory:
+                              value.trim().toLowerCase() === "protocol"
+                                ? draft.protocolCategory
+                                : "",
+                          });
+                        }}
+                        onSelectionChange={(key) => {
+                          if (key === null) {
+                            return;
                           }
-                          style={styles.selectField}
-                          onInputChange={(value) => {
-                            updateDraft(listing.id, {
-                              kind: value,
-                              appName:
-                                value.trim().toLowerCase() === "apps"
-                                  ? draft.appName
-                                  : "",
-                              appCategory:
-                                value.trim().toLowerCase() === "apps"
-                                  ? draft.appCategory
-                                  : "",
-                              protocolCategory:
-                                value.trim().toLowerCase() === "protocol"
-                                  ? draft.protocolCategory
-                                  : "",
-                            });
-                          }}
-                          onSelectionChange={(key) => {
-                            if (key === null) {
-                              return;
-                            }
 
-                            const nextKind = String(key);
-                            updateDraft(listing.id, {
-                              kind: nextKind,
-                              appName: nextKind === "apps" ? draft.appName : "",
-                              appCategory:
-                                nextKind === "apps" ? draft.appCategory : "",
-                              protocolCategory:
-                                nextKind === "protocol"
-                                  ? draft.protocolCategory
-                                  : "",
-                            });
-                          }}
-                        >
-                          {(item) => (
-                            <ComboBoxItem id={item.id}>
-                              {item.label}
-                            </ComboBoxItem>
-                          )}
-                        </ComboBox>
+                          const nextKind = String(key);
+                          updateDraft(listing.id, {
+                            kind: nextKind,
+                            appName: nextKind === "apps" ? draft.appName : "",
+                            appCategory:
+                              nextKind === "apps" ? draft.appCategory : "",
+                            protocolCategory:
+                              nextKind === "protocol"
+                                ? draft.protocolCategory
+                                : "",
+                          });
+                        }}
+                      >
+                        {(item) => (
+                          <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
+                        )}
+                      </ComboBox>
 
-                        {draft.kind.trim().toLowerCase() === "apps" ? (
-                          <>
-                            <ComboBox
-                              allowsCustomValue
-                              aria-label={`App name for ${listing.name}`}
-                              inputValue={draft.appName}
-                              items={categorySuggestions.appNameOptions}
-                              label="App Name"
-                              placeholder="Bluesky"
-                              selectedKey={selectedAppNameOption}
-                              style={styles.selectField}
-                              onInputChange={(value) => {
-                                updateDraft(listing.id, {
-                                  appName: value,
-                                  appCategory: "",
-                                });
-                              }}
-                              onSelectionChange={(key) => {
-                                const nextAppNameId = key ? String(key) : "";
-                                const nextAppNameLabel =
-                                  categorySuggestions.appNameOptions.find(
-                                    (option) => option.id === nextAppNameId,
-                                  )?.label || nextAppNameId;
-
-                                updateDraft(listing.id, {
-                                  appName: nextAppNameLabel,
-                                  appCategory: "",
-                                });
-                              }}
-                            >
-                              {(item) => (
-                                <ComboBoxItem id={item.id}>
-                                  {item.label}
-                                </ComboBoxItem>
-                              )}
-                            </ComboBox>
-
-                            <ComboBox
-                              allowsCustomValue
-                              aria-label={`App category for ${listing.name}`}
-                              inputValue={draft.appCategory}
-                              items={appCategoryOptions}
-                              label="App Name Category"
-                              placeholder="Clients"
-                              selectedKey={selectedAppCategoryOption}
-                              style={styles.selectField}
-                              onInputChange={(value) => {
-                                updateDraft(listing.id, {
-                                  appCategory: value,
-                                });
-                              }}
-                              onSelectionChange={(key) => {
-                                const nextAppCategoryId = key
-                                  ? String(key)
-                                  : "";
-                                const nextAppCategoryLabel =
-                                  appCategoryOptions.find(
-                                    (option) => option.id === nextAppCategoryId,
-                                  )?.label || nextAppCategoryId;
-
-                                updateDraft(listing.id, {
-                                  appCategory: nextAppCategoryLabel,
-                                });
-                              }}
-                            >
-                              {(item) => (
-                                <ComboBoxItem id={item.id}>
-                                  {item.label}
-                                </ComboBoxItem>
-                              )}
-                            </ComboBox>
-                          </>
-                        ) : null}
-
-                        {draft.kind.trim().toLowerCase() === "protocol" ? (
+                      {draft.kind.trim().toLowerCase() === "apps" ? (
+                        <>
                           <ComboBox
                             allowsCustomValue
-                            aria-label={`Protocol category for ${listing.name}`}
-                            inputValue={draft.protocolCategory}
-                            items={categorySuggestions.protocolCategoryOptions}
-                            label="Protocol Category"
-                            placeholder="PDS"
-                            selectedKey={selectedProtocolCategoryOption}
+                            aria-label={`App name for ${listing.name}`}
+                            inputValue={draft.appName}
+                            items={categorySuggestions.appNameOptions}
+                            label="App Name"
+                            placeholder="Bluesky"
+                            selectedKey={selectedAppNameOption}
                             style={styles.selectField}
                             onInputChange={(value) => {
                               updateDraft(listing.id, {
-                                protocolCategory: value,
+                                appName: value,
+                                appCategory: "",
                               });
                             }}
                             onSelectionChange={(key) => {
-                              const nextProtocolCategoryId = key
-                                ? String(key)
-                                : "";
-                              const nextProtocolCategoryLabel =
-                                categorySuggestions.protocolCategoryOptions.find(
-                                  (option) =>
-                                    option.id === nextProtocolCategoryId,
-                                )?.label || nextProtocolCategoryId;
+                              const nextAppNameId = key ? String(key) : "";
+                              const nextAppNameLabel =
+                                categorySuggestions.appNameOptions.find(
+                                  (option) => option.id === nextAppNameId,
+                                )?.label || nextAppNameId;
 
                               updateDraft(listing.id, {
-                                protocolCategory: nextProtocolCategoryLabel,
+                                appName: nextAppNameLabel,
+                                appCategory: "",
                               });
                             }}
                           >
@@ -621,71 +538,142 @@ function DevCategoriesPage() {
                               </ComboBoxItem>
                             )}
                           </ComboBox>
-                        ) : null}
-                      </div>
 
-                      <Flex gap="lg" style={styles.listingFooter}>
-                        <Button
-                          isDisabled={
-                            !isDirty ||
-                            isSaving ||
-                            isDeleting ||
-                            nextCategorySlug === null
-                          }
-                          onPress={() => void saveListing(listing)}
+                          <ComboBox
+                            allowsCustomValue
+                            aria-label={`App category for ${listing.name}`}
+                            inputValue={draft.appCategory}
+                            items={appCategoryOptions}
+                            label="App Name Category"
+                            placeholder="Clients"
+                            selectedKey={selectedAppCategoryOption}
+                            style={styles.selectField}
+                            onInputChange={(value) => {
+                              updateDraft(listing.id, {
+                                appCategory: value,
+                              });
+                            }}
+                            onSelectionChange={(key) => {
+                              const nextAppCategoryId = key ? String(key) : "";
+                              const nextAppCategoryLabel =
+                                appCategoryOptions.find(
+                                  (option) => option.id === nextAppCategoryId,
+                                )?.label || nextAppCategoryId;
+
+                              updateDraft(listing.id, {
+                                appCategory: nextAppCategoryLabel,
+                              });
+                            }}
+                          >
+                            {(item) => (
+                              <ComboBoxItem id={item.id}>
+                                {item.label}
+                              </ComboBoxItem>
+                            )}
+                          </ComboBox>
+                        </>
+                      ) : null}
+
+                      {draft.kind.trim().toLowerCase() === "protocol" ? (
+                        <ComboBox
+                          allowsCustomValue
+                          aria-label={`Protocol category for ${listing.name}`}
+                          inputValue={draft.protocolCategory}
+                          items={categorySuggestions.protocolCategoryOptions}
+                          label="Protocol Category"
+                          placeholder="PDS"
+                          selectedKey={selectedProtocolCategoryOption}
+                          style={styles.selectField}
+                          onInputChange={(value) => {
+                            updateDraft(listing.id, {
+                              protocolCategory: value,
+                            });
+                          }}
+                          onSelectionChange={(key) => {
+                            const nextProtocolCategoryId = key
+                              ? String(key)
+                              : "";
+                            const nextProtocolCategoryLabel =
+                              categorySuggestions.protocolCategoryOptions.find(
+                                (option) =>
+                                  option.id === nextProtocolCategoryId,
+                              )?.label || nextProtocolCategoryId;
+
+                            updateDraft(listing.id, {
+                              protocolCategory: nextProtocolCategoryLabel,
+                            });
+                          }}
                         >
-                          {isSaving ? "Saving..." : "Save"}
-                        </Button>
-                        <AlertDialog
-                          trigger={
-                            <Button
-                              variant="secondary"
-                              isDisabled={isSaving || isDeleting}
-                            >
-                              {isDeleting ? "Deleting..." : "Delete"}
-                            </Button>
-                          }
-                        >
-                          <AlertDialogHeader>
-                            Delete this listing?
-                          </AlertDialogHeader>
-                          <AlertDialogDescription>
-                            This will permanently remove{" "}
-                            <strong>{listing.name}</strong> from the directory.
-                          </AlertDialogDescription>
-                          <AlertDialogFooter>
-                            <AlertDialogCancelButton />
-                            <AlertDialogActionButton
-                              isPending={isDeleting}
-                              closeOnPress={false}
-                              onPress={() => void deleteListing(listing)}
-                            >
-                              Delete entry
-                            </AlertDialogActionButton>
-                          </AlertDialogFooter>
-                        </AlertDialog>
-                        <SmallBody style={styles.saveStatus}>
-                          {lastSavedId === listing.id ? "Saved." : " "}
-                        </SmallBody>
-                      </Flex>
+                          {(item) => (
+                            <ComboBoxItem id={item.id}>
+                              {item.label}
+                            </ComboBoxItem>
+                          )}
+                        </ComboBox>
+                      ) : null}
+                    </div>
+
+                    <Flex gap="lg" style={styles.listingFooter}>
+                      <Button
+                        isDisabled={
+                          !isDirty ||
+                          isSaving ||
+                          isDeleting ||
+                          nextCategorySlug === null
+                        }
+                        onPress={() => void saveListing(listing)}
+                      >
+                        {isSaving ? "Saving..." : "Save"}
+                      </Button>
+                      <AlertDialog
+                        trigger={
+                          <Button
+                            variant="secondary"
+                            isDisabled={isSaving || isDeleting}
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                          </Button>
+                        }
+                      >
+                        <AlertDialogHeader>
+                          Delete this listing?
+                        </AlertDialogHeader>
+                        <AlertDialogDescription>
+                          This will permanently remove{" "}
+                          <strong>{listing.name}</strong> from the directory.
+                        </AlertDialogDescription>
+                        <AlertDialogFooter>
+                          <AlertDialogCancelButton />
+                          <AlertDialogActionButton
+                            isPending={isDeleting}
+                            closeOnPress={false}
+                            onPress={() => void deleteListing(listing)}
+                          >
+                            Delete entry
+                          </AlertDialogActionButton>
+                        </AlertDialogFooter>
+                      </AlertDialog>
+                      <SmallBody style={styles.saveStatus}>
+                        {lastSavedId === listing.id ? "Saved." : " "}
+                      </SmallBody>
                     </Flex>
-                  </Card>
-                );
-              })
-            ) : (
-              <Card style={styles.listingCard}>
-                <Flex direction="column" style={styles.listingCardBody}>
-                  <Heading1>All caught up</Heading1>
-                  <Body variant="secondary">
-                    There are no uncategorized listings left right now.
-                  </Body>
-                </Flex>
-              </Card>
-            )}
-          </Flex>
+                  </Flex>
+                </Card>
+              );
+            })
+          ) : (
+            <Card style={styles.listingCard}>
+              <Flex direction="column" style={styles.listingCardBody}>
+                <Heading1>All caught up</Heading1>
+                <Body variant="secondary">
+                  There are no uncategorized listings left right now.
+                </Body>
+              </Flex>
+            </Card>
+          )}
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+      </Flex>
+    </Page.Root>
   );
 }
 

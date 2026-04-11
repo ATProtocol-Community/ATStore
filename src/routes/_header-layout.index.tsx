@@ -18,7 +18,6 @@ import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { blue } from "../design-system/theme/colors/blue.stylex";
@@ -487,171 +486,166 @@ function HomePage() {
   const claimCount = claimEligibility.listings.length;
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large">
-        <Flex direction="column" gap="5xl" style={styles.claimBanner}>
-          {showClaimBanner ? (
-            <Alert
-              variant="info"
-              title={
-                claimCount === 1 ? "Claim your listing" : "Claim your listings"
-              }
-              action={
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onPress={() => void navigate({ to: "/product/claim" })}
-                >
-                  Continue
-                </Button>
-              }
-            >
-              {claimCount === 1
-                ? `“${claimEligibility.listings[0]!.name}” is still on the store repo. Claim it to manage updates from your PDS.`
-                : `You have ${String(claimCount)} listings on the store repo. Claim them to manage updates from your PDS.`}
-            </Alert>
-          ) : null}
+    <Page.Root variant="large">
+      <Flex direction="column" gap="5xl" style={styles.claimBanner}>
+        {showClaimBanner ? (
+          <Alert
+            variant="info"
+            title={
+              claimCount === 1 ? "Claim your listing" : "Claim your listings"
+            }
+            action={
+              <Button
+                variant="primary"
+                size="sm"
+                onPress={() => void navigate({ to: "/product/claim" })}
+              >
+                Continue
+              </Button>
+            }
+          >
+            {claimCount === 1
+              ? `“${claimEligibility.listings[0]!.name}” is still on the store repo. Claim it to manage updates from your PDS.`
+              : `You have ${String(claimCount)} listings on the store repo. Claim them to manage updates from your PDS.`}
+          </Alert>
+        ) : null}
 
-          <Flex direction="column" gap="5xl" style={styles.pageHeader}>
-            <Heading1>Apps on the Atmosphere</Heading1>
-            <Text
-              variant="secondary"
-              size="2xl"
-              leading="sm"
-              style={styles.headerDescription}
-            >
-              Discover the best apps the Atmosphere has to offer. With every
-              product you own your data and use the same identity across all
-              apps.
-            </Text>
-          </Flex>
+        <Flex direction="column" gap="5xl" style={styles.pageHeader}>
+          <Heading1>Apps on the Atmosphere</Heading1>
+          <Text
+            variant="secondary"
+            size="2xl"
+            leading="sm"
+            style={styles.headerDescription}
+          >
+            Discover the best apps the Atmosphere has to offer. With every
+            product you own your data and use the same identity across all apps.
+          </Text>
+        </Flex>
+      </Flex>
+
+      <Flex direction="column" style={styles.pageSections}>
+        <section {...stylex.props(styles.section)}>
+          <FeaturedListingGrid
+            items={[data.featured, ...data.spotlights]}
+            getKey={(listing, index) =>
+              index === 0 ? `featured-${listing.id}` : `spotlight-${listing.id}`
+            }
+            isFeatured={(_, index) => index === 0}
+            renderItem={(listing, { featured }) =>
+              featured ? (
+                <HeroCard listing={listing} />
+              ) : (
+                <SpotlightCard listing={listing} />
+              )
+            }
+          />
+        </section>
+
+        <section {...stylex.props(styles.section)}>
+          <SectionHeader
+            eyebrow="Browse Apps"
+            title="Find apps you'll love"
+            to="/apps/tags"
+          />
+          <Grid style={styles.categoriesGrid}>
+            {data.tags.map((tag) => (
+              <AppTagCard key={tag.tag} tag={tag} />
+            ))}
+          </Grid>
+        </section>
+
+        <section {...stylex.props(styles.section)}>
+          <SectionHeader
+            eyebrow="Popular Right Now"
+            title="Trending across the ecosystem"
+            to="/apps/all"
+            search={{ sort: "popular" }}
+          />
+          <Grid style={styles.popularGrid}>
+            <Flex direction="column" gap="md">
+              {data.popular.map((listing, index) => (
+                <PopularListItem
+                  key={listing.id}
+                  listing={listing}
+                  rank={index + 1}
+                />
+              ))}
+            </Flex>
+            <PromoCard listing={promoListing} />
+          </Grid>
+        </section>
+
+        <section {...stylex.props(styles.section)}>
+          <SectionHeader
+            eyebrow="New & Noteworthy"
+            title="Fresh apps just added"
+            to="/apps/all"
+            search={{ sort: "newest" }}
+          />
+          <Grid style={styles.newGrid}>
+            {data.fresh.map((listing) => (
+              <NewListingCard key={listing.id} listing={listing} />
+            ))}
+          </Grid>
+        </section>
+
+        <Flex direction="column" gap="5xl" style={styles.protocolHeader}>
+          <Heading1>Dive into the Protocol</Heading1>
+          <Text
+            variant="secondary"
+            size="2xl"
+            leading="sm"
+            style={styles.headerDescription}
+          >
+            The Atmosphere is built on an open Protocol, so you can use it to
+            build your own apps and services.
+          </Text>
         </Flex>
 
-        <Flex direction="column" style={styles.pageSections}>
-          <section {...stylex.props(styles.section)}>
-            <FeaturedListingGrid
-              items={[data.featured, ...data.spotlights]}
-              getKey={(listing, index) =>
-                index === 0
-                  ? `featured-${listing.id}`
-                  : `spotlight-${listing.id}`
-              }
-              isFeatured={(_, index) => index === 0}
-              renderItem={(listing, { featured }) =>
-                featured ? (
-                  <HeroCard listing={listing} />
-                ) : (
-                  <SpotlightCard listing={listing} />
-                )
-              }
-            />
-          </section>
+        <section {...stylex.props(styles.section)}>
+          <FeaturedListingGrid
+            items={protocolListings}
+            getKey={(listing, index) =>
+              index === 0
+                ? `protocol-featured-${listing.id}`
+                : `protocol-spotlight-${listing.id}`
+            }
+            isFeatured={(_, index) => index === 0}
+            renderItem={(listing, { featured }) =>
+              featured ? (
+                <HeroCard
+                  listing={listing}
+                  badgeLabel="Featured Protocol Tool"
+                />
+              ) : (
+                <SpotlightCard listing={listing} />
+              )
+            }
+          />
+        </section>
 
-          <section {...stylex.props(styles.section)}>
-            <SectionHeader
-              eyebrow="Browse Apps"
-              title="Find apps you'll love"
-              to="/apps/tags"
-            />
+        <section {...stylex.props(styles.section)}>
+          <SectionHeader
+            eyebrow="Browse Protocol"
+            title="Infrastructure & developer tooling"
+            to="/protocol/tags"
+          />
+          {data.protocolCategories.length > 0 ? (
             <Grid style={styles.categoriesGrid}>
-              {data.tags.map((tag) => (
-                <AppTagCard key={tag.tag} tag={tag} />
+              {data.protocolCategories.map((cat) => (
+                <ProtocolCategoryCard key={cat.segment} category={cat} />
               ))}
             </Grid>
-          </section>
-
-          <section {...stylex.props(styles.section)}>
-            <SectionHeader
-              eyebrow="Popular Right Now"
-              title="Trending across the ecosystem"
-              to="/apps/all"
-              search={{ sort: "popular" }}
-            />
-            <Grid style={styles.popularGrid}>
-              <Flex direction="column" gap="md">
-                {data.popular.map((listing, index) => (
-                  <PopularListItem
-                    key={listing.id}
-                    listing={listing}
-                    rank={index + 1}
-                  />
-                ))}
-              </Flex>
-              <PromoCard listing={promoListing} />
-            </Grid>
-          </section>
-
-          <section {...stylex.props(styles.section)}>
-            <SectionHeader
-              eyebrow="New & Noteworthy"
-              title="Fresh apps just added"
-              to="/apps/all"
-              search={{ sort: "newest" }}
-            />
-            <Grid style={styles.newGrid}>
-              {data.fresh.map((listing) => (
-                <NewListingCard key={listing.id} listing={listing} />
-              ))}
-            </Grid>
-          </section>
-
-          <Flex direction="column" gap="5xl" style={styles.protocolHeader}>
-            <Heading1>Dive into the Protocol</Heading1>
-            <Text
-              variant="secondary"
-              size="2xl"
-              leading="sm"
-              style={styles.headerDescription}
-            >
-              The Atmosphere is built on an open Protocol, so you can use it to
-              build your own apps and services.
-            </Text>
-          </Flex>
-
-          <section {...stylex.props(styles.section)}>
-            <FeaturedListingGrid
-              items={protocolListings}
-              getKey={(listing, index) =>
-                index === 0
-                  ? `protocol-featured-${listing.id}`
-                  : `protocol-spotlight-${listing.id}`
-              }
-              isFeatured={(_, index) => index === 0}
-              renderItem={(listing, { featured }) =>
-                featured ? (
-                  <HeroCard
-                    listing={listing}
-                    badgeLabel="Featured Protocol Tool"
-                  />
-                ) : (
-                  <SpotlightCard listing={listing} />
-                )
-              }
-            />
-          </section>
-
-          <section {...stylex.props(styles.section)}>
-            <SectionHeader
-              eyebrow="Browse Protocol"
-              title="Infrastructure & developer tooling"
-              to="/protocol/tags"
-            />
-            {data.protocolCategories.length > 0 ? (
-              <Grid style={styles.categoriesGrid}>
-                {data.protocolCategories.map((cat) => (
-                  <ProtocolCategoryCard key={cat.segment} category={cat} />
-                ))}
-              </Grid>
-            ) : (
-              <Body variant="secondary">
-                Protocol categories will appear here as listings are added to
-                the directory.
-              </Body>
-            )}
-          </section>
-        </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+          ) : (
+            <Body variant="secondary">
+              Protocol categories will appear here as listings are added to the
+              directory.
+            </Body>
+          )}
+        </section>
+      </Flex>
+    </Page.Root>
   );
 }
 

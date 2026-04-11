@@ -8,7 +8,6 @@ import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Checkbox } from "../design-system/checkbox";
 import { Flex } from "../design-system/flex";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { TextField } from "../design-system/text-field";
@@ -216,116 +215,111 @@ function DevListingProductAccountsPage() {
       : null;
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.pageContent}>
-          <Flex style={styles.navLinks}>
-            <AppLink to="/dev/app-tags">App tags</AppLink>
-            <AppLink to="/dev/categories">Categories</AppLink>
-            <AppLink to="/">Home</AppLink>
-          </Flex>
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.pageContent}>
+        <Flex style={styles.navLinks}>
+          <AppLink to="/dev/app-tags">App tags</AppLink>
+          <AppLink to="/dev/categories">Categories</AppLink>
+          <AppLink to="/">Home</AppLink>
+        </Flex>
 
-          <Flex direction="column" style={styles.pageHeader}>
-            <Heading1>Product Bluesky account</Heading1>
-            <Body style={styles.meta}>
-              All pending candidates are listed below. Check each row to publish{" "}
-              <code>productAccountDid</code> for that listing; unchecked rows
-              are rejected. Use the button at the bottom to apply everything at
-              once.
-            </Body>
-          </Flex>
+        <Flex direction="column" style={styles.pageHeader}>
+          <Heading1>Product Bluesky account</Heading1>
+          <Body style={styles.meta}>
+            All pending candidates are listed below. Check each row to publish{" "}
+            <code>productAccountDid</code> for that listing; unchecked rows are
+            rejected. Use the button at the bottom to apply everything at once.
+          </Body>
+        </Flex>
 
-          <Flex direction="column" gap="xl" style={styles.pageHeader}>
-            <Heading2>Missing handle (@unknown on /apps/tags)</Heading2>
-            <Body style={styles.meta}>
-              Listings with no stored Bluesky handle (empty or whitespace only).
-              You can manually save handle and/or DID to Postgres only; the
-              ATProto listing record still uses <code>productAccountDid</code>{" "}
-              when set.
-            </Body>
-            {missingHandleFetching && !missingHandleRows?.length ? (
-              <SmallBody>Loading…</SmallBody>
-            ) : !missingHandleRows?.length ? (
-              <Card style={styles.rowCard}>
-                <Body>
-                  Every listing has a non-empty handle in the database.
-                </Body>
-              </Card>
-            ) : (
-              <Flex direction="column" style={styles.list}>
-                {missingHandleRows.map((listing) => (
-                  <MissingHandleRow
-                    key={listing.id}
-                    errorMessage={
-                      saveHandleMutation.isError &&
-                      saveHandleMutation.variables?.listingId === listing.id
-                        ? saveHandleMutation.error instanceof Error
-                          ? saveHandleMutation.error.message
-                          : String(saveHandleMutation.error)
-                        : undefined
-                    }
-                    isSaving={pendingSaveId === listing.id}
-                    listing={listing}
-                    onSave={(listingId, payload) => {
-                      saveHandleMutation.mutate({ listingId, ...payload });
-                    }}
-                  />
-                ))}
-              </Flex>
-            )}
-          </Flex>
-
-          {error ? (
-            <Text size="sm" style={styles.errorText}>
-              {error}
-            </Text>
-          ) : null}
-
-          {isFetching && !rows?.length ? (
+        <Flex direction="column" gap="xl" style={styles.pageHeader}>
+          <Heading2>Missing handle (@unknown on /apps/tags)</Heading2>
+          <Body style={styles.meta}>
+            Listings with no stored Bluesky handle (empty or whitespace only).
+            You can manually save handle and/or DID to Postgres only; the
+            ATProto listing record still uses <code>productAccountDid</code>{" "}
+            when set.
+          </Body>
+          {missingHandleFetching && !missingHandleRows?.length ? (
             <SmallBody>Loading…</SmallBody>
-          ) : !rows?.length ? (
+          ) : !missingHandleRows?.length ? (
             <Card style={styles.rowCard}>
-              <Body>No pending candidates. Run </Body>
-              <code>pnpm discover:product-bsky</code>
-              <Body> to enqueue.</Body>
+              <Body>Every listing has a non-empty handle in the database.</Body>
             </Card>
           ) : (
-            <>
-              <Flex direction="column" style={styles.list}>
-                {rows.map((item) => (
-                  <CandidateRow
-                    key={item.candidateId}
-                    item={item}
-                    isSelected={selected[item.candidateId] !== false}
-                    onSelectedChange={(value) => {
-                      setSelected((s) => ({
-                        ...s,
-                        [item.candidateId]: value,
-                      }));
-                    }}
-                  />
-                ))}
-              </Flex>
-
-              <Flex direction="column" style={styles.footer}>
-                <SmallBody style={styles.meta}>
-                  Confirms all checked rows on the store PDS; rejects every
-                  unchecked pending candidate (failed confirms stay pending for
-                  a later run).
-                </SmallBody>
-                <Button
-                  isDisabled={busy || !rows.length}
-                  isPending={busy}
-                  onPress={() => void onApplyBatch()}
-                >
-                  Confirm checked &amp; reject others
-                </Button>
-              </Flex>
-            </>
+            <Flex direction="column" style={styles.list}>
+              {missingHandleRows.map((listing) => (
+                <MissingHandleRow
+                  key={listing.id}
+                  errorMessage={
+                    saveHandleMutation.isError &&
+                    saveHandleMutation.variables?.listingId === listing.id
+                      ? saveHandleMutation.error instanceof Error
+                        ? saveHandleMutation.error.message
+                        : String(saveHandleMutation.error)
+                      : undefined
+                  }
+                  isSaving={pendingSaveId === listing.id}
+                  listing={listing}
+                  onSave={(listingId, payload) => {
+                    saveHandleMutation.mutate({ listingId, ...payload });
+                  }}
+                />
+              ))}
+            </Flex>
           )}
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        {error ? (
+          <Text size="sm" style={styles.errorText}>
+            {error}
+          </Text>
+        ) : null}
+
+        {isFetching && !rows?.length ? (
+          <SmallBody>Loading…</SmallBody>
+        ) : !rows?.length ? (
+          <Card style={styles.rowCard}>
+            <Body>No pending candidates. Run </Body>
+            <code>pnpm discover:product-bsky</code>
+            <Body> to enqueue.</Body>
+          </Card>
+        ) : (
+          <>
+            <Flex direction="column" style={styles.list}>
+              {rows.map((item) => (
+                <CandidateRow
+                  key={item.candidateId}
+                  item={item}
+                  isSelected={selected[item.candidateId] !== false}
+                  onSelectedChange={(value) => {
+                    setSelected((s) => ({
+                      ...s,
+                      [item.candidateId]: value,
+                    }));
+                  }}
+                />
+              ))}
+            </Flex>
+
+            <Flex direction="column" style={styles.footer}>
+              <SmallBody style={styles.meta}>
+                Confirms all checked rows on the store PDS; rejects every
+                unchecked pending candidate (failed confirms stay pending for a
+                later run).
+              </SmallBody>
+              <Button
+                isDisabled={busy || !rows.length}
+                isPending={busy}
+                onPress={() => void onApplyBatch()}
+              >
+                Confirm checked &amp; reject others
+              </Button>
+            </Flex>
+          </>
+        )}
+      </Flex>
+    </Page.Root>
   );
 }
 

@@ -18,6 +18,7 @@ import {
   NavbarNavigation,
 } from "../design-system/navbar";
 import { fontSize } from "../design-system/theme/typography.stylex";
+import { Suspense } from "react";
 
 const NavbarLogoLink = createLink(NavbarLogo);
 const NavbarLinkLink = createLink(NavbarLink);
@@ -84,7 +85,11 @@ function HeaderLayoutRoute() {
         </Navbar>
       </HeaderLayout.Header>
 
-      <Outlet />
+      <HeaderLayout.Page>
+        <Suspense>
+          <Outlet />
+        </Suspense>
+      </HeaderLayout.Page>
 
       <HeaderLayout.Footer>
         <Footer.Root>

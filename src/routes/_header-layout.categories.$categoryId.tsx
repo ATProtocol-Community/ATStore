@@ -21,7 +21,6 @@ import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { blue } from "../design-system/theme/colors/blue.stylex";
@@ -383,66 +382,64 @@ function CategoryPage() {
       : null;
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.pageContent}>
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" style={styles.navLinks}>
-              {appSegment ? (
-                <AppLink to="/ecosystems/$app" params={{ app: appSegment }}>
-                  <ChevronLeft />
-                  Back to {AppName} Ecosystem
-                </AppLink>
-              ) : (
-                <AppLink to={browsePath as never}>
-                  <ChevronLeft />
-                  Back to categories
-                </AppLink>
-              )}
-            </Flex>
-
-            <AppTagHero
-              eyebrow={formatCount(category.count)}
-              title={category.label}
-              description={category.description}
-              imageSrc={categoryImageSrc}
-            />
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.pageContent}>
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" style={styles.navLinks}>
+            {appSegment ? (
+              <AppLink to="/ecosystems/$app" params={{ app: appSegment }}>
+                <ChevronLeft />
+                Back to {AppName} Ecosystem
+              </AppLink>
+            ) : (
+              <AppLink to={browsePath as never}>
+                <ChevronLeft />
+                Back to categories
+              </AppLink>
+            )}
           </Flex>
 
-          {data.listings.length > 0 ? (
-            <FeaturedListingGrid
-              items={data.listings}
-              getKey={(listing) => listing.id}
-              renderItem={(listing, { featured }) => (
-                <CategoryListingCard featured={featured} listing={listing} />
-              )}
-            />
-          ) : (
-            <Flex direction="column" style={styles.emptyState}>
-              <Body variant="secondary">
-                No listings are assigned to this branch yet.
-              </Body>
-              {import.meta.env.DEV ? (
-                <AppLink to="/dev/categories">
-                  Open the dev recategorization panel to assign some.
-                </AppLink>
-              ) : null}
-            </Flex>
-          )}
-
-          {category.children.length > 0 ? (
-            <Flex direction="column" gap="2xl">
-              <Heading1>Subcategories</Heading1>
-              <Grid style={styles.childGrid}>
-                {category.children.map((child) => (
-                  <ChildCategoryCard key={child.id} category={child} />
-                ))}
-              </Grid>
-            </Flex>
-          ) : null}
+          <AppTagHero
+            eyebrow={formatCount(category.count)}
+            title={category.label}
+            description={category.description}
+            imageSrc={categoryImageSrc}
+          />
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        {data.listings.length > 0 ? (
+          <FeaturedListingGrid
+            items={data.listings}
+            getKey={(listing) => listing.id}
+            renderItem={(listing, { featured }) => (
+              <CategoryListingCard featured={featured} listing={listing} />
+            )}
+          />
+        ) : (
+          <Flex direction="column" style={styles.emptyState}>
+            <Body variant="secondary">
+              No listings are assigned to this branch yet.
+            </Body>
+            {import.meta.env.DEV ? (
+              <AppLink to="/dev/categories">
+                Open the dev recategorization panel to assign some.
+              </AppLink>
+            ) : null}
+          </Flex>
+        )}
+
+        {category.children.length > 0 ? (
+          <Flex direction="column" gap="2xl">
+            <Heading1>Subcategories</Heading1>
+            <Grid style={styles.childGrid}>
+              {category.children.map((child) => (
+                <ChildCategoryCard key={child.id} category={child} />
+              ))}
+            </Grid>
+          </Flex>
+        ) : null}
+      </Flex>
+    </Page.Root>
   );
 }
 

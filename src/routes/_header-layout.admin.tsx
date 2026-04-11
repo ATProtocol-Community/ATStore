@@ -8,7 +8,6 @@ import { Link as AriaLink } from "react-aria-components";
 import { Button } from "../design-system/button";
 import { Card, CardBody, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Page } from "../design-system/page";
 import {
   gap,
@@ -98,166 +97,164 @@ function AdminPage() {
   }
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.section}>
-          <Heading1>Moderation</Heading1>
-          <SmallBody>
-            Unverified listings and pending claims. Handle{" "}
-            <code>ADMIN_HANDLE</code> (default hipstersmoothie.com).
-          </SmallBody>
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.section}>
+        <Heading1>Moderation</Heading1>
+        <SmallBody>
+          Unverified listings and pending claims. Handle{" "}
+          <code>ADMIN_HANDLE</code> (default hipstersmoothie.com).
+        </SmallBody>
 
-          <Heading2>Unverified listings</Heading2>
-          {data.unverified.length === 0 ? (
-            <Body>None.</Body>
-          ) : (
-            <Flex direction="column" style={styles.listStack}>
-              {data.unverified.map((row) => (
-                <Card key={row.id} style={styles.card} size="lg">
-                  {row.heroImageUrl ? (
-                    <CardImage
-                      aspectRatio={16 / 9}
-                      src={row.heroImageUrl}
-                      alt=""
-                    />
-                  ) : null}
-                  <CardBody>
-                    <Flex direction="column" style={styles.cardBody}>
-                      <Flex direction="column" style={styles.preview}>
-                        <Flex gap="xl" align="start">
-                          {row.iconUrl ? (
-                            <img
-                              src={row.iconUrl}
-                              alt=""
-                              {...stylex.props(styles.previewIcon)}
-                            />
+        <Heading2>Unverified listings</Heading2>
+        {data.unverified.length === 0 ? (
+          <Body>None.</Body>
+        ) : (
+          <Flex direction="column" style={styles.listStack}>
+            {data.unverified.map((row) => (
+              <Card key={row.id} style={styles.card} size="lg">
+                {row.heroImageUrl ? (
+                  <CardImage
+                    aspectRatio={16 / 9}
+                    src={row.heroImageUrl}
+                    alt=""
+                  />
+                ) : null}
+                <CardBody>
+                  <Flex direction="column" style={styles.cardBody}>
+                    <Flex direction="column" style={styles.preview}>
+                      <Flex gap="xl" align="start">
+                        {row.iconUrl ? (
+                          <img
+                            src={row.iconUrl}
+                            alt=""
+                            {...stylex.props(styles.previewIcon)}
+                          />
+                        ) : null}
+                        <Flex direction="column" gap="xl">
+                          <Text size="2xl" weight="bold">
+                            {row.name}
+                          </Text>
+                          {row.tagline ? (
+                            <Text size="base" variant="secondary">
+                              {row.tagline}
+                            </Text>
                           ) : null}
-                          <Flex direction="column" gap="xl">
-                            <Text size="2xl" weight="bold">
-                              {row.name}
-                            </Text>
-                            {row.tagline ? (
-                              <Text size="base" variant="secondary">
-                                {row.tagline}
+                          <Text size="sm" weight="bold">
+                            {row.categorySlugs?.[0]
+                              ? `${row.categorySlugs[0]}`
+                              : ""}
+                          </Text>
+                          {row.externalUrl ? (
+                            <AriaLink
+                              href={row.externalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              {...stylex.props(styles.productLink)}
+                            >
+                              <Text size="sm" variant="secondary">
+                                View product
                               </Text>
-                            ) : null}
-                            <Text size="sm" weight="bold">
-                              {row.categorySlugs?.[0]
-                                ? `${row.categorySlugs[0]}`
-                                : ""}
-                            </Text>
-                            {row.externalUrl ? (
-                              <AriaLink
-                                href={row.externalUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                {...stylex.props(styles.productLink)}
-                              >
-                                <Text size="sm" variant="secondary">
-                                  View product
-                                </Text>
-                                <ExternalLink size={14} />
-                              </AriaLink>
-                            ) : null}
-                          </Flex>
+                              <ExternalLink size={14} />
+                            </AriaLink>
+                          ) : null}
                         </Flex>
                       </Flex>
-                      <Flex gap="md">
-                        <Button
-                          isDisabled={busy === row.id}
-                          onPress={async () => {
-                            setBusy(row.id);
-                            try {
-                              await adminApi.setListingVerification({
-                                data: { listingId: row.id, status: "verified" },
-                              });
-                              await refresh();
-                            } finally {
-                              setBusy(null);
-                            }
-                          }}
-                        >
-                          Verify
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          isDisabled={busy === row.id}
-                          onPress={async () => {
-                            setBusy(row.id);
-                            try {
-                              await adminApi.setListingVerification({
-                                data: { listingId: row.id, status: "rejected" },
-                              });
-                              await refresh();
-                            } finally {
-                              setBusy(null);
-                            }
-                          }}
-                        >
-                          Reject
-                        </Button>
-                      </Flex>
                     </Flex>
-                  </CardBody>
-                </Card>
-              ))}
-            </Flex>
-          )}
-
-          <Heading2>Pending claims</Heading2>
-          {data.pendingClaims.length === 0 ? (
-            <Body>None.</Body>
-          ) : (
-            <Flex direction="column" style={styles.listStack}>
-              {data.pendingClaims.map((c) => (
-                <Flex key={c.id} style={styles.row}>
-                  <div>
-                    <Body>{c.claimantDid}</Body>
-                    <SmallBody>
-                      listing {c.storeListingId} · {c.status}
-                    </SmallBody>
-                  </div>
-                  <Flex gap="md">
-                    <Button
-                      isDisabled={busy === c.id}
-                      onPress={async () => {
-                        setBusy(c.id);
-                        try {
-                          await adminApi.setClaimStatus({
-                            data: { claimId: c.id, status: "approved" },
-                          });
-                          await refresh();
-                        } finally {
-                          setBusy(null);
-                        }
-                      }}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      isDisabled={busy === c.id}
-                      onPress={async () => {
-                        setBusy(c.id);
-                        try {
-                          await adminApi.setClaimStatus({
-                            data: { claimId: c.id, status: "rejected" },
-                          });
-                          await refresh();
-                        } finally {
-                          setBusy(null);
-                        }
-                      }}
-                    >
-                      Reject
-                    </Button>
+                    <Flex gap="md">
+                      <Button
+                        isDisabled={busy === row.id}
+                        onPress={async () => {
+                          setBusy(row.id);
+                          try {
+                            await adminApi.setListingVerification({
+                              data: { listingId: row.id, status: "verified" },
+                            });
+                            await refresh();
+                          } finally {
+                            setBusy(null);
+                          }
+                        }}
+                      >
+                        Verify
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        isDisabled={busy === row.id}
+                        onPress={async () => {
+                          setBusy(row.id);
+                          try {
+                            await adminApi.setListingVerification({
+                              data: { listingId: row.id, status: "rejected" },
+                            });
+                            await refresh();
+                          } finally {
+                            setBusy(null);
+                          }
+                        }}
+                      >
+                        Reject
+                      </Button>
+                    </Flex>
                   </Flex>
+                </CardBody>
+              </Card>
+            ))}
+          </Flex>
+        )}
+
+        <Heading2>Pending claims</Heading2>
+        {data.pendingClaims.length === 0 ? (
+          <Body>None.</Body>
+        ) : (
+          <Flex direction="column" style={styles.listStack}>
+            {data.pendingClaims.map((c) => (
+              <Flex key={c.id} style={styles.row}>
+                <div>
+                  <Body>{c.claimantDid}</Body>
+                  <SmallBody>
+                    listing {c.storeListingId} · {c.status}
+                  </SmallBody>
+                </div>
+                <Flex gap="md">
+                  <Button
+                    isDisabled={busy === c.id}
+                    onPress={async () => {
+                      setBusy(c.id);
+                      try {
+                        await adminApi.setClaimStatus({
+                          data: { claimId: c.id, status: "approved" },
+                        });
+                        await refresh();
+                      } finally {
+                        setBusy(null);
+                      }
+                    }}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    isDisabled={busy === c.id}
+                    onPress={async () => {
+                      setBusy(c.id);
+                      try {
+                        await adminApi.setClaimStatus({
+                          data: { claimId: c.id, status: "rejected" },
+                        });
+                        await refresh();
+                      } finally {
+                        setBusy(null);
+                      }
+                    }}
+                  >
+                    Reject
+                  </Button>
                 </Flex>
-              ))}
-            </Flex>
-          )}
-        </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+              </Flex>
+            ))}
+          </Flex>
+        )}
+      </Flex>
+    </Page.Root>
   );
 }

@@ -15,7 +15,6 @@ import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { blue } from "../design-system/theme/colors/blue.stylex";
@@ -365,39 +364,37 @@ function AppsTagPage() {
   const relatedTags = getRelatedAppTagGroups(data, allGroups);
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" style={styles.pageContent}>
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" style={styles.navLinks}>
-              <LinkLink to="/apps/tags">
-                <ChevronLeft />
-                All tags
-              </LinkLink>
-            </Flex>
-
-            <AppTagHero
-              eyebrow={formatAppTagCount(data.count)}
-              title={formatAppTagLabel(data.tag)}
-              description={getAppTagDescription(data.tag)}
-              imageSrc={getAppTagHeroAssetPathForTag(data.tag)}
-            />
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" style={styles.pageContent}>
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" style={styles.navLinks}>
+            <LinkLink to="/apps/tags">
+              <ChevronLeft />
+              All tags
+            </LinkLink>
           </Flex>
 
-          <FeaturedListingGrid
-            items={data.listings}
-            getKey={(listing) => `${data.tag}-${listing.id}`}
-            renderItem={(listing, { featured }) => (
-              <AppTagListingCard featured={featured} listing={listing} />
-            )}
+          <AppTagHero
+            eyebrow={formatAppTagCount(data.count)}
+            title={formatAppTagLabel(data.tag)}
+            description={getAppTagDescription(data.tag)}
+            imageSrc={getAppTagHeroAssetPathForTag(data.tag)}
           />
-
-          {relatedTags.length > 0 ? (
-            <RelatedTagsSection groups={relatedTags} />
-          ) : null}
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        <FeaturedListingGrid
+          items={data.listings}
+          getKey={(listing) => `${data.tag}-${listing.id}`}
+          renderItem={(listing, { featured }) => (
+            <AppTagListingCard featured={featured} listing={listing} />
+          )}
+        />
+
+        {relatedTags.length > 0 ? (
+          <RelatedTagsSection groups={relatedTags} />
+        ) : null}
+      </Flex>
+    </Page.Root>
   );
 }
 

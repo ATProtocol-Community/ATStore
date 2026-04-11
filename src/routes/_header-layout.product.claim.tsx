@@ -9,7 +9,6 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Button } from "../design-system/button";
 import { Card, CardBody, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Page } from "../design-system/page";
 import {
   gap,
@@ -129,110 +128,101 @@ function ProductClaimPage() {
 
   if (!eligibility?.eligible || eligibility.listings.length === 0) {
     return (
-      <HeaderLayout.Page>
-        <Page.Root variant="small" style={styles.page}>
-          <Flex direction="column" style={styles.section}>
-            <Heading1>Nothing to claim</Heading1>
-            <Text size="base" variant="secondary">
-              You do not have any store listings to move to your PDS right now.
-            </Text>
-            <Button
-              variant="secondary"
-              onPress={() => void navigate({ to: "/" })}
-            >
-              Home
-            </Button>
-          </Flex>
-        </Page.Root>
-      </HeaderLayout.Page>
+      <Page.Root variant="small" style={styles.page}>
+        <Flex direction="column" style={styles.section}>
+          <Heading1>Nothing to claim</Heading1>
+          <Text size="base" variant="secondary">
+            You do not have any store listings to move to your PDS right now.
+          </Text>
+          <Button
+            variant="secondary"
+            onPress={() => void navigate({ to: "/" })}
+          >
+            Home
+          </Button>
+        </Flex>
+      </Page.Root>
     );
   }
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="small" style={styles.page}>
-        <Flex
-          direction="column"
-          align="center"
-          gap="6xl"
-          style={styles.section}
+    <Page.Root variant="small" style={styles.page}>
+      <Flex direction="column" align="center" gap="6xl" style={styles.section}>
+        <Heading1>Claim your listing</Heading1>
+        <Text
+          size="lg"
+          leading="base"
+          variant="secondary"
+          style={styles.description}
         >
-          <Heading1>Claim your listing</Heading1>
-          <Text
-            size="lg"
-            leading="base"
-            variant="secondary"
-            style={styles.description}
-          >
-            It looks like you own a product listing in the store.
-            <br />
-            You can claim it and gain the ability to update it!
-          </Text>
-          {eligibility.listings.map((listing) => (
-            <>
-              <Card key={listing.id} style={styles.card} size="lg">
-                {listing.heroImageUrl && (
-                  <CardImage
-                    aspectRatio={16 / 9}
-                    src={listing.heroImageUrl}
-                    alt=""
-                  />
-                )}
-                <CardBody>
-                  <Flex direction="column" style={styles.preview}>
-                    <Flex gap="xl" align="start">
-                      {listing.iconUrl ? (
-                        <img
-                          src={listing.iconUrl}
-                          alt=""
-                          {...stylex.props(styles.previewIcon)}
-                        />
-                      ) : null}
-                      <Flex direction="column" gap="xl">
-                        <Text size="2xl" weight="bold">
-                          {listing.name}
-                        </Text>
-                        {listing.tagline ? (
-                          <Text size="base" variant="secondary">
-                            {listing.tagline}
-                          </Text>
-                        ) : null}
-                      </Flex>
-                    </Flex>
-                    {claimMutation.isError ? (
-                      <Text size="sm" variant="critical">
-                        {claimMutation.error instanceof Error
-                          ? claimMutation.error.message
-                          : "Something went wrong."}
-                      </Text>
+          It looks like you own a product listing in the store.
+          <br />
+          You can claim it and gain the ability to update it!
+        </Text>
+        {eligibility.listings.map((listing) => (
+          <>
+            <Card key={listing.id} style={styles.card} size="lg">
+              {listing.heroImageUrl && (
+                <CardImage
+                  aspectRatio={16 / 9}
+                  src={listing.heroImageUrl}
+                  alt=""
+                />
+              )}
+              <CardBody>
+                <Flex direction="column" style={styles.preview}>
+                  <Flex gap="xl" align="start">
+                    {listing.iconUrl ? (
+                      <img
+                        src={listing.iconUrl}
+                        alt=""
+                        {...stylex.props(styles.previewIcon)}
+                      />
                     ) : null}
+                    <Flex direction="column" gap="xl">
+                      <Text size="2xl" weight="bold">
+                        {listing.name}
+                      </Text>
+                      {listing.tagline ? (
+                        <Text size="base" variant="secondary">
+                          {listing.tagline}
+                        </Text>
+                      ) : null}
+                    </Flex>
                   </Flex>
-                </CardBody>
-              </Card>
-              <Flex gap="md" wrap>
-                <Button
-                  variant="secondary"
-                  isDisabled={claimMutation.isPending}
-                  onPress={dismissClaimPrompt}
-                  size="lg"
-                >
-                  Not now
-                </Button>
-                <Button
-                  variant="primary"
-                  isPending={claimMutation.isPending}
-                  onPress={() => {
-                    claimMutation.mutate({ listingId: listing.id });
-                  }}
-                  size="lg"
-                >
-                  Accept
-                </Button>
-              </Flex>
-            </>
-          ))}
-        </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+                  {claimMutation.isError ? (
+                    <Text size="sm" variant="critical">
+                      {claimMutation.error instanceof Error
+                        ? claimMutation.error.message
+                        : "Something went wrong."}
+                    </Text>
+                  ) : null}
+                </Flex>
+              </CardBody>
+            </Card>
+            <Flex gap="md" wrap>
+              <Button
+                variant="secondary"
+                isDisabled={claimMutation.isPending}
+                onPress={dismissClaimPrompt}
+                size="lg"
+              >
+                Not now
+              </Button>
+              <Button
+                variant="primary"
+                isPending={claimMutation.isPending}
+                onPress={() => {
+                  claimMutation.mutate({ listingId: listing.id });
+                }}
+                size="lg"
+              >
+                Accept
+              </Button>
+            </Flex>
+          </>
+        ))}
+      </Flex>
+    </Page.Root>
   );
 }

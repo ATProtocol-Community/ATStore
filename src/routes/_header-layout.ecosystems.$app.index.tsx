@@ -12,7 +12,6 @@ import { Button } from "../design-system/button";
 import { IconButton } from "../design-system/icon-button";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import {
@@ -150,60 +149,58 @@ function EcosystemIndexPage() {
     .filter((section) => section.listings.length > 0);
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="large" style={styles.page}>
-        <Flex direction="column" gap="8xl">
-          <Flex direction="column" gap="4xl">
-            <Flex gap="xl" justify="between" style={styles.navLinks}>
-              <AppLink
-                to="/products/$productId"
-                params={{ productId: appSegment }}
-              >
-                <ChevronLeft />
-                {category.label}
-              </AppLink>
-              <IconButtonLink
-                params={{ app: appSegment }}
-                to="/ecosystems/$app/all"
-                variant="secondary"
-                style={styles.searchButton}
-              >
-                <Search />
-              </IconButtonLink>
-            </Flex>
-
-            <AppTagHero
-              description={category.description}
-              eyebrow={formatEcosystemListingCount(category.count)}
-              imageSrc={heroImage}
-              title={`${category.label} ecosystem`}
-            />
+    <Page.Root variant="large" style={styles.page}>
+      <Flex direction="column" gap="8xl">
+        <Flex direction="column" gap="4xl">
+          <Flex gap="xl" justify="between" style={styles.navLinks}>
+            <AppLink
+              to="/products/$productId"
+              params={{ productId: appSegment }}
+            >
+              <ChevronLeft />
+              {category.label}
+            </AppLink>
+            <IconButtonLink
+              params={{ app: appSegment }}
+              to="/ecosystems/$app/all"
+              variant="secondary"
+              style={styles.searchButton}
+            >
+              <Search />
+            </IconButtonLink>
           </Flex>
 
-          {categorySections.length > 0 ? (
-            <Flex direction="column" style={styles.sectionList}>
-              {categorySections.map((section) => (
-                <EcosystemCategorySection
-                  key={section.category.id}
-                  category={section.category}
-                  listings={section.listings}
-                />
-              ))}
-            </Flex>
-          ) : (
-            <Flex direction="column" style={styles.emptyState}>
-              <Heading1>Categories</Heading1>
-              <Body variant="secondary">
-                This ecosystem does not have nested category sections yet.
-              </Body>
-              <AppLink to={getEcosystemAllPathFromAppSegment(appSegment)}>
-                Search all listings in this ecosystem
-              </AppLink>
-            </Flex>
-          )}
+          <AppTagHero
+            description={category.description}
+            eyebrow={formatEcosystemListingCount(category.count)}
+            imageSrc={heroImage}
+            title={`${category.label} ecosystem`}
+          />
         </Flex>
-      </Page.Root>
-    </HeaderLayout.Page>
+
+        {categorySections.length > 0 ? (
+          <Flex direction="column" style={styles.sectionList}>
+            {categorySections.map((section) => (
+              <EcosystemCategorySection
+                key={section.category.id}
+                category={section.category}
+                listings={section.listings}
+              />
+            ))}
+          </Flex>
+        ) : (
+          <Flex direction="column" style={styles.emptyState}>
+            <Heading1>Categories</Heading1>
+            <Body variant="secondary">
+              This ecosystem does not have nested category sections yet.
+            </Body>
+            <AppLink to={getEcosystemAllPathFromAppSegment(appSegment)}>
+              Search all listings in this ecosystem
+            </AppLink>
+          </Flex>
+        )}
+      </Flex>
+    </Page.Root>
   );
 }
 

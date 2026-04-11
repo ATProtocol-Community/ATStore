@@ -1,9 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import {
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   createLink,
@@ -24,7 +20,6 @@ import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { StarRating } from "../design-system/star-rating";
@@ -95,16 +90,26 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
 
     const productSlug = getDirectoryListingSlug(listing);
 
-    await context.queryClient.ensureQueryData(
+    const relatedProducts = await context.queryClient.ensureQueryData(
       directoryListingApi.getRelatedDirectoryListingsQueryOptions({
         id: listing.id,
         limit: 3,
       }),
     );
 
-    await context.queryClient.ensureQueryData(
+    const listingReviews = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
     );
+    const session = await context.queryClient.ensureQueryData(
+      user.getSessionQueryOptions,
+    );
+    const editAccess = session?.user?.did
+      ? await context.queryClient.ensureQueryData(
+          directoryListingApi.getProductListingEditAccessQueryOptions(
+            listing.id,
+          ),
+        )
+      : null;
 
     const ecosystemRootId = getAppEcosystemRootCategoryId(listing.categorySlug);
     if (ecosystemRootId) {
@@ -134,6 +139,11 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       productId: listing.id,
       productSlug,
       ecosystemRootId,
+      listing,
+      relatedProducts,
+      listingReviews,
+      session,
+      editAccess,
       ogTitle: `${listing.name} | at-store`,
       ogDescription,
       ogImage: listing.heroImageUrl || null,
@@ -480,7 +490,17 @@ const styles = stylex.create({
 });
 
 function ProductPage() {
-  const { productId, productSlug, ecosystemRootId } = Route.useLoaderData();
+  const {
+    productId,
+    productSlug,
+    ecosystemRootId,
+    listing,
+    relatedProducts,
+    listingReviews,
+    session,
+    editAccess,
+  } = Route.useLoaderData();
+
   const queryClient = useQueryClient();
   const detailQueryOptions =
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
@@ -489,16 +509,6 @@ function ProductPage() {
       id: productId,
       limit: 3,
     });
-  const reviewsQueryOptions =
-    directoryListingApi.getDirectoryListingReviewsQueryOptions(productId);
-  const { data: listing } = useSuspenseQuery(detailQueryOptions);
-  const { data: relatedProducts } = useSuspenseQuery(relatedQueryOptions);
-  const { data: listingReviews } = useSuspenseQuery(reviewsQueryOptions);
-  const { data: session } = useQuery(user.getSessionQueryOptions);
-  const { data: editAccess } = useQuery({
-    ...directoryListingApi.getProductListingEditAccessQueryOptions(productId),
-    enabled: Boolean(session?.user?.did),
-  });
 
   if (!listing) {
     throw notFound();
@@ -683,262 +693,256 @@ function ProductPage() {
   }
 
   return (
-    <HeaderLayout.Page>
-      <Page.Root variant="small" style={styles.page}>
-        <Flex direction="column" gap="6xl">
-          <Flex
-            align="center"
-            justify="between"
-            gap="xl"
-            style={styles.backLinkRow}
-          >
-            <Flex align="center">
-              {canGoBack ? (
-                <Link onClick={() => router.history.back()}>
-                  <ChevronLeft />
-                  Back
-                </Link>
-              ) : (
-                <AppLink to="/">
-                  <ChevronLeft />
-                  Home
-                </AppLink>
-              )}
-            </Flex>
-            {editAccess?.canEdit ? (
-              <AppLink
-                to="/products/$productId/edit"
-                params={{ productId: productSlug }}
-              >
-                Edit listing
-              </AppLink>
-            ) : null}
-          </Flex>
-          {editAccess?.needsClaim ? (
-            <Text size="sm" variant="secondary">
-              This listing is still published from the store account.{" "}
-              <AppLink to="/product/claim">Claim it</AppLink> to edit from your
-              PDS.
-            </Text>
-          ) : null}
-          <HeroSection listing={listing} />
-          <Flex direction="column" gap="5xl">
-            {getDescriptionBlocks(listing.description).map((block, index) => (
-              <Body
-                key={`${listing.id}-description-${index}`}
-                style={styles.descriptionText}
-              >
-                {block}
-              </Body>
-            ))}
-          </Flex>
-          {type === "Apps" ? (
-            domain ? (
-              <Flex gap="xl">
-                <MetaCard label="App" value={scope} />
-                <MetaCard label="Domain" value={domain} />
-              </Flex>
-            ) : null
-          ) : (
-            <Flex gap="xl">
-              <MetaCard label="Type" value={type || "Unknown"} />
-              <MetaCard label="Domain" value={scope || "Unknown"} />
-            </Flex>
-          )}
-          {ecosystemRootId && isRootApp ? (
-            <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
-          ) : null}
-          <Flex gap="4xl" direction="column">
-            <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
-              <Flex
-                align="center"
-                gap="2xl"
-                justify="between"
-                style={styles.reviewsHeaderTop}
-              >
-                <Flex gap="4xl" align="center">
-                  <Heading2>Reviews</Heading2>
-                  <Flex gap="md" style={styles.ratingRow}>
-                    <StarRating
-                      rating={listing.rating}
-                      reviewCount={listing.reviewCount}
-                      showReviewCount
-                    />
-                    <Text weight="semibold">
-                      {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-                    </Text>
-                  </Flex>
-                </Flex>
-                <ButtonLink
-                  to="/products/$productId/reviews"
-                  params={{ productId: productSlug }}
-                  size="lg"
-                  variant="secondary"
-                >
-                  View all
-                </ButtonLink>
-              </Flex>
-            </Flex>
-
-            {previewReviews.length > 0 ? (
-              <Flex direction="column" gap="2xl">
-                {previewReviews.map((review) => (
-                  <DirectoryListingReviewCard
-                    key={review.id}
-                    listingId={productId}
-                    review={review}
-                    viewerDid={session?.user?.did ?? null}
-                    onEditReview={() => {
-                      void navigate({
-                        to: "/products/$productId/reviews/$reviewId/edit",
-                        params: {
-                          productId: productSlug,
-                          reviewId: review.id,
-                        },
-                      });
-                    }}
-                  />
-                ))}
-              </Flex>
+    <Page.Root variant="small" style={styles.page}>
+      <Flex direction="column" gap="6xl">
+        <Flex
+          align="center"
+          justify="between"
+          gap="xl"
+          style={styles.backLinkRow}
+        >
+          <Flex align="center">
+            {canGoBack ? (
+              <Link onClick={() => router.history.back()}>
+                <ChevronLeft />
+                Back
+              </Link>
             ) : (
-              <Flex
-                direction="column"
-                justify="center"
-                align="center"
-                gap="2xl"
-                style={styles.noReviews}
-              >
-                <Body variant="secondary">
-                  Be the first to review this product.
-                </Body>
-              </Flex>
+              <AppLink to="/">
+                <ChevronLeft />
+                Home
+              </AppLink>
             )}
-
-            <ButtonLink
-              to="/products/$productId/reviews/write"
-              params={{ productId: productSlug }}
-              size="lg"
-              variant="secondary"
-            >
-              Create review
-            </ButtonLink>
           </Flex>
-          {relatedProducts.length > 0 ? (
-            <RelatedProductsSection listings={relatedProducts} />
+          {editAccess?.canEdit ? (
+            <AppLink
+              to="/products/$productId/edit"
+              params={{ productId: productSlug }}
+            >
+              Edit listing
+            </AppLink>
           ) : null}
         </Flex>
-        {import.meta.env.DEV && imageReviewDraft ? (
-          <Card style={styles.imageReviewPanel}>
-            <Flex direction="column" style={styles.imageReviewCardBody}>
-              <Text
-                size="sm"
-                weight="semibold"
-                style={styles.imageReviewHeading}
+        {editAccess?.needsClaim ? (
+          <Text size="sm" variant="secondary">
+            This listing is still published from the store account.{" "}
+            <AppLink to="/product/claim">Claim it</AppLink> to edit from your
+            PDS.
+          </Text>
+        ) : null}
+        <HeroSection listing={listing} />
+        <Flex direction="column" gap="5xl">
+          {getDescriptionBlocks(listing.description).map((block, index) => (
+            <Body
+              key={`${listing.id}-description-${index}`}
+              style={styles.descriptionText}
+            >
+              {block}
+            </Body>
+          ))}
+        </Flex>
+        {type === "Apps" ? (
+          domain ? (
+            <Flex gap="xl">
+              <MetaCard label="App" value={scope} />
+              <MetaCard label="Domain" value={domain} />
+            </Flex>
+          ) : null
+        ) : (
+          <Flex gap="xl">
+            <MetaCard label="Type" value={type || "Unknown"} />
+            <MetaCard label="Domain" value={scope || "Unknown"} />
+          </Flex>
+        )}
+        {ecosystemRootId && isRootApp ? (
+          <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
+        ) : null}
+        <Flex gap="4xl" direction="column">
+          <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
+            <Flex
+              align="center"
+              gap="2xl"
+              justify="between"
+              style={styles.reviewsHeaderTop}
+            >
+              <Flex gap="4xl" align="center">
+                <Heading2>Reviews</Heading2>
+                <Flex gap="md" style={styles.ratingRow}>
+                  <StarRating
+                    rating={listing.rating}
+                    reviewCount={listing.reviewCount}
+                    showReviewCount
+                  />
+                  <Text weight="semibold">
+                    {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  </Text>
+                </Flex>
+              </Flex>
+              <ButtonLink
+                to="/products/$productId/reviews"
+                params={{ productId: productSlug }}
+                size="lg"
+                variant="secondary"
               >
-                {imageReviewDraft.kind === "hero"
-                  ? "Review new hero image"
-                  : "Review new icon"}
-              </Text>
-              {imageReviewDraft.kind === "icon" &&
-              imageReviewDraft.previewSource ? (
-                <Text size="sm" variant="secondary">
-                  {imageReviewDraft.previewSource === "site_asset"
-                    ? "Sourced from site favicon or logo asset, then refined with Gemini."
-                    : "Generated from a homepage screenshot."}
-                </Text>
-              ) : null}
-              <figure {...stylex.props(styles.imageReviewFigure)}>
-                <img
-                  alt={
-                    imageReviewDraft.kind === "hero"
-                      ? "Generated hero preview"
-                      : "Generated icon preview"
-                  }
-                  src={`data:${imageReviewDraft.mimeType};base64,${imageReviewDraft.imageBase64}`}
-                  {...stylex.props(
-                    imageReviewDraft.kind === "hero"
-                      ? styles.imageReviewHeroImg
-                      : styles.imageReviewIconImg,
-                  )}
+                View all
+              </ButtonLink>
+            </Flex>
+          </Flex>
+
+          {previewReviews.length > 0 ? (
+            <Flex direction="column" gap="2xl">
+              {previewReviews.map((review) => (
+                <DirectoryListingReviewCard
+                  key={review.id}
+                  listingId={productId}
+                  review={review}
+                  viewerDid={session?.user?.did ?? null}
+                  onEditReview={() => {
+                    void navigate({
+                      to: "/products/$productId/reviews/$reviewId/edit",
+                      params: {
+                        productId: productSlug,
+                        reviewId: review.id,
+                      },
+                    });
+                  }}
                 />
-              </figure>
-              <Flex style={styles.imageReviewActions}>
-                <Button
-                  variant="secondary"
-                  isDisabled={pendingImageCommit}
-                  onPress={dismissImageReview}
-                >
-                  Discard
-                </Button>
-                <Button
-                  isPending={pendingImageCommit}
-                  isDisabled={pendingImageCommit}
-                  onPress={() => void commitImageReview()}
-                >
-                  Publish to listing
-                </Button>
-              </Flex>
+              ))}
             </Flex>
-          </Card>
+          ) : (
+            <Flex
+              direction="column"
+              justify="center"
+              align="center"
+              gap="2xl"
+              style={styles.noReviews}
+            >
+              <Body variant="secondary">
+                Be the first to review this product.
+              </Body>
+            </Flex>
+          )}
+
+          <ButtonLink
+            to="/products/$productId/reviews/write"
+            params={{ productId: productSlug }}
+            size="lg"
+            variant="secondary"
+          >
+            Create review
+          </ButtonLink>
+        </Flex>
+        {relatedProducts.length > 0 ? (
+          <RelatedProductsSection listings={relatedProducts} />
         ) : null}
-        {import.meta.env.DEV ? (
-          <Card style={styles.devToolbar}>
-            <Flex direction="column" style={styles.devToolbarBody}>
-              <Text size="sm" weight="semibold">
-                Dev tools
+      </Flex>
+      {import.meta.env.DEV && imageReviewDraft ? (
+        <Card style={styles.imageReviewPanel}>
+          <Flex direction="column" style={styles.imageReviewCardBody}>
+            <Text size="sm" weight="semibold" style={styles.imageReviewHeading}>
+              {imageReviewDraft.kind === "hero"
+                ? "Review new hero image"
+                : "Review new icon"}
+            </Text>
+            {imageReviewDraft.kind === "icon" &&
+            imageReviewDraft.previewSource ? (
+              <Text size="sm" variant="secondary">
+                {imageReviewDraft.previewSource === "site_asset"
+                  ? "Sourced from site favicon or logo asset, then refined with Gemini."
+                  : "Generated from a homepage screenshot."}
               </Text>
-              <Flex direction="column" style={styles.devToolbarButtons}>
-                <Button
-                  variant="secondary"
-                  isPending={pendingGeneration === "icon"}
-                  isDisabled={
-                    pendingGeneration !== null || imageReviewDraft !== null
-                  }
-                  onPress={() => void runGeneration("icon")}
-                >
-                  Generate icon
-                </Button>
-                <Button
-                  variant="secondary"
-                  isPending={pendingGeneration === "hero"}
-                  isDisabled={
-                    pendingGeneration !== null || imageReviewDraft !== null
-                  }
-                  onPress={() => void runGeneration("hero")}
-                >
-                  Generate hero image
-                </Button>
-                <Button
-                  variant="secondary"
-                  isPending={pendingGeneration === "tagline"}
-                  isDisabled={pendingGeneration !== null}
-                  onPress={() => void runGeneration("tagline")}
-                >
-                  Generate tagline
-                </Button>
-                <Button
-                  variant="secondary"
-                  isPending={pendingGeneration === "description"}
-                  isDisabled={pendingGeneration !== null}
-                  onPress={() => void runGeneration("description")}
-                >
-                  Generate description
-                </Button>
-              </Flex>
-              <Text
-                size="sm"
-                variant={
-                  toolbarStatus?.tone === "critical" ? "critical" : "secondary"
+            ) : null}
+            <figure {...stylex.props(styles.imageReviewFigure)}>
+              <img
+                alt={
+                  imageReviewDraft.kind === "hero"
+                    ? "Generated hero preview"
+                    : "Generated icon preview"
                 }
-                style={styles.devToolbarStatus}
+                src={`data:${imageReviewDraft.mimeType};base64,${imageReviewDraft.imageBase64}`}
+                {...stylex.props(
+                  imageReviewDraft.kind === "hero"
+                    ? styles.imageReviewHeroImg
+                    : styles.imageReviewIconImg,
+                )}
+              />
+            </figure>
+            <Flex style={styles.imageReviewActions}>
+              <Button
+                variant="secondary"
+                isDisabled={pendingImageCommit}
+                onPress={dismissImageReview}
               >
-                {toolbarStatus?.text ?? " "}
-              </Text>
+                Discard
+              </Button>
+              <Button
+                isPending={pendingImageCommit}
+                isDisabled={pendingImageCommit}
+                onPress={() => void commitImageReview()}
+              >
+                Publish to listing
+              </Button>
             </Flex>
-          </Card>
-        ) : null}
-      </Page.Root>
-    </HeaderLayout.Page>
+          </Flex>
+        </Card>
+      ) : null}
+      {import.meta.env.DEV ? (
+        <Card style={styles.devToolbar}>
+          <Flex direction="column" style={styles.devToolbarBody}>
+            <Text size="sm" weight="semibold">
+              Dev tools
+            </Text>
+            <Flex direction="column" style={styles.devToolbarButtons}>
+              <Button
+                variant="secondary"
+                isPending={pendingGeneration === "icon"}
+                isDisabled={
+                  pendingGeneration !== null || imageReviewDraft !== null
+                }
+                onPress={() => void runGeneration("icon")}
+              >
+                Generate icon
+              </Button>
+              <Button
+                variant="secondary"
+                isPending={pendingGeneration === "hero"}
+                isDisabled={
+                  pendingGeneration !== null || imageReviewDraft !== null
+                }
+                onPress={() => void runGeneration("hero")}
+              >
+                Generate hero image
+              </Button>
+              <Button
+                variant="secondary"
+                isPending={pendingGeneration === "tagline"}
+                isDisabled={pendingGeneration !== null}
+                onPress={() => void runGeneration("tagline")}
+              >
+                Generate tagline
+              </Button>
+              <Button
+                variant="secondary"
+                isPending={pendingGeneration === "description"}
+                isDisabled={pendingGeneration !== null}
+                onPress={() => void runGeneration("description")}
+              >
+                Generate description
+              </Button>
+            </Flex>
+            <Text
+              size="sm"
+              variant={
+                toolbarStatus?.tone === "critical" ? "critical" : "secondary"
+              }
+              style={styles.devToolbarStatus}
+            >
+              {toolbarStatus?.text ?? " "}
+            </Text>
+          </Flex>
+        </Card>
+      ) : null}
+    </Page.Root>
   );
 }
 
