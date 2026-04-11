@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { useState } from "react";
 import {
   useMutation,
   useQueryClient,
@@ -19,6 +20,7 @@ import {
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { Heading1 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { TextField } from "../design-system/text-field";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { SKIP_PRODUCT_CLAIM_COOKIE } from "../lib/product-claim-eligibility";
@@ -80,13 +82,14 @@ export const Route = createFileRoute("/_header-layout/product/claim")({
 function ProductClaimPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [claimKeys, setClaimKeys] = useState<Record<string, string>>({});
   const { data: eligibility } = useSuspenseQuery(
     directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
   const claimMutation = useMutation({
-    mutationFn: async (listingId: string) => {
+    mutationFn: async (input: { listingId: string; claimKey: string }) => {
       return directoryListingApi.claimProductListingToPds({
-        data: { listingId },
+        data: input,
       });
     },
     onSuccess: async (result) => {
@@ -150,6 +153,10 @@ function ProductClaimPage() {
             <br />
             You can claim it and gain the ability to update it!
           </Text>
+          <Text size="base" variant="secondary" style={styles.description}>
+            Enter the claim key from the store-published listing record (it is
+            mirrored in our database from the network).
+          </Text>
 
           {eligibility.listings.map((listing) => (
             <>
@@ -189,6 +196,18 @@ function ProductClaimPage() {
                           : "Something went wrong."}
                       </Text>
                     ) : null}
+                    <TextField
+                      label="Claim key"
+                      type="password"
+                      value={claimKeys[listing.id] ?? ""}
+                      onChange={(value) => {
+                        setClaimKeys((prev) => ({
+                          ...prev,
+                          [listing.id]: value,
+                        }));
+                      }}
+                      placeholder="Paste your claim key"
+                    />
                   </Flex>
                 </CardBody>
               </Card>
@@ -204,7 +223,15 @@ function ProductClaimPage() {
                 <Button
                   variant="primary"
                   isPending={claimMutation.isPending}
-                  onPress={() => claimMutation.mutate(listing.id)}
+                  isDisabled={!claimKeys[listing.id]?.trim()}
+                  onPress={() => {
+                    const key = claimKeys[listing.id]?.trim();
+                    if (!key) return;
+                    claimMutation.mutate({
+                      listingId: listing.id,
+                      claimKey: key,
+                    });
+                  }}
                   size="lg"
                 >
                   Accept

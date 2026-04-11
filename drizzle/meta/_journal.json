@@ -113,6 +113,13 @@
       "when": 1776400000000,
       "tag": "0015_store_listings_migrated_from_at_uri",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776500000000,
+      "tag": "0016_store_listings_claim_key",
+      "breakpoints": true
     }
   ]
 }

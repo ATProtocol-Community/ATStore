@@ -3,6 +3,7 @@ import {
   isLegacyBlob,
   type Blob as AtprotoBlob,
 } from '@atcute/lexicons/interfaces'
+import { timingSafeEqual } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -13,9 +14,18 @@ import {
   explainMissingBlobUrl,
   getBlobCidString,
 } from '#/lib/atproto/blob-cdn-url'
+import { parseAtUriParts } from '#/lib/atproto/at-uri'
 import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
+import { getAtstoreRepoDid } from '#/lib/atproto/publish-directory-listing'
+
+function timingSafeEqualUtf8(a: string, b: string): boolean {
+  const ba = Buffer.from(a, 'utf8')
+  const bb = Buffer.from(b, 'utf8')
+  if (ba.length !== bb.length) return false
+  return timingSafeEqual(ba, bb)
+}
 
 /**
  * `isBlob()` requires `$type: "blob"`, exactly four keys, etc. Tap / repo JSON often omits
@@ -130,6 +140,14 @@ const listingBodySchema = z.object({
     .refine((s) => !s || s.startsWith('at://'), {
       message: 'migratedFromAtUri must be an at:// URI',
     }),
+  claimKey: z
+    .string()
+    .max(256)
+    .optional()
+    .transform((s) => {
+      const t = s?.trim() ?? ''
+      return t.length > 0 ? t : undefined
+    }),
 })
 
 export type ListingDetailParseResult =
@@ -232,6 +250,7 @@ export function tryParseListingDetailRecord(
   if (d.productAccountDid) rec.productAccountDid = d.productAccountDid
   const migrated = d.migratedFromAtUri?.trim()
   if (migrated) rec.migratedFromAtUri = migrated
+  if (d.claimKey) rec.claimKey = d.claimKey
   return { ok: true, record: rec }
 }
 
@@ -244,6 +263,36 @@ export function parseListingDetailRecord(
 
 function atUriFor(did: string, rkey: string) {
   return `at://${did}/${COLLECTION.listingDetail}/${rkey}`
+}
+
+/**
+ * Verified when: trusted store publisher; or claim lineage from the store repo; or the ingested `claimKey`
+ * matches the directory row already stored for this slug (same token on the network as in Postgres).
+ */
+function resolveListingVerificationStatus(input: {
+  trustedPublisher: boolean
+  record: FyiAtstoreListingDetail
+  incomingClaimKey: string | null
+  existingClaimKey: string | null
+  atstoreDid: string
+}): 'verified' | 'unverified' {
+  if (input.trustedPublisher) return 'verified'
+  const migrated = input.record.migratedFromAtUri?.trim()
+  if (migrated) {
+    try {
+      const prior = parseAtUriParts(migrated)
+      if (prior.collection !== COLLECTION.listingDetail) return 'unverified'
+      if (prior.repo.trim() === input.atstoreDid.trim()) return 'verified'
+    } catch {
+      /* fall through */
+    }
+  }
+  const inc = input.incomingClaimKey
+  const ex = input.existingClaimKey
+  if (inc && ex && timingSafeEqualUtf8(inc, ex)) {
+    return 'verified'
+  }
+  return 'unverified'
 }
 
 /**
@@ -260,7 +309,26 @@ export async function upsertDirectoryListingFromTap(input: {
   const { db, did, rkey, record, trustedPublisher } = input
   const atUri = atUriFor(did, rkey)
   const sourceUrl = record.externalUrl.trim()
-  const verificationStatus = trustedPublisher ? 'verified' : 'unverified'
+  const incomingClaimKey = record.claimKey?.trim() ?? null
+  const atstoreDid = await getAtstoreRepoDid()
+  /** Only the store repo may persist `claim_key`; owner-repo ingests clear it so it cannot return after claim. */
+  const claimKeyPersisted =
+    did.trim() === atstoreDid.trim() ? incomingClaimKey : null
+
+  const [existingRow] = await db
+    .select({ claimKey: schema.storeListings.claimKey })
+    .from(schema.storeListings)
+    .where(eq(schema.storeListings.slug, record.slug))
+    .limit(1)
+  const existingClaimKey = existingRow?.claimKey?.trim() ?? null
+
+  const verificationStatus = resolveListingVerificationStatus({
+    trustedPublisher,
+    record,
+    incomingClaimKey,
+    existingClaimKey,
+    atstoreDid,
+  })
   const now = new Date()
   const appTags = record.appTags ?? []
   const categorySlugs = record.categorySlug
@@ -310,6 +378,7 @@ export async function upsertDirectoryListingFromTap(input: {
       productAccountDid: productDid,
       productAccountHandle,
       migratedFromAtUri,
+      claimKey: claimKeyPersisted,
       updatedAt: now,
     })
     .onConflictDoUpdate({
@@ -333,6 +402,7 @@ export async function upsertDirectoryListingFromTap(input: {
         productAccountDid: productDid,
         productAccountHandle,
         migratedFromAtUri,
+        claimKey: claimKeyPersisted,
         updatedAt: now,
       },
     })

@@ -47,6 +47,7 @@ type StoreListingRow = {
   product_account_did: string | null
   product_account_handle: string | null
   migrated_from_at_uri: string | null
+  claim_key?: string | null
   review_count: number
   average_rating: number | null
   created_at: Date
@@ -74,6 +75,7 @@ const CONFLICT_UPDATE_COLUMNS = [
   'product_account_did',
   'product_account_handle',
   'migrated_from_at_uri',
+  'claim_key',
   'review_count',
   'average_rating',
   'created_at',
@@ -151,6 +153,7 @@ async function main() {
         product_account_did,
         product_account_handle,
         migrated_from_at_uri,
+        claim_key,
         review_count,
         average_rating,
         created_at,
@@ -179,6 +182,7 @@ async function main() {
         ${row.product_account_did},
         ${row.product_account_handle},
         ${row.migrated_from_at_uri},
+        ${row.claim_key ?? null},
         ${row.review_count},
         ${row.average_rating},
         ${row.created_at},

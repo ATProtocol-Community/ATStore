@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
+import { timingSafeEqual } from 'node:crypto'
 import { and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
@@ -59,6 +60,13 @@ import {
 } from '#/lib/site-brand-icon'
 import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
 import { findEligibleProductClaimsForDid } from '#/lib/product-claim-eligibility'
+
+function timingSafeEqualUtf8(a: string, b: string): boolean {
+  const ba = Buffer.from(a, 'utf8')
+  const bb = Buffer.from(b, 'utf8')
+  if (ba.length !== bb.length) return false
+  return timingSafeEqual(ba, bb)
+}
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -754,6 +762,7 @@ function buildHomePageTagSummaries(
   throw new Error('No app tag summaries found')
 }
 
+/** Public listing card projection — never include `claim_key` (server-only secret). */
 function getListingSelect(table: typeof dbSchema.storeListings) {
   return {
     id: table.id,
@@ -1670,6 +1679,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data, context }) => {
     const table = context.schema.storeListings
+    /** Explicit columns only — never `claim_key`. */
     const [row] = await context.db
       .select({
         id: table.id,
@@ -1713,6 +1723,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data, context }) => {
     const table = context.schema.storeListings
+    /** Explicit columns only — never `claim_key`. */
     const [row] = await context.db
       .select({
         id: table.id,
@@ -2967,6 +2978,8 @@ const rejectProductAccountCandidate = createServerFn({ method: 'POST' })
 
 const claimProductListingToPdsInput = z.object({
   listingId: z.string().uuid(),
+  /** Server-only secret (from admins); never stored on ATProto. */
+  claimKey: z.string().min(1).max(512),
 })
 
 const getProfileOwnedProductListingsInput = z.object({
@@ -3016,10 +3029,28 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
       throw new Error('This listing is not published on the store account.')
     }
 
+    if (isBrowseableProtocolRow({ categorySlugs: full.categorySlugs ?? [] })) {
+      throw new Error(
+        'Protocol directory listings cannot be claimed to a product PDS.',
+      )
+    }
+
     const oldAtUri = full.atUri?.trim()
     const oldRkey = full.rkey?.trim()
     if (!oldAtUri?.startsWith('at://') || !oldRkey) {
       throw new Error('Listing is missing ATProto coordinates.')
+    }
+
+    const expectedClaimKey = full.claimKey?.trim()
+    if (!expectedClaimKey) {
+      throw new Error(
+        'This listing has no claim key on file. Ask the directory team for a claim key.',
+      )
+    }
+
+    const submitted = data.claimKey.trim()
+    if (!timingSafeEqualUtf8(expectedClaimKey, submitted)) {
+      throw new Error('Invalid claim key.')
     }
 
     /**
@@ -3049,7 +3080,10 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
         client,
         full,
         undefined,
-        { migratedFromAtUri: canonicalOldAtUri },
+        {
+          migratedFromAtUri: canonicalOldAtUri,
+          omitClaimKey: true,
+        },
       )
       record.updatedAt = new Date().toISOString()
 
@@ -3068,6 +3102,9 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
           repoDid: session.did,
           rkey: newRkey,
           migratedFromAtUri: canonicalOldAtUri,
+          verificationStatus: 'verified',
+          /** Single-use: remove so Tap / claim cannot reuse the same token. */
+          claimKey: null,
           updatedAt: now,
         })
         .where(eq(t.id, full.id))

@@ -202,6 +202,10 @@ export const storeListings = pgTable(
      * Used with `at_uri` so review ingest can resolve `subject` before and after migration.
      */
     migratedFromAtUri: text('migrated_from_at_uri'),
+    /**
+     * Mirror of `fyi.atstore.listing.detail.claimKey` from Tap (AT Store repo only). Nulled on successful claim (one-time).
+     */
+    claimKey: text('claim_key'),
     /** Denormalized from `store_listing_reviews` (Tap ingest). */
     reviewCount: integer('review_count').notNull().default(0),
     /** Null when `reviewCount` is 0; else mean of star ratings (1–5). */

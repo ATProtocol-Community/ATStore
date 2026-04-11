@@ -1,8 +1,28 @@
-import { and, asc, eq, isNotNull } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  eq,
+  isNotNull,
+  not,
+  sql,
+  type SQL,
+} from 'drizzle-orm'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 
 import type { Database } from '#/db/index.server'
 import * as schema from '#/db/schema'
 import { getAtstoreRepoDid } from '#/lib/atproto/publish-directory-listing'
+
+/** Two-segment `protocol/…` slug — directory "Protocol" listings; not claimable as app product listings. */
+function sqlCategorySlugsHasProtocolBrowseableSegment(
+  categorySlugs: AnyPgColumn,
+): SQL {
+  return sql<boolean>`exists (
+    select 1 from unnest(${categorySlugs}) as u(slug)
+    where cardinality(string_to_array(trim(both from u.slug::text), '/')) = 2
+      and trim(both from u.slug::text) like 'protocol/%'
+  )`
+}
 
 /** Client-visible cookie; when set, OAuth callback will not redirect to `/product/claim`. */
 export const SKIP_PRODUCT_CLAIM_COOKIE = 'atstore_skip_product_claim'
@@ -50,6 +70,9 @@ export async function findEligibleProductClaimsForDid(
         eq(t.repoDid, atstoreDid),
         isNotNull(t.atUri),
         isNotNull(t.rkey),
+        isNotNull(t.claimKey),
+        sql`trim(${t.claimKey}) <> ''`,
+        not(sqlCategorySlugsHasProtocolBrowseableSegment(t.categorySlugs)),
       ),
     )
     .orderBy(asc(t.name))

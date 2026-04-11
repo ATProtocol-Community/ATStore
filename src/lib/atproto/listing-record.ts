@@ -52,6 +52,8 @@ export type FyiAtstoreListingDetail = {
   productAccountDid?: string
   /** Prior `fyi.atstore.listing.detail` record URI when this record supersedes one from another repo. */
   migratedFromAtUri?: string
+  /** Claim token on store-published records; omitted on the product PDS after claim. */
+  claimKey?: string
 }
 
 function isHttpsUri(s: string | null | undefined): s is string {
@@ -113,6 +115,8 @@ export type ListingDetailBlobOverrides = {
 export type ListingDetailRecordExtras = {
   /** Set when claiming a listing from the store repo onto the product owner PDS. */
   migratedFromAtUri?: string
+  /** Do not put `claimKey` on the new record (post-claim listing on the owner PDS). */
+  omitClaimKey?: boolean
 }
 
 /**
@@ -207,6 +211,11 @@ export async function buildListingDetailRecordWithBlobs(
   const migrated = extras?.migratedFromAtUri?.trim()
   if (migrated?.startsWith('at://')) {
     record.migratedFromAtUri = migrated
+  }
+
+  if (!extras?.omitClaimKey) {
+    const ck = row.claimKey?.trim()
+    if (ck) record.claimKey = ck
   }
 
   return {
