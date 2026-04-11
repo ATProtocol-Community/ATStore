@@ -4,6 +4,7 @@ import type { StoreListing } from '#/db/schema'
 import {
   buildListingDetailRecordWithBlobs,
   type ListingDetailBlobOverrides,
+  type ListingDetailDbUrls,
 } from '#/lib/atproto/listing-record'
 import {
   createListingDetailRecord,
@@ -80,4 +81,41 @@ export async function publishDirectoryListingDetail(
   }
   const { uri } = await createListingDetailRecord(client, repoDid, record)
   return { uri }
+}
+
+/**
+ * Put `fyi.atstore.listing.detail` on the **owner** repo (after claim). Postgres should be updated
+ * by the caller so the site reflects changes without waiting for Tap.
+ */
+export async function publishOwnedListingDetail(
+  client: Client,
+  ownerRepoDid: string,
+  row: StoreListing,
+  patch?: Partial<StoreListing>,
+  blobOverrides?: ListingDetailBlobOverrides,
+): Promise<{ uri: string; dbUrls: ListingDetailDbUrls }> {
+  const repo = row.repoDid?.trim()
+  if (repo !== ownerRepoDid) {
+    throw new Error('You can only update listings stored in your repository.')
+  }
+  const rk = row.rkey?.trim()
+  if (!rk) {
+    throw new Error('Listing has no record key; cannot update in place.')
+  }
+  const merged = mergeListingRow(row, patch)
+  const migrated = row.migratedFromAtUri?.trim()
+  const { record, dbUrls } = await buildListingDetailRecordWithBlobs(
+    client,
+    merged,
+    blobOverrides,
+    {
+      omitClaimKey: true,
+      ...(migrated?.startsWith('at://')
+        ? { migratedFromAtUri: migrated }
+        : {}),
+    },
+  )
+  record.updatedAt = new Date().toISOString()
+  const { uri } = await putListingDetailRecord(client, ownerRepoDid, rk, record)
+  return { uri, dbUrls }
 }

@@ -1,15 +1,15 @@
 import * as stylex from "@stylexjs/stylex";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, InfoIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 import { z } from "zod";
 
 import type { SavedHandle } from "#/utils/saved-handles";
 
 import { AtStoreLogo } from "../components/AtStoreLogo";
-import { AutocompleteInput } from "../design-system/autocomplete";
+import { UserHandleAutocomplete } from "../components/user-handle-autocomplete";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import {
@@ -23,7 +23,6 @@ import { Form } from "../design-system/form";
 import { IconButton } from "../design-system/icon-button";
 import { Link } from "../design-system/link";
 import { LinkContext } from "../design-system/link/link-context";
-import { ListBoxItem } from "../design-system/listbox";
 import { Separator } from "../design-system/separator";
 import { primaryColor, uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
@@ -142,11 +141,6 @@ export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in" }] }),
 });
 
-interface Actor {
-  handle: string;
-  avatar: string | null;
-}
-
 function AuthPage() {
   const {
     redirect: redirectTo,
@@ -179,31 +173,6 @@ function AuthPage() {
       });
     }
   }, [loginSuccess, handleParam, avatarParam, navigate, redirectTo]);
-
-  const isSearching = inputValue.length >= 2;
-  const { data: actorsData } = useQuery<{ actors: Array<Actor> }>({
-    queryKey: ["atproto-actors", inputValue],
-    queryFn: async () => {
-      const host = "https://public.api.bsky.app";
-      const url = new URL("xrpc/app.bsky.actor.searchActorsTypeahead", host);
-      url.searchParams.set("q", inputValue);
-      url.searchParams.set("limit", "5");
-
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error("Failed to fetch actors");
-      }
-      return res.json() as Promise<{ actors: Array<Actor> }>;
-    },
-    enabled: isSearching,
-    staleTime: 30_000,
-    placeholderData: (previousData) => previousData,
-  });
-
-  const actors = useMemo(
-    () => (actorsData?.actors ?? []).map((d) => ({ ...d, id: d.handle })),
-    [actorsData],
-  );
 
   const loginMutation = useMutation({
     mutationFn: async (selectedHandle: string) => {
@@ -286,7 +255,7 @@ function AuthPage() {
 
             {view === "login" && (
               <Flex direction="column" gap="md">
-                <AutocompleteInput
+                <UserHandleAutocomplete
                   size="lg"
                   placeholder="your.handle.com"
                   label={
@@ -376,36 +345,17 @@ function AuthPage() {
                       </Dialog>
                     </Flex>
                   }
-                  inputValue={inputValue}
-                  onInputChange={(value) => {
+                  value={inputValue}
+                  onValueChange={(value) => {
                     setInputValue(value);
                     setHandle(value);
                   }}
-                  items={actors}
-                  onAction={(selectedHandle) => {
+                  onSelect={(selectedHandle) => {
                     setInputValue(selectedHandle);
                     setHandle(selectedHandle);
-                    loginMutation.mutate(selectedHandle as string);
+                    loginMutation.mutate(selectedHandle);
                   }}
-                >
-                  {(actor) => (
-                    <ListBoxItem
-                      key={actor.handle}
-                      textValue={actor.handle}
-                      id={actor.handle}
-                      prefix={
-                        <Avatar
-                          src={actor.avatar ?? undefined}
-                          alt={actor.handle}
-                          fallback={actor.handle[0]?.toUpperCase() ?? "?"}
-                          size="sm"
-                        />
-                      }
-                    >
-                      {actor.handle}
-                    </ListBoxItem>
-                  )}
-                </AutocompleteInput>
+                />
               </Flex>
             )}
 

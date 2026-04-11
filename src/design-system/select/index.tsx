@@ -75,6 +75,7 @@ interface SelectContentProps<T extends object> {
   placement?: PopoverProps["placement"];
   isVirtualized?: boolean;
   labelVariant?: "vertical" | "horizontal";
+  isRequired: boolean;
 }
 
 function SelectContent<T extends object>({
@@ -98,6 +99,7 @@ function SelectContent<T extends object>({
   shouldUpdatePosition,
   placement,
   labelVariant,
+  isRequired,
 }: SelectContentProps<T>) {
   const inputStyles = useInputStyles({
     size,
@@ -166,7 +168,12 @@ function SelectContent<T extends object>({
 
   return (
     <>
-      <Label style={inputStyles.label}>{label}</Label>
+      <Label style={inputStyles.label}>
+        {label}{" "}
+        {isRequired ? (
+          <span {...stylex.props(inputStyles.required)}>*</span>
+        ) : null}
+      </Label>
       <Button {...stylex.props(inputStyles.wrapper)}>
         {prefix != null && (
           <div {...stylex.props(inputStyles.addon)}>{prefix}</div>
@@ -281,8 +288,9 @@ export function Select<
         {...stylex.props(inputStyles.field, style)}
         placeholder={placeholder}
       >
-        {({ isInvalid, isOpen }) => (
+        {({ isInvalid, isOpen, isRequired }) => (
           <SelectContent
+            isRequired={isRequired}
             isOpen={isOpen}
             isVirtualized={isVirtualized}
             label={label}

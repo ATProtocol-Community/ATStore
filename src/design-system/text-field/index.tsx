@@ -71,6 +71,7 @@ interface TextFieldContentProps {
   placeholder?: string;
   type: TextFieldProps["type"];
   setType: (type: TextFieldProps["type"]) => void;
+  isRequired: boolean;
 }
 
 function TextFieldContent({
@@ -87,6 +88,7 @@ function TextFieldContent({
   placeholder,
   type,
   setType,
+  isRequired,
 }: TextFieldContentProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isPasswordInput = type === "password";
@@ -141,7 +143,12 @@ function TextFieldContent({
 
   return (
     <>
-      <Label style={inputStyles.label}>{label}</Label>
+      <Label style={inputStyles.label}>
+        {label}{" "}
+        {isRequired ? (
+          <span {...stylex.props(inputStyles.required)}>*</span>
+        ) : null}
+      </Label>
 
       {labelVariant === "horizontal" ? (
         <Flex direction="column" gap="md">
@@ -202,8 +209,9 @@ export function TextField({
         type={type}
         {...stylex.props(inputStyles.field, style)}
       >
-        {({ isInvalid }) => (
+        {({ isInvalid, isRequired }) => (
           <TextFieldContent
+            isRequired={isRequired}
             label={label}
             labelVariant={labelVariant}
             description={description}

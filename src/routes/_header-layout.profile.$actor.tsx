@@ -6,7 +6,9 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
+import { Link as AriaLink } from "react-aria-components";
 
+import { BlueskyIcon } from "#/components/bluesky-icon";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { Avatar } from "../design-system/avatar";
 import { Flex } from "../design-system/flex";
@@ -15,17 +17,20 @@ import { Page } from "../design-system/page";
 import {
   gap,
   horizontalSpace,
+  size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { Link } from "../design-system/link";
-import { Heading3 } from "../design-system/typography";
+import { Body, Heading3 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { resolveProfilePathActorToDid } from "../lib/bluesky-public-profile";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { radius } from "../design-system/theme/radius.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
 
-const ProfileProductLink = createLink(Link);
+const RouterLink = createLink(AriaLink);
 
 const styles = stylex.create({
   page: {
@@ -35,6 +40,9 @@ const styles = stylex.create({
     paddingBottom: verticalSpace["8xl"],
     paddingTop: verticalSpace["4xl"],
     width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    gap: gap["4xl"],
   },
   hero: {
     gap: gap["2xl"],
@@ -49,10 +57,10 @@ const styles = stylex.create({
     flexShrink: 0,
   },
   reviews: {
-    gap: gap.xl,
+    paddingLeft: horizontalSpace["xl"],
+    paddingRight: horizontalSpace["xl"],
   },
   ownedSection: {
-    gap: gap.xl,
     marginBottom: verticalSpace["4xl"],
     paddingLeft: horizontalSpace["xl"],
     paddingRight: horizontalSpace["xl"],
@@ -68,24 +76,45 @@ const styles = stylex.create({
   ownedCard: {
     alignItems: "center",
     borderColor: "var(--ds-ui-component-2, rgba(0,0,0,0.12))",
-    borderRadius: "12px",
+    borderRadius: radius["lg"],
     borderStyle: "solid",
     borderWidth: 1,
+    color: uiColor.text2,
+    cornerShape: "squircle",
     display: "flex",
     gap: gap.lg,
     minWidth: 0,
     padding: horizontalSpace.lg,
     textDecoration: "none",
+    backgroundColor: {
+      default: uiColor.bg,
+      ":is([data-hovered])": uiColor.component2,
+    },
   },
   ownedIcon: {
     borderRadius: "10px",
     flexShrink: 0,
-    height: "48px",
+    height: size["5xl"],
     objectFit: "cover",
-    width: "48px",
+    width: size["5xl"],
   },
   ownedTextColumn: {
     minWidth: 0,
+  },
+  noReviews: {
+    paddingTop: verticalSpace["6xl"],
+    paddingBottom: verticalSpace["6xl"],
+    paddingLeft: horizontalSpace["xl"],
+    paddingRight: horizontalSpace["xl"],
+    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: uiColor.border2,
+    borderRadius: radius["xl"],
+    cornerShape: "squircle",
+  },
+  iconButton: {
+    height: size["4xl"],
+    width: size["4xl"],
   },
 });
 
@@ -139,6 +168,11 @@ function UserProfilePage() {
     (did.length > 28 ? `${did.slice(0, 18)}…` : did);
   const subtitle =
     page.displayName?.trim() && handleDisplay ? handleDisplay : null;
+  const buttonStyles = useButtonStyles({ variant: "secondary", size: "lg" });
+  const blueskyProfileId = page.handle?.trim()
+    ? page.handle.replace(/^@+/, "")
+    : did;
+  const blueskyProfileUrl = `https://bsky.app/profile/${blueskyProfileId}`;
 
   return (
     <HeaderLayout.Page>
@@ -159,24 +193,28 @@ function UserProfilePage() {
                 </Text>
               ) : null}
             </Flex>
-            <Text size="lg" variant="secondary">
-              {page.reviews.length === 0
-                ? "No reviews yet."
-                : `${page.reviews.length} review${page.reviews.length === 1 ? "" : "s"}`}
-            </Text>
+
+            <AriaLink
+              {...stylex.props(buttonStyles, styles.iconButton)}
+              href={blueskyProfileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BlueskyIcon />
+            </AriaLink>
           </Flex>
         </Flex>
 
         {ownedProducts && ownedProducts.length > 0 ? (
-          <Flex direction="column" style={styles.ownedSection}>
+          <Flex direction="column" gap="4xl" style={styles.ownedSection}>
             <Heading3>Products</Heading3>
             <div {...stylex.props(styles.ownedGrid)}>
               {ownedProducts.map((p) => (
-                <ProfileProductLink
+                <RouterLink
                   key={p.id}
                   to="/products/$productId"
                   params={{ productId: getDirectoryListingSlug(p) }}
-                  style={styles.ownedCard}
+                  {...stylex.props(styles.ownedCard)}
                 >
                   {p.iconUrl ? (
                     <img
@@ -187,51 +225,66 @@ function UserProfilePage() {
                   ) : null}
                   <Flex
                     direction="column"
-                    gap="xs"
+                    gap="xl"
                     style={styles.ownedTextColumn}
                   >
-                    <Text size="base" weight="bold">
-                      {p.name}
-                    </Text>
+                    <Flex justify="between" align="center" gap="lg">
+                      <Text size="lg" weight="bold">
+                        {p.name}
+                      </Text>
+                      <Text size="sm" variant="secondary">
+                        {p.reviewCount === 0
+                          ? "No reviews"
+                          : `${p.reviewCount} review${p.reviewCount === 1 ? "" : "s"}`}
+                        {p.averageRating != null && p.reviewCount > 0
+                          ? ` · ${Number(p.averageRating).toFixed(1)} ★`
+                          : ""}
+                      </Text>
+                    </Flex>
                     {p.tagline ? (
-                      <Text size="sm" variant="secondary" hasEllipsis>
+                      <Text size="sm" variant="secondary">
                         {p.tagline}
                       </Text>
                     ) : null}
-                    <Text size="sm" variant="secondary">
-                      {p.reviewCount === 0
-                        ? "No reviews"
-                        : `${p.reviewCount} review${p.reviewCount === 1 ? "" : "s"}`}
-                      {p.averageRating != null && p.reviewCount > 0
-                        ? ` · ${Number(p.averageRating).toFixed(1)}★`
-                        : ""}
-                    </Text>
                   </Flex>
-                </ProfileProductLink>
+                </RouterLink>
               ))}
             </div>
           </Flex>
         ) : null}
 
-        <Flex direction="column" style={styles.reviews}>
-          {page.reviews.map((review) => (
-            <DirectoryListingReviewCard
-              key={review.id}
-              listingId={review.listing.id}
-              reviewedListing={review.listing}
-              review={review}
-              viewerDid={session?.user?.did ?? null}
-              onEditReview={() => {
-                void navigate({
-                  to: "/products/$productId/reviews/$reviewId/edit",
-                  params: {
-                    productId: getDirectoryListingSlug(review.listing),
-                    reviewId: review.id,
-                  },
-                });
-              }}
-            />
-          ))}
+        <Flex direction="column" gap="4xl" style={styles.reviews}>
+          <Heading3>Reviews</Heading3>
+          {page.reviews.length > 0 ? (
+            page.reviews.map((review) => (
+              <DirectoryListingReviewCard
+                key={review.id}
+                listingId={review.listing.id}
+                reviewedListing={review.listing}
+                review={review}
+                viewerDid={session?.user?.did ?? null}
+                onEditReview={() => {
+                  void navigate({
+                    to: "/products/$productId/reviews/$reviewId/edit",
+                    params: {
+                      productId: getDirectoryListingSlug(review.listing),
+                      reviewId: review.id,
+                    },
+                  });
+                }}
+              />
+            ))
+          ) : (
+            <Flex
+              direction="column"
+              gap="2xl"
+              justify="center"
+              align="center"
+              style={styles.noReviews}
+            >
+              <Body variant="secondary">No reviews yet.</Body>
+            </Flex>
+          )}
         </Flex>
       </Page.Root>
     </HeaderLayout.Page>

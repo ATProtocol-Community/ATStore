@@ -43,6 +43,7 @@ import {
   createAtstorePublishClient,
   getAtstoreRepoDid,
   publishDirectoryListingDetail,
+  publishOwnedListingDetail,
 } from '#/lib/atproto/publish-directory-listing'
 import {
   createListingDetailRecord,
@@ -57,7 +58,10 @@ import {
   discoverSiteBrandIconAsset,
   rasterizeBrandIconForGeminiInput,
 } from '#/lib/site-brand-icon'
-import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
+import {
+  fetchBlueskyPublicProfileFields,
+  resolveBlueskyHandleToDid,
+} from '#/lib/bluesky-public-profile'
 import { findEligibleProductClaimsForDid } from '#/lib/product-claim-eligibility'
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
@@ -162,6 +166,10 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   atUri: string | null
   /** Official product Bluesky DID (`fyi.atstore.listing.detail`). */
   productAccountDid: string | null
+  /** Raw `store_listings.tagline` for owner edit forms (display tagline may fall back to description). */
+  sourceTagline: string | null
+  /** Raw `store_listings.full_description` for owner edit forms (display `description` is sanitized). */
+  sourceFullDescription: string | null
   screenshots: string[]
   externalUrl: string | null
   sourceUrl: string | null
@@ -541,6 +549,8 @@ function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail
     ...toListingCard(row),
     atUri: row.atUri,
     productAccountDid: row.productAccountDid,
+    sourceTagline: row.tagline ?? null,
+    sourceFullDescription: row.fullDescription ?? null,
     screenshots: row.screenshotUrls,
     externalUrl: row.externalUrl,
     sourceUrl: row.sourceUrl,
@@ -3000,6 +3010,261 @@ function getProductClaimEligibilityQueryOptions() {
   })
 }
 
+const listingExternalUrlSchema = z
+  .string()
+  .trim()
+  .min(1, 'URL is required')
+  .max(2048)
+  .refine((s) => {
+    try {
+      const u = new URL(s)
+      return u.protocol === 'https:' || u.protocol === 'http:'
+    } catch {
+      return false
+    }
+  }, 'Enter a valid http(s) URL')
+
+function normalizeEditableListingCategorySlug(value: string): string {
+  const raw = value.trim().replace(/^app\//i, 'apps/')
+  const option = getDirectoryCategoryOption(raw)
+  const ids = option?.pathIds ?? []
+
+  const isProtocolLeaf = ids[0] === 'protocol' && ids.length === 2
+  const isAppLeaf = ids[0] === 'apps' && (ids.length === 2 || ids.length === 3)
+  if (!isProtocolLeaf && !isAppLeaf) {
+    throw new Error(
+      'Category must be `protocol/<category>`, `apps/<app>`, or `apps/<app>/<category>`.',
+    )
+  }
+
+  return ids.join('/')
+}
+
+const updateOwnedProductListingInput = z.object({
+  listingId: z.string().uuid(),
+  name: z.string().trim().min(1).max(640),
+  tagline: z.string().max(2000),
+  fullDescription: z.string().max(20000),
+  externalUrl: listingExternalUrlSchema,
+  categorySlug: z.string().trim().min(1).max(256),
+  productHandle: z.string().max(300),
+})
+
+const getProductListingEditAccessInput = z.object({
+  listingId: z.string().uuid(),
+})
+
+const getProductListingEditAccess = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(getProductListingEditAccessInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return { canEdit: false as const, needsClaim: false as const }
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+
+    if (!full.rkey?.trim() || !full.atUri?.trim()) {
+      return { canEdit: false as const, needsClaim: false as const }
+    }
+
+    const atstoreDid = await getAtstoreRepoDid()
+    const repo = full.repoDid?.trim()
+    const productDid = full.productAccountDid?.trim()
+
+    const needsClaim = Boolean(
+      productDid === session.did && repo === atstoreDid,
+    )
+
+    const canEdit = Boolean(
+      repo === session.did && productDid === session.did,
+    )
+
+    return { canEdit, needsClaim }
+  })
+
+function getProductListingEditAccessQueryOptions(listingId: string) {
+  return queryOptions({
+    queryKey: ['storeListings', 'productListingEditAccess', listingId] as const,
+    queryFn: async () => getProductListingEditAccess({ data: { listingId } }),
+  })
+}
+
+const updateOwnedProductListing = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(updateOwnedProductListingInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to edit your listing.')
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+
+    if (full.repoDid?.trim() !== session.did) {
+      throw new Error(
+        'Only the account that hosts the listing record can edit it. Claim the listing first if it is still on the store publisher.',
+      )
+    }
+
+    if (full.productAccountDid?.trim() !== session.did) {
+      throw new Error('This listing is not associated with your account.')
+    }
+
+    const name = data.name.trim().slice(0, 640)
+    const taglineClean = sanitizeListingTagline(data.tagline)
+    const descClean = sanitizeListingDescription(data.fullDescription)
+    const externalUrl = data.externalUrl.trim()
+    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
+    const productHandleInput = data.productHandle.trim()
+
+    let productAccountHandle: string | null = null
+    if (productHandleInput.length > 0) {
+      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      if (!resolvedDid) {
+        throw new Error('Could not resolve that handle to a DID.')
+      }
+      if (resolvedDid !== session.did) {
+        throw new Error('That handle does not belong to your signed-in account.')
+      }
+    }
+
+    const patch: Partial<StoreListing> = {
+      name,
+      tagline: taglineClean,
+      fullDescription: descClean,
+      externalUrl,
+      categorySlugs: [categorySlug],
+      productAccountDid: session.did,
+    }
+
+    const { uri } = await publishOwnedListingDetail(
+      session.client,
+      session.did,
+      full,
+      patch,
+    )
+
+    const now = new Date()
+    const t = context.schema.storeListings
+    await context.db
+      .update(t)
+      .set({
+        name,
+        tagline: taglineClean,
+        fullDescription: descClean,
+        externalUrl,
+        categorySlugs: [categorySlug],
+        productAccountDid: session.did,
+        productAccountHandle,
+        atUri: uri,
+        updatedAt: now,
+      })
+      .where(eq(t.id, full.id))
+
+    return { slug: full.slug }
+  })
+
+const updateOwnedProductListingImageInput = z.object({
+  listingId: z.string().uuid(),
+  kind: z.enum(['hero', 'icon']),
+  mimeType: z.string().min(3).max(128),
+  imageBase64: z.string().min(1),
+})
+
+const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(updateOwnedProductListingImageInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to update images.')
+    }
+
+    const mime = data.mimeType.trim().toLowerCase()
+    if (!mime.startsWith('image/')) {
+      throw new Error('File must be an image.')
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+
+    if (full.repoDid?.trim() !== session.did) {
+      throw new Error(
+        'Only the account that hosts the listing record can edit it.',
+      )
+    }
+
+    if (full.productAccountDid?.trim() !== session.did) {
+      throw new Error('This listing is not associated with your account.')
+    }
+
+    let raw: Buffer
+    try {
+      raw = Buffer.from(data.imageBase64, 'base64')
+    } catch {
+      throw new Error('Invalid image data.')
+    }
+    const maxBytes = data.kind === 'hero' ? 12_000_000 : 2_000_000
+    if (raw.length === 0 || raw.length > maxBytes) {
+      throw new Error(
+        data.kind === 'hero'
+          ? 'Hero image must be at most 12 MB.'
+          : 'Icon image must be at most 2 MB.',
+      )
+    }
+
+    const bytes = Uint8Array.from(raw)
+    const blobOverrides =
+      data.kind === 'hero'
+        ? {
+            heroImage: {
+              bytes,
+              mimeType: mime,
+            },
+          }
+        : {
+            icon: {
+              bytes,
+              mimeType: mime,
+            },
+          }
+
+    const { uri, dbUrls } = await publishOwnedListingDetail(
+      session.client,
+      session.did,
+      full,
+      undefined,
+      blobOverrides,
+    )
+
+    const now = new Date()
+    const t = context.schema.storeListings
+
+    if (data.kind === 'hero') {
+      await context.db
+        .update(t)
+        .set({
+          heroImageUrl: dbUrls.heroImageUrl,
+          atUri: uri,
+          updatedAt: now,
+        })
+        .where(eq(t.id, full.id))
+    } else {
+      await context.db
+        .update(t)
+        .set({
+          iconUrl: dbUrls.iconUrl,
+          atUri: uri,
+          updatedAt: now,
+        })
+        .where(eq(t.id, full.id))
+    }
+
+    return { ok: true as const }
+  })
+
 const claimProductListingToPds = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware])
   .inputValidator(claimProductListingToPdsInput)
@@ -3196,6 +3461,9 @@ export const directoryListingApi = {
   rejectProductAccountCandidate,
   getProductClaimEligibility,
   getProductClaimEligibilityQueryOptions,
+  getProductListingEditAccessQueryOptions,
+  updateOwnedProductListing,
+  updateOwnedProductListingImage,
   claimProductListingToPds,
   getProfileOwnedProductListings,
   getProfileOwnedProductListingsQueryOptions,

@@ -378,6 +378,9 @@ const styles = stylex.create({
     paddingLeft: horizontalSpace["md"],
     paddingRight: horizontalSpace["md"],
   },
+  required: {
+    color: criticalColor.text1,
+  },
 });
 
 export function useInputStyles({
@@ -434,6 +437,7 @@ export function useInputStyles({
     ],
     description: [styles.additionalText],
     errorMessage: [styles.additionalText],
+    required: [styles.required],
     input: [
       styles.input,
       size === "sm" && styles.inputSizeSm,

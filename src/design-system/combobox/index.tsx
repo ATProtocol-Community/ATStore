@@ -70,6 +70,7 @@ interface ComboBoxContentProps<T extends object> {
   variant: InputVariant | undefined;
   validationState: InputValidationState | undefined;
   isInvalid: boolean;
+  isRequired: boolean;
   placeholder: string;
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
@@ -92,6 +93,7 @@ function ComboBoxContent<T extends object>({
   variant,
   validationState,
   isInvalid: _isInvalid,
+  isRequired,
   placeholder,
   prefix,
   suffix,
@@ -172,7 +174,12 @@ function ComboBoxContent<T extends object>({
 
   return (
     <>
-      <Label style={inputStyles.label}>{label}</Label>
+      <Label style={inputStyles.label}>
+        {label}{" "}
+        {isRequired ? (
+          <span {...stylex.props(inputStyles.required)}>*</span>
+        ) : null}
+      </Label>
       {labelVariant === "horizontal" ? (
         <Flex direction="column" gap="md">
           {content}
@@ -261,7 +268,7 @@ export function ComboBox<T extends object>({
         isInvalid={validationState ? validationState === "invalid" : undefined}
         {...stylex.props(inputStyles.field, style)}
       >
-        {({ isInvalid }) => (
+        {({ isInvalid, isRequired }) => (
           <ComboBoxContent
             label={label}
             labelVariant={labelVariant}
@@ -271,6 +278,7 @@ export function ComboBox<T extends object>({
             variant={variant}
             validationState={validationState}
             isInvalid={isInvalid}
+            isRequired={isRequired}
             placeholder={placeholder}
             prefix={prefix}
             suffix={suffix}

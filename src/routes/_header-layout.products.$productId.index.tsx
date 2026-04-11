@@ -155,6 +155,7 @@ const styles = stylex.create({
   },
   backLinkRow: {
     alignItems: "center",
+    width: "100%",
   },
   hero: {
     borderRadius: radius["3xl"],
@@ -471,6 +472,10 @@ function ProductPage() {
   const { data: relatedProducts } = useSuspenseQuery(relatedQueryOptions);
   const { data: listingReviews } = useSuspenseQuery(reviewsQueryOptions);
   const { data: session } = useQuery(user.getSessionQueryOptions);
+  const { data: editAccess } = useQuery({
+    ...directoryListingApi.getProductListingEditAccessQueryOptions(productId),
+    enabled: Boolean(session?.user?.did),
+  });
 
   if (!listing) {
     throw notFound();
@@ -658,19 +663,41 @@ function ProductPage() {
     <HeaderLayout.Page>
       <Page.Root variant="small" style={styles.page}>
         <Flex direction="column" gap="6xl">
-          <Flex style={styles.backLinkRow}>
-            {canGoBack ? (
-              <Link onClick={() => router.history.back()}>
-                <ChevronLeft />
-                Back
-              </Link>
-            ) : (
-              <AppLink to="/">
-                <ChevronLeft />
-                Home
+          <Flex
+            align="center"
+            justify="between"
+            gap="xl"
+            style={styles.backLinkRow}
+          >
+            <Flex align="center">
+              {canGoBack ? (
+                <Link onClick={() => router.history.back()}>
+                  <ChevronLeft />
+                  Back
+                </Link>
+              ) : (
+                <AppLink to="/">
+                  <ChevronLeft />
+                  Home
+                </AppLink>
+              )}
+            </Flex>
+            {editAccess?.canEdit ? (
+              <AppLink
+                to="/products/$productId/edit"
+                params={{ productId: productSlug }}
+              >
+                Edit listing
               </AppLink>
-            )}
+            ) : null}
           </Flex>
+          {editAccess?.needsClaim ? (
+            <Text size="sm" variant="secondary">
+              This listing is still published from the store account.{" "}
+              <AppLink to="/product/claim">Claim it</AppLink> to edit from your
+              PDS.
+            </Text>
+          ) : null}
           <HeroSection listing={listing} />
           <Flex direction="column" gap="5xl">
             {getDescriptionBlocks(listing.description).map((block, index) => (

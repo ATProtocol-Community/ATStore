@@ -33,6 +33,7 @@ import { Route as ApiAuthAtprotoJwksDotjsonRouteImport } from './routes/api.auth
 import { Route as ApiAuthAtprotoCallbackRouteImport } from './routes/api.auth.atproto.callback'
 import { Route as ApiAuthAtprotoAuthorizeRouteImport } from './routes/api.auth.atproto.authorize'
 import { Route as HeaderLayoutProductsProductIdReviewsRouteImport } from './routes/_header-layout.products.$productId.reviews'
+import { Route as HeaderLayoutProductsProductIdEditRouteImport } from './routes/_header-layout.products.$productId.edit'
 import { Route as HeaderLayoutEcosystemsAppAllRouteImport } from './routes/_header-layout.ecosystems.$app.all'
 import { Route as HeaderLayoutProductsProductIdReviewsIndexRouteImport } from './routes/_header-layout.products.$productId.reviews.index'
 import { Route as HeaderLayoutProductsProductIdReviewsWriteRouteImport } from './routes/_header-layout.products.$productId.reviews.write'
@@ -170,6 +171,12 @@ const HeaderLayoutProductsProductIdReviewsRoute =
     path: '/products/$productId/reviews',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
+const HeaderLayoutProductsProductIdEditRoute =
+  HeaderLayoutProductsProductIdEditRouteImport.update({
+    id: '/products/$productId/edit',
+    path: '/products/$productId/edit',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
 const HeaderLayoutEcosystemsAppAllRoute =
   HeaderLayoutEcosystemsAppAllRouteImport.update({
     id: '/ecosystems/$app/all',
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
+  '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
@@ -241,6 +249,7 @@ export interface FileRoutesByTo {
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
+  '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
@@ -271,6 +280,7 @@ export interface FileRoutesById {
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
+  '/_header-layout/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/_header-layout/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/protocol/listings'
     | '/protocol/tags'
     | '/ecosystems/$app/all'
+    | '/products/$productId/edit'
     | '/products/$productId/reviews'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/protocol/listings'
     | '/protocol/tags'
     | '/ecosystems/$app/all'
+    | '/products/$productId/edit'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
     | '/api/auth/atproto/jwks.json'
@@ -360,6 +372,7 @@ export interface FileRouteTypes {
     | '/_header-layout/protocol/listings'
     | '/_header-layout/protocol/tags'
     | '/_header-layout/ecosystems/$app/all'
+    | '/_header-layout/products/$productId/edit'
     | '/_header-layout/products/$productId/reviews'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
@@ -553,6 +566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
+    '/_header-layout/products/$productId/edit': {
+      id: '/_header-layout/products/$productId/edit'
+      path: '/products/$productId/edit'
+      fullPath: '/products/$productId/edit'
+      preLoaderRoute: typeof HeaderLayoutProductsProductIdEditRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
     '/_header-layout/ecosystems/$app/all': {
       id: '/_header-layout/ecosystems/$app/all'
       path: '/ecosystems/$app/all'
@@ -621,6 +641,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
   HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
   HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
+  HeaderLayoutProductsProductIdEditRoute: typeof HeaderLayoutProductsProductIdEditRoute
   HeaderLayoutProductsProductIdReviewsRoute: typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   HeaderLayoutEcosystemsAppIndexRoute: typeof HeaderLayoutEcosystemsAppIndexRoute
   HeaderLayoutProductsProductIdIndexRoute: typeof HeaderLayoutProductsProductIdIndexRoute
@@ -643,6 +664,8 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
   HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,
   HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
+  HeaderLayoutProductsProductIdEditRoute:
+    HeaderLayoutProductsProductIdEditRoute,
   HeaderLayoutProductsProductIdReviewsRoute:
     HeaderLayoutProductsProductIdReviewsRouteWithChildren,
   HeaderLayoutEcosystemsAppIndexRoute: HeaderLayoutEcosystemsAppIndexRoute,
