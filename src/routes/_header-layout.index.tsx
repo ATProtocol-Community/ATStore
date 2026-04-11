@@ -849,7 +849,7 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
               {listing.name}
             </Text>
             <SmallBody variant="secondary">
-              {getListingMetadataLabel(listing)}
+              @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
             </SmallBody>
           </Flex>
           <Body variant="secondary">{listing.tagline}</Body>

@@ -24,6 +24,7 @@
     "backfill:listing-icons": "tsx scripts/backfill-listing-icons.ts",
     "backfill:listing-taxonomy": "tsx scripts/backfill-listing-taxonomy.ts",
     "backfill:bluesky-external-urls": "tsx scripts/scrape-bluesky-directory/backfill-external-urls.ts",
+    "backfill:product-account-did": "tsx -r dotenv/config scripts/backfill-product-account-did-from-handle.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:migrate:kit": "drizzle-kit migrate",
@@ -35,7 +36,8 @@
     "lex:status": "node scripts/goat-lex.mjs lex status",
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
     "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts",
-    "discover:product-bsky": "tsx -r dotenv/config scripts/discover-product-bsky-candidates.ts"
+    "discover:product-bsky": "tsx -r dotenv/config scripts/discover-product-bsky-candidates.ts",
+    "fix:feed-creator-url": "tsx -r dotenv/config scripts/fix-bluesky-feed-creator-external-url.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

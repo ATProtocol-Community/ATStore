@@ -438,6 +438,11 @@ function AppTagListingCard({
                   <Text size="xl" weight="semibold">
                     {listing.name}
                   </Text>
+                  <SmallBody variant="secondary">
+                    @
+                    {listing.productAccountHandle?.replace(/^@/, "") ||
+                      "unknown"}
+                  </SmallBody>
                 </Flex>
               </Flex>
               <Body variant="secondary" style={styles.listingTagline}>
@@ -496,14 +501,6 @@ function getAccentSurface(accent: DirectoryListingCard["accent"]) {
   if (accent === "green") return styles.greenSurface;
 
   return styles.blueSurface;
-}
-
-function getAccentGlow(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.pinkGlow;
-  if (accent === "purple") return styles.purpleGlow;
-  if (accent === "green") return styles.greenGlow;
-
-  return styles.blueGlow;
 }
 
 function getRelatedAppTagGroups(

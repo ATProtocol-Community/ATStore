@@ -33,7 +33,9 @@ import {
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
+import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { Badge } from "#/design-system/badge";
 
 const LinkLink = createLink(Link);
 
@@ -102,7 +104,9 @@ const styles = stylex.create({
     },
   },
   listingLink: {
-    display: "block",
+    display: "flex",
+    flexDirection: "column",
+    gap: gap["4xl"],
     height: "100%",
     textDecoration: "none",
   },
@@ -132,9 +136,28 @@ const styles = stylex.create({
   listingFooter: {
     alignItems: "center",
   },
+  listingMainLink: {
+    color: "inherit",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minHeight: 0,
+    textDecoration: "none",
+  },
+  listingTags: {
+    flexWrap: "wrap",
+    maxWidth: "100%",
+    rowGap: gap.sm,
+  },
+  listingFooterRating: {
+    flexShrink: 0,
+  },
   emptyState: {
     gap: gap["lg"],
     maxWidth: "40rem",
+  },
+  listingTagLink: {
+    textDecoration: "none",
   },
 });
 
@@ -160,6 +183,7 @@ function AppsAllPage() {
         listing.tagline,
         listing.category,
         listing.description,
+        ...listing.appTags,
       ].some((value) => value.toLowerCase().includes(normalizedQuery)),
     );
   }, [apps, normalizedQuery]);
@@ -260,13 +284,13 @@ function AppsAllPage() {
 
 function AllAppsListingCard({ listing }: { listing: DirectoryListingCard }) {
   return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.listingLink)}
-    >
-      <Card style={styles.listingCard}>
-        <Flex direction="column" style={styles.listingCardBody}>
+    <Card style={styles.listingCard}>
+      <Flex direction="column" style={styles.listingCardBody}>
+        <RouterLink
+          to="/products/$productId"
+          params={{ productId: getDirectoryListingSlug(listing) }}
+          {...stylex.props(styles.listingLink, styles.listingMainLink)}
+        >
           <Flex gap="2xl" align="center" style={styles.listingHeader}>
             <Avatar
               alt={listing.name}
@@ -279,15 +303,10 @@ function AllAppsListingCard({ listing }: { listing: DirectoryListingCard }) {
                 {listing.name}
               </Text>
               <Flex align="center" gap="lg">
-                <SmallBody variant="secondary">{listing.category}</SmallBody>
                 <SmallBody variant="secondary">
-                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
                 </SmallBody>
-                <StarRating
-                  rating={listing.rating}
-                  reviewCount={listing.reviewCount}
-                  showReviewCount
-                />
               </Flex>
             </Flex>
           </Flex>
@@ -295,20 +314,49 @@ function AllAppsListingCard({ listing }: { listing: DirectoryListingCard }) {
           <Body variant="secondary" style={styles.listingTagline}>
             {listing.tagline}
           </Body>
+        </RouterLink>
 
-          <div />
-
-          <Flex justify="between" gap="xl" style={styles.listingFooter}>
-            <Text size="sm" weight="semibold">
-              {listing.rating != null
-                ? `${listing.rating.toFixed(1)} rating`
-                : "No reviews yet"}
-            </Text>
-            <Text weight="semibold">{listing.priceLabel}</Text>
+        <Flex
+          justify="between"
+          gap="xl"
+          align="start"
+          style={styles.listingFooter}
+        >
+          <Flex align="center" gap="sm" style={styles.listingTags}>
+            {listing.appTags.length > 0 ? (
+              listing.appTags.map((tag) => (
+                <RouterLink
+                  key={tag}
+                  to="/apps/$tag"
+                  params={{ tag: getAppTagSlug(tag) }}
+                  {...stylex.props(styles.listingTagLink)}
+                >
+                  <Badge
+                    size="sm"
+                    variant="primary"
+                    style={styles.listingTagLink}
+                  >
+                    {formatAppTagLabel(tag)}
+                  </Badge>
+                </RouterLink>
+              ))
+            ) : (
+              <SmallBody variant="secondary">—</SmallBody>
+            )}
+          </Flex>
+          <Flex align="center" gap="sm" style={styles.listingFooterRating}>
+            <SmallBody variant="secondary">
+              {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+            </SmallBody>
+            <StarRating
+              rating={listing.rating}
+              reviewCount={listing.reviewCount}
+              showReviewCount
+            />
           </Flex>
         </Flex>
-      </Card>
-    </RouterLink>
+      </Flex>
+    </Card>
   );
 }
 

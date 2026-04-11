@@ -350,6 +350,7 @@ function buildMarketingPrompt(listing: CandidateListing, pageUrl: string): strin
 Goals:
 - Preserve the brand feeling, palette, and product category suggested by the screenshot.
 - Produce a clean, aspirational hero image suitable for an app directory card or product detail page.
+- **Always include the listing name** from metadata (the "Name:" line) as prominent, legible typography in the image—e.g. title or headline treatment. Spell it exactly as given; this is product identification, not conversion copy.
 - Show a plausible marketing composition inspired by the screenshot; improve clarity and composition. Illustrative **mock product UI** (windows, panels, toolbars, in-app controls) is fine—read as the **product**, not a marketing funnel.
 - If the reference is dominated by CTAs, signup strips, or "Get started"-style conversion blocks, do not recreate that focal layout—borrow palette and mood only.
 - Keep it realistic and product-focused, not abstract art.

@@ -36,7 +36,8 @@ import {
 } from "../lib/app-tag-metadata";
 import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { StarRating } from "#/design-system/star-rating";
 
 const ButtonLink = createLink(Button);
 const LinkLink = createLink(Link);
@@ -234,20 +235,26 @@ function AppTagListingCard({ listing }: { listing: DirectoryListingCard }) {
               <Text size="xl" weight="semibold">
                 {listing.name}
               </Text>
-              <SmallBody variant="secondary">{listing.category}</SmallBody>
+              <SmallBody variant="secondary">
+                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+              </SmallBody>
             </Flex>
           </Flex>
           <Body variant="secondary" style={styles.listingTagline}>
             {listing.tagline}
           </Body>
           <div />
-          <Flex justify="between" gap="xl" style={styles.listingFooter}>
-            <Text size="sm" weight="semibold">
-              {listing.rating != null
-                ? `${listing.rating.toFixed(1)} rating`
-                : "No reviews yet"}
-            </Text>
-            <Text weight="semibold">{listing.priceLabel}</Text>
+          <Flex justify="end" gap="xl" style={styles.listingFooter}>
+            <Flex align="center" gap="sm">
+              <SmallBody variant="secondary">
+                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+              </SmallBody>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+                showReviewCount
+              />
+            </Flex>
           </Flex>
         </Flex>
       </Card>

@@ -5,7 +5,7 @@ import {
   createLink,
   Link as RouterLink,
 } from "@tanstack/react-router";
-import { ChevronLeft, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
@@ -32,6 +32,7 @@ import {
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
 import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
+import { StarRating } from "#/design-system/star-rating";
 
 const ButtonLink = createLink(Button);
 const LinkLink = createLink(Link);
@@ -232,20 +233,26 @@ function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
               <Text size="xl" weight="semibold">
                 {listing.name}
               </Text>
-              <SmallBody variant="secondary">{listing.category}</SmallBody>
+              <SmallBody variant="secondary">
+                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+              </SmallBody>
             </Flex>
           </Flex>
           <Body variant="secondary" style={styles.listingTagline}>
             {listing.tagline}
           </Body>
           <div />
-          <Flex gap="xl" justify="between" style={styles.listingFooter}>
-            <Text size="sm" weight="semibold">
-              {listing.rating != null
-                ? `${listing.rating.toFixed(1)} rating`
-                : "No reviews yet"}
-            </Text>
-            <Text weight="semibold">{listing.priceLabel}</Text>
+          <Flex gap="xl" justify="end" style={styles.listingFooter}>
+            <Flex align="center" gap="sm">
+              <SmallBody variant="secondary">
+                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+              </SmallBody>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+                showReviewCount
+              />
+            </Flex>
           </Flex>
         </Flex>
       </Card>

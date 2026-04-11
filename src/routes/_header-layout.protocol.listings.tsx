@@ -30,8 +30,10 @@ import {
   directoryListingApi,
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { getDirectoryCategoryOption } from "../lib/directory-categories";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
+import { Badge } from "#/design-system/badge";
 
 const LinkLink = createLink(Link);
 
@@ -69,7 +71,9 @@ const styles = stylex.create({
     },
   },
   listingLink: {
-    display: "block",
+    display: "flex",
+    flexDirection: "column",
+    gap: gap["4xl"],
     height: "100%",
     textDecoration: "none",
   },
@@ -98,6 +102,25 @@ const styles = stylex.create({
   },
   listingFooter: {
     alignItems: "center",
+  },
+  listingMainLink: {
+    color: "inherit",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minHeight: 0,
+    textDecoration: "none",
+  },
+  listingTags: {
+    flexWrap: "wrap",
+    maxWidth: "100%",
+    rowGap: gap.sm,
+  },
+  listingFooterRating: {
+    flexShrink: 0,
+  },
+  categoryLink: {
+    textDecoration: "none",
   },
   emptyState: {
     gap: gap["lg"],
@@ -204,14 +227,16 @@ function ProtocolListingsPage() {
 }
 
 function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
+  const protocolCategory = getProtocolCategoryLink(listing);
+
   return (
-    <RouterLink
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      to="/products/$productId"
-      {...stylex.props(styles.listingLink)}
-    >
-      <Card style={styles.listingCard}>
-        <Flex direction="column" style={styles.listingCardBody}>
+    <Card style={styles.listingCard}>
+      <Flex direction="column" style={styles.listingCardBody}>
+        <RouterLink
+          params={{ productId: getDirectoryListingSlug(listing) }}
+          to="/products/$productId"
+          {...stylex.props(styles.listingLink, styles.listingMainLink)}
+        >
           <Flex align="center" gap="2xl" style={styles.listingHeader}>
             <Avatar
               alt={listing.name}
@@ -224,15 +249,10 @@ function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
                 {listing.name}
               </Text>
               <Flex align="center" gap="lg">
-                <SmallBody variant="secondary">{listing.category}</SmallBody>
                 <SmallBody variant="secondary">
-                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
                 </SmallBody>
-                <StarRating
-                  rating={listing.rating}
-                  reviewCount={listing.reviewCount}
-                  showReviewCount
-                />
               </Flex>
             </Flex>
           </Flex>
@@ -240,21 +260,70 @@ function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
           <Body variant="secondary" style={styles.listingTagline}>
             {listing.tagline}
           </Body>
+        </RouterLink>
 
-          <div />
-
-          <Flex gap="xl" justify="between" style={styles.listingFooter}>
-            <Text size="sm" weight="semibold">
-              {listing.rating != null
-                ? `${listing.rating.toFixed(1)} rating`
-                : "No reviews yet"}
-            </Text>
-            <Text weight="semibold">{listing.priceLabel}</Text>
+        <Flex
+          justify="between"
+          gap="xl"
+          align="start"
+          style={styles.listingFooter}
+        >
+          <Flex align="center" gap="sm" style={styles.listingTags}>
+            {protocolCategory ? (
+              <RouterLink
+                params={{ category: protocolCategory.segment }}
+                to="/protocol/$category"
+                {...stylex.props(styles.categoryLink)}
+              >
+                <Badge size="sm" variant="primary">
+                  {protocolCategory.label}
+                </Badge>
+              </RouterLink>
+            ) : (
+              <SmallBody variant="secondary">—</SmallBody>
+            )}
+          </Flex>
+          <Flex align="center" gap="sm" style={styles.listingFooterRating}>
+            <SmallBody variant="secondary">
+              {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+            </SmallBody>
+            <StarRating
+              rating={listing.rating}
+              reviewCount={listing.reviewCount}
+              showReviewCount
+            />
           </Flex>
         </Flex>
-      </Card>
-    </RouterLink>
+      </Flex>
+    </Card>
   );
+}
+
+/**
+ * First `protocol/{segment}` on the listing (two-part slug), for category badge + link.
+ */
+function getProtocolCategoryLink(
+  listing: DirectoryListingCard,
+): { segment: string; label: string } | null {
+  const slug = listing.categorySlugs.find(
+    (s) =>
+      s.startsWith("protocol/") && s.split("/").filter(Boolean).length === 2,
+  );
+  if (!slug) {
+    return null;
+  }
+  const segment = slug.split("/")[1]?.trim();
+  if (!segment) {
+    return null;
+  }
+  const option = getDirectoryCategoryOption(slug);
+  const label =
+    (
+      option?.pathLabels.slice(1).join(" ") ||
+      option?.label ||
+      listing.category
+    ).trim() || segment;
+  return { segment, label };
 }
 
 function getInitials(name: string) {

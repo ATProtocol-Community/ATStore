@@ -16,6 +16,7 @@ import {
 } from "@tanstack/react-router";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { Link as AriaLink } from "react-aria-components";
 
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
@@ -42,7 +43,12 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { Body, Heading2, SubLabel } from "../design-system/typography";
+import {
+  Body,
+  Heading2,
+  SmallBody,
+  SubLabel,
+} from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
@@ -63,6 +69,8 @@ import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
+import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
+import { BlueskyIcon } from "#/components/bluesky-icon";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -120,6 +128,10 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
 });
 
 const styles = stylex.create({
+  iconButton: {
+    height: size["4xl"],
+    width: size["4xl"],
+  },
   noReviews: {
     paddingTop: verticalSpace["8xl"],
     paddingBottom: verticalSpace["8xl"],
@@ -882,6 +894,7 @@ function ProductPage() {
 
 function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
   const primaryLink = listing.externalUrl || undefined;
+  const buttonStyles = useButtonStyles({ variant: "secondary", size: "lg" });
 
   return (
     <Flex direction="column" gap="6xl">
@@ -905,57 +918,55 @@ function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
           style={styles.heroAvatar}
         />
         <Flex direction="column" gap="2xl" style={styles.heroHeaderText}>
-          {listing.appTags.length > 0 ? (
-            <Flex gap="md" style={styles.tagRow}>
-              {listing.appTags.map((tag) => (
-                <RouterLink
-                  key={tag}
-                  to="/apps/$tag"
-                  params={{ tag: getAppTagSlug(tag) }}
-                  {...stylex.props(styles.tagLink)}
-                >
-                  <Badge size="sm" variant="primary">
-                    {formatAppTagLabel(tag)}
-                  </Badge>
-                </RouterLink>
-              ))}
-            </Flex>
-          ) : null}
-          <Text
-            font="title"
-            size={{ default: "4xl", sm: "4xl" }}
-            weight="semibold"
-            style={styles.heroTitle}
-          >
-            {listing.name}
-          </Text>
+          <Flex gap="xl" align="center">
+            <Text
+              font="title"
+              size={{ default: "4xl", sm: "4xl" }}
+              weight="semibold"
+              style={styles.heroTitle}
+            >
+              {listing.name}
+            </Text>
+            {listing.appTags.length > 0 ? (
+              <Flex gap="md" style={styles.tagRow}>
+                {listing.appTags.map((tag) => (
+                  <RouterLink
+                    key={tag}
+                    to="/apps/$tag"
+                    params={{ tag: getAppTagSlug(tag) }}
+                    {...stylex.props(styles.tagLink)}
+                  >
+                    <Badge size="sm" variant="primary">
+                      {formatAppTagLabel(tag)}
+                    </Badge>
+                  </RouterLink>
+                ))}
+              </Flex>
+            ) : null}
+          </Flex>
           <Body style={styles.heroTagline}>{listing.tagline}</Body>
         </Flex>
 
-        <Flex direction="column" align="end" gap="md">
+        <Flex align="center" gap="md">
+          {listing.productAccountDid ? (
+            <AriaLink
+              {...stylex.props(buttonStyles, styles.iconButton)}
+              href={`https://bsky.app/profile/${listing.productAccountDid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BlueskyIcon />
+            </AriaLink>
+          ) : null}
           {primaryLink ? (
             <ButtonLink
               to={primaryLink}
-              size="xl"
+              size="lg"
               target="_blank"
               rel="noopener noreferrer"
             >
               {listing.priceLabel} <ExternalLink />
             </ButtonLink>
-          ) : null}
-          {listing.productAccountDid ? (
-            <Button
-              href={`https://bsky.app/profile/${encodeURIComponent(listing.productAccountDid)}`}
-              size="xl"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Bluesky
-              {listing.productAccountHandle
-                ? ` @${listing.productAccountHandle.replace(/^@/, "")}`
-                : ""}{" "}
-              <ExternalLink />
-            </Button>
           ) : null}
         </Flex>
       </Flex>
@@ -1089,13 +1100,17 @@ function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
           <Body variant="secondary" style={styles.relatedTagline}>
             {listing.tagline}
           </Body>
-          <Flex justify="between" gap="xl" style={styles.relatedFooter}>
-            <Text size="sm" weight="semibold">
-              {listing.rating != null
-                ? `${listing.rating.toFixed(1)} rating`
-                : "No reviews yet"}
-            </Text>
-            <Text weight="semibold">{listing.priceLabel}</Text>
+          <Flex justify="end" gap="xl" style={styles.relatedFooter}>
+            <Flex align="center" gap="sm">
+              <SmallBody variant="secondary">
+                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+              </SmallBody>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+                showReviewCount
+              />
+            </Flex>
           </Flex>
         </Flex>
       </Card>
