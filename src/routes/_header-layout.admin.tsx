@@ -1,22 +1,28 @@
 import * as stylex from "@stylexjs/stylex";
+import { ExternalLink } from "lucide-react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { Link as AriaLink } from "react-aria-components";
 
 import { Button } from "../design-system/button";
+import { Card, CardBody, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { HeaderLayout } from "../design-system/header-layout";
 import { Page } from "../design-system/page";
 import {
   gap,
+  horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
+import { shadow } from "../design-system/theme/shadow.stylex";
 import {
   Body,
   Heading1,
   Heading2,
   SmallBody,
 } from "../design-system/typography";
+import { Text } from "../design-system/typography/text";
 import { redirect } from "@tanstack/react-router";
 
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
@@ -45,13 +51,40 @@ const styles = stylex.create({
   },
   section: {
     gap: gap["3xl"],
-    maxWidth: "56rem",
+    maxWidth: "60rem",
   },
   row: {
     alignItems: "flex-start",
     flexWrap: "wrap",
     gap: gap.md,
     justifyContent: "space-between",
+  },
+  card: {
+    boxShadow: shadow.sm,
+    width: "100%",
+  },
+  cardBody: {
+    gap: gap["2xl"],
+  },
+  preview: {
+    gap: gap.xl,
+  },
+  previewIcon: {
+    borderRadius: "12px",
+    flexShrink: 0,
+    height: "64px",
+    objectFit: "cover",
+    width: "64px",
+  },
+  productLink: {
+    alignItems: "center",
+    display: "inline-flex",
+    gap: gap.sm,
+    paddingLeft: horizontalSpace.xs,
+    textDecoration: "none",
+  },
+  listStack: {
+    gap: gap.xl,
   },
 });
 
@@ -78,52 +111,95 @@ function AdminPage() {
           {data.unverified.length === 0 ? (
             <Body>None.</Body>
           ) : (
-            <Flex direction="column" style={{ gap: gap.xl }}>
+            <Flex direction="column" style={styles.listStack}>
               {data.unverified.map((row) => (
-                <Flex key={row.id} style={styles.row}>
-                  <div>
-                    <Body>{row.name}</Body>
-                    <SmallBody>
-                      {row.slug} · {row.verificationStatus}
-                      {row.atUri ? ` · ${row.atUri}` : ""}
-                    </SmallBody>
-                  </div>
-                  <Flex gap="md">
-                    <Button
-                      isDisabled={busy === row.id}
-                      onPress={async () => {
-                        setBusy(row.id);
-                        try {
-                          await adminApi.setListingVerification({
-                            data: { listingId: row.id, status: "verified" },
-                          });
-                          await refresh();
-                        } finally {
-                          setBusy(null);
-                        }
-                      }}
-                    >
-                      Verify
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      isDisabled={busy === row.id}
-                      onPress={async () => {
-                        setBusy(row.id);
-                        try {
-                          await adminApi.setListingVerification({
-                            data: { listingId: row.id, status: "rejected" },
-                          });
-                          await refresh();
-                        } finally {
-                          setBusy(null);
-                        }
-                      }}
-                    >
-                      Reject
-                    </Button>
-                  </Flex>
-                </Flex>
+                <Card key={row.id} style={styles.card} size="lg">
+                  {row.heroImageUrl ? (
+                    <CardImage
+                      aspectRatio={16 / 9}
+                      src={row.heroImageUrl}
+                      alt=""
+                    />
+                  ) : null}
+                  <CardBody>
+                    <Flex direction="column" style={styles.cardBody}>
+                      <Flex direction="column" style={styles.preview}>
+                        <Flex gap="xl" align="start">
+                          {row.iconUrl ? (
+                            <img
+                              src={row.iconUrl}
+                              alt=""
+                              {...stylex.props(styles.previewIcon)}
+                            />
+                          ) : null}
+                          <Flex direction="column" gap="xl">
+                            <Text size="2xl" weight="bold">
+                              {row.name}
+                            </Text>
+                            {row.tagline ? (
+                              <Text size="base" variant="secondary">
+                                {row.tagline}
+                              </Text>
+                            ) : null}
+                            <Text size="sm" weight="bold">
+                              {row.categorySlugs?.[0]
+                                ? `${row.categorySlugs[0]}`
+                                : ""}
+                            </Text>
+                            {row.externalUrl ? (
+                              <AriaLink
+                                href={row.externalUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                {...stylex.props(styles.productLink)}
+                              >
+                                <Text size="sm" variant="secondary">
+                                  View product
+                                </Text>
+                                <ExternalLink size={14} />
+                              </AriaLink>
+                            ) : null}
+                          </Flex>
+                        </Flex>
+                      </Flex>
+                      <Flex gap="md">
+                        <Button
+                          isDisabled={busy === row.id}
+                          onPress={async () => {
+                            setBusy(row.id);
+                            try {
+                              await adminApi.setListingVerification({
+                                data: { listingId: row.id, status: "verified" },
+                              });
+                              await refresh();
+                            } finally {
+                              setBusy(null);
+                            }
+                          }}
+                        >
+                          Verify
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          isDisabled={busy === row.id}
+                          onPress={async () => {
+                            setBusy(row.id);
+                            try {
+                              await adminApi.setListingVerification({
+                                data: { listingId: row.id, status: "rejected" },
+                              });
+                              await refresh();
+                            } finally {
+                              setBusy(null);
+                            }
+                          }}
+                        >
+                          Reject
+                        </Button>
+                      </Flex>
+                    </Flex>
+                  </CardBody>
+                </Card>
               ))}
             </Flex>
           )}
@@ -132,7 +208,7 @@ function AdminPage() {
           {data.pendingClaims.length === 0 ? (
             <Body>None.</Body>
           ) : (
-            <Flex direction="column" style={{ gap: gap.xl }}>
+            <Flex direction="column" style={styles.listStack}>
               {data.pendingClaims.map((c) => (
                 <Flex key={c.id} style={styles.row}>
                   <div>
