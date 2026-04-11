@@ -46,6 +46,7 @@ import {
 } from "../lib/app-tag-metadata";
 import { getAppTagHeroAssetPathForTag } from "../lib/app-tag-hero-art";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
 
 export const Route = createFileRoute("/_header-layout/apps/$tag")({
@@ -60,8 +61,21 @@ export const Route = createFileRoute("/_header-layout/apps/$tag")({
       throw notFound();
     }
 
-    return params;
+    return {
+      tag: params.tag,
+      ogTitle: `${formatAppTagLabel(data.tag)} apps | at-store`,
+      ogDescription: getAppTagDescription(data.tag),
+      ogImage: getAppTagHeroAssetPathForTag(data.tag),
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "App tag | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Explore listings grouped under this app workflow tag.",
+      image: loaderData?.ogImage,
+    }),
   component: AppsTagPage,
 });
 
@@ -334,10 +348,10 @@ const styles = stylex.create({
 });
 
 function AppsTagPage() {
-  const params = Route.useLoaderData();
+  const { tag } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getAppsByTagPageQueryOptions({
-      tag: params.tag,
+      tag,
     }),
   );
   const { data: allGroups } = useSuspenseQuery(

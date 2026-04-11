@@ -5,7 +5,7 @@ import {
   createLink,
   Link as RouterLink,
 } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
@@ -29,6 +29,7 @@ import {
   type DirectoryListingCard,
   type DirectoryProtocolCategoryGroup,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
 import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
@@ -43,6 +44,13 @@ export const Route = createFileRoute("/_header-layout/protocol/tags")({
     context.queryClient.ensureQueryData(
       directoryListingApi.getProtocolCategoriesQueryOptions,
     ),
+  head: () =>
+    buildRouteOgMeta({
+      title: "Protocol Tools | at-store",
+      description:
+        "Browse protocol listings by top-level category, from PDS and AppView to supporting infrastructure.",
+      image: getProtocolPageHeroArtSpec("tags")?.assetPath,
+    }),
   component: ProtocolTagsPage,
 });
 

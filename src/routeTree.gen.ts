@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
+import { Route as OgIndexRouteImport } from './routes/og.index'
 import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
 import { Route as HeaderLayoutAdminRouteImport } from './routes/_header-layout.admin'
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
@@ -47,6 +48,11 @@ const LoginRoute = LoginRouteImport.update({
 } as any)
 const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
   id: '/_header-layout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OgIndexRoute = OgIndexRouteImport.update({
+  id: '/og/',
+  path: '/og/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HeaderLayoutIndexRoute = HeaderLayoutIndexRouteImport.update({
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/': typeof HeaderLayoutIndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof HeaderLayoutAdminRoute
+  '/og/': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/admin': typeof HeaderLayoutAdminRoute
   '/': typeof HeaderLayoutIndexRoute
+  '/og': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_header-layout/admin': typeof HeaderLayoutAdminRoute
   '/_header-layout/': typeof HeaderLayoutIndexRoute
+  '/og/': typeof OgIndexRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
   '/_header-layout/apps/tags': typeof HeaderLayoutAppsTagsRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/admin'
+    | '/og/'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin'
     | '/'
+    | '/og'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_header-layout/admin'
     | '/_header-layout/'
+    | '/og/'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
     | '/_header-layout/apps/tags'
@@ -402,6 +414,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   HeaderLayoutRoute: typeof HeaderLayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
+  OgIndexRoute: typeof OgIndexRoute
   ApiAuthAtprotoAuthorizeRoute: typeof ApiAuthAtprotoAuthorizeRoute
   ApiAuthAtprotoCallbackRoute: typeof ApiAuthAtprotoCallbackRoute
   ApiAuthAtprotoJwksDotjsonRoute: typeof ApiAuthAtprotoJwksDotjsonRoute
@@ -423,6 +436,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof HeaderLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/': {
+      id: '/og/'
+      path: '/og'
+      fullPath: '/og/'
+      preLoaderRoute: typeof OgIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_header-layout/': {
@@ -702,6 +722,7 @@ const HeaderLayoutRouteWithChildren = HeaderLayoutRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   HeaderLayoutRoute: HeaderLayoutRouteWithChildren,
   LoginRoute: LoginRoute,
+  OgIndexRoute: OgIndexRoute,
   ApiAuthAtprotoAuthorizeRoute: ApiAuthAtprotoAuthorizeRoute,
   ApiAuthAtprotoCallbackRoute: ApiAuthAtprotoCallbackRoute,
   ApiAuthAtprotoJwksDotjsonRoute: ApiAuthAtprotoJwksDotjsonRoute,

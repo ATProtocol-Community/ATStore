@@ -21,6 +21,7 @@ import { Heading1 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { SKIP_PRODUCT_CLAIM_COOKIE } from "../lib/product-claim-eligibility";
 
 const styles = stylex.create({
@@ -70,10 +71,27 @@ export const Route = createFileRoute("/_header-layout/product/claim")({
         search: { redirect: "/product/claim" },
       });
     }
-    await context.queryClient.ensureQueryData(
+    const eligibility = await context.queryClient.ensureQueryData(
       directoryListingApi.getProductClaimEligibilityQueryOptions(),
     );
+
+    const previewListing = eligibility?.listings?.[0];
+
+    return {
+      ogTitle: "Claim your listing | at-store",
+      ogDescription:
+        "Move your store listing to your PDS and unlock full editing control.",
+      ogImage: previewListing?.heroImageUrl || null,
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Claim listing | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Move your store listing to your PDS and unlock full editing control.",
+      image: loaderData?.ogImage,
+    }),
   component: ProductClaimPage,
 });
 

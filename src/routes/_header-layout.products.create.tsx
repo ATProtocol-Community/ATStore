@@ -14,6 +14,7 @@ import {
 } from "../design-system/alert-dialog";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { buildRouteOgMeta } from "../lib/og-meta";
 
 async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -46,6 +47,12 @@ export const Route = createFileRoute("/_header-layout/products/create")({
       });
     }
   },
+  head: () =>
+    buildRouteOgMeta({
+      title: "Create product listing | at-store",
+      description:
+        "Publish a new listing to your PDS and add it to the at-store directory.",
+    }),
   component: CreateProductListingPage,
 });
 

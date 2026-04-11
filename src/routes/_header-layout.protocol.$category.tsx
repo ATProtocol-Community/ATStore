@@ -39,6 +39,7 @@ import {
   type DirectoryProtocolCategoryGroup,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { getProtocolCategoryCoverAssetPathForSegment } from "../lib/protocol-category-hero-art";
 import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
 import { StarRating } from "#/design-system/star-rating";
@@ -56,8 +57,26 @@ export const Route = createFileRoute("/_header-layout/protocol/$category")({
       throw notFound();
     }
 
-    return params;
+    const heroImage = getProtocolCategoryCoverAssetPathForSegment(data.segment);
+    const description =
+      data.description.trim() ||
+      getProtocolCategoryDescription(data.categoryId);
+
+    return {
+      category: params.category,
+      ogTitle: `${data.label} protocol tools | at-store`,
+      ogDescription: description,
+      ogImage: heroImage,
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Protocol category | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Browse protocol listings across the Bluesky infrastructure stack.",
+      image: loaderData?.ogImage,
+    }),
   component: ProtocolCategoryPage,
 });
 
@@ -255,10 +274,10 @@ const styles = stylex.create({
 });
 
 function ProtocolCategoryPage() {
-  const params = Route.useLoaderData();
+  const { category } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getProtocolCategoryPageQueryOptions({
-      category: params.category,
+      category,
     }),
   );
   const { data: allGroups } = useSuspenseQuery(

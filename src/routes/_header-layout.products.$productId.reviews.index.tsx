@@ -15,11 +15,40 @@ import { uiColor } from "../design-system/theme/color.stylex";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { Route as ProductReviewsRoute } from "./_header-layout.products.$productId.reviews";
 
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews/",
 )({
+  loader: async ({ context, params }) => {
+    const legacyListingId = getLegacyDirectoryListingId(params.productId);
+    const listing = await context.queryClient.ensureQueryData(
+      legacyListingId
+        ? directoryListingApi.getDirectoryListingDetailQueryOptions(
+            legacyListingId,
+          )
+        : directoryListingApi.getDirectoryListingDetailBySlugQueryOptions(
+            params.productId,
+          ),
+    );
+
+    return {
+      ogTitle: `${listing?.name || "Product"} reviews | at-store`,
+      ogDescription:
+        listing?.tagline || "Read and write reviews for products on at-store.",
+      ogImage: listing?.heroImageUrl || null,
+    };
+  },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Product reviews | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Read and write reviews for products on at-store.",
+      image: loaderData?.ogImage,
+    }),
   component: ProductReviewsListPage,
 });
 

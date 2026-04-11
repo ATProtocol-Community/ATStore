@@ -36,7 +36,8 @@ import {
 } from "../lib/app-tag-metadata";
 import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { buildRouteOgMeta } from "../lib/og-meta";
+import { ChevronLeft } from "lucide-react";
 import { StarRating } from "#/design-system/star-rating";
 
 const ButtonLink = createLink(Button);
@@ -48,6 +49,13 @@ export const Route = createFileRoute("/_header-layout/apps/tags")({
     context.queryClient.ensureQueryData(
       directoryListingApi.getAppsByTagQueryOptions,
     ),
+  head: () =>
+    buildRouteOgMeta({
+      title: "App Collections | at-store",
+      description:
+        "Explore app collections by workflow tags like analytics, moderation, and automation.",
+      image: getAppTagHeroArtSpec("all")?.assetPath,
+    }),
   component: AppsAllPage,
 });
 
@@ -141,7 +149,9 @@ function AppsAllPage() {
                 Home
               </LinkLink>
 
-              <LinkLink to="/apps/all">All apps</LinkLink>
+              <LinkLink to="/apps/all" search={{ sort: "popular" }}>
+                All apps
+              </LinkLink>
             </Flex>
 
             <AppTagHero

@@ -28,6 +28,8 @@ import { Body } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { Route as ProductReviewsRoute } from "./_header-layout.products.$productId.reviews";
 import { TextArea } from "#/design-system/text-area";
 import { Form } from "#/design-system/form";
@@ -35,6 +37,34 @@ import { Form } from "#/design-system/form";
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews/write",
 )({
+  loader: async ({ context, params }) => {
+    const legacyListingId = getLegacyDirectoryListingId(params.productId);
+    const listing = await context.queryClient.ensureQueryData(
+      legacyListingId
+        ? directoryListingApi.getDirectoryListingDetailQueryOptions(
+            legacyListingId,
+          )
+        : directoryListingApi.getDirectoryListingDetailBySlugQueryOptions(
+            params.productId,
+          ),
+    );
+
+    return {
+      ogTitle: `Write a review for ${listing?.name || "this product"} | at-store`,
+      ogDescription:
+        listing?.tagline ||
+        "Share your product review with the at-store community.",
+      ogImage: listing?.heroImageUrl || null,
+    };
+  },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Write a review | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Share your product review with the at-store community.",
+      image: loaderData?.ogImage,
+    }),
   component: ProductReviewWritePage,
 });
 

@@ -69,6 +69,7 @@ import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { BlueskyIcon } from "#/components/bluesky-icon";
 
@@ -122,8 +123,30 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       });
     }
 
-    return { productId: listing.id, productSlug, ecosystemRootId };
+    const primaryTag = listing.appTags[0]
+      ? formatAppTagLabel(listing.appTags[0])
+      : null;
+    const ogDescription = primaryTag
+      ? `${listing.tagline} Tag: ${primaryTag}.`
+      : listing.tagline;
+
+    return {
+      productId: listing.id,
+      productSlug,
+      ecosystemRootId,
+      ogTitle: `${listing.name} | at-store`,
+      ogDescription,
+      ogImage: listing.heroImageUrl || null,
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Product | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Discover product details, links, and reviews on at-store.",
+      image: loaderData?.ogImage,
+    }),
   component: ProductPage,
 });
 

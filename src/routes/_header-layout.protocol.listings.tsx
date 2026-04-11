@@ -32,6 +32,7 @@ import {
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryCategoryOption } from "../lib/directory-categories";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
 import { Badge } from "#/design-system/badge";
 
@@ -42,6 +43,13 @@ export const Route = createFileRoute("/_header-layout/protocol/listings")({
     context.queryClient.ensureQueryData(
       directoryListingApi.getAllProtocolListingsQueryOptions,
     ),
+  head: () =>
+    buildRouteOgMeta({
+      title: "All protocol listings | at-store",
+      description:
+        "Search every protocol listing in the directory: infrastructure, tooling, and services filed under protocol categories.",
+      image: getProtocolPageHeroArtSpec("listings")?.assetPath,
+    }),
   component: ProtocolListingsPage,
 });
 

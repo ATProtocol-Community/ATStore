@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { EXT_TO_MIME, mimeFromPath } from '../src/lib/atproto/resolve-image-bytes.shared'
@@ -15,6 +16,7 @@ const BANNER_DIRS = [
   'app-tag-heroes',
   'category-bento',
   'ecosystem-heroes',
+  'home-page-heroes',
   'protocol-categories',
   'protocol-page-heroes',
 ] as const
@@ -100,6 +102,26 @@ export const GENERATED_BANNER_RECORD_URLS: Record<string, string> = ${JSON.strin
     2,
   )}
 `
+}
+
+async function readExistingBannerUrlMap(): Promise<Record<string, string>> {
+  try {
+    const moduleUrl = `${pathToFileURL(OUTPUT_TS_PATH).href}?v=${Date.now()}`
+    const module = (await import(moduleUrl)) as {
+      GENERATED_BANNER_RECORD_URLS?: unknown
+    }
+
+    if (
+      module.GENERATED_BANNER_RECORD_URLS &&
+      typeof module.GENERATED_BANNER_RECORD_URLS === 'object'
+    ) {
+      return module.GENERATED_BANNER_RECORD_URLS as Record<string, string>
+    }
+  } catch {
+    // Ignore parse/import failures and fall back to writing only new uploads.
+  }
+
+  return {}
 }
 
 function requiredEnv(name: string): string {
@@ -212,8 +234,11 @@ async function main() {
     console.log(`Uploaded s3://${bucket}/${key}`)
   }
 
-  await writeFile(OUTPUT_TS_PATH, buildOutputTs(uploadedMap))
-  console.log(`\nWrote ${Object.keys(uploadedMap).length} banner URLs to:`)
+  const existingMap = await readExistingBannerUrlMap()
+  const mergedMap = { ...existingMap, ...uploadedMap }
+
+  await writeFile(OUTPUT_TS_PATH, buildOutputTs(mergedMap))
+  console.log(`\nWrote ${Object.keys(mergedMap).length} banner URLs to:`)
   console.log(`- ${path.relative(PROJECT_ROOT, OUTPUT_TS_PATH)}`)
 
   const listed = await s3.send(

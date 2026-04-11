@@ -27,6 +27,7 @@ import { directoryListingApi } from "../integrations/tanstack-query/api-director
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { resolveProfilePathActorToDid } from "../lib/bluesky-public-profile";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { radius } from "../design-system/theme/radius.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 
@@ -124,7 +125,7 @@ export const Route = createFileRoute("/_header-layout/profile/$actor")({
     if (resolvedDid == null) {
       throw notFound();
     }
-    const [data] = await Promise.all([
+    const [data, ownedProducts] = await Promise.all([
       context.queryClient.ensureQueryData(
         directoryListingApi.getUserProfileReviewsPageDataQueryOptions(
           resolvedDid,
@@ -139,8 +140,36 @@ export const Route = createFileRoute("/_header-layout/profile/$actor")({
     if (data == null) {
       throw notFound();
     }
-    return { did: resolvedDid };
+    const handleDisplay = data.handle?.trim()
+      ? `@${data.handle.replace(/^@+/, "")}`
+      : null;
+    const mainTitle =
+      data.displayName?.trim() ||
+      handleDisplay ||
+      (resolvedDid.length > 28 ? `${resolvedDid.slice(0, 18)}…` : resolvedDid);
+
+    return {
+      did: resolvedDid,
+      ogTitle: `${mainTitle} profile`,
+      ogDescription:
+        handleDisplay != null
+          ? `Read reviews and discover products published by ${handleDisplay}.`
+          : "Read reviews and discover products published on at-store.",
+      ogAvatar: data.avatarUrl ?? null,
+      ogOwnedProducts: ownedProducts?.length ?? 0,
+      ogReviews: data.reviews.length,
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Profile | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Read reviews and discover products published on at-store.",
+      avatar: loaderData?.ogAvatar,
+      ownedProducts: loaderData?.ogOwnedProducts,
+      reviews: loaderData?.ogReviews,
+    }),
   component: UserProfilePage,
 });
 

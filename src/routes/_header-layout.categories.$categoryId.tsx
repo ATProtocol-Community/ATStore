@@ -52,6 +52,7 @@ import {
 import { getCategoryBentoArtSpec } from "../lib/category-bento-art";
 import { getEcosystemHeroAssetPathForCategory } from "../lib/ecosystem-hero-art";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
 
 const AppLink = createLink(Link);
@@ -68,8 +69,27 @@ export const Route = createFileRoute("/_header-layout/categories/$categoryId")({
       throw notFound();
     }
 
-    return params;
+    const category = data.category;
+    const categoryImageSrc =
+      getEcosystemHeroAssetPathForCategory(category.id) ??
+      getCategoryBentoArtSpec(category.label)?.assetPath ??
+      null;
+
+    return {
+      categoryId: params.categoryId,
+      ogTitle: `${category.label} | at-store`,
+      ogDescription: category.description,
+      ogImage: categoryImageSrc,
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Category | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Browse listings assigned to this directory category.",
+      image: loaderData?.ogImage,
+    }),
   component: CategoryPage,
 });
 
@@ -337,10 +357,10 @@ const styles = stylex.create({
 });
 
 function CategoryPage() {
-  const params = Route.useLoaderData();
+  const { categoryId } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryPageQueryOptions({
-      categoryId: params.categoryId,
+      categoryId,
     }),
   );
 

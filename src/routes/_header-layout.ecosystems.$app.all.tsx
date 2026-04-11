@@ -25,12 +25,12 @@ import { directoryListingApi } from "../integrations/tanstack-query/api-director
 import {
   getAppEcosystemCategoryIdFromRouteParam,
   getAppSegmentFromEcosystemRootCategoryId,
-  getEcosystemPathFromAppSegment,
 } from "../lib/directory-categories";
 import {
   formatEcosystemListingCount,
   pickListingImageForCategoryBranch,
 } from "../lib/ecosystem-listings";
+import { buildRouteOgMeta } from "../lib/og-meta";
 
 const AppLink = createLink(Link);
 
@@ -49,8 +49,24 @@ export const Route = createFileRoute("/_header-layout/ecosystems/$app/all")({
       throw notFound();
     }
 
-    return params;
+    const { category, listings } = data;
+    const heroImage = pickListingImageForCategoryBranch(category.id, listings);
+
+    return {
+      app: params.app,
+      ogTitle: `${category.label} ecosystem listings | at-store`,
+      ogDescription: `Search every listing filed under ${category.pathLabels.join(" / ")}.`,
+      ogImage: heroImage,
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Ecosystem listings | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Search listings within this ecosystem on at-store.",
+      image: loaderData?.ogImage,
+    }),
   component: EcosystemAllPage,
 });
 
@@ -85,8 +101,8 @@ const styles = stylex.create({
 });
 
 function EcosystemAllPage() {
-  const params = Route.useLoaderData();
-  const categoryId = getAppEcosystemCategoryIdFromRouteParam(params.app);
+  const { app } = Route.useLoaderData();
+  const categoryId = getAppEcosystemCategoryIdFromRouteParam(app);
   if (!categoryId) {
     throw notFound();
   }

@@ -35,6 +35,7 @@ import {
 import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { Badge } from "#/design-system/badge";
 
 const LinkLink = createLink(Link);
@@ -57,6 +58,13 @@ export const Route = createFileRoute("/_header-layout/apps/all")({
         sort: deps.sort,
       }),
     ),
+  head: () =>
+    buildRouteOgMeta({
+      title: "All apps | at-store",
+      description:
+        "Browse the full Bluesky app catalog and filter by search, popularity, or newest listings.",
+      image: getAppTagHeroArtSpec("all-apps")?.assetPath,
+    }),
   component: AppsAllPage,
 });
 

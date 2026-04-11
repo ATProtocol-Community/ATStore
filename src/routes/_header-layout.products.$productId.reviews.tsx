@@ -4,6 +4,8 @@ import {
   ProductReviewsPageChrome,
   loadProductReviewsRoute,
 } from "../lib/product-reviews-route";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { buildRouteOgMeta } from "../lib/og-meta";
 
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews",
@@ -13,7 +15,8 @@ export const Route = createFileRoute(
     let slugMismatchRedirectTo:
       | "/products/$productId/reviews"
       | "/products/$productId/reviews/write"
-      | "/products/$productId/reviews/$reviewId/edit" = "/products/$productId/reviews";
+      | "/products/$productId/reviews/$reviewId/edit" =
+      "/products/$productId/reviews";
     let slugMismatchExtraParams: { reviewId: string } | undefined;
 
     if (pathname.endsWith("/write") || pathname.includes("/reviews/write")) {
@@ -26,14 +29,36 @@ export const Route = createFileRoute(
       }
     }
 
-    return loadProductReviewsRoute({
+    const routeData = await loadProductReviewsRoute({
       context,
       params,
       prefetchReviews: true,
       slugMismatchRedirectTo,
       slugMismatchExtraParams,
     });
+
+    const listing = await context.queryClient.ensureQueryData(
+      directoryListingApi.getDirectoryListingDetailQueryOptions(
+        routeData.productId,
+      ),
+    );
+
+    return {
+      ...routeData,
+      ogTitle: `${listing?.name || "Product"} reviews | at-store`,
+      ogDescription:
+        listing?.tagline || "Read and write reviews for products on at-store.",
+      ogImage: listing?.heroImageUrl || null,
+    };
   },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Product reviews | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Read and write reviews for products on at-store.",
+      image: loaderData?.ogImage,
+    }),
   component: ProductReviewsLayout,
 });
 

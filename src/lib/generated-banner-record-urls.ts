@@ -54,6 +54,7 @@ export const GENERATED_BANNER_RECORD_URLS: Record<string, string> = {
   "/generated/ecosystem-heroes/bluesky-scheduling.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/ecosystem-heroes/bluesky-scheduling.png@png",
   "/generated/ecosystem-heroes/bluesky-tool.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/ecosystem-heroes/bluesky-tool.png@png",
   "/generated/ecosystem-heroes/bluesky.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/ecosystem-heroes/bluesky.png@png",
+  "/generated/home-page-heroes/home-og.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/home-page-heroes/home-og.png@png",
   "/generated/protocol-categories/appview.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-categories/appview.png@png",
   "/generated/protocol-categories/cli.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-categories/cli.png@png",
   "/generated/protocol-categories/data-explorer.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-categories/data-explorer.png@png",
