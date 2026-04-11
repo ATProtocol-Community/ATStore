@@ -1,6 +1,6 @@
 ---
 name: add-directory-listing
-description: Add or update manual directory listings in at-store, including copy, taxonomy, branding assets, fallback handcrafted icons, and DB import. Use when the user asks to add a listing, provider, app, protocol service, PDS, or product from a website into the directory.
+description: Add or update manual directory listings in at-store, including copy, taxonomy, branding assets, fallback handcrafted icons, and optional DB import. Use when the user asks to add a listing, provider, app, protocol service, PDS, or product from a website into the directory.
 ---
 
 # Add Directory Listing
@@ -17,6 +17,7 @@ Add a new manual listing to the at-store directory with:
 - optional DB import
 
 Use the repo script for the repetitive parts and do lightweight research for the judgment calls.
+Default to `--no-import` unless the user explicitly asks for DB import.
 
 ## Inputs to gather
 
@@ -41,8 +42,10 @@ Use the repo script for the repetitive parts and do lightweight research for the
    - If the site has no good square icon, first try the in-app `Generate icon` dev action to create a local candidate from the homepage screenshot
    - The generated icon prompt uses style fallbacks: brand mark first, then motif/monogram from the wordmark, then a restrained gradient-plus-symbol treatment for weak branding
    - If the generated result still feels generic or off-brand, create a simple local SVG icon inspired by the branding instead
-3. Add or update the manual source entry with `npm run listing:add -- ...`
-4. Verify the import succeeded if DB import was enabled.
+3. Add or update the manual source entry with `npm run listing:add -- ... --no-import`
+4. Publish to ATProto (preferred default):
+   - `pnpm listing:publish-store <slug-or-uuid>`
+5. Verify DB import only if the user explicitly asked for import.
 
 ## Asset rules
 
@@ -58,7 +61,7 @@ Use the repo script for the repetitive parts and do lightweight research for the
 Primary command:
 
 ```bash
-npm run listing:add -- --name "Product" --source-url "https://source" --category-slug "protocol/pds" ...
+npm run listing:add -- --name "Product" --source-url "https://source" --category-slug "protocol/pds" --no-import ...
 ```
 
 Common flags:
@@ -79,6 +82,12 @@ Common flags:
 - `--asset-slug`
 - `--no-import`
 - `--dry-run`
+
+Publish command:
+
+```bash
+pnpm listing:publish-store <slug-or-uuid>
+```
 
 ## When to handcraft an icon
 
@@ -102,7 +111,8 @@ Good fallback pattern:
 - Confirm `out/manual-directory-listings.json` contains the intended record.
 - Confirm downloaded/generated assets exist under `public/generated/listings/`.
 - If you used the in-app generator, confirm the resulting `iconUrl` or `screenshotUrls[0]` point at local generated assets.
-- If imported, confirm the listing row resolves to the expected `iconUrl` and `categorySlug`.
+- If published, confirm the command returns an `at://` URI.
+- If imported (explicit opt-in), confirm the listing row resolves to the expected `iconUrl` and `categorySlug`.
 
 ## Examples
 

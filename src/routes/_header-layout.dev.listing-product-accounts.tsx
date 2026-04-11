@@ -158,7 +158,7 @@ function DevListingProductAccountsPage() {
     });
 
   const saveHandleMutation = useMutation({
-    mutationFn: (vars: { listingId: string; handle: string }) =>
+    mutationFn: (vars: { listingId: string; handle?: string; did?: string }) =>
       directoryListingApi.setProductAccountHandleDev({ data: vars }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -239,8 +239,9 @@ function DevListingProductAccountsPage() {
             <Heading2>Missing handle (@unknown on /apps/tags)</Heading2>
             <Body style={styles.meta}>
               Listings with no stored Bluesky handle (empty or whitespace only).
-              Saving updates Postgres only; the ATProto listing record still
-              uses <code>productAccountDid</code> when set.
+              You can manually save handle and/or DID to Postgres only; the
+              ATProto listing record still uses <code>productAccountDid</code>{" "}
+              when set.
             </Body>
             {missingHandleFetching && !missingHandleRows?.length ? (
               <SmallBody>Loading…</SmallBody>
@@ -265,8 +266,8 @@ function DevListingProductAccountsPage() {
                     }
                     isSaving={pendingSaveId === listing.id}
                     listing={listing}
-                    onSave={(listingId, handle) => {
-                      saveHandleMutation.mutate({ listingId, handle });
+                    onSave={(listingId, payload) => {
+                      saveHandleMutation.mutate({ listingId, ...payload });
                     }}
                   />
                 ))}
@@ -335,11 +336,16 @@ function MissingHandleRow({
   errorMessage,
 }: {
   listing: ListingMissingProductAccountHandleItem;
-  onSave: (listingId: string, handle: string) => void;
+  onSave: (
+    listingId: string,
+    payload: { handle?: string; did?: string },
+  ) => void;
   isSaving: boolean;
   errorMessage?: string;
 }) {
-  const [value, setValue] = useState("");
+  const [handleValue, setHandleValue] = useState("");
+  const [didValue, setDidValue] = useState("");
+  const canSave = Boolean(handleValue.trim() || didValue.trim());
 
   return (
     <Card style={styles.rowCard}>
@@ -380,17 +386,29 @@ function MissingHandleRow({
           <Flex style={styles.handleFieldRow}>
             <TextField
               label="Bluesky handle"
-              onChange={setValue}
+              onChange={setHandleValue}
               placeholder="e.g. myproduct.bsky.social"
               style={styles.handleInput}
-              value={value}
+              value={handleValue}
+            />
+            <TextField
+              label="Bluesky DID"
+              onChange={setDidValue}
+              placeholder="e.g. did:plc:abc123..."
+              style={styles.handleInput}
+              value={didValue}
             />
             <Button
-              isDisabled={!value.trim() || isSaving}
+              isDisabled={!canSave || isSaving}
               isPending={isSaving}
-              onPress={() => onSave(listing.id, value)}
+              onPress={() =>
+                onSave(listing.id, {
+                  did: didValue.trim() || undefined,
+                  handle: handleValue.trim() || undefined,
+                })
+              }
             >
-              Save handle
+              Save account info
             </Button>
           </Flex>
           {errorMessage ? (

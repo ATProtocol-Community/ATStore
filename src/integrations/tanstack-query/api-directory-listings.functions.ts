@@ -2796,9 +2796,26 @@ function normalizeManualProductAccountHandle(raw: string): string {
   return s
 }
 
+function normalizeManualProductAccountDid(raw: string): string {
+  const s = raw.trim()
+  if (!s) {
+    throw new Error('DID is required.')
+  }
+  if (/\s/.test(s)) {
+    throw new Error('DID cannot contain whitespace.')
+  }
+  if (!s.startsWith('did:')) {
+    throw new Error('DID must start with "did:".')
+  }
+  return s
+}
+
 const setProductAccountHandleDevInput = z.object({
   listingId: z.string().uuid(),
-  handle: z.string().min(1).max(300),
+  handle: z.string().min(1).max(300).optional(),
+  did: z.string().min(1).max(300).optional(),
+}).refine((value) => value.handle?.trim() || value.did?.trim(), {
+  message: 'Either handle or DID is required.',
 })
 
 const setProductAccountHandleDev = createServerFn({ method: 'POST' })
@@ -2807,7 +2824,6 @@ const setProductAccountHandleDev = createServerFn({ method: 'POST' })
   .handler(async ({ data, context }) => {
     assertDevelopmentOnly()
     const t = context.schema.storeListings
-    const normalized = normalizeManualProductAccountHandle(data.handle)
 
     const [found] = await context.db
       .select({ id: t.id })
@@ -2819,11 +2835,22 @@ const setProductAccountHandleDev = createServerFn({ method: 'POST' })
       throw new Error('Listing not found.')
     }
 
+    const updates: { productAccountHandle?: string; productAccountDid?: string } = {}
+    if (data.handle?.trim()) {
+      updates.productAccountHandle = normalizeManualProductAccountHandle(data.handle)
+    }
+    if (data.did?.trim()) {
+      updates.productAccountDid = normalizeManualProductAccountDid(data.did)
+    }
+    if (!updates.productAccountHandle && !updates.productAccountDid) {
+      throw new Error('Either handle or DID is required.')
+    }
+
     const now = new Date()
     await context.db
       .update(t)
       .set({
-        productAccountHandle: normalized,
+        ...updates,
         updatedAt: now,
       })
       .where(eq(t.id, data.listingId))
