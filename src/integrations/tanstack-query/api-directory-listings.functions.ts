@@ -3022,36 +3022,67 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
       throw new Error('Listing is missing ATProto coordinates.')
     }
 
+    /**
+     * Must match `atUriFor()` in tap-listing-sync so `markListingRemovedFromTap` can correlate
+     * delete events when Tap processes the store-repo tombstone before the claim finishes.
+     */
+    const canonicalOldAtUri = `at://${atstoreDid}/${COLLECTION.listingDetail}/${oldRkey}`
+
     const { client } = session
-    const { record } = await buildListingDetailRecordWithBlobs(
-      client,
-      full,
-      undefined,
-      { migratedFromAtUri: oldAtUri },
-    )
-    record.updatedAt = new Date().toISOString()
-
-    const { uri: newUri } = await createListingDetailRecord(
-      client,
-      session.did,
-      record,
-    )
-    const { rkey: newRkey } = parseAtUriParts(newUri)
-
-    const now = new Date()
     const t = context.schema.storeListings
+    const claimStartedAt = new Date()
+
+    /**
+     * Set lineage *before* PDS writes. Otherwise Tap can apply the store-repo delete first;
+     * `markListingRemovedFromTap` would not see `migratedFromAtUri` yet and would delete the row.
+     */
     await context.db
       .update(t)
       .set({
-        atUri: newUri,
-        repoDid: session.did,
-        rkey: newRkey,
-        migratedFromAtUri: oldAtUri,
-        updatedAt: now,
+        migratedFromAtUri: canonicalOldAtUri,
+        updatedAt: claimStartedAt,
       })
       .where(eq(t.id, full.id))
 
-    return { slug: full.slug }
+    try {
+      const { record } = await buildListingDetailRecordWithBlobs(
+        client,
+        full,
+        undefined,
+        { migratedFromAtUri: canonicalOldAtUri },
+      )
+      record.updatedAt = new Date().toISOString()
+
+      const { uri: newUri } = await createListingDetailRecord(
+        client,
+        session.did,
+        record,
+      )
+      const { rkey: newRkey } = parseAtUriParts(newUri)
+
+      const now = new Date()
+      await context.db
+        .update(t)
+        .set({
+          atUri: newUri,
+          repoDid: session.did,
+          rkey: newRkey,
+          migratedFromAtUri: canonicalOldAtUri,
+          updatedAt: now,
+        })
+        .where(eq(t.id, full.id))
+
+      return { slug: full.slug }
+    } catch (err) {
+      await context.db
+        .update(t)
+        .set({
+          migratedFromAtUri: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(t.id, full.id))
+      throw err
+    }
   })
 
 const getProfileOwnedProductListings = createServerFn({ method: 'GET' })

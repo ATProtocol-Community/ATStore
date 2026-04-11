@@ -1,12 +1,17 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, createLink } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  createLink,
+  useNavigate,
+} from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
 import { AppTagCard } from "../components/AppTagCard";
 import { ProtocolCategoryCard } from "../components/ProtocolCategoryCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
+import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -45,10 +50,16 @@ import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 
 export const Route = createFileRoute("/_header-layout/")({
-  loader: ({ context }) =>
-    context.queryClient.ensureQueryData(
-      directoryListingApi.getHomePageQueryOptions,
-    ),
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        directoryListingApi.getHomePageQueryOptions,
+      ),
+      context.queryClient.ensureQueryData(
+        directoryListingApi.getProductClaimEligibilityQueryOptions(),
+      ),
+    ]);
+  },
   component: HomePage,
 });
 
@@ -102,6 +113,9 @@ const styles = stylex.create({
   compactCardContentText: {
     flexGrow: 1,
     fontSize: fontSize["base"],
+  },
+  claimBanner: {
+    width: "100%",
   },
   pageHeader: {
     paddingBottom: verticalSpace["11xl"],
@@ -449,26 +463,59 @@ const styles = stylex.create({
 });
 
 function HomePage() {
+  const navigate = useNavigate();
   const { data } = useSuspenseQuery(
     directoryListingApi.getHomePageQueryOptions,
+  );
+  const { data: claimEligibility } = useSuspenseQuery(
+    directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
   const promoListing = data.spotlights[0] || data.featured;
   const protocolListings = [data.protocolFeatured, ...data.protocolSpotlights];
 
+  const showClaimBanner =
+    claimEligibility.eligible && claimEligibility.listings.length > 0;
+  const claimCount = claimEligibility.listings.length;
+
   return (
     <HeaderLayout.Page>
       <Page.Root variant="large">
-        <Flex direction="column" gap="5xl" style={styles.pageHeader}>
-          <Heading1>Apps on the Atmosphere</Heading1>
-          <Text
-            variant="secondary"
-            size="2xl"
-            leading="sm"
-            style={styles.headerDescription}
-          >
-            Discover the best apps the atmosphere has to offer. With every
-            product you own your data and use the same identity across all apps.
-          </Text>
+        <Flex direction="column" gap="5xl" style={styles.claimBanner}>
+          {showClaimBanner ? (
+            <Alert
+              variant="info"
+              title={
+                claimCount === 1 ? "Claim your listing" : "Claim your listings"
+              }
+              action={
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onPress={() => void navigate({ to: "/product/claim" })}
+                >
+                  Continue
+                </Button>
+              }
+            >
+              {claimCount === 1
+                ? `“${claimEligibility.listings[0]!.name}” is still on the store repo. Claim it to manage updates from your PDS.`
+                : `You have ${String(claimCount)} listings on the store repo. Claim them to manage updates from your PDS.`}
+            </Alert>
+          ) : null}
+
+          <Flex direction="column" gap="5xl" style={styles.pageHeader}>
+            <Heading1>Apps on the Atmosphere</Heading1>
+            <Text
+              variant="secondary"
+              size="2xl"
+              leading="sm"
+              style={styles.headerDescription}
+            >
+              Discover the best apps the atmosphere has to offer. With every
+              product you own your data and use the same identity across all
+              apps.
+            </Text>
+          </Flex>
         </Flex>
 
         <Flex direction="column" style={styles.pageSections}>

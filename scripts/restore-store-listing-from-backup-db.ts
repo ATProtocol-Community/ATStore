@@ -16,6 +16,9 @@
  *
  * To (re)publish the listing to the AT Store PDS after the row exists in Postgres, run
  * `pnpm listing:publish-store kich` — Tap will ingest and refresh the mirror.
+ *
+ * If you still have an `at://…/fyi.atstore.listing.detail/…` URI on the network but no DB backup,
+ * use `pnpm listing:rehydrate-from-at-uri <at-uri>` instead (rebuilds the mirror from the PDS).
  */
 import 'dotenv/config'
 
