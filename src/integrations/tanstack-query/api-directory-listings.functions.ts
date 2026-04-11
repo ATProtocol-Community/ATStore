@@ -3057,6 +3057,18 @@ const createOwnedProductListingInput = z.object({
   externalUrl: listingExternalUrlSchema,
   categorySlug: z.string().trim().min(1).max(256),
   productHandle: z.string().max(300),
+  heroImage: z
+    .object({
+      mimeType: z.string().min(3).max(128),
+      imageBase64: z.string().min(1),
+    })
+    .optional(),
+  iconImage: z
+    .object({
+      mimeType: z.string().min(3).max(128),
+      imageBase64: z.string().min(1),
+    })
+    .optional(),
 })
 
 const getProductListingEditAccessInput = z.object({
@@ -3242,10 +3254,49 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       updatedAt: now,
     }
 
+    let blobOverrides:
+      | {
+          heroImage?: { bytes: Uint8Array; mimeType: string }
+          icon?: { bytes: Uint8Array; mimeType: string }
+        }
+      | undefined
+
+    if (data.heroImage || data.iconImage) {
+      blobOverrides = {}
+      if (data.heroImage) {
+        const heroMime = data.heroImage.mimeType.trim().toLowerCase()
+        if (!heroMime.startsWith('image/')) {
+          throw new Error('Hero image must be an image.')
+        }
+        const heroRaw = Buffer.from(data.heroImage.imageBase64, 'base64')
+        if (heroRaw.length === 0 || heroRaw.length > 12_000_000) {
+          throw new Error('Hero image must be at most 12 MB.')
+        }
+        blobOverrides.heroImage = {
+          bytes: Uint8Array.from(heroRaw),
+          mimeType: heroMime,
+        }
+      }
+      if (data.iconImage) {
+        const iconMime = data.iconImage.mimeType.trim().toLowerCase()
+        if (!iconMime.startsWith('image/')) {
+          throw new Error('Icon image must be an image.')
+        }
+        const iconRaw = Buffer.from(data.iconImage.imageBase64, 'base64')
+        if (iconRaw.length === 0) {
+          throw new Error('Icon image must be an image.')
+        }
+        blobOverrides.icon = {
+          bytes: Uint8Array.from(iconRaw),
+          mimeType: iconMime,
+        }
+      }
+    }
+
     const { record } = await buildListingDetailRecordWithBlobs(
       session.client,
       draftRow,
-      undefined,
+      blobOverrides,
       { omitClaimKey: true },
     )
     const createdAt = now.toISOString()
