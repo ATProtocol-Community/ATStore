@@ -18,7 +18,6 @@ import { parseAtUriParts } from '#/lib/atproto/at-uri'
 import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
-import { getAtstoreRepoDid } from '#/lib/atproto/publish-directory-listing'
 
 function timingSafeEqualUtf8(a: string, b: string): boolean {
   const ba = Buffer.from(a, 'utf8')
@@ -274,11 +273,11 @@ function resolveListingVerificationStatus(input: {
   record: FyiAtstoreListingDetail
   incomingClaimKey: string | null
   existingClaimKey: string | null
-  atstoreDid: string
+  atstoreDid: string | null
 }): 'verified' | 'unverified' {
   if (input.trustedPublisher) return 'verified'
   const migrated = input.record.migratedFromAtUri?.trim()
-  if (migrated) {
+  if (migrated && input.atstoreDid) {
     try {
       const prior = parseAtUriParts(migrated)
       if (prior.collection !== COLLECTION.listingDetail) return 'unverified'
@@ -310,10 +309,11 @@ export async function upsertDirectoryListingFromTap(input: {
   const atUri = atUriFor(did, rkey)
   const sourceUrl = record.externalUrl.trim()
   const incomingClaimKey = record.claimKey?.trim() ?? null
-  const atstoreDid = await getAtstoreRepoDid()
+  const atstoreDidRaw = process.env.ATSTORE_REPO_DID?.trim() ?? null
+  const atstoreDid = atstoreDidRaw?.startsWith('did:') ? atstoreDidRaw : null
   /** Only the store repo may persist `claim_key`; owner-repo ingests clear it so it cannot return after claim. */
   const claimKeyPersisted =
-    did.trim() === atstoreDid.trim() ? incomingClaimKey : null
+    atstoreDid && did.trim() === atstoreDid.trim() ? incomingClaimKey : null
 
   const [existingRow] = await db
     .select({ claimKey: schema.storeListings.claimKey })
