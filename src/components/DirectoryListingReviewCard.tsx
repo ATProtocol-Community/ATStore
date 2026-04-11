@@ -146,14 +146,13 @@ export function DirectoryListingReviewCard({
             <Avatar
               alt={authorLabel}
               fallback={getInitials(authorLabel)}
-              size="lg"
               src={review.authorAvatarUrl || undefined}
             />
             <Flex direction="column" gap="lg" style={styles.reviewAuthor}>
               <Text weight="semibold">{authorLabel}</Text>
-              <StarRating rating={review.rating} showReviewCount={false} />
             </Flex>
             <Flex style={styles.ratingActions}>
+              <StarRating rating={review.rating} showReviewCount={false} />
               {showAuthorMenu ? (
                 <Menu
                   placement="bottom end"

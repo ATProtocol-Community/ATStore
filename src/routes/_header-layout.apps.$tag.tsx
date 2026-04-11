@@ -438,21 +438,21 @@ function AppTagListingCard({
                   <Text size="xl" weight="semibold">
                     {listing.name}
                   </Text>
-                  <Flex align="center" gap="lg">
-                    <SmallBody variant="secondary">
-                      {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-                    </SmallBody>
-                    <StarRating
-                      rating={listing.rating}
-                      reviewCount={listing.reviewCount}
-                      showReviewCount
-                    />
-                  </Flex>
                 </Flex>
               </Flex>
               <Body variant="secondary" style={styles.listingTagline}>
                 {listing.tagline}
               </Body>
+              <Flex align="center" justify="end" gap="lg">
+                <SmallBody variant="secondary">
+                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                </SmallBody>
+                <StarRating
+                  rating={listing.rating}
+                  reviewCount={listing.reviewCount}
+                  showReviewCount
+                />
+              </Flex>
             </>
           )}
         </Flex>
