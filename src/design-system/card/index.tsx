@@ -78,7 +78,7 @@ const styles = stylex.create({
     borderBottomStyle: "solid",
     borderBottomWidth: 1,
     marginBottom: "var(--card-y-padding)",
-    paddingBottom: verticalSpace["5xl"],
+    paddingBottom: verticalSpace["3xl"],
   },
   cardHeaderAction: {
     gridColumnEnd: "action",

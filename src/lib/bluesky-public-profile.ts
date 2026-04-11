@@ -112,3 +112,34 @@ export async function resolveBlueskyHandleToDid(
     return null
   }
 }
+
+function isPlausibleProfileDid(value: string): boolean {
+  const s = value.trim()
+  return s.startsWith('did:') && s.length >= 12 && s.length <= 2048
+}
+
+/**
+ * Decode a `/profile/...` path segment: trim and decode URI escapes.
+ */
+export function normalizeProfilePathActor(raw: string): string {
+  try {
+    return decodeURIComponent(raw).trim()
+  } catch {
+    return raw.trim()
+  }
+}
+
+/**
+ * Resolve a profile URL segment to a DID: either a `did:…` string or a Bluesky handle
+ * (e.g. `user.bsky.social`, `hipstersmoothie.com`).
+ */
+export async function resolveProfilePathActorToDid(
+  raw: string,
+): Promise<string | null> {
+  const normalized = normalizeProfilePathActor(raw)
+  if (!normalized) return null
+  if (normalized.startsWith('did:')) {
+    return isPlausibleProfileDid(normalized) ? normalized : null
+  }
+  return resolveBlueskyHandleToDid(normalized)
+}

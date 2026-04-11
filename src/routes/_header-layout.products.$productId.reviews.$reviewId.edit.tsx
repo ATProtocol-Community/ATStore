@@ -144,13 +144,21 @@ function ProductReviewEditPage() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: directoryListingApi.getDirectoryListingReviewsQueryOptions(
-            productId,
-          ).queryKey,
+          queryKey:
+            directoryListingApi.getDirectoryListingReviewsQueryOptions(
+              productId,
+            ).queryKey,
           exact: true,
         }),
         queryClient.invalidateQueries({
           queryKey: detailQuery.queryKey,
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey:
+            directoryListingApi.getUserProfileReviewsPageDataQueryOptions(
+              review.authorDid,
+            ).queryKey,
           exact: true,
         }),
       ]);

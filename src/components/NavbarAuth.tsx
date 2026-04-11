@@ -17,6 +17,10 @@ const ButtonLink = createLink(Button);
 
 export function NavbarAuth() {
   const { data: session } = useQuery(user.getSessionQueryOptions);
+  const { data: userProfile } = useQuery({
+    ...user.getUserProfileQueryOptions,
+    enabled: session?.user != null,
+  });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -49,6 +53,25 @@ export function NavbarAuth() {
           }
           placement="bottom end"
         >
+          <MenuItem
+            onPress={() => {
+              const did = session.user.did;
+              if (did == null || did === "") {
+                return;
+              }
+              const handle = userProfile?.blueskyHandle?.trim();
+              const actor =
+                handle != null && handle !== ""
+                  ? handle.replace(/^@+/, "")
+                  : did;
+              void navigate({
+                to: "/profile/$actor",
+                params: { actor },
+              });
+            }}
+          >
+            Profile
+          </MenuItem>
           <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
             Log out
           </MenuItem>

@@ -16,6 +16,7 @@ import { Route as HeaderLayoutAdminRouteImport } from './routes/_header-layout.a
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
 import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
 import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
+import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
 import { Route as HeaderLayoutDevListingProductAccountsRouteImport } from './routes/_header-layout.dev.listing-product-accounts'
 import { Route as HeaderLayoutDevCategoriesRouteImport } from './routes/_header-layout.dev.categories'
 import { Route as HeaderLayoutDevAppTagsRouteImport } from './routes/_header-layout.dev.app-tags'
@@ -71,6 +72,12 @@ const HeaderLayoutProtocolCategoryRoute =
   HeaderLayoutProtocolCategoryRouteImport.update({
     id: '/protocol/$category',
     path: '/protocol/$category',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutProfileActorRoute =
+  HeaderLayoutProfileActorRouteImport.update({
+    id: '/profile/$actor',
+    path: '/profile/$actor',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
 const HeaderLayoutDevListingProductAccountsRoute =
@@ -192,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
+  '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
@@ -219,6 +227,7 @@ export interface FileRoutesByTo {
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
+  '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
@@ -247,6 +256,7 @@ export interface FileRoutesById {
   '/_header-layout/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/_header-layout/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/_header-layout/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
+  '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/dev/app-tags'
     | '/dev/categories'
     | '/dev/listing-product-accounts'
+    | '/profile/$actor'
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
@@ -303,6 +314,7 @@ export interface FileRouteTypes {
     | '/dev/app-tags'
     | '/dev/categories'
     | '/dev/listing-product-accounts'
+    | '/profile/$actor'
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
@@ -330,6 +342,7 @@ export interface FileRouteTypes {
     | '/_header-layout/dev/app-tags'
     | '/_header-layout/dev/categories'
     | '/_header-layout/dev/listing-product-accounts'
+    | '/_header-layout/profile/$actor'
     | '/_header-layout/protocol/$category'
     | '/_header-layout/protocol/listings'
     | '/_header-layout/protocol/tags'
@@ -406,6 +419,13 @@ declare module '@tanstack/react-router' {
       path: '/protocol/$category'
       fullPath: '/protocol/$category'
       preLoaderRoute: typeof HeaderLayoutProtocolCategoryRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/profile/$actor': {
+      id: '/_header-layout/profile/$actor'
+      path: '/profile/$actor'
+      fullPath: '/profile/$actor'
+      preLoaderRoute: typeof HeaderLayoutProfileActorRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/dev/listing-product-accounts': {
@@ -575,6 +595,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutDevAppTagsRoute: typeof HeaderLayoutDevAppTagsRoute
   HeaderLayoutDevCategoriesRoute: typeof HeaderLayoutDevCategoriesRoute
   HeaderLayoutDevListingProductAccountsRoute: typeof HeaderLayoutDevListingProductAccountsRoute
+  HeaderLayoutProfileActorRoute: typeof HeaderLayoutProfileActorRoute
   HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
   HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
   HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
@@ -595,6 +616,7 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutDevCategoriesRoute: HeaderLayoutDevCategoriesRoute,
   HeaderLayoutDevListingProductAccountsRoute:
     HeaderLayoutDevListingProductAccountsRoute,
+  HeaderLayoutProfileActorRoute: HeaderLayoutProfileActorRoute,
   HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
   HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
   HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,

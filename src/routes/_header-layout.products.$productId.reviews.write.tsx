@@ -1,5 +1,10 @@
 import * as stylex from "@stylexjs/stylex";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   createFileRoute,
   createLink,
@@ -55,6 +60,7 @@ const styles = stylex.create({
 function ProductReviewWritePage() {
   const { productId, productSlug } = ProductReviewsRoute.useLoaderData();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const detailQuery =
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
 
@@ -80,7 +86,16 @@ function ProductReviewWritePage() {
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      const did = session?.user?.did;
+      if (did != null && did !== "") {
+        await queryClient.invalidateQueries({
+          queryKey:
+            directoryListingApi.getUserProfileReviewsPageDataQueryOptions(did)
+              .queryKey,
+          exact: true,
+        });
+      }
       navigate({
         to: "/products/$productId",
         params: { productId: productSlug },

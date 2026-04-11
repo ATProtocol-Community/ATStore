@@ -182,6 +182,28 @@ export interface DirectoryListingReview {
   authorAvatarUrl: string | null
 }
 
+/** Listing summary embedded in a review shown on a user profile. */
+export interface DirectoryUserReviewListing {
+  id: string
+  name: string
+  slug: string
+  sourceUrl: string
+  iconUrl: string | null
+  tagline: string | null
+}
+
+export interface DirectoryUserReview extends DirectoryListingReview {
+  listing: DirectoryUserReviewListing
+}
+
+export interface UserProfileReviewsPageData {
+  did: string
+  displayName: string | null
+  handle: string | null
+  avatarUrl: string | null
+  reviews: DirectoryUserReview[]
+}
+
 export interface DirectoryCategorySummary {
   id: string
   label: string
@@ -346,6 +368,15 @@ const updateDirectoryListingReviewInput = z.object({
 const deleteDirectoryListingReviewInput = z.object({
   reviewId: z.string().uuid(),
 })
+
+const getUserProfileReviewsPageDataInput = z.object({
+  did: z.string().trim().min(1).max(2048),
+})
+
+function isPlausiblePublicDid(value: string) {
+  const s = value.trim()
+  return s.startsWith('did:') && s.length >= 12 && s.length <= 2048
+}
 
 const fallbackCategoryIds = ['apps', 'protocol']
 
@@ -1792,6 +1823,89 @@ function getDirectoryListingReviewsQueryOptions(id: string) {
   })
 }
 
+const getUserProfileReviewsPageData = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(getUserProfileReviewsPageDataInput)
+  .handler(async ({ data, context }) => {
+    const did = data.did.trim()
+    if (!isPlausiblePublicDid(did)) {
+      return null
+    }
+
+    const profile = await fetchBlueskyPublicProfileFields(did)
+
+    const rev = context.schema.storeListingReviews
+    const list = context.schema.storeListings
+
+    const rows = await context.db
+      .select({
+        id: rev.id,
+        authorDid: rev.authorDid,
+        rating: rev.rating,
+        text: rev.text,
+        reviewCreatedAt: rev.reviewCreatedAt,
+        authorDisplayName: rev.authorDisplayName,
+        authorAvatarUrl: rev.authorAvatarUrl,
+        listingId: list.id,
+        listingName: list.name,
+        listingSlug: list.slug,
+        listingSourceUrl: list.sourceUrl,
+        listingIconUrl: list.iconUrl,
+        listingTagline: list.tagline,
+      })
+      .from(rev)
+      .innerJoin(list, eq(rev.storeListingId, list.id))
+      .where(and(eq(rev.authorDid, did), listingPublicWhere(list)))
+      .orderBy(desc(rev.reviewCreatedAt))
+
+    const enriched: DirectoryUserReview[] = rows.map((row) => {
+      const displayName =
+        row.authorDisplayName?.trim() ||
+        profile?.displayName?.trim() ||
+        profile?.handle ||
+        null
+      const avatarUrl =
+        row.authorAvatarUrl?.trim() || profile?.avatarUrl || null
+
+      return {
+        id: row.id,
+        authorDid: row.authorDid,
+        rating: row.rating,
+        text: row.text,
+        reviewCreatedAt: row.reviewCreatedAt.toISOString(),
+        authorDisplayName: displayName,
+        authorAvatarUrl: avatarUrl,
+        listing: {
+          id: row.listingId,
+          name: row.listingName,
+          slug: row.listingSlug,
+          sourceUrl: row.listingSourceUrl,
+          iconUrl: row.listingIconUrl?.trim() || null,
+          tagline: row.listingTagline?.trim() || null,
+        },
+      }
+    })
+
+    return {
+      did,
+      displayName:
+        profile?.displayName?.trim() ||
+        enriched[0]?.authorDisplayName?.trim() ||
+        null,
+      handle: profile?.handle ?? null,
+      avatarUrl:
+        profile?.avatarUrl?.trim() || enriched[0]?.authorAvatarUrl?.trim() || null,
+      reviews: enriched,
+    } satisfies UserProfileReviewsPageData
+  })
+
+function getUserProfileReviewsPageDataQueryOptions(did: string) {
+  return queryOptions({
+    queryKey: ['userProfileReviews', did],
+    queryFn: async () => getUserProfileReviewsPageData({ data: { did } }),
+  })
+}
+
 const createDirectoryListingReview = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware])
   .inputValidator(createDirectoryListingReviewInput)
@@ -2873,6 +2987,8 @@ export const directoryListingApi = {
   getDirectoryListingDetailBySlugQueryOptions,
   getDirectoryListingReviews,
   getDirectoryListingReviewsQueryOptions,
+  getUserProfileReviewsPageData,
+  getUserProfileReviewsPageDataQueryOptions,
   createDirectoryListingReview,
   updateDirectoryListingReview,
   deleteDirectoryListingReview,
