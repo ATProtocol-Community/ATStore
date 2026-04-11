@@ -9,6 +9,7 @@ import {
 import { radius } from "../design-system/theme/radius.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { resolveBannerRecordUrl } from "../lib/banner-record-url";
 
 interface AppTagHeroProps {
   eyebrow?: string;
@@ -58,11 +59,13 @@ export function AppTagHero({
   imageSrc,
   action,
 }: AppTagHeroProps) {
+  const bannerSrc = resolveBannerRecordUrl(imageSrc);
+
   return (
     <Flex direction="column" gap="4xl" style={styles.root}>
       <div {...stylex.props(styles.imageFrame, ui.bgSubtle)}>
-        {imageSrc ? (
-          <img {...stylex.props(styles.image)} alt="" src={imageSrc} />
+        {bannerSrc ? (
+          <img {...stylex.props(styles.image)} alt="" src={bannerSrc} />
         ) : (
           <div {...stylex.props(styles.imageFallback)} aria-hidden="true" />
         )}

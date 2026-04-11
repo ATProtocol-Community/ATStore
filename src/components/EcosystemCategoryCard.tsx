@@ -23,6 +23,7 @@ import type {
 } from "../lib/directory-categories";
 import { formatEcosystemListingCount } from "../lib/ecosystem-listings";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { resolveResizedBannerRecordUrl } from "../lib/banner-record-url";
 
 const styles = stylex.create({
   cardContentLayout: {
@@ -130,6 +131,11 @@ export function EcosystemCategoryCard({
   imageSrc,
 }: EcosystemCategoryCardProps) {
   const accent = category.accent;
+  const bannerSrc = resolveResizedBannerRecordUrl(imageSrc, {
+    width: 1280,
+    height: 720,
+    mode: "fill",
+  });
 
   return (
     <RouterLink
@@ -137,12 +143,12 @@ export function EcosystemCategoryCard({
       params={{ categoryId: category.id }}
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}
     >
-      {imageSrc ? (
+      {bannerSrc ? (
         <img
           {...stylex.props(styles.cardImage)}
           alt=""
           aria-hidden="true"
-          src={imageSrc}
+          src={bannerSrc}
         />
       ) : null}
       <div {...stylex.props(styles.cardOverlay)} />

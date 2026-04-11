@@ -4,6 +4,7 @@ import { desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { adminFnMiddleware } from '#/middleware/auth'
+import { protocolRecordImageUrlOrNull } from '#/lib/atproto/protocol-record-image-url'
 
 import { dbMiddleware } from './db-middleware'
 
@@ -54,7 +55,14 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
       .where(eq(claims.status, 'pending'))
       .orderBy(desc(claims.createdAt))
 
-    return { unverified, pendingClaims }
+    return {
+      unverified: unverified.map((row) => ({
+        ...row,
+        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+        heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
+      })),
+      pendingClaims,
+    }
   })
 
 const getAdminDashboardQueryOptions = queryOptions({

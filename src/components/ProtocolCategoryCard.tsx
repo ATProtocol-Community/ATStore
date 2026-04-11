@@ -18,6 +18,7 @@ import { shadow } from "../design-system/theme/shadow.stylex";
 import { SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import type { DirectoryProtocolCategorySummary } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { resolveResizedBannerRecordUrl } from "../lib/banner-record-url";
 import { getProtocolCategoryCoverAssetPathForSegment } from "../lib/protocol-category-hero-art";
 
 const styles = stylex.create({
@@ -108,8 +109,9 @@ type ProtocolCategoryCardProps = {
 
 export function ProtocolCategoryCard({ category }: ProtocolCategoryCardProps) {
   const accent = getProtocolCategoryAccent(category.segment);
-  const coverSrc = getProtocolCategoryCoverAssetPathForSegment(
-    category.segment,
+  const coverSrc = resolveResizedBannerRecordUrl(
+    getProtocolCategoryCoverAssetPathForSegment(category.segment),
+    { width: 640, height: 480, mode: "fill" },
   );
 
   return (

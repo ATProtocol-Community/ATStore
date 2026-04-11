@@ -27,6 +27,7 @@ import {
   getAppTagSlug,
 } from "../lib/app-tag-metadata";
 import { getAppTagHeroAssetPathForTag } from "../lib/app-tag-hero-art";
+import { resolveResizedBannerRecordUrl } from "../lib/banner-record-url";
 
 const styles = stylex.create({
   card: {
@@ -107,7 +108,10 @@ type AppTagCardProps = {
 
 export function AppTagCard({ tag }: AppTagCardProps) {
   const accent = getAppTagAccent(tag.tag);
-  const imageSrc = getAppTagHeroAssetPathForTag(tag.tag);
+  const imageSrc = resolveResizedBannerRecordUrl(
+    getAppTagHeroAssetPathForTag(tag.tag),
+    { width: 640, height: 360, mode: "fill" },
+  );
 
   return (
     <RouterLink

@@ -63,6 +63,7 @@ import {
   resolveBlueskyHandleToDid,
 } from '#/lib/bluesky-public-profile'
 import { findEligibleProductClaimsForDid } from '#/lib/product-claim-eligibility'
+import { protocolRecordImageUrlOrNull } from '#/lib/atproto/protocol-record-image-url'
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -490,8 +491,8 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     slug: row.slug || buildDirectoryListingSlug({ name: row.name }),
     tagline,
     description: getListingDescription(row),
-    iconUrl: row.iconUrl,
-    heroImageUrl: row.heroImageUrl ?? row.screenshotUrls[0] ?? null,
+    iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+    heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
     categorySlugs: slugs,
     categorySlug: primaryCategorySlug(slugs),
     category,
@@ -1898,7 +1899,7 @@ const getUserProfileReviewsPageData = createServerFn({ method: 'GET' })
           name: row.listingName,
           slug: row.listingSlug,
           sourceUrl: row.listingSourceUrl,
-          iconUrl: row.listingIconUrl?.trim() || null,
+          iconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl?.trim() || null),
           tagline: row.listingTagline?.trim() || null,
         },
       }
@@ -2280,7 +2281,7 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
         return {
           id: row.id,
           name: row.name,
-          iconUrl: row.iconUrl,
+          iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
           tagline:
             sanitizeListingTagline(row.tagline) ||
             sanitizeListingTagline(row.fullDescription) ||
@@ -2362,7 +2363,7 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
       return {
         id: row.id,
         name: row.name,
-        iconUrl: row.iconUrl,
+        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
         tagline:
           sanitizeListingTagline(row.tagline) ||
           sanitizeListingTagline(row.fullDescription) ||
@@ -2699,6 +2700,7 @@ const getNextProductAccountCandidate = createServerFn({ method: 'GET' })
     if (!row) return null
     return {
       ...row,
+      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
       createdAt: row.createdAt.toISOString(),
     } satisfies ProductAccountCandidateQueueItem
   })
@@ -2736,6 +2738,7 @@ const getPendingProductAccountCandidates = createServerFn({ method: 'GET' })
 
     return rows.map((row) => ({
       ...row,
+      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
       createdAt: row.createdAt.toISOString(),
     })) satisfies ProductAccountCandidateQueueItem[]
   })
@@ -2771,7 +2774,10 @@ const getListingsMissingProductAccountHandle = createServerFn({ method: 'GET' })
       .where(sql`coalesce(trim(${t.productAccountHandle}), '') = ''`)
       .orderBy(asc(t.name))
 
-    return rows satisfies ListingMissingProductAccountHandleItem[]
+    return rows.map((row) => ({
+      ...row,
+      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+    })) satisfies ListingMissingProductAccountHandleItem[]
   })
 
 const getListingsMissingProductAccountHandleQueryOptions = queryOptions({
@@ -3597,7 +3603,11 @@ const getProfileOwnedProductListings = createServerFn({ method: 'GET' })
       .where(listingPublicWhere(t, eq(t.productAccountDid, did)))
       .orderBy(asc(t.name))
 
-    return rows
+    return rows.map((row) => ({
+      ...row,
+      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
+    }))
   })
 
 function getProfileOwnedProductListingsQueryOptions(did: string) {
