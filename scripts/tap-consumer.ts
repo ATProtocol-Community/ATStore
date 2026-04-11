@@ -4,8 +4,10 @@
  * into `store_listings` and `fyi.atstore.listing.review` into `store_listing_reviews`
  * (aggregates on `store_listings`).
  * Logs identity events; other record collections are skipped except `fyi.atstore.profile` (quiet).
- * Which repos and records appear is configured on the Tap side; this client ingests every
- * matching collection event the channel delivers (no per-DID allowlist here).
+ * Which repos and records appear is configured on the Tap *server* (indigo `cmd/tap`): set
+ * `TAP_COLLECTION_FILTERS` to include both `fyi.atstore.listing.detail` and `fyi.atstore.listing.review`
+ * (or `fyi.atstore.*`). If the server only filters `listing.detail`, review creates never reach
+ * this WebSocket — you will see no `[record]` lines for reviews. This client has no per-DID allowlist.
  *
  * Env:
  *   TAP_URL=http://127.0.0.1:2480   # Railway Tap: use https://…railway.app (no :2480); normalized at startup
@@ -329,6 +331,9 @@ async function main() {
 
   console.log(
     `[tap] config: url=${url} ingestCollections=${[...ingestCollections].join(', ')} trustedPublishers=${trusted.size} verbose=${isVerbose()}`,
+  )
+  console.log(
+    `[tap] hint: Tap server TAP_COLLECTION_FILTERS must include listing.review (or fyi.atstore.*) or reviews never arrive here`,
   )
   console.log(
     `[tap] WebSocket channel starting (blocking) — you should see [record] lines as repos update…`,

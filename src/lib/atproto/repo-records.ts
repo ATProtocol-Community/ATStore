@@ -127,6 +127,47 @@ export async function putProfileSelfRecord(
   })
 }
 
+/**
+ * Create `fyi.atstore.profile` / `self` on the user's repo if it does not exist yet.
+ * Used after OAuth when the user has repo write scope.
+ */
+export async function ensureProfileSelfRecord(
+  client: Client,
+  repo: string,
+  defaults: Pick<FyiAtstoreProfile, 'displayName'> &
+    Partial<Pick<FyiAtstoreProfile, 'description' | 'website'>>,
+): Promise<{ created: boolean }> {
+  const existing = await client.get('com.atproto.repo.getRecord', {
+    params: lexGetRecordParams({
+      repo,
+      collection: COLLECTION.profile,
+      rkey: 'self',
+    }),
+  })
+
+  if (existing.ok && existing.data?.cid) {
+    return { created: false }
+  }
+
+  const rawName = defaults.displayName.trim()
+  const displayName = rawName.slice(0, 640) || repo
+  const record: FyiAtstoreProfile = {
+    $type: NSID.profile,
+    displayName,
+  }
+  const desc = defaults.description?.trim()
+  if (desc) {
+    record.description = desc.slice(0, 4000)
+  }
+  const site = defaults.website?.trim()
+  if (site) {
+    record.website = site.slice(0, 2048)
+  }
+
+  await putProfileSelfRecord(client, repo, record)
+  return { created: true }
+}
+
 export async function createListingDetailRecord(
   client: Client,
   repo: string,

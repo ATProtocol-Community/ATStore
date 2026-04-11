@@ -1,3 +1,4 @@
+import { Client } from "@atcute/client";
 import { and, eq } from "drizzle-orm";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
@@ -13,6 +14,7 @@ import {
 import { sanitizeAuthRedirectTarget } from "#/utils/auth-redirect";
 import { db } from "#/db/index.server";
 import * as schema from "#/db/schema";
+import { ensureProfileSelfRecord } from "#/lib/atproto/repo-records";
 
 export const Route = createFileRoute("/api/auth/atproto/callback")({
   server: {
@@ -25,11 +27,11 @@ export const Route = createFileRoute("/api/auth/atproto/callback")({
             console.warn("OAuth callback error param:", callbackError);
           }
 
-          const { session, state } = await atprotoOAuth.callback(
+          const { session: oauthSession, state } = await atprotoOAuth.callback(
             callbackUrl.searchParams,
           );
 
-          const did = session.did;
+          const did = oauthSession.did;
           const stateData = state as
             | { redirect?: string; returnTo?: string; handle?: string }
             | undefined;
@@ -117,6 +119,18 @@ export const Route = createFileRoute("/api/auth/atproto/callback")({
             ipAddress: request.headers.get("x-forwarded-for") || undefined,
             userAgent: request.headers.get("user-agent") || undefined,
           });
+
+          try {
+            const atprotoClient = new Client({ handler: oauthSession });
+            await ensureProfileSelfRecord(atprotoClient, did, {
+              displayName,
+            });
+          } catch (profileErr) {
+            console.warn(
+              "Failed to ensure fyi.atstore.profile record:",
+              profileErr,
+            );
+          }
 
           const isSecure = request.url.startsWith("https://");
           const cookieAttributes = [
