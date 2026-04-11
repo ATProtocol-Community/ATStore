@@ -1,5 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   createFileRoute,
   createLink,
@@ -7,6 +11,7 @@ import {
   notFound,
   redirect,
   useCanGoBack,
+  useNavigate,
   useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft, ExternalLink } from "lucide-react";
@@ -39,13 +44,14 @@ import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { Body, Heading2, SubLabel } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
 import {
   directoryListingApi,
   type DirectoryListingCard,
   type DirectoryListingDetail,
-  type DirectoryListingReview,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { user } from "../integrations/tanstack-query/api-user.functions";
 import {
   getAppEcosystemRootCategoryId,
   getAppSegmentFromEcosystemRootCategoryId,
@@ -304,31 +310,6 @@ const styles = stylex.create({
     gap: gap["2xl"],
     gridTemplateColumns: "1fr",
   },
-  reviewCard: {
-    boxShadow: shadow.sm,
-    height: "100%",
-  },
-  reviewCardBody: {
-    gap: gap["5xl"],
-    height: "100%",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
-  reviewHeader: {
-    alignItems: "center",
-  },
-  reviewAuthor: {
-    flex: 1,
-    minWidth: 0,
-  },
-  reviewMeta: {
-    color: uiColor.text1,
-  },
-  reviewQuote: {
-    fontSize: fontSize["lg"],
-  },
   relatedSection: {
     paddingTop: verticalSpace["6xl"],
   },
@@ -477,6 +458,7 @@ function ProductPage() {
   const { data: listing } = useSuspenseQuery(detailQueryOptions);
   const { data: relatedProducts } = useSuspenseQuery(relatedQueryOptions);
   const { data: listingReviews } = useSuspenseQuery(reviewsQueryOptions);
+  const { data: session } = useQuery(user.getSessionQueryOptions);
 
   if (!listing) {
     throw notFound();
@@ -487,6 +469,7 @@ function ProductPage() {
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
   const canGoBack = useCanGoBack();
+  const navigate = useNavigate();
   const router = useRouter();
   const [pendingGeneration, setPendingGeneration] = useState<
     null | "hero" | "icon" | "tagline" | "description"
@@ -738,7 +721,21 @@ function ProductPage() {
             {previewReviews.length > 0 ? (
               <Flex direction="column" gap="2xl">
                 {previewReviews.map((review) => (
-                  <ReviewPreviewCard key={review.id} review={review} />
+                  <DirectoryListingReviewCard
+                    key={review.id}
+                    listingId={productId}
+                    review={review}
+                    viewerDid={session?.user?.did ?? null}
+                    onEditReview={() => {
+                      void navigate({
+                        to: "/products/$productId/reviews/$reviewId/edit",
+                        params: {
+                          productId: productSlug,
+                          reviewId: review.id,
+                        },
+                      });
+                    }}
+                  />
                 ))}
               </Flex>
             ) : (
@@ -756,9 +753,8 @@ function ProductPage() {
             )}
 
             <ButtonLink
-              to="/products/$productId/reviews"
+              to="/products/$productId/reviews/write"
               params={{ productId: productSlug }}
-              hash="write-review"
               size="lg"
               variant="secondary"
             >
@@ -1029,41 +1025,6 @@ function ProductEcosystemSection({
         </Body>
       )}
     </Flex>
-  );
-}
-
-function ReviewPreviewCard({ review }: { review: DirectoryListingReview }) {
-  const authorLabel =
-    review.authorDisplayName?.trim() ||
-    (review.authorDid.length > 16
-      ? `${review.authorDid.slice(0, 10)}…`
-      : review.authorDid);
-
-  return (
-    <Card style={styles.reviewCard}>
-      <Flex direction="column" style={styles.reviewCardBody}>
-        <Flex gap="2xl" style={styles.reviewHeader}>
-          <Avatar
-            alt={authorLabel}
-            fallback={getInitials(authorLabel)}
-            size="lg"
-            src={review.authorAvatarUrl || undefined}
-          />
-          <Flex direction="column" gap="lg" style={styles.reviewAuthor}>
-            <Text weight="semibold">{authorLabel}</Text>
-          </Flex>
-          <StarRating rating={review.rating} showReviewCount={false} />
-        </Flex>
-        {review.text ? (
-          <Body style={styles.reviewQuote}>{review.text}</Body>
-        ) : null}
-        <Text size="sm" variant="secondary" style={styles.reviewMeta}>
-          {new Date(review.reviewCreatedAt).toLocaleDateString(undefined, {
-            dateStyle: "medium",
-          })}
-        </Text>
-      </Flex>
-    </Card>
   );
 }
 

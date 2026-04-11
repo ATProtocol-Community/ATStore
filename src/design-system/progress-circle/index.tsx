@@ -36,10 +36,12 @@ const styles = stylex.create({
     position: "relative",
 
     "--progress-border-width": 8,
+    // Scope to this ProgressBar only — a parent (e.g. Button) may also set
+    // data-size; :is([data-size=lg] *) would incorrectly enlarge nested spinners.
     "--progress-size": {
-      ":is([data-size=lg] *)": sizeSpace["4xl"],
-      ":is([data-size=md] *)": sizeSpace["3xl"],
-      ":is([data-size=sm] *)": sizeSpace["md"],
+      ":is([data-progress-circle][data-size=lg] *)": sizeSpace["4xl"],
+      ":is([data-progress-circle][data-size=md] *)": sizeSpace["3xl"],
+      ":is([data-progress-circle][data-size=sm] *)": sizeSpace["md"],
     },
   },
   track: {
@@ -126,6 +128,7 @@ export function ProgressCircle({
   return (
     <ProgressBar
       {...props}
+      data-progress-circle
       data-size={size}
       {...stylex.props(styles.wrapper, style)}
     >

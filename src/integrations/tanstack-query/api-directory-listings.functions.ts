@@ -44,6 +44,7 @@ import {
 import {
   createListingReviewRecord,
   deleteRecord,
+  putListingReviewRecord,
 } from '#/lib/atproto/repo-records'
 import { geminiFlashGenerateImageFromPromptAndImage } from '#/lib/gemini-flash-image-gen'
 import { buildIconPolishFromSiteAssetPrompt } from '#/lib/listing-icon-prompts'
@@ -325,6 +326,16 @@ const createDirectoryListingReviewInput = z.object({
   listingId: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
   text: z.string().max(8000).optional().nullable(),
+})
+
+const updateDirectoryListingReviewInput = z.object({
+  reviewId: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  text: z.string().max(8000).optional().nullable(),
+})
+
+const deleteDirectoryListingReviewInput = z.object({
+  reviewId: z.string().uuid(),
 })
 
 const fallbackCategoryIds = ['apps', 'protocol']
@@ -1826,6 +1837,112 @@ const createDirectoryListingReview = createServerFn({ method: 'POST' })
     return { uri }
   })
 
+const updateDirectoryListingReview = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(updateDirectoryListingReviewInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session) {
+      throw new Error('Sign in to edit your review.')
+    }
+
+    const revTable = context.schema.storeListingReviews
+    const listTable = context.schema.storeListings
+
+    const [revRow] = await context.db
+      .select({
+        rkey: revTable.rkey,
+        reviewCreatedAt: revTable.reviewCreatedAt,
+        storeListingId: revTable.storeListingId,
+      })
+      .from(revTable)
+      .where(
+        and(
+          eq(revTable.id, data.reviewId),
+          eq(revTable.authorDid, session.did),
+        ),
+      )
+      .limit(1)
+
+    if (!revRow) {
+      throw new Error(
+        'Review not found or you do not have permission to edit it.',
+      )
+    }
+
+    const [listing] = await context.db
+      .select({
+        atUri: listTable.atUri,
+      })
+      .from(listTable)
+      .where(
+        listingPublicWhere(
+          listTable,
+          eq(listTable.id, revRow.storeListingId),
+        ),
+      )
+      .limit(1)
+
+    if (!listing) {
+      throw new Error('Listing not found.')
+    }
+
+    const atUri = listing.atUri?.trim()
+    if (!atUri) {
+      throw new Error(
+        'This listing has no AT Protocol URI yet; reviews cannot be updated until it is published to the network.',
+      )
+    }
+
+    await putListingReviewRecord(session.client, session.did, revRow.rkey, {
+      subject: atUri,
+      rating: data.rating,
+      createdAt: revRow.reviewCreatedAt.toISOString(),
+      text: data.text,
+    })
+
+    return { ok: true as const }
+  })
+
+const deleteDirectoryListingReview = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(deleteDirectoryListingReviewInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session) {
+      throw new Error('Sign in to delete your review.')
+    }
+
+    const revTable = context.schema.storeListingReviews
+    const [revRow] = await context.db
+      .select({
+        rkey: revTable.rkey,
+      })
+      .from(revTable)
+      .where(
+        and(
+          eq(revTable.id, data.reviewId),
+          eq(revTable.authorDid, session.did),
+        ),
+      )
+      .limit(1)
+
+    if (!revRow) {
+      throw new Error(
+        'Review not found or you do not have permission to delete it.',
+      )
+    }
+
+    await deleteRecord(
+      session.client,
+      session.did,
+      COLLECTION.listingReview,
+      revRow.rkey,
+    )
+
+    return { ok: true as const }
+  })
+
 const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getRelatedDirectoryListingsInput)
@@ -2415,6 +2532,8 @@ export const directoryListingApi = {
   getDirectoryListingReviews,
   getDirectoryListingReviewsQueryOptions,
   createDirectoryListingReview,
+  updateDirectoryListingReview,
+  deleteDirectoryListingReview,
   getRelatedDirectoryListings,
   getRelatedDirectoryListingsQueryOptions,
   listDirectoryListings,

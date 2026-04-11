@@ -31,6 +31,9 @@ import { Route as ApiAuthAtprotoCallbackRouteImport } from './routes/api.auth.at
 import { Route as ApiAuthAtprotoAuthorizeRouteImport } from './routes/api.auth.atproto.authorize'
 import { Route as HeaderLayoutProductsProductIdReviewsRouteImport } from './routes/_header-layout.products.$productId.reviews'
 import { Route as HeaderLayoutEcosystemsAppAllRouteImport } from './routes/_header-layout.ecosystems.$app.all'
+import { Route as HeaderLayoutProductsProductIdReviewsIndexRouteImport } from './routes/_header-layout.products.$productId.reviews.index'
+import { Route as HeaderLayoutProductsProductIdReviewsWriteRouteImport } from './routes/_header-layout.products.$productId.reviews.write'
+import { Route as HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport } from './routes/_header-layout.products.$productId.reviews.$reviewId.edit'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -152,6 +155,24 @@ const HeaderLayoutEcosystemsAppAllRoute =
     path: '/ecosystems/$app/all',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
+const HeaderLayoutProductsProductIdReviewsIndexRoute =
+  HeaderLayoutProductsProductIdReviewsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => HeaderLayoutProductsProductIdReviewsRoute,
+  } as any)
+const HeaderLayoutProductsProductIdReviewsWriteRoute =
+  HeaderLayoutProductsProductIdReviewsWriteRouteImport.update({
+    id: '/write',
+    path: '/write',
+    getParentRoute: () => HeaderLayoutProductsProductIdReviewsRoute,
+  } as any)
+const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
+  HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport.update({
+    id: '/$reviewId/edit',
+    path: '/$reviewId/edit',
+    getParentRoute: () => HeaderLayoutProductsProductIdReviewsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof HeaderLayoutIndexRoute
@@ -167,7 +188,7 @@ export interface FileRoutesByFullPath {
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
-  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRoute
+  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
@@ -175,6 +196,9 @@ export interface FileRoutesByFullPath {
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
   '/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
   '/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
+  '/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
+  '/products/$productId/reviews/': typeof HeaderLayoutProductsProductIdReviewsIndexRoute
+  '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -190,7 +214,6 @@ export interface FileRoutesByTo {
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
-  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRoute
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
@@ -198,6 +221,9 @@ export interface FileRoutesByTo {
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
   '/ecosystems/$app': typeof HeaderLayoutEcosystemsAppIndexRoute
   '/products/$productId': typeof HeaderLayoutProductsProductIdIndexRoute
+  '/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
+  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsIndexRoute
+  '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -215,7 +241,7 @@ export interface FileRoutesById {
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
-  '/_header-layout/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRoute
+  '/_header-layout/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
@@ -223,6 +249,9 @@ export interface FileRoutesById {
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
   '/_header-layout/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
   '/_header-layout/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
+  '/_header-layout/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
+  '/_header-layout/products/$productId/reviews/': typeof HeaderLayoutProductsProductIdReviewsIndexRoute
+  '/_header-layout/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -248,6 +277,9 @@ export interface FileRouteTypes {
     | '/api/auth/atproto/signup'
     | '/ecosystems/$app/'
     | '/products/$productId/'
+    | '/products/$productId/reviews/write'
+    | '/products/$productId/reviews/'
+    | '/products/$productId/reviews/$reviewId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -263,7 +295,6 @@ export interface FileRouteTypes {
     | '/protocol/listings'
     | '/protocol/tags'
     | '/ecosystems/$app/all'
-    | '/products/$productId/reviews'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
     | '/api/auth/atproto/jwks.json'
@@ -271,6 +302,9 @@ export interface FileRouteTypes {
     | '/api/auth/atproto/signup'
     | '/ecosystems/$app'
     | '/products/$productId'
+    | '/products/$productId/reviews/write'
+    | '/products/$productId/reviews'
+    | '/products/$productId/reviews/$reviewId/edit'
   id:
     | '__root__'
     | '/_header-layout'
@@ -295,6 +329,9 @@ export interface FileRouteTypes {
     | '/api/auth/atproto/signup'
     | '/_header-layout/ecosystems/$app/'
     | '/_header-layout/products/$productId/'
+    | '/_header-layout/products/$productId/reviews/write'
+    | '/_header-layout/products/$productId/reviews/'
+    | '/_header-layout/products/$productId/reviews/$reviewId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -463,8 +500,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutEcosystemsAppAllRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
+    '/_header-layout/products/$productId/reviews/': {
+      id: '/_header-layout/products/$productId/reviews/'
+      path: '/'
+      fullPath: '/products/$productId/reviews/'
+      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsIndexRouteImport
+      parentRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+    }
+    '/_header-layout/products/$productId/reviews/write': {
+      id: '/_header-layout/products/$productId/reviews/write'
+      path: '/write'
+      fullPath: '/products/$productId/reviews/write'
+      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsWriteRouteImport
+      parentRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+    }
+    '/_header-layout/products/$productId/reviews/$reviewId/edit': {
+      id: '/_header-layout/products/$productId/reviews/$reviewId/edit'
+      path: '/$reviewId/edit'
+      fullPath: '/products/$productId/reviews/$reviewId/edit'
+      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport
+      parentRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+    }
   }
 }
+
+interface HeaderLayoutProductsProductIdReviewsRouteChildren {
+  HeaderLayoutProductsProductIdReviewsWriteRoute: typeof HeaderLayoutProductsProductIdReviewsWriteRoute
+  HeaderLayoutProductsProductIdReviewsIndexRoute: typeof HeaderLayoutProductsProductIdReviewsIndexRoute
+  HeaderLayoutProductsProductIdReviewsReviewIdEditRoute: typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
+}
+
+const HeaderLayoutProductsProductIdReviewsRouteChildren: HeaderLayoutProductsProductIdReviewsRouteChildren =
+  {
+    HeaderLayoutProductsProductIdReviewsWriteRoute:
+      HeaderLayoutProductsProductIdReviewsWriteRoute,
+    HeaderLayoutProductsProductIdReviewsIndexRoute:
+      HeaderLayoutProductsProductIdReviewsIndexRoute,
+    HeaderLayoutProductsProductIdReviewsReviewIdEditRoute:
+      HeaderLayoutProductsProductIdReviewsReviewIdEditRoute,
+  }
+
+const HeaderLayoutProductsProductIdReviewsRouteWithChildren =
+  HeaderLayoutProductsProductIdReviewsRoute._addFileChildren(
+    HeaderLayoutProductsProductIdReviewsRouteChildren,
+  )
 
 interface HeaderLayoutRouteChildren {
   HeaderLayoutAdminRoute: typeof HeaderLayoutAdminRoute
@@ -479,7 +558,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
   HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
   HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
-  HeaderLayoutProductsProductIdReviewsRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+  HeaderLayoutProductsProductIdReviewsRoute: typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   HeaderLayoutEcosystemsAppIndexRoute: typeof HeaderLayoutEcosystemsAppIndexRoute
   HeaderLayoutProductsProductIdIndexRoute: typeof HeaderLayoutProductsProductIdIndexRoute
 }
@@ -498,7 +577,7 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,
   HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
   HeaderLayoutProductsProductIdReviewsRoute:
-    HeaderLayoutProductsProductIdReviewsRoute,
+    HeaderLayoutProductsProductIdReviewsRouteWithChildren,
   HeaderLayoutEcosystemsAppIndexRoute: HeaderLayoutEcosystemsAppIndexRoute,
   HeaderLayoutProductsProductIdIndexRoute:
     HeaderLayoutProductsProductIdIndexRoute,

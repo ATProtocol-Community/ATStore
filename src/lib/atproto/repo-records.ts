@@ -218,6 +218,35 @@ export async function createListingReviewRecord(
   return { uri: res.uri, cid: res.cid }
 }
 
+/** Replace an existing `fyi.atstore.listing.review` (same rkey). */
+export async function putListingReviewRecord(
+  client: Client,
+  repo: string,
+  rkey: string,
+  input: {
+    subject: string
+    rating: number
+    createdAt: string
+    text?: string | null
+  },
+): Promise<{ uri: string }> {
+  const record: Record<string, unknown> = {
+    $type: NSID.listingReview,
+    subject: input.subject,
+    rating: input.rating,
+    createdAt: input.createdAt,
+  }
+  const t = input.text?.trim()
+  if (t) record.text = t
+
+  return repoUpsertRecord(client, {
+    repo,
+    collection: COLLECTION.listingReview,
+    rkey,
+    record,
+  })
+}
+
 /** Replace an existing `fyi.atstore.listing.detail` (same rkey). */
 export async function putListingDetailRecord(
   client: Client,
