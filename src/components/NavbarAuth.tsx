@@ -55,6 +55,13 @@ export function NavbarAuth() {
         >
           <MenuItem
             onPress={() => {
+              void navigate({ to: "/products/create" });
+            }}
+          >
+            Create listing
+          </MenuItem>
+          <MenuItem
+            onPress={() => {
               const did = session.user.did;
               if (did == null || did === "") {
                 return;

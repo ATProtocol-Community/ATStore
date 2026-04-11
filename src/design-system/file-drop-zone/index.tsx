@@ -35,6 +35,63 @@ async function getFiles(items: Array<DropItem>): Promise<Array<File>> {
   );
 }
 
+function hasAcceptedDropType(
+  acceptedFileTypes: readonly string[],
+  dropTypes: { has: (type: string | symbol) => boolean },
+): boolean {
+  const hasWildcard = acceptedFileTypes.some((type) => type.endsWith("/*"));
+  if (hasWildcard) {
+    // Some drag sources do not expose full MIME types during dragover.
+    // Allow the drop interaction and validate actual files in `onDrop`.
+    return true;
+  }
+  for (const acceptedType of acceptedFileTypes) {
+    if (dropTypes.has(acceptedType)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function fileMatchesAcceptedType(file: File, acceptedType: string): boolean {
+  const normalizedAcceptedType = acceptedType.toLowerCase();
+  const normalizedMimeType = file.type.toLowerCase();
+  if (acceptedType.endsWith("/*")) {
+    const prefix = normalizedAcceptedType.slice(0, -1);
+    if (normalizedMimeType.startsWith(prefix)) {
+      return true;
+    }
+    // Fallback for drag sources that omit MIME type.
+    if (normalizedMimeType === "" && prefix === "image/") {
+      const imageExtensions = [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".gif",
+        ".avif",
+        ".svg",
+      ];
+      const lowerName = file.name.toLowerCase();
+      return imageExtensions.some((ext) => lowerName.endsWith(ext));
+    }
+    return false;
+  }
+  if (normalizedMimeType === normalizedAcceptedType) {
+    return true;
+  }
+  if (normalizedMimeType === "") {
+    if (normalizedAcceptedType === "image/png") {
+      return file.name.toLowerCase().endsWith(".png");
+    }
+    if (normalizedAcceptedType === "image/jpeg") {
+      const lowerName = file.name.toLowerCase();
+      return lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg");
+    }
+  }
+  return false;
+}
+
 const styles = stylex.create({
   dropZone: {
     paddingBottom: verticalSpace["2xl"],
@@ -112,12 +169,21 @@ export const FileDropZone = ({
       isDisabled={isDisabled}
       onDrop={(e) => {
         void getFiles(e.items).then((files) => {
-          onAddFiles?.(files);
+          if (!acceptedFileTypes || acceptedFileTypes.length === 0) {
+            onAddFiles?.(files);
+            return;
+          }
+          const matched = files.filter((file) =>
+            acceptedFileTypes.some((type) =>
+              fileMatchesAcceptedType(file, type),
+            ),
+          );
+          onAddFiles?.(matched);
         });
       }}
       getDropOperation={(types) => {
         if (!acceptedFileTypes) return "copy";
-        return acceptedFileTypes.some((type) => types.has(type))
+        return hasAcceptedDropType(acceptedFileTypes, types)
           ? "copy"
           : "cancel";
       }}

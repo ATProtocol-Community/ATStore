@@ -4,23 +4,13 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  notFound,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
-import { ImageCropperDialog } from "#/components/image-cropper-dialog";
 import { UserHandleAutocomplete } from "#/components/user-handle-autocomplete";
 import { Button } from "../design-system/button";
 import { Card, CardBody } from "../design-system/card";
 import { ComboBox, ComboBoxItem } from "../design-system/combobox";
-import {
-  FileDropDefaultTrigger,
-  FileDropZone,
-} from "../design-system/file-drop-zone";
 import { Flex } from "../design-system/flex";
 import { Form } from "../design-system/form";
 import { HeaderLayout } from "../design-system/header-layout";
@@ -29,11 +19,10 @@ import { Select, SelectItem } from "../design-system/select";
 import { TextArea } from "../design-system/text-area";
 import { TextField } from "../design-system/text-field";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
+import { fontSize, fontWeight } from "../design-system/theme/typography.stylex";
 import {
   gap,
   horizontalSpace,
-  size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
@@ -41,30 +30,6 @@ import { Heading1 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
-import {
-  getDirectoryListingSlug,
-  getLegacyDirectoryListingId,
-} from "../lib/directory-listing-slugs";
-import { fontSize, fontWeight } from "../design-system/theme/typography.stylex";
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const s = reader.result;
-      if (typeof s !== "string") {
-        reject(new Error("Could not read image."));
-        return;
-      }
-      const comma = s.indexOf(",");
-      resolve(comma >= 0 ? s.slice(comma + 1) : s);
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Could not read image."));
-    };
-    reader.readAsDataURL(blob);
-  });
-}
 
 type CategoryTreeNode = {
   id: string;
@@ -219,70 +184,13 @@ const styles = stylex.create({
   form: {
     gap: gap["3xl"],
   },
-  imageSection: {
-    gap: gap["3xl"],
-  },
-  imageAsset: {
-    gap: gap["xl"],
-  },
-  imageAssetHeader: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: gap["md"],
-  },
-  imagePreviewHero: {
-    aspectRatio: "16 / 9",
-    backgroundColor: uiColor.overlayBackdrop,
-    borderColor: uiColor.border1,
-    borderRadius: radius.xl,
-    borderStyle: "solid",
-    borderWidth: 1,
-    cornerShape: "squircle",
-    objectFit: "cover",
-    overflow: "hidden",
-  },
-  imagePreviewIcon: {
-    backgroundColor: uiColor.overlayBackdrop,
-    borderColor: uiColor.border1,
-    borderRadius: radius.xl,
-    borderStyle: "solid",
-    borderWidth: 1,
-    cornerShape: "squircle",
-    height: size["8xl"],
-    objectFit: "cover",
-    overflow: "hidden",
-    width: size["8xl"],
-  },
-  imageIconRow: {
-    alignItems: "center",
-    gap: gap["2xl"],
-    flexWrap: "wrap",
-  },
-  imageDropZone: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 0,
-  },
-  imageDropZoneHero: {
-    aspectRatio: "16 / 9",
-    padding: 0,
-  },
-  imageDropZoneIcon: {
-    aspectRatio: "1 / 1",
-    padding: 0,
-    alignSelf: "flex-start",
-    width: size["9xl"],
-  },
   stickyFooterActions: {
     justifyContent: "flex-end",
   },
 });
 
-export const Route = createFileRoute(
-  "/_header-layout/products/$productId/edit",
-)({
-  loader: async ({ context, params }) => {
+export const Route = createFileRoute("/_header-layout/products/create")({
+  loader: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(
       user.getSessionQueryOptions,
     );
@@ -290,102 +198,38 @@ export const Route = createFileRoute(
       throw redirect({
         to: "/login",
         search: {
-          redirect: `/products/${params.productId}/edit`,
+          redirect: "/products/create",
         },
       });
     }
-
-    const legacyListingId = getLegacyDirectoryListingId(params.productId);
-    const listing = await context.queryClient.ensureQueryData(
-      legacyListingId
-        ? directoryListingApi.getDirectoryListingDetailQueryOptions(
-            legacyListingId,
-          )
-        : directoryListingApi.getDirectoryListingDetailBySlugQueryOptions(
-            params.productId,
-          ),
-    );
-
-    if (!listing) {
-      throw notFound();
-    }
-
-    const productSlug = getDirectoryListingSlug(listing);
-
-    if (params.productId !== productSlug) {
-      throw redirect({
-        to: "/products/$productId/edit",
-        params: { productId: productSlug },
-        replace: true,
-      });
-    }
-
-    const access = await context.queryClient.ensureQueryData(
-      directoryListingApi.getProductListingEditAccessQueryOptions(listing.id),
-    );
-
-    if (!access.canEdit) {
-      throw redirect({
-        to: "/products/$productId",
-        params: { productId: productSlug },
-        replace: true,
-      });
-    }
-
-    return { productId: listing.id, productSlug };
   },
-  component: EditProductListingPage,
+  component: CreateProductListingPage,
 });
 
-function EditProductListingPage() {
+function CreateProductListingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { productId, productSlug } = Route.useLoaderData();
-
-  const detailQuery =
-    directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
-  const { data: listing } = useSuspenseQuery(detailQuery);
   const { data: categoryTree } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryTreeQueryOptions,
   );
 
-  if (!listing) {
-    throw notFound();
-  }
-
-  const [name, setName] = useState(listing.name);
-  const [tagline, setTagline] = useState(listing.sourceTagline ?? "");
-  const [fullDescription, setFullDescription] = useState(
-    listing.sourceFullDescription ?? "",
-  );
-  const [externalUrl, setExternalUrl] = useState(
-    listing.externalUrl ?? listing.sourceUrl ?? "",
-  );
-  const [productHandle, setProductHandle] = useState(
-    listing.productAccountHandle ?? "",
-  );
-  const categoryParts = (listing.categorySlug ?? "").split("/").filter(Boolean);
+  const [name, setName] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [fullDescription, setFullDescription] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
+  const [productHandle, setProductHandle] = useState("");
   const [categoryKind, setCategoryKind] = useState<
     "app" | "app-tool" | "protocol"
-  >(
-    categoryParts[0] === "protocol"
-      ? "protocol"
-      : categoryParts.length >= 3
-        ? "app-tool"
-        : "app",
-  );
-  const [appName, setAppName] = useState(
-    categoryParts[0] === "apps" ? (categoryParts[1] ?? "") : "",
-  );
-  const [appCategorySlug, setAppCategorySlug] = useState(
-    categoryParts[0] === "apps" ? (categoryParts[2] ?? "") : "",
-  );
-  const [appCategoryLabel, setAppCategoryLabel] = useState(
-    categoryParts[0] === "apps" ? (categoryParts[2] ?? "") : "",
-  );
-  const [protocolCategory, setProtocolCategory] = useState(
-    categoryParts[0] === "protocol" ? (categoryParts[1] ?? "") : "",
-  );
+  >("app");
+  const [appName, setAppName] = useState("");
+  const [appCategorySlug, setAppCategorySlug] = useState("");
+  const [appCategoryLabel, setAppCategoryLabel] = useState("");
+  const [protocolCategory, setProtocolCategory] = useState("");
+  const [publishResult, setPublishResult] = useState<{
+    slug: string;
+    uri: string;
+  } | null>(null);
+
   const appCategoryOptionsByApp = collectAppCategoryOptionsByApp(
     (categoryTree ?? []) as CategoryTreeNode[],
   );
@@ -439,24 +283,10 @@ function EditProductListingPage() {
         ? appName.trim().length > 0 && appCategorySlug.trim().length > 0
         : appName.trim().length > 0;
 
-  const [cropKind, setCropKind] = useState<null | "hero" | "icon">(null);
-  const [cropSourceBlob, setCropSourceBlob] = useState<Blob | null>(null);
-  const [cropperOpen, setCropperOpen] = useState(false);
-  const [cropSession, setCropSession] = useState(0);
-  const pendingHeroBlobRef = useRef<Blob | null>(null);
-  const [pendingHeroPreviewUrl, setPendingHeroPreviewUrl] = useState<
-    string | null
-  >(null);
-  const pendingIconBlobRef = useRef<Blob | null>(null);
-  const [pendingIconPreviewUrl, setPendingIconPreviewUrl] = useState<
-    string | null
-  >(null);
-
-  const saveMutation = useMutation({
+  const publishMutation = useMutation({
     mutationFn: async () => {
-      const result = await directoryListingApi.updateOwnedProductListing({
+      return directoryListingApi.createOwnedProductListing({
         data: {
-          listingId: productId,
           name,
           tagline,
           fullDescription,
@@ -465,107 +295,27 @@ function EditProductListingPage() {
           productHandle,
         },
       });
-
-      const nextPendingHeroBlob = pendingHeroBlobRef.current;
-      if (nextPendingHeroBlob) {
-        const mimeType =
-          nextPendingHeroBlob.type &&
-          nextPendingHeroBlob.type.startsWith("image/")
-            ? nextPendingHeroBlob.type
-            : "image/png";
-        const imageBase64 = await blobToBase64(nextPendingHeroBlob);
-        await directoryListingApi.updateOwnedProductListingImage({
-          data: {
-            listingId: productId,
-            kind: "hero",
-            mimeType,
-            imageBase64,
-          },
-        });
-      }
-
-      const nextPendingIconBlob = pendingIconBlobRef.current;
-      if (nextPendingIconBlob) {
-        const mimeType =
-          nextPendingIconBlob.type &&
-          nextPendingIconBlob.type.startsWith("image/")
-            ? nextPendingIconBlob.type
-            : "image/png";
-        const imageBase64 = await blobToBase64(nextPendingIconBlob);
-        await directoryListingApi.updateOwnedProductListingImage({
-          data: {
-            listingId: productId,
-            kind: "icon",
-            mimeType,
-            imageBase64,
-          },
-        });
-      }
-
-      return result;
     },
     onSuccess: async (result) => {
+      setPublishResult(result);
       await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
-      await queryClient.invalidateQueries({
-        queryKey: detailQuery.queryKey,
-        exact: true,
-      });
-      pendingHeroBlobRef.current = null;
-      pendingIconBlobRef.current = null;
-      if (pendingHeroPreviewUrl) {
-        URL.revokeObjectURL(pendingHeroPreviewUrl);
-      }
-      if (pendingIconPreviewUrl) {
-        URL.revokeObjectURL(pendingIconPreviewUrl);
-      }
-      setPendingHeroPreviewUrl(null);
-      setPendingIconPreviewUrl(null);
-      void navigate({
-        to: "/products/$productId",
-        params: { productId: result.slug },
-      });
     },
   });
-
-  useEffect(() => {
-    return () => {
-      if (pendingHeroPreviewUrl) {
-        URL.revokeObjectURL(pendingHeroPreviewUrl);
-      }
-    };
-  }, [pendingHeroPreviewUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (pendingIconPreviewUrl) {
-        URL.revokeObjectURL(pendingIconPreviewUrl);
-      }
-    };
-  }, [pendingIconPreviewUrl]);
-
-  function onPickFile(kind: "hero" | "icon", file: File | undefined) {
-    if (!file || !file.type.startsWith("image/")) {
-      return;
-    }
-    setCropSession((n) => n + 1);
-    setCropKind(kind);
-    setCropSourceBlob(file);
-    setCropperOpen(true);
-  }
 
   return (
     <HeaderLayout.Page>
       <Page.Root variant="small" style={styles.page}>
         <Form
-          onSubmit={(e) => {
-            e.preventDefault();
-            saveMutation.mutate();
+          onSubmit={() => {
+            setPublishResult(null);
+            publishMutation.mutate();
           }}
         >
           <Flex direction="column" gap="5xl" style={styles.section}>
-            <Heading1>Edit listing</Heading1>
+            <Heading1>Create listing</Heading1>
             <Text size="base" variant="secondary">
-              Changes are written to your PDS and mirrored in the directory.
+              Publish a new listing record to your PDS. Ingestion will create an
+              unverified directory entry shortly after.
             </Text>
 
             <Card style={styles.card} size="lg">
@@ -728,117 +478,6 @@ function EditProductListingPage() {
 
             <Card style={styles.card} size="lg">
               <CardBody>
-                <Flex direction="column" gap="2xl" style={styles.imageSection}>
-                  <Text weight="semibold" size="lg">
-                    Images
-                  </Text>
-                  <Text size="sm" variant="secondary">
-                    Drop or pick files to preview them. Image changes publish
-                    when you save.
-                  </Text>
-                  <Flex direction="column" style={styles.imageAsset}>
-                    <Flex style={styles.imageAssetHeader}>
-                      <Text size="sm" variant="secondary">
-                        Hero (16:9)
-                      </Text>
-                    </Flex>
-                    <FileDropZone
-                      acceptedFileTypes={["image/*"]}
-                      isDisabled={saveMutation.isPending}
-                      onAddFiles={(files) => {
-                        onPickFile("hero", files[0]);
-                      }}
-                      style={[styles.imageDropZone, styles.imageDropZoneHero]}
-                    >
-                      {pendingHeroPreviewUrl || listing.heroImageUrl ? (
-                        <img
-                          src={
-                            pendingHeroPreviewUrl ?? listing.heroImageUrl ?? ""
-                          }
-                          alt=""
-                          {...stylex.props(styles.imagePreviewHero)}
-                        />
-                      ) : (
-                        <div {...stylex.props(styles.imagePreviewHero)} />
-                      )}
-                      <FileDropDefaultTrigger aria-label="Select hero image">
-                        Change hero
-                      </FileDropDefaultTrigger>
-                    </FileDropZone>
-                  </Flex>
-                  <Flex direction="column" style={styles.imageAsset}>
-                    <Flex style={styles.imageAssetHeader}>
-                      <Text size="sm" variant="secondary">
-                        Icon (square)
-                      </Text>
-                    </Flex>
-                    <FileDropZone
-                      acceptedFileTypes={["image/*"]}
-                      isDisabled={saveMutation.isPending}
-                      onAddFiles={(files) => {
-                        onPickFile("icon", files[0]);
-                      }}
-                      style={[styles.imageDropZone, styles.imageDropZoneIcon]}
-                    >
-                      <Flex style={styles.imageIconRow}>
-                        {pendingIconPreviewUrl || listing.iconUrl ? (
-                          <img
-                            src={pendingIconPreviewUrl ?? listing.iconUrl ?? ""}
-                            alt=""
-                            {...stylex.props(styles.imagePreviewIcon)}
-                          />
-                        ) : (
-                          <div {...stylex.props(styles.imagePreviewIcon)} />
-                        )}
-                      </Flex>
-                      <FileDropDefaultTrigger aria-label="Select icon image">
-                        Change icon
-                      </FileDropDefaultTrigger>
-                    </FileDropZone>
-                  </Flex>
-                </Flex>
-              </CardBody>
-            </Card>
-
-            {cropSourceBlob && cropKind ? (
-              <ImageCropperDialog
-                key={`${String(cropSession)}-${cropKind}`}
-                image={cropSourceBlob}
-                aspectRatio={cropKind === "hero" ? 16 / 9 : 1}
-                title={cropKind === "hero" ? "Crop hero image" : "Crop icon"}
-                description="Drag to reposition, use the slider to zoom, then save."
-                isOpen={cropperOpen}
-                onOpenChange={(open) => {
-                  setCropperOpen(open);
-                  if (!open) {
-                    setCropSourceBlob(null);
-                    setCropKind(null);
-                  }
-                }}
-                onSubmit={async (cropped) => {
-                  const nextPreviewUrl = URL.createObjectURL(cropped);
-                  if (cropKind === "hero") {
-                    if (pendingHeroPreviewUrl) {
-                      URL.revokeObjectURL(pendingHeroPreviewUrl);
-                    }
-                    pendingHeroBlobRef.current = cropped;
-                    setPendingHeroPreviewUrl(nextPreviewUrl);
-                  } else {
-                    if (pendingIconPreviewUrl) {
-                      URL.revokeObjectURL(pendingIconPreviewUrl);
-                    }
-                    pendingIconBlobRef.current = cropped;
-                    setPendingIconPreviewUrl(nextPreviewUrl);
-                  }
-                  setCropperOpen(false);
-                  setCropSourceBlob(null);
-                  setCropKind(null);
-                }}
-              />
-            ) : null}
-
-            <Card style={styles.card} size="lg">
-              <CardBody>
                 <Flex direction="column" gap="4xl">
                   <Text weight="semibold" size="lg">
                     Listing Details
@@ -874,11 +513,17 @@ function EditProductListingPage() {
                       onChange={setFullDescription}
                       rows={10}
                     />
-                    {saveMutation.isError ? (
+                    {publishMutation.isError ? (
                       <Text size="sm" variant="critical">
-                        {saveMutation.error instanceof Error
-                          ? saveMutation.error.message
-                          : "Could not save."}
+                        {publishMutation.error instanceof Error
+                          ? publishMutation.error.message
+                          : "Could not publish listing."}
+                      </Text>
+                    ) : null}
+                    {publishResult ? (
+                      <Text size="sm" variant="secondary">
+                        Published to ATProto ({publishResult.uri}). Ingestion
+                        should add your new unverified listing soon.
                       </Text>
                     ) : null}
                   </Flex>
@@ -890,13 +535,10 @@ function EditProductListingPage() {
             <Flex gap="md" wrap style={styles.stickyFooterActions}>
               <Button
                 variant="secondary"
-                isDisabled={saveMutation.isPending}
+                isDisabled={publishMutation.isPending}
                 size="lg"
                 onPress={() => {
-                  void navigate({
-                    to: "/products/$productId",
-                    params: { productId: productSlug },
-                  });
+                  void navigate({ to: "/" });
                 }}
               >
                 Cancel
@@ -904,11 +546,11 @@ function EditProductListingPage() {
               <Button
                 size="lg"
                 variant="primary"
-                isPending={saveMutation.isPending}
+                isPending={publishMutation.isPending}
                 isDisabled={!hasValidCategoryInputs}
                 type="submit"
               >
-                Save
+                Publish
               </Button>
             </Flex>
           </Page.StickyFooter>

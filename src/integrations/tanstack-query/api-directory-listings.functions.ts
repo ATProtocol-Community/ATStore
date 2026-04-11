@@ -3050,9 +3050,24 @@ const updateOwnedProductListingInput = z.object({
   productHandle: z.string().max(300),
 })
 
+const createOwnedProductListingInput = z.object({
+  name: z.string().trim().min(1).max(640),
+  tagline: z.string().max(2000),
+  fullDescription: z.string().max(20000),
+  externalUrl: listingExternalUrlSchema,
+  categorySlug: z.string().trim().min(1).max(256),
+  productHandle: z.string().max(300),
+})
+
 const getProductListingEditAccessInput = z.object({
   listingId: z.string().uuid(),
 })
+
+function buildDraftOwnedListingSlug(name: string): string {
+  const baseSlug = buildDirectoryListingSlug({ name, sourceUrl: null })
+  const suffix = crypto.randomUUID().slice(0, 8)
+  return `${baseSlug}--${suffix}`
+}
 
 const getProductListingEditAccess = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
@@ -3167,6 +3182,80 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
     return { slug: full.slug }
   })
 
+const createOwnedProductListing = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(createOwnedProductListingInput)
+  .handler(async ({ data }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to create a listing.')
+    }
+
+    const name = data.name.trim().slice(0, 640)
+    const taglineClean = sanitizeListingTagline(data.tagline)
+    const descClean = sanitizeListingDescription(data.fullDescription)
+    const externalUrl = data.externalUrl.trim()
+    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
+    const slug = buildDraftOwnedListingSlug(name)
+    const productHandleInput = data.productHandle.trim()
+
+    let productAccountHandle: string | null = null
+    if (productHandleInput.length > 0) {
+      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      if (!resolvedDid) {
+        throw new Error('Could not resolve that handle to a DID.')
+      }
+      if (resolvedDid !== session.did) {
+        throw new Error('That handle does not belong to your signed-in account.')
+      }
+    }
+
+    const now = new Date()
+    const draftRow: StoreListing = {
+      id: crypto.randomUUID(),
+      sourceUrl: externalUrl,
+      name,
+      slug,
+      externalUrl,
+      iconUrl: null,
+      screenshotUrls: [],
+      tagline: taglineClean,
+      fullDescription: descClean,
+      categorySlugs: [categorySlug],
+      appTags: [],
+      atUri: null,
+      repoDid: session.did,
+      rkey: null,
+      heroImageUrl: null,
+      verificationStatus: 'unverified',
+      sourceAccountDid: session.did,
+      claimedByDid: null,
+      claimedAt: null,
+      productAccountDid: session.did,
+      productAccountHandle,
+      migratedFromAtUri: null,
+      claimKey: null,
+      reviewCount: 0,
+      averageRating: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    const { record } = await buildListingDetailRecordWithBlobs(
+      session.client,
+      draftRow,
+      undefined,
+      { omitClaimKey: true },
+    )
+    const createdAt = now.toISOString()
+    record.createdAt = createdAt
+    record.updatedAt = createdAt
+
+    const { uri } = await createListingDetailRecord(session.client, session.did, record)
+    return { uri, slug }
+  })
+
 const updateOwnedProductListingImageInput = z.object({
   listingId: z.string().uuid(),
   kind: z.enum(['hero', 'icon']),
@@ -3207,7 +3296,7 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
       throw new Error('Invalid image data.')
     }
     const maxBytes = data.kind === 'hero' ? 12_000_000 : 2_000_000
-    if (raw.length === 0 || raw.length > maxBytes) {
+    if (raw.length === 0) {
       throw new Error(
         data.kind === 'hero'
           ? 'Hero image must be at most 12 MB.'
@@ -3215,19 +3304,86 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
       )
     }
 
-    const bytes = Uint8Array.from(raw)
+    let finalRaw = raw
+    let finalMime = mime
+    if (data.kind === 'icon' && raw.length > maxBytes) {
+      const { default: sharp } = await import('sharp')
+      const scales = [1, 0.9, 0.8, 0.7, 0.6] as const
+      const qualities = [90, 80, 70, 60, 50, 40] as const
+      let bestBuffer: Buffer | null = null
+      let bestMime: string | null = null
+
+      for (const scale of scales) {
+        let pipeline = sharp(raw, { failOn: 'none' }).rotate()
+        if (scale < 1) {
+          const meta = await pipeline.metadata()
+          const width = meta.width ?? 0
+          const height = meta.height ?? 0
+          if (width > 0 && height > 0) {
+            pipeline = pipeline.resize({
+              width: Math.max(1, Math.floor(width * scale)),
+              height: Math.max(1, Math.floor(height * scale)),
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+          }
+        }
+
+        for (const quality of qualities) {
+          const webpBuffer = await pipeline.clone().webp({ quality }).toBuffer()
+          if (!bestBuffer || webpBuffer.length < bestBuffer.length) {
+            bestBuffer = webpBuffer
+            bestMime = 'image/webp'
+          }
+          if (webpBuffer.length <= maxBytes) {
+            finalRaw = webpBuffer
+            finalMime = 'image/webp'
+            break
+          }
+
+          const jpegBuffer = await pipeline
+            .clone()
+            .jpeg({ quality, mozjpeg: true })
+            .toBuffer()
+          if (!bestBuffer || jpegBuffer.length < bestBuffer.length) {
+            bestBuffer = jpegBuffer
+            bestMime = 'image/jpeg'
+          }
+          if (jpegBuffer.length <= maxBytes) {
+            finalRaw = jpegBuffer
+            finalMime = 'image/jpeg'
+            break
+          }
+        }
+
+        if (finalRaw.length <= maxBytes) {
+          break
+        }
+      }
+
+    }
+
+    if (finalRaw.length > maxBytes) {
+      throw new Error(
+        data.kind === 'hero'
+          ? 'Hero image must be at most 12 MB.'
+          : 'Icon image must be at most 2 MB.',
+      )
+    }
+
+    const bytes = Uint8Array.from(finalRaw)
     const blobOverrides =
       data.kind === 'hero'
         ? {
             heroImage: {
               bytes,
-              mimeType: mime,
+              mimeType: finalMime,
             },
           }
         : {
             icon: {
               bytes,
-              mimeType: mime,
+              mimeType: finalMime,
             },
           }
 
@@ -3462,6 +3618,7 @@ export const directoryListingApi = {
   getProductClaimEligibility,
   getProductClaimEligibilityQueryOptions,
   getProductListingEditAccessQueryOptions,
+  createOwnedProductListing,
   updateOwnedProductListing,
   updateOwnedProductListingImage,
   claimProductListingToPds,

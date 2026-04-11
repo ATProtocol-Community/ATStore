@@ -6,6 +6,7 @@ import {
   type ListingDetailBlobOverrides,
   type ListingDetailDbUrls,
 } from '#/lib/atproto/listing-record'
+import { blobLikeToBskyCdnUrl } from '#/lib/atproto/blob-cdn-url'
 import {
   createListingDetailRecord,
   putListingDetailRecord,
@@ -117,5 +118,14 @@ export async function publishOwnedListingDetail(
   )
   record.updatedAt = new Date().toISOString()
   const { uri } = await putListingDetailRecord(client, ownerRepoDid, rk, record)
-  return { uri, dbUrls }
+  const recordIconUrl = blobLikeToBskyCdnUrl(record.icon, ownerRepoDid)
+  const recordHeroImageUrl = blobLikeToBskyCdnUrl(record.heroImage, ownerRepoDid)
+  return {
+    uri,
+    dbUrls: {
+      ...dbUrls,
+      iconUrl: recordIconUrl ?? dbUrls.iconUrl,
+      heroImageUrl: recordHeroImageUrl ?? dbUrls.heroImageUrl,
+    },
+  }
 }
