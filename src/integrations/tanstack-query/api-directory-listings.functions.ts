@@ -37,11 +37,15 @@ import type { Database } from '#/db/index.server'
 import type { StoreListing } from '#/db/schema'
 import * as dbSchema from '#/db/schema'
 import { COLLECTION } from '#/lib/atproto/nsids'
+import { parseAtUriParts } from '#/lib/atproto/at-uri'
+import { buildListingDetailRecordWithBlobs } from '#/lib/atproto/listing-record'
 import {
   createAtstorePublishClient,
+  getAtstoreRepoDid,
   publishDirectoryListingDetail,
 } from '#/lib/atproto/publish-directory-listing'
 import {
+  createListingDetailRecord,
   createListingReviewRecord,
   deleteRecord,
   putListingReviewRecord,
@@ -54,6 +58,7 @@ import {
   rasterizeBrandIconForGeminiInput,
 } from '#/lib/site-brand-icon'
 import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
+import { findEligibleProductClaimsForDid } from '#/lib/product-claim-eligibility'
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -2960,6 +2965,130 @@ const rejectProductAccountCandidate = createServerFn({ method: 'POST' })
     return { ok: true as const }
   })
 
+const claimProductListingToPdsInput = z.object({
+  listingId: z.string().uuid(),
+})
+
+const getProfileOwnedProductListingsInput = z.object({
+  did: z.string().trim().min(1).max(2048),
+})
+
+const getProductClaimEligibility = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return { eligible: false as const, listings: [] }
+    }
+    const listings = await findEligibleProductClaimsForDid(
+      context.db,
+      session.did,
+    )
+    return {
+      eligible: listings.length > 0,
+      listings,
+    }
+  })
+
+function getProductClaimEligibilityQueryOptions() {
+  return queryOptions({
+    queryKey: ['storeListings', 'productClaimEligibility'] as const,
+    queryFn: async () => getProductClaimEligibility(),
+  })
+}
+
+const claimProductListingToPds = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(claimProductListingToPdsInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to claim your product listing.')
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+    const atstoreDid = await getAtstoreRepoDid()
+
+    if (full.productAccountDid?.trim() !== session.did) {
+      throw new Error('This listing is not associated with your account.')
+    }
+    if (full.repoDid?.trim() !== atstoreDid) {
+      throw new Error('This listing is not published on the store account.')
+    }
+
+    const oldAtUri = full.atUri?.trim()
+    const oldRkey = full.rkey?.trim()
+    if (!oldAtUri?.startsWith('at://') || !oldRkey) {
+      throw new Error('Listing is missing ATProto coordinates.')
+    }
+
+    const { client } = session
+    const { record } = await buildListingDetailRecordWithBlobs(
+      client,
+      full,
+      undefined,
+      { migratedFromAtUri: oldAtUri },
+    )
+    record.updatedAt = new Date().toISOString()
+
+    const { uri: newUri } = await createListingDetailRecord(
+      client,
+      session.did,
+      record,
+    )
+    const { rkey: newRkey } = parseAtUriParts(newUri)
+
+    const now = new Date()
+    const t = context.schema.storeListings
+    await context.db
+      .update(t)
+      .set({
+        atUri: newUri,
+        repoDid: session.did,
+        rkey: newRkey,
+        migratedFromAtUri: oldAtUri,
+        updatedAt: now,
+      })
+      .where(eq(t.id, full.id))
+
+    return { slug: full.slug }
+  })
+
+const getProfileOwnedProductListings = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(getProfileOwnedProductListingsInput)
+  .handler(async ({ data, context }) => {
+    const did = data.did.trim()
+    if (!isPlausiblePublicDid(did)) {
+      return null
+    }
+
+    const t = context.schema.storeListings
+    const rows = await context.db
+      .select({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        tagline: t.tagline,
+        iconUrl: t.iconUrl,
+        heroImageUrl: t.heroImageUrl,
+        reviewCount: t.reviewCount,
+        averageRating: t.averageRating,
+      })
+      .from(t)
+      .where(listingPublicWhere(t, eq(t.productAccountDid, did)))
+      .orderBy(asc(t.name))
+
+    return rows
+  })
+
+function getProfileOwnedProductListingsQueryOptions(did: string) {
+  return queryOptions({
+    queryKey: ['storeListings', 'profileOwnedProducts', did] as const,
+    queryFn: async () => getProfileOwnedProductListings({ data: { did } }),
+  })
+}
+
 export const directoryListingApi = {
   getHomePageData,
   getHomePageQueryOptions,
@@ -3019,4 +3148,9 @@ export const directoryListingApi = {
   applyProductAccountCandidatesBatch,
   confirmProductAccountCandidate,
   rejectProductAccountCandidate,
+  getProductClaimEligibility,
+  getProductClaimEligibilityQueryOptions,
+  claimProductListingToPds,
+  getProfileOwnedProductListings,
+  getProfileOwnedProductListingsQueryOptions,
 }

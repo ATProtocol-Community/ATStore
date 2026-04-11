@@ -50,6 +50,8 @@ export type FyiAtstoreListingDetail = {
   appTags?: string[]
   /** Bluesky DID for the product (not the store publisher). */
   productAccountDid?: string
+  /** Prior `fyi.atstore.listing.detail` record URI when this record supersedes one from another repo. */
+  migratedFromAtUri?: string
 }
 
 function isHttpsUri(s: string | null | undefined): s is string {
@@ -108,6 +110,11 @@ export type ListingDetailBlobOverrides = {
   heroImage?: ListingDetailInMemoryImage
 }
 
+export type ListingDetailRecordExtras = {
+  /** Set when claiming a listing from the store repo onto the product owner PDS. */
+  migratedFromAtUri?: string
+}
+
 /**
  * Build a lexicon record with blobs (Kitchen-style uploadBlob) plus the string URLs to store in Postgres for the site.
  */
@@ -115,6 +122,7 @@ export async function buildListingDetailRecordWithBlobs(
   client: Client,
   row: StoreListing,
   blobOverrides?: ListingDetailBlobOverrides,
+  extras?: ListingDetailRecordExtras,
 ): Promise<{ record: FyiAtstoreListingDetail; dbUrls: ListingDetailDbUrls }> {
   const externalUrl =
     pickUri(row.externalUrl, row.sourceUrl) ?? 'https://bsky.app'
@@ -195,6 +203,11 @@ export async function buildListingDetailRecordWithBlobs(
 
   const productDid = row.productAccountDid?.trim()
   if (productDid) record.productAccountDid = productDid
+
+  const migrated = extras?.migratedFromAtUri?.trim()
+  if (migrated?.startsWith('at://')) {
+    record.migratedFromAtUri = migrated
+  }
 
   return {
     record,

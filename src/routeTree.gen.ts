@@ -17,6 +17,7 @@ import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-l
 import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
 import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
 import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
+import { Route as HeaderLayoutProductClaimRouteImport } from './routes/_header-layout.product.claim'
 import { Route as HeaderLayoutDevListingProductAccountsRouteImport } from './routes/_header-layout.dev.listing-product-accounts'
 import { Route as HeaderLayoutDevCategoriesRouteImport } from './routes/_header-layout.dev.categories'
 import { Route as HeaderLayoutDevAppTagsRouteImport } from './routes/_header-layout.dev.app-tags'
@@ -78,6 +79,12 @@ const HeaderLayoutProfileActorRoute =
   HeaderLayoutProfileActorRouteImport.update({
     id: '/profile/$actor',
     path: '/profile/$actor',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutProductClaimRoute =
+  HeaderLayoutProductClaimRouteImport.update({
+    id: '/product/claim',
+    path: '/product/claim',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
 const HeaderLayoutDevListingProductAccountsRoute =
@@ -199,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
+  '/product/claim': typeof HeaderLayoutProductClaimRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
@@ -227,6 +235,7 @@ export interface FileRoutesByTo {
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
+  '/product/claim': typeof HeaderLayoutProductClaimRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
@@ -256,6 +265,7 @@ export interface FileRoutesById {
   '/_header-layout/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/_header-layout/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/_header-layout/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
+  '/_header-layout/product/claim': typeof HeaderLayoutProductClaimRoute
   '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/dev/app-tags'
     | '/dev/categories'
     | '/dev/listing-product-accounts'
+    | '/product/claim'
     | '/profile/$actor'
     | '/protocol/$category'
     | '/protocol/listings'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/dev/app-tags'
     | '/dev/categories'
     | '/dev/listing-product-accounts'
+    | '/product/claim'
     | '/profile/$actor'
     | '/protocol/$category'
     | '/protocol/listings'
@@ -342,6 +354,7 @@ export interface FileRouteTypes {
     | '/_header-layout/dev/app-tags'
     | '/_header-layout/dev/categories'
     | '/_header-layout/dev/listing-product-accounts'
+    | '/_header-layout/product/claim'
     | '/_header-layout/profile/$actor'
     | '/_header-layout/protocol/$category'
     | '/_header-layout/protocol/listings'
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/profile/$actor'
       fullPath: '/profile/$actor'
       preLoaderRoute: typeof HeaderLayoutProfileActorRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/product/claim': {
+      id: '/_header-layout/product/claim'
+      path: '/product/claim'
+      fullPath: '/product/claim'
+      preLoaderRoute: typeof HeaderLayoutProductClaimRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/dev/listing-product-accounts': {
@@ -595,6 +615,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutDevAppTagsRoute: typeof HeaderLayoutDevAppTagsRoute
   HeaderLayoutDevCategoriesRoute: typeof HeaderLayoutDevCategoriesRoute
   HeaderLayoutDevListingProductAccountsRoute: typeof HeaderLayoutDevListingProductAccountsRoute
+  HeaderLayoutProductClaimRoute: typeof HeaderLayoutProductClaimRoute
   HeaderLayoutProfileActorRoute: typeof HeaderLayoutProfileActorRoute
   HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
   HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
@@ -616,6 +637,7 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutDevCategoriesRoute: HeaderLayoutDevCategoriesRoute,
   HeaderLayoutDevListingProductAccountsRoute:
     HeaderLayoutDevListingProductAccountsRoute,
+  HeaderLayoutProductClaimRoute: HeaderLayoutProductClaimRoute,
   HeaderLayoutProfileActorRoute: HeaderLayoutProfileActorRoute,
   HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
   HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,

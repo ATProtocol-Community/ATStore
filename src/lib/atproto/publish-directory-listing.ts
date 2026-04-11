@@ -31,6 +31,25 @@ export async function createAtstorePublishClient(): Promise<{
   return { client: new Client({ handler: manager }), repoDid: session.did }
 }
 
+let atstoreRepoDidMemo: string | null = null
+
+/**
+ * DID of the AT Store listing publisher (same account as `createAtstorePublishClient`).
+ * Set `ATSTORE_REPO_DID` to avoid an extra login when checking claim eligibility.
+ */
+export async function getAtstoreRepoDid(): Promise<string> {
+  const fromEnv = process.env.ATSTORE_REPO_DID?.trim()
+  if (fromEnv?.startsWith('did:')) {
+    return fromEnv
+  }
+  if (atstoreRepoDidMemo) {
+    return atstoreRepoDidMemo
+  }
+  const { repoDid } = await createAtstorePublishClient()
+  atstoreRepoDidMemo = repoDid
+  return repoDid
+}
+
 function mergeListingRow(
   row: StoreListing,
   patch?: Partial<StoreListing>,

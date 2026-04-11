@@ -114,6 +114,12 @@ export const lexicons = [
               "type": "string",
               "maxLength": 2048,
               "description": "Bluesky DID for the product, app, or tool (not the AT Store publisher). Handle is resolved and stored in Postgres only."
+            },
+            "migratedFromAtUri": {
+              "type": "string",
+              "format": "at-uri",
+              "maxLength": 8192,
+              "description": "When this listing.detail record supersedes a prior record in another repo (e.g. moved from the AT Store publisher to a product owner PDS), the at:// URI of that prior fyi.atstore.listing.detail record."
             }
           }
         }

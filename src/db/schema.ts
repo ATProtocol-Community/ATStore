@@ -197,6 +197,11 @@ export const storeListings = pgTable(
     productAccountDid: text('product_account_did'),
     /** Resolved via public API at Tap ingest; not stored on the ATProto record. */
     productAccountHandle: text('product_account_handle'),
+    /**
+     * Mirror of `fyi.atstore.listing.detail.migratedFromAtUri` — prior listing detail AT URI after a PDS claim.
+     * Used with `at_uri` so review ingest can resolve `subject` before and after migration.
+     */
+    migratedFromAtUri: text('migrated_from_at_uri'),
     /** Denormalized from `store_listing_reviews` (Tap ingest). */
     reviewCount: integer('review_count').notNull().default(0),
     /** Null when `reviewCount` is 0; else mean of star ratings (1–5). */
@@ -219,6 +224,9 @@ export const storeListings = pgTable(
     atUriIdx: uniqueIndex('store_listings_at_uri_idx').on(table.atUri),
     verificationIdx: index('store_listings_verification_status_idx').on(
       table.verificationStatus,
+    ),
+    migratedFromAtUriIdx: index('store_listings_migrated_from_at_uri_idx').on(
+      table.migratedFromAtUri,
     ),
     repoRkeyIdx: uniqueIndex('store_listings_repo_did_rkey_idx').on(
       table.repoDid,

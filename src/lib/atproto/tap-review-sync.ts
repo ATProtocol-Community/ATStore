@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import type { Database } from '#/db/index.server'
@@ -130,10 +130,16 @@ export async function upsertListingReviewFromTap(input: {
   const { db, did, rkey, record } = input
   const atUri = atUriForReview(did, rkey)
 
+  const subject = record.subject
   const [listing] = await db
     .select({ id: schema.storeListings.id })
     .from(schema.storeListings)
-    .where(eq(schema.storeListings.atUri, record.subject))
+    .where(
+      or(
+        eq(schema.storeListings.atUri, subject),
+        eq(schema.storeListings.migratedFromAtUri, subject),
+      ),
+    )
     .limit(1)
 
   if (!listing) {

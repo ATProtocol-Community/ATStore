@@ -21,6 +21,7 @@
     "generate:listing-images": "tsx scripts/generate-listing-images.ts",
     "generate:listing-copy": "tsx scripts/generate-listing-copy.ts",
     "listing:add": "tsx scripts/add-manual-directory-listing.ts",
+    "listing:publish-store": "tsx -r dotenv/config scripts/publish-store-listing-to-atproto.ts",
     "backfill:listing-icons": "tsx scripts/backfill-listing-icons.ts",
     "backfill:listing-taxonomy": "tsx scripts/backfill-listing-taxonomy.ts",
     "backfill:bluesky-external-urls": "tsx scripts/scrape-bluesky-directory/backfill-external-urls.ts",

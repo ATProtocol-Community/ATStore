@@ -15,6 +15,10 @@ import { sanitizeAuthRedirectTarget } from "#/utils/auth-redirect";
 import { db } from "#/db/index.server";
 import * as schema from "#/db/schema";
 import { ensureProfileSelfRecord } from "#/lib/atproto/repo-records";
+import {
+  cookieHeaderSkipsProductClaim,
+  countEligibleProductClaimsForDid,
+} from "#/lib/product-claim-eligibility";
 
 export const Route = createFileRoute("/api/auth/atproto/callback")({
   server: {
@@ -36,10 +40,28 @@ export const Route = createFileRoute("/api/auth/atproto/callback")({
             | { redirect?: string; returnTo?: string; handle?: string }
             | undefined;
           const requestedReturnTo = stateData?.redirect ?? stateData?.returnTo;
-          const returnTo = sanitizeAuthRedirectTarget(
+          let returnTo = sanitizeAuthRedirectTarget(
             requestedReturnTo,
             request.url,
           );
+
+          const skipClaim = cookieHeaderSkipsProductClaim(
+            request.headers.get("cookie"),
+          );
+          const defaultHome = returnTo === "/" || returnTo === "";
+          if (!skipClaim && defaultHome) {
+            try {
+              const n = await countEligibleProductClaimsForDid(db, did);
+              if (n > 0) {
+                returnTo = "/product/claim";
+              }
+            } catch (claimRouteErr) {
+              console.warn(
+                "Product claim eligibility check failed:",
+                claimRouteErr,
+              );
+            }
+          }
 
           const [publicProfile, existingUserByDid, existingAccount] =
             await Promise.all([

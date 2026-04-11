@@ -124,6 +124,12 @@ const listingBodySchema = z.object({
       const t = String(s).trim()
       return t.length > 0 ? t : undefined
     }),
+  migratedFromAtUri: z
+    .string()
+    .optional()
+    .refine((s) => !s || s.startsWith('at://'), {
+      message: 'migratedFromAtUri must be an at:// URI',
+    }),
 })
 
 export type ListingDetailParseResult =
@@ -224,6 +230,8 @@ export function tryParseListingDetailRecord(
   }
   if (d.appTags?.length) rec.appTags = d.appTags
   if (d.productAccountDid) rec.productAccountDid = d.productAccountDid
+  const migrated = d.migratedFromAtUri?.trim()
+  if (migrated) rec.migratedFromAtUri = migrated
   return { ok: true, record: rec }
 }
 
@@ -278,6 +286,8 @@ export async function upsertDirectoryListingFromTap(input: {
     productAccountHandle = h && h.length > 0 ? h : null
   }
 
+  const migratedFromAtUri = record.migratedFromAtUri?.trim() ?? null
+
   await db
     .insert(schema.storeListings)
     .values({
@@ -299,6 +309,7 @@ export async function upsertDirectoryListingFromTap(input: {
       appTags,
       productAccountDid: productDid,
       productAccountHandle,
+      migratedFromAtUri,
       updatedAt: now,
     })
     .onConflictDoUpdate({
@@ -321,6 +332,7 @@ export async function upsertDirectoryListingFromTap(input: {
         appTags,
         productAccountDid: productDid,
         productAccountHandle,
+        migratedFromAtUri,
         updatedAt: now,
       },
     })
@@ -328,6 +340,10 @@ export async function upsertDirectoryListingFromTap(input: {
 
 /**
  * Remove the mirrored `store_listings` row when the listing record is deleted on the PDS (matched by repo + rkey).
+ *
+ * Skips the delete when some row records `migratedFromAtUri` equal to this record's AT URI — that means a product
+ * claim repointed the mirror to the owner's repo first; a racing Tap delete for the **old** store record must not
+ * wipe the surviving directory row (see claim flow in `claimProductListingToPds`).
  */
 export async function markListingRemovedFromTap(input: {
   db: Database
@@ -335,6 +351,21 @@ export async function markListingRemovedFromTap(input: {
   rkey: string
 }) {
   const { db, did, rkey } = input
+  const deletedAtUri = atUriFor(did, rkey)
+
+  const [superseded] = await db
+    .select({ id: schema.storeListings.id })
+    .from(schema.storeListings)
+    .where(eq(schema.storeListings.migratedFromAtUri, deletedAtUri))
+    .limit(1)
+
+  if (superseded) {
+    console.log(
+      `[tap-ingest] skip listing delete for ${deletedAtUri} — URI recorded as migratedFromAtUri (claim / lineage); mirror row must stay`,
+    )
+    return
+  }
+
   await db.delete(schema.storeListings).where(
     and(
       eq(schema.storeListings.repoDid, did),

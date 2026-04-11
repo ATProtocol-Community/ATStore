@@ -106,6 +106,13 @@
       "when": 1776300000000,
       "tag": "0014_product_account_candidates",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1776400000000,
+      "tag": "0015_store_listings_migrated_from_at_uri",
+      "breakpoints": true
     }
   ]
 }

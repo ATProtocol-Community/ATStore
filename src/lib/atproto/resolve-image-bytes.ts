@@ -1,26 +1,8 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-
-const EXT_TO_MIME: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-}
-
-function mimeFromPath(filePath: string): string {
-  const lower = filePath.toLowerCase()
-  for (const [ext, mime] of Object.entries(EXT_TO_MIME)) {
-    if (lower.endsWith(ext)) return mime
-  }
-  return 'application/octet-stream'
-}
+import { mimeFromPath } from '#/lib/atproto/resolve-image-bytes.shared'
 
 /**
  * Load image bytes from an `https?://` URL, or a site path like `/generated/foo.png`
- * (resolved under `./public`).
+ * (resolved under `./public` on the server, or via same-origin `fetch` in the browser).
  */
 export async function resolveUrlToImageBytes(
   url: string,
@@ -53,9 +35,23 @@ export async function resolveUrlToImageBytes(
     return { bytes: buf, mimeType: mt }
   }
 
-  const rel = raw.startsWith('/') ? raw.slice(1) : raw
-  const filePath = join(process.cwd(), 'public', rel)
-  const bytes = await readFile(filePath)
-  const mimeType = mimeFromPath(filePath)
-  return { bytes: new Uint8Array(bytes), mimeType }
+  if (import.meta.env.SSR) {
+    const { readPublicImageFile } = await import(
+      '#/lib/atproto/resolve-image-bytes.server'
+    )
+    return readPublicImageFile(raw)
+  }
+
+  const fetchPath = raw.startsWith('/') ? raw : `/${raw}`
+  const res = await fetch(fetchPath)
+  if (!res.ok) {
+    throw new Error(`fetch ${fetchPath}: ${res.status}`)
+  }
+  const mimeType = res.headers.get('content-type')?.split(';')[0]?.trim()
+  const buf = new Uint8Array(await res.arrayBuffer())
+  const mt =
+    mimeType && mimeType.startsWith('image/')
+      ? mimeType
+      : mimeFromPath(fetchPath)
+  return { bytes: buf, mimeType: mt }
 }
