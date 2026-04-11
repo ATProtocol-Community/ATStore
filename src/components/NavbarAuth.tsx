@@ -5,7 +5,7 @@ import Cookies from "universal-cookie";
 
 import { AvatarButton } from "../design-system/avatar";
 import { Button } from "../design-system/button";
-import { Menu, MenuItem } from "../design-system/menu";
+import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
 import { NavbarAction } from "../design-system/navbar";
 import {
   ATPROTO_DID_COOKIE,
@@ -55,13 +55,6 @@ export function NavbarAuth() {
         >
           <MenuItem
             onPress={() => {
-              void navigate({ to: "/products/create" });
-            }}
-          >
-            Create listing
-          </MenuItem>
-          <MenuItem
-            onPress={() => {
               const did = session.user.did;
               if (did == null || did === "") {
                 return;
@@ -79,6 +72,14 @@ export function NavbarAuth() {
           >
             Profile
           </MenuItem>
+          <MenuItem
+            onPress={() => {
+              void navigate({ to: "/products/create" });
+            }}
+          >
+            Submit a product
+          </MenuItem>
+          <MenuSeparator />
           <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
             Log out
           </MenuItem>
