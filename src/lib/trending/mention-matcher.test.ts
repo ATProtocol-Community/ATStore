@@ -251,6 +251,52 @@ describe('matchPostToListings', () => {
     ).toBe(true)
   })
 
+  it('does not domain-match listings solely because their URL is on github.com', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'gh',
+        name: 'Repo Backed App',
+        slug: 'repo-backed-app',
+        sourceUrl: 'https://repo-backed-app.com',
+        externalUrl: 'https://github.com/acme/repo-backed-app',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'shipping a fix, see github for details',
+      urls: ['https://github.com/other-org/other-repo/issues/1'],
+      facetHandles: [],
+    })
+
+    expect(hits.some((h) => h.storeListingId === 'gh')).toBe(false)
+  })
+
+  it('still matches listing-specific github URLs by slug path signal', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'gh2',
+        name: 'Repo Slug Match App',
+        slug: 'repo-slug-match',
+        sourceUrl: 'https://repo-slug-match.com',
+        externalUrl: 'https://github.com/acme/repo-slug-match',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'release notes',
+      urls: ['https://github.com/acme/repo-slug-match/releases/tag/v1.2.3'],
+      facetHandles: [],
+    })
+
+    expect(
+      hits.some((h) => h.storeListingId === 'gh2' && h.matchType === 'url'),
+    ).toBe(true)
+  })
+
   it('keeps highest-confidence hit when multiple signals match', () => {
     const index = buildListingMentionIndex([
       {

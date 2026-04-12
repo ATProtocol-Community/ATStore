@@ -24,6 +24,8 @@ export type ListingMentionIndex = {
   listings: ListingMentionIndexRow[]
 }
 
+const BROAD_HOSTS_TO_SKIP_FOR_DOMAIN_MATCH = new Set(['github.com'])
+
 function normalizeHandle(h: string): string {
   return h.trim().replace(/^@/, '').toLowerCase()
 }
@@ -129,6 +131,10 @@ function addToMap(map: Map<string, Set<string>>, key: string, id: string) {
   set.add(id)
 }
 
+function shouldSkipDomainLevelMatch(host: string): boolean {
+  return BROAD_HOSTS_TO_SKIP_FOR_DOMAIN_MATCH.has(host)
+}
+
 export function buildListingMentionIndex(
   rows: ListingMentionIndexRow[],
 ): ListingMentionIndex {
@@ -142,10 +148,10 @@ export function buildListingMentionIndex(
     }
 
     const su = hostnameFromUrl(row.sourceUrl)
-    if (su) addToMap(byDomain, su, row.id)
+    if (su && !shouldSkipDomainLevelMatch(su)) addToMap(byDomain, su, row.id)
 
     const eu = row.externalUrl ? hostnameFromUrl(row.externalUrl) : null
-    if (eu) addToMap(byDomain, eu, row.id)
+    if (eu && !shouldSkipDomainLevelMatch(eu)) addToMap(byDomain, eu, row.id)
   }
 
   return { byHandle, byDomain, listings: rows }
