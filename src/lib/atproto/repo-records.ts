@@ -66,6 +66,12 @@ export type FyiAtstoreProfile = {
   website?: string
 }
 
+export type FyiAtstoreListingFavorite = {
+  $type: typeof NSID.listingFavorite
+  subject: string
+  createdAt: string
+}
+
 /**
  * Create a record, or replace it if one exists. `swapRecord` must be a CID, not a boolean.
  */
@@ -216,6 +222,45 @@ export async function createListingReviewRecord(
     }),
   )
   return { uri: res.uri, cid: res.cid }
+}
+
+/** Replace an existing `fyi.atstore.listing.favorite` (same rkey). */
+export async function putListingFavoriteRecord(
+  client: Client,
+  repo: string,
+  rkey: string,
+  input: {
+    subject: string
+    createdAt: string
+  },
+): Promise<{ uri: string }> {
+  const record: FyiAtstoreListingFavorite = {
+    $type: NSID.listingFavorite,
+    subject: input.subject,
+    createdAt: input.createdAt,
+  }
+
+  return repoUpsertRecord(client, {
+    repo,
+    collection: COLLECTION.listingFavorite,
+    rkey,
+    record: record as Record<string, unknown>,
+  })
+}
+
+export async function hasListingFavoriteRecord(
+  client: Client,
+  repo: string,
+  rkey: string,
+): Promise<boolean> {
+  const existing = await client.get('com.atproto.repo.getRecord', {
+    params: lexGetRecordParams({
+      repo,
+      collection: COLLECTION.listingFavorite,
+      rkey,
+    }),
+  })
+  return existing.ok && existing.data?.cid != null
 }
 
 /** Replace an existing `fyi.atstore.listing.review` (same rkey). */

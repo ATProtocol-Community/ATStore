@@ -338,6 +338,45 @@ export const storeListingReviews = pgTable(
   }),
 )
 
+/** Tap-sync mirror of `fyi.atstore.listing.favorite` — one row per favorite record. */
+export const storeListingFavorites = pgTable(
+  'store_listing_favorites',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    storeListingId: uuid('store_listing_id')
+      .notNull()
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
+    /** Repo DID of the user who favorited this listing (event `did`). */
+    authorDid: text('author_did').notNull(),
+    rkey: text('rkey').notNull(),
+    atUri: text('at_uri').notNull(),
+    /** From record `createdAt` (ISO string -> timestamp). */
+    favoriteCreatedAt: timestamp('favorite_created_at', {
+      withTimezone: true,
+    }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingIdx: index('store_listing_favorites_store_listing_id_idx').on(
+      table.storeListingId,
+    ),
+    authorCreatedIdx: index('store_listing_favorites_author_created_idx').on(
+      table.authorDid,
+      table.favoriteCreatedAt,
+    ),
+    atUriIdx: uniqueIndex('store_listing_favorites_at_uri_idx').on(table.atUri),
+    repoRkeyIdx: uniqueIndex('store_listing_favorites_repo_rkey_idx').on(
+      table.authorDid,
+      table.rkey,
+    ),
+  }),
+)
+
 /** App-side claim workflow against @store-hosted listings (protocol layer is separate). */
 export const listingClaims = pgTable(
   'listing_claims',
@@ -377,6 +416,8 @@ export type HomePageHeroListing = typeof homePageHeroListings.$inferSelect
 export type NewHomePageHeroListing = typeof homePageHeroListings.$inferInsert
 export type StoreListingReview = typeof storeListingReviews.$inferSelect
 export type NewStoreListingReview = typeof storeListingReviews.$inferInsert
+export type StoreListingFavorite = typeof storeListingFavorites.$inferSelect
+export type NewStoreListingFavorite = typeof storeListingFavorites.$inferInsert
 export type ListingClaim = typeof listingClaims.$inferSelect
 export type NewListingClaim = typeof listingClaims.$inferInsert
 export type StoreListingProductAccountCandidate =

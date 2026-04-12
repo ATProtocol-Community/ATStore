@@ -1,6 +1,35 @@
 export const lexicons = [
   {
     "lexicon": 1,
+    "id": "fyi.atstore.authBasic",
+    "description": "Permission set for AT Store write access.",
+    "defs": {
+      "main": {
+        "type": "permission-set",
+        "title": "Full AT Store Access",
+        "detail": "Provides full access to AT Store profile, listings, reviews, and favorites.",
+        "permissions": [
+          {
+            "type": "permission",
+            "resource": "repo",
+            "collection": [
+              "fyi.atstore.profile",
+              "fyi.atstore.listing.detail",
+              "fyi.atstore.listing.review",
+              "fyi.atstore.listing.favorite"
+            ],
+            "action": [
+              "create",
+              "update",
+              "delete"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "lexicon": 1,
     "id": "fyi.atstore.listing.detail",
     "defs": {
       "main": {
@@ -125,6 +154,35 @@ export const lexicons = [
               "type": "string",
               "maxLength": 256,
               "description": "Claim token carried on the store-published record; directory ingest mirrors it to Postgres. The post-claim copy on the product owner PDS omits this field."
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "lexicon": 1,
+    "id": "fyi.atstore.listing.favorite",
+    "defs": {
+      "main": {
+        "type": "record",
+        "description": "A user favorite for an AT Store listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
+        "key": "any",
+        "record": {
+          "type": "object",
+          "required": [
+            "subject",
+            "createdAt"
+          ],
+          "properties": {
+            "subject": {
+              "type": "string",
+              "format": "at-uri",
+              "description": "AT URI of the fyi.atstore.listing.detail record being favorited."
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "datetime"
             }
           }
         }

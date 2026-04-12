@@ -49,6 +49,7 @@ import {
   createListingDetailRecord,
   createListingReviewRecord,
   deleteRecord,
+  putListingFavoriteRecord,
   putListingReviewRecord,
 } from '#/lib/atproto/repo-records'
 import { geminiFlashGenerateImageFromPromptAndImage } from '#/lib/gemini-flash-image-gen'
@@ -218,6 +219,19 @@ export interface UserProfileReviewsPageData {
   reviews: DirectoryUserReview[]
 }
 
+export interface DirectoryUserFavoriteListing {
+  id: string
+  name: string
+  slug: string | null
+  iconUrl: string | null
+  tagline: string | null
+  favoritedAt: string
+}
+
+export interface DirectoryListingFavoriteStatus {
+  isFavorited: boolean
+}
+
 export interface DirectoryCategorySummary {
   id: string
   label: string
@@ -385,6 +399,14 @@ const deleteDirectoryListingReviewInput = z.object({
 
 const getUserProfileReviewsPageDataInput = z.object({
   did: z.string().trim().min(1).max(2048),
+})
+
+const getProfileFavoriteListingsInput = z.object({
+  did: z.string().trim().min(1).max(2048),
+})
+
+const listingFavoriteInput = z.object({
+  listingId: z.string().uuid(),
 })
 
 function isPlausiblePublicDid(value: string) {
@@ -1977,6 +1999,149 @@ function getUserProfileReviewsPageDataQueryOptions(did: string) {
   })
 }
 
+const getProfileFavoriteListings = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(getProfileFavoriteListingsInput)
+  .handler(async ({ data, context }) => {
+    const did = data.did.trim()
+    if (!isPlausiblePublicDid(did)) {
+      return []
+    }
+    const fav = context.schema.storeListingFavorites
+    const list = context.schema.storeListings
+    const rows = await context.db
+      .select({
+        id: list.id,
+        name: list.name,
+        slug: list.slug,
+        iconUrl: list.iconUrl,
+        tagline: list.tagline,
+        favoritedAt: fav.favoriteCreatedAt,
+      })
+      .from(fav)
+      .innerJoin(list, eq(fav.storeListingId, list.id))
+      .where(and(eq(fav.authorDid, did), listingPublicWhere(list)))
+      .orderBy(desc(fav.favoriteCreatedAt))
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      tagline: row.tagline?.trim() || null,
+      favoritedAt: row.favoritedAt.toISOString(),
+    })) satisfies DirectoryUserFavoriteListing[]
+  })
+
+function getProfileFavoriteListingsQueryOptions(did: string) {
+  return queryOptions({
+    queryKey: ['storeListings', 'profileFavorites', did] as const,
+    queryFn: async () => getProfileFavoriteListings({ data: { did } }),
+  })
+}
+
+const getDirectoryListingFavoriteStatus = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(listingFavoriteInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session) {
+      return { isFavorited: false } satisfies DirectoryListingFavoriteStatus
+    }
+
+    const list = context.schema.storeListings
+    const [listing] = await context.db
+      .select({ id: list.id })
+      .from(list)
+      .where(listingPublicWhere(list, eq(list.id, data.listingId)))
+      .limit(1)
+
+    if (!listing) {
+      return { isFavorited: false } satisfies DirectoryListingFavoriteStatus
+    }
+
+    const fav = context.schema.storeListingFavorites
+    const [favorite] = await context.db
+      .select({ id: fav.id })
+      .from(fav)
+      .where(and(eq(fav.storeListingId, data.listingId), eq(fav.authorDid, session.did)))
+      .limit(1)
+
+    return {
+      isFavorited: Boolean(favorite),
+    } satisfies DirectoryListingFavoriteStatus
+  })
+
+function getDirectoryListingFavoriteStatusQueryOptions(listingId: string) {
+  return queryOptions({
+    queryKey: ['storeListings', 'favoriteStatus', listingId] as const,
+    queryFn: async () => getDirectoryListingFavoriteStatus({ data: { listingId } }),
+  })
+}
+
+const favoriteDirectoryListing = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(listingFavoriteInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session) {
+      throw new Error('Sign in to favorite products.')
+    }
+
+    const t = context.schema.storeListings
+    const [listing] = await context.db
+      .select({
+        id: t.id,
+        atUri: t.atUri,
+      })
+      .from(t)
+      .where(listingPublicWhere(t, eq(t.id, data.listingId)))
+      .limit(1)
+    if (!listing) {
+      throw new Error('Listing not found.')
+    }
+
+    const subject = listing.atUri?.trim()
+    if (!subject) {
+      throw new Error('This listing cannot be favorited until it is published on AT Protocol.')
+    }
+
+    const createdAt = new Date().toISOString()
+    await putListingFavoriteRecord(session.client, session.did, data.listingId, {
+      subject,
+      createdAt,
+    })
+    return { ok: true as const }
+  })
+
+const unfavoriteDirectoryListing = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(listingFavoriteInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session) {
+      throw new Error('Sign in to manage favorites.')
+    }
+
+    const t = context.schema.storeListings
+    const [listing] = await context.db
+      .select({ id: t.id })
+      .from(t)
+      .where(listingPublicWhere(t, eq(t.id, data.listingId)))
+      .limit(1)
+    if (!listing) {
+      throw new Error('Listing not found.')
+    }
+
+    await deleteRecord(
+      session.client,
+      session.did,
+      COLLECTION.listingFavorite,
+      data.listingId,
+    )
+    return { ok: true as const }
+  })
+
 const createDirectoryListingReview = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware])
   .inputValidator(createDirectoryListingReviewInput)
@@ -3447,7 +3612,6 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
       const scales = [1, 0.9, 0.8, 0.7, 0.6] as const
       const qualities = [90, 80, 70, 60, 50, 40] as const
       let bestBuffer: Buffer | null = null
-      let bestMime: string | null = null
 
       for (const scale of scales) {
         let pipeline = sharp(raw, { failOn: 'none' }).rotate()
@@ -3469,7 +3633,6 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
           const webpBuffer = await pipeline.clone().webp({ quality }).toBuffer()
           if (!bestBuffer || webpBuffer.length < bestBuffer.length) {
             bestBuffer = webpBuffer
-            bestMime = 'image/webp'
           }
           if (webpBuffer.length <= maxBytes) {
             finalRaw = webpBuffer
@@ -3483,7 +3646,6 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
             .toBuffer()
           if (!bestBuffer || jpegBuffer.length < bestBuffer.length) {
             bestBuffer = jpegBuffer
-            bestMime = 'image/jpeg'
           }
           if (jpegBuffer.length <= maxBytes) {
             finalRaw = jpegBuffer
@@ -3725,6 +3887,12 @@ export const directoryListingApi = {
   getDirectoryListingReviewsQueryOptions,
   getUserProfileReviewsPageData,
   getUserProfileReviewsPageDataQueryOptions,
+  getProfileFavoriteListings,
+  getProfileFavoriteListingsQueryOptions,
+  getDirectoryListingFavoriteStatus,
+  getDirectoryListingFavoriteStatusQueryOptions,
+  favoriteDirectoryListing,
+  unfavoriteDirectoryListing,
   createDirectoryListingReview,
   updateDirectoryListingReview,
   deleteDirectoryListingReview,

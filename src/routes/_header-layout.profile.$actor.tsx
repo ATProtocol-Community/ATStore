@@ -124,11 +124,14 @@ export const Route = createFileRoute("/_header-layout/profile/$actor")({
     if (resolvedDid == null) {
       throw notFound();
     }
-    const [data, ownedProducts] = await Promise.all([
+    const [data, , ownedProducts] = await Promise.all([
       context.queryClient.ensureQueryData(
         directoryListingApi.getUserProfileReviewsPageDataQueryOptions(
           resolvedDid,
         ),
+      ),
+      context.queryClient.ensureQueryData(
+        directoryListingApi.getProfileFavoriteListingsQueryOptions(resolvedDid),
       ),
       context.queryClient.ensureQueryData(
         directoryListingApi.getProfileOwnedProductListingsQueryOptions(
@@ -181,6 +184,9 @@ function UserProfilePage() {
   const { data: ownedProducts } = useSuspenseQuery(
     directoryListingApi.getProfileOwnedProductListingsQueryOptions(did),
   );
+  const { data: favoriteProducts } = useSuspenseQuery(
+    directoryListingApi.getProfileFavoriteListingsQueryOptions(did),
+  );
   const { data: session } = useQuery(user.getSessionQueryOptions);
 
   if (page == null) {
@@ -231,6 +237,45 @@ function UserProfilePage() {
           </AriaLink>
         </Flex>
       </Flex>
+
+      {favoriteProducts.length > 0 ? (
+        <Flex direction="column" gap="4xl" style={styles.ownedSection}>
+          <Heading3>Favorites</Heading3>
+          <div {...stylex.props(styles.ownedGrid)}>
+            {favoriteProducts.map((favorite) => (
+              <RouterLink
+                key={favorite.id}
+                to="/products/$productId"
+                params={{
+                  productId: getDirectoryListingSlug({
+                    slug: favorite.slug,
+                    name: favorite.name,
+                  }),
+                }}
+                {...stylex.props(styles.ownedCard)}
+              >
+                {favorite.iconUrl ? (
+                  <img
+                    src={favorite.iconUrl}
+                    alt=""
+                    {...stylex.props(styles.ownedIcon)}
+                  />
+                ) : null}
+                <Flex direction="column" gap="xl" style={styles.ownedTextColumn}>
+                  <Text size="lg" weight="bold">
+                    {favorite.name}
+                  </Text>
+                  {favorite.tagline ? (
+                    <Text size="sm" variant="secondary">
+                      {favorite.tagline}
+                    </Text>
+                  ) : null}
+                </Flex>
+              </RouterLink>
+            ))}
+          </div>
+        </Flex>
+      ) : null}
 
       {ownedProducts && ownedProducts.length > 0 ? (
         <Flex direction="column" gap="4xl" style={styles.ownedSection}>

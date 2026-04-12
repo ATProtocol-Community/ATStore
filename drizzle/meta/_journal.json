@@ -127,6 +127,13 @@
       "when": 1776600000000,
       "tag": "0017_home_page_hero_listings",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1776700000000,
+      "tag": "0018_store_listing_favorites",
+      "breakpoints": true
     }
   ]
 }

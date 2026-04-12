@@ -1,5 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   createFileRoute,
   createLink,
@@ -10,7 +14,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { ChevronLeft, ExternalLink } from "lucide-react";
+import { ChevronLeft, ExternalLink, Heart } from "lucide-react";
 import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
@@ -23,11 +27,7 @@ import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { StarRating } from "../design-system/star-rating";
-import { blue } from "../design-system/theme/colors/blue.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
-import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
-import { pink } from "../design-system/theme/colors/pink.stylex";
-import { purple } from "../design-system/theme/colors/purple.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
@@ -67,6 +67,7 @@ import {
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { BlueskyIcon } from "#/components/bluesky-icon";
+import { ToggleButton } from "#/design-system/toggle-button";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -110,6 +111,11 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
           ),
         )
       : null;
+    await context.queryClient.ensureQueryData(
+      directoryListingApi.getDirectoryListingFavoriteStatusQueryOptions(
+        listing.id,
+      ),
+    );
 
     const ecosystemRootId = getAppEcosystemRootCategoryId(listing.categorySlug);
     if (ecosystemRootId) {
@@ -494,6 +500,7 @@ function ProductPage() {
   } = Route.useLoaderData();
 
   const queryClient = useQueryClient();
+
   const detailQueryOptions =
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
   const relatedQueryOptions =
@@ -722,7 +729,7 @@ function ProductPage() {
             PDS.
           </Text>
         ) : null}
-        <HeroSection listing={listing} />
+        <HeroSection listing={listing} productId={productId} />
         <Flex direction="column" gap="5xl">
           {getDescriptionBlocks(listing.description).map((block, index) => (
             <Body
@@ -770,14 +777,16 @@ function ProductPage() {
                   </Text>
                 </Flex>
               </Flex>
-              <ButtonLink
-                to="/products/$productId/reviews"
-                params={{ productId: productSlug }}
-                size="lg"
-                variant="secondary"
-              >
-                View all
-              </ButtonLink>
+              <Flex gap="xl" style={styles.reviewsActions}>
+                <ButtonLink
+                  to="/products/$productId/reviews"
+                  params={{ productId: productSlug }}
+                  size="lg"
+                  variant="secondary"
+                >
+                  View all
+                </ButtonLink>
+              </Flex>
             </Flex>
           </Flex>
 
@@ -938,9 +947,58 @@ function ProductPage() {
   );
 }
 
-function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
+function HeroSection({
+  listing,
+  productId,
+}: {
+  listing: DirectoryListingDetail;
+  productId: string;
+}) {
   const primaryLink = listing.externalUrl || undefined;
   const buttonStyles = useButtonStyles({ variant: "secondary", size: "lg" });
+  const { session } = Route.useLoaderData();
+  const { data: favoriteStatus } = useSuspenseQuery(
+    directoryListingApi.getDirectoryListingFavoriteStatusQueryOptions(
+      productId,
+    ),
+  );
+  const queryClient = useQueryClient();
+  const favoriteStatusQueryOptions =
+    directoryListingApi.getDirectoryListingFavoriteStatusQueryOptions(
+      productId,
+    );
+  const profileFavoritesQueryOptions = session?.user?.did
+    ? directoryListingApi.getProfileFavoriteListingsQueryOptions(
+        session.user.did,
+      )
+    : null;
+  const favoriteMutation = useMutation({
+    mutationFn: async () => {
+      if (favoriteStatus.isFavorited) {
+        await directoryListingApi.unfavoriteDirectoryListing({
+          data: { listingId: productId },
+        });
+        return;
+      }
+      await directoryListingApi.favoriteDirectoryListing({
+        data: { listingId: productId },
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: favoriteStatusQueryOptions.queryKey,
+        exact: true,
+      });
+      if (profileFavoritesQueryOptions) {
+        await queryClient.invalidateQueries({
+          queryKey: profileFavoritesQueryOptions.queryKey,
+          exact: true,
+        });
+      }
+    },
+  });
+  const canFavorite =
+    Boolean(session?.user?.did) && Boolean(listing.atUri?.trim());
 
   return (
     <Flex direction="column" gap="6xl">
@@ -994,6 +1052,23 @@ function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
         </Flex>
 
         <Flex align="center" gap="md">
+          {session?.user?.did && canFavorite ? (
+            <ToggleButton
+              variant="secondary"
+              size="lg"
+              isSelected={favoriteStatus.isFavorited}
+              isDisabled={favoriteMutation.isPending}
+              onPress={() => void favoriteMutation.mutateAsync()}
+              aria-label={
+                favoriteStatus.isFavorited ? "Unfavorite" : "Favorite"
+              }
+            >
+              <Heart
+                size={16}
+                fill={favoriteStatus.isFavorited ? "currentColor" : "none"}
+              />
+            </ToggleButton>
+          ) : null}
           {listing.productAccountDid ? (
             <AriaLink
               {...stylex.props(buttonStyles, styles.iconButton)}

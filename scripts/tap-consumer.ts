@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
  * Tap consumer: WebSocket to your Tap deployment. Ingests `fyi.atstore.listing.detail`
- * into `store_listings` and `fyi.atstore.listing.review` into `store_listing_reviews`
- * (aggregates on `store_listings`).
+ * into `store_listings`, `fyi.atstore.listing.review` into `store_listing_reviews`,
+ * and `fyi.atstore.listing.favorite` into `store_listing_favorites`.
  * Logs identity events; other record collections are skipped except `fyi.atstore.profile` (quiet).
  * Which repos and records appear is configured on the Tap *server* (indigo `cmd/tap`): set
- * `TAP_COLLECTION_FILTERS` to include both `fyi.atstore.listing.detail` and `fyi.atstore.listing.review`
- * (or `fyi.atstore.*`). If the server only filters `listing.detail`, review creates never reach
- * this WebSocket — you will see no `[record]` lines for reviews. This client has no per-DID allowlist.
+ * `TAP_COLLECTION_FILTERS` to include `fyi.atstore.listing.detail`, `fyi.atstore.listing.review`,
+ * and `fyi.atstore.listing.favorite` (or `fyi.atstore.*`). If the server only filters `listing.detail`,
+ * review/favorite creates never reach
+ * this WebSocket — you will see no `[record]` lines for those records. This client has no per-DID allowlist.
  *
  * Env:
  *   TAP_URL=http://127.0.0.1:2480   # Railway Tap: use https://…railway.app (no :2480); normalized at startup
@@ -27,6 +28,11 @@ import {
   normalizeTapUrlForRailway,
   probeTapHealth,
 } from '#/lib/atproto/tap-railway-url'
+import {
+  deleteListingFavoriteFromTap,
+  tryParseListingFavoriteRecord,
+  upsertListingFavoriteFromTap,
+} from '#/lib/atproto/tap-favorite-sync'
 import {
   deleteListingReviewFromTap,
   tryParseListingReviewRecord,
@@ -101,9 +107,11 @@ async function main() {
   const ingestCollections = new Set<string>([
     COLLECTION.listingDetail,
     COLLECTION.listingReview,
+    COLLECTION.listingFavorite,
   ])
   let firstListingDetailEvent = true
   let firstListingReviewEvent = true
+  let firstListingFavoriteEvent = true
 
   const indexer = new SimpleIndexer()
 
@@ -201,6 +209,79 @@ async function main() {
       } catch (err) {
         console.error(
           `[tap] review upsert failed rkey=${evt.rkey} did=${evt.did}`,
+          err,
+        )
+        throw err
+      }
+      return
+    }
+
+    if (evt.collection === COLLECTION.listingFavorite) {
+      if (evt.action !== 'delete' && !evt.live) {
+        console.log(
+          `[tap] listing.favorite backfill/non-live event (still ingesting) live=false rkey=${evt.rkey} did=${evt.did}`,
+        )
+      }
+
+      if (evt.action === 'delete') {
+        console.log(
+          `[tap] delete store_listing_favorites match author_did=${evt.did} rkey=${evt.rkey}`,
+        )
+        await deleteListingFavoriteFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+        })
+        console.log(`[tap] favorite delete applied rkey=${evt.rkey}`)
+        return
+      }
+
+      if (firstListingFavoriteEvent) {
+        firstListingFavoriteEvent = false
+        console.log(
+          `[tap] first listing.favorite event — ensure Tap relays ${COLLECTION.listingFavorite}`,
+        )
+      }
+
+      const raw = evt.record
+      const body =
+        raw === undefined ? undefined : cloneRecordForIngest(raw)
+      if (raw !== undefined && isVerbose()) {
+        const mode =
+          typeof structuredClone === 'function' ? 'structuredClone' : 'JSON'
+        console.log(`[tap] record clone mode=${mode}`)
+      }
+      if (body === undefined) {
+        console.warn(
+          `[tap] listing.favorite missing record body rkey=${evt.rkey} did=${evt.did} action=${evt.action}`,
+        )
+        return
+      }
+      const parseResult = tryParseListingFavoriteRecord(body)
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip listing.favorite rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
+        )
+        if (parseResult.stage === 'zod' && parseResult.zodError) {
+          console.warn('[tap] zod field errors:', parseResult.zodError.flatten())
+        }
+        return
+      }
+
+      console.log(
+        `[tap] upsert store_listing_favorites subject=${parseResult.record.subject} did=${evt.did} rkey=${evt.rkey}`,
+      )
+      try {
+        await upsertListingFavoriteFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parseResult.record,
+        })
+        console.log(`[tap] favorite upsert ok rkey=${evt.rkey}`)
+      } catch (err) {
+        console.error(
+          `[tap] favorite upsert failed rkey=${evt.rkey} did=${evt.did}`,
           err,
         )
         throw err
@@ -333,7 +414,7 @@ async function main() {
     `[tap] config: url=${url} ingestCollections=${[...ingestCollections].join(', ')} trustedPublishers=${trusted.size} verbose=${isVerbose()}`,
   )
   console.log(
-    `[tap] hint: Tap server TAP_COLLECTION_FILTERS must include listing.review (or fyi.atstore.*) or reviews never arrive here`,
+    `[tap] hint: Tap server TAP_COLLECTION_FILTERS must include listing.review + listing.favorite (or fyi.atstore.*) or those events never arrive here`,
   )
   console.log(
     `[tap] WebSocket channel starting (blocking) — you should see [record] lines as repos update…`,
