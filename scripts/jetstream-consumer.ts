@@ -7,8 +7,10 @@
  *   DATABASE_URL=…                    (required)
  *   JETSTREAM_URL=…                  (default: wss://jetstream2.us-east.bsky.network/subscribe)
  *   JETSTREAM_CURSOR_BUFFER_SEC=5     (subtract from saved cursor on reconnect for overlap)
- *   JETSTREAM_VERBOSE=1             (log every matched post / delete with metadata)
+ *   JETSTREAM_VERBOSE=1             (extra ingest_processed lines for debugging)
  *   JETSTREAM_STATS_INTERVAL_SEC=60 (periodic summary line; set 0 to disable)
+ *
+ * Every time a post is tied to at least one directory listing, an [MATCH] line is logged (not gated on VERBOSE).
  */
 import 'dotenv/config'
 
@@ -136,10 +138,31 @@ function applyIngestStats(stats: Stats, result: JetstreamIngestResult | null) {
   }
 }
 
+/** Always-on when a post affects stored mentions — easy to grep (`MATCH`). */
+function logDirectoryListingMatch(result: JetstreamIngestResult) {
+  const m = result.meta
+  const n = m?.listingMatches ?? 0
+  if (!result.processed || n <= 0) return
+  const op =
+    m?.operation === 'delete'
+      ? 'removed mention row(s) (post deleted)'
+      : 'stored mention row(s) (post matched)'
+  log('info', `MATCH · ${op} · ${String(n)} listing(s)`, {
+    postUri: m?.postUri,
+    operation: m?.operation,
+    repoDid: m?.repoDid,
+    listingCount: n,
+    time_us: result.time_us,
+  })
+}
+
+/** Verbose-only: processed events that did not emit a MATCH line (e.g. delete with no prior rows). */
 function logVerboseIngest(result: JetstreamIngestResult) {
   if (!verbose() || !result.processed) return
+  const n = result.meta?.listingMatches ?? 0
+  if (n > 0) return
   const m = result.meta
-  log('info', 'ingest_processed', {
+  log('info', 'ingest_processed_verbose', {
     time_us: result.time_us,
     postUri: m?.postUri,
     operation: m?.operation,
@@ -234,6 +257,7 @@ async function main() {
         result = await ingestJetstreamCommitLine(db, line, index)
         applyIngestStats(stats, result)
         if (result) {
+          logDirectoryListingMatch(result)
           logVerboseIngest(result)
         }
       } catch (err) {

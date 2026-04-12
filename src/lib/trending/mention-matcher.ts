@@ -45,6 +45,76 @@ export function extractUrlsFromText(text: string): string[] {
   return out
 }
 
+function looksLikeDomainHandle(raw: string): boolean {
+  const t = raw.trim()
+  if (t.length < 3 || !t.includes('.')) return false
+  if (t.startsWith('.') || t.endsWith('.')) return false
+  return /^[a-z0-9][a-z0-9._-]*(?:\.[a-z0-9][a-z0-9._-]*)+$/i.test(t)
+}
+
+/**
+ * Handles written as @name.host.tld in post text when facets are missing or incomplete.
+ * Requires dot-separated segments (avoids @everyone, @here).
+ */
+export function extractAtHandleMentionsFromText(text: string): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  const re = /@([^\s@]{1,253})/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    const raw = m[1]!.replace(/[),.;:]+$/g, '').trim()
+    if (!looksLikeDomainHandle(raw)) continue
+    const h = normalizeHandle(raw)
+    if (seen.has(h)) continue
+    seen.add(h)
+    out.push(h)
+  }
+  return out
+}
+
+/**
+ * `https://bsky.app/profile/handle.bsky.social/post/...` → handle (not `did:` — those need a DID index).
+ */
+export function extractBskyAppProfileHandlesFromUrls(urls: string[]): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const raw of urls) {
+    let u: URL
+    try {
+      u = new URL(raw.trim())
+    } catch {
+      continue
+    }
+    if (!u.hostname.toLowerCase().endsWith('bsky.app')) continue
+    const parts = u.pathname.split('/').filter(Boolean)
+    if (parts[0] !== 'profile' || !parts[1]) continue
+    const id = parts[1]
+    if (id.startsWith('did:')) continue
+    const h = normalizeHandle(id)
+    if (h.length < 3 || seen.has(h)) continue
+    seen.add(h)
+    out.push(h)
+  }
+  return out
+}
+
+export function urlPathContainsSlug(url: string, slug: string): boolean {
+  const s = slug.trim().toLowerCase()
+  if (s.length < 2) return false
+  try {
+    const u = new URL(url.trim().includes('://') ? url.trim() : `https://${url.trim()}`)
+    const path = u.pathname.toLowerCase()
+    return (
+      path === `/${s}` ||
+      path.endsWith(`/${s}`) ||
+      path.includes(`/${s}/`) ||
+      path.includes(`/${s}?`)
+    )
+  } catch {
+    return false
+  }
+}
+
 function addToMap(map: Map<string, Set<string>>, key: string, id: string) {
   let set = map.get(key)
   if (!set) {
@@ -169,9 +239,21 @@ export function matchPostToListings(input: {
     if (h) urlHosts.add(h)
   }
 
+  const handleCandidates = new Set<string>()
+  for (const h of input.facetHandles) {
+    handleCandidates.add(normalizeHandle(h))
+  }
+  for (const h of extractAtHandleMentionsFromText(input.text)) {
+    handleCandidates.add(h)
+  }
+  for (const h of extractBskyAppProfileHandlesFromUrls(allUrls)) {
+    handleCandidates.add(h)
+  }
+
   const byId = new Map<string, MentionHit>()
 
-  for (const handle of input.facetHandles) {
+  for (const handle of handleCandidates) {
+    if (!handle) continue
     const ids = input.index.byHandle.get(handle)
     if (!ids) continue
     for (const id of ids) {
@@ -193,6 +275,19 @@ export function matchPostToListings(input: {
         matchType: 'url',
         confidence: 0.9,
         evidence: { host },
+      })
+    }
+  }
+
+  for (const u of allUrls) {
+    for (const row of input.index.listings) {
+      const slug = row.slug?.trim() ?? ''
+      if (!slug || !urlPathContainsSlug(u, slug)) continue
+      mergeHit(byId, {
+        storeListingId: row.id,
+        matchType: 'url',
+        confidence: 0.82,
+        evidence: { slugInUrlPath: slug, url: u },
       })
     }
   }
