@@ -142,7 +142,7 @@ function AppsAllPage() {
       <Flex direction="column" style={styles.gap}>
         <Flex direction="column" gap="4xl">
           <Flex gap="xl" justify="between" style={styles.navLinks}>
-            <LinkLink to="/">
+            <LinkLink to="/home">
               <ChevronLeft />
               Home
             </LinkLink>

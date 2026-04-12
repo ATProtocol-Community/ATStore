@@ -232,7 +232,7 @@ function DevAppTagsPage() {
         <Flex gap="xl" style={styles.filterBar}>
           <AppLink to={"/categories/all" as never}>Back to categories</AppLink>
           <AppLink to="/dev/categories">Recategorize categories</AppLink>
-          <AppLink to="/">Home</AppLink>
+          <AppLink to="/home">Home</AppLink>
         </Flex>
 
         <Flex direction="column" style={styles.pageHeader}>

@@ -11,8 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as OgIndexRouteImport } from './routes/og.index'
-import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
+import { Route as HeaderLayoutHomeRouteImport } from './routes/_header-layout.home'
 import { Route as HeaderLayoutAdminRouteImport } from './routes/_header-layout.admin'
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
 import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
@@ -50,14 +51,19 @@ const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
   id: '/_header-layout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OgIndexRoute = OgIndexRouteImport.update({
   id: '/og/',
   path: '/og/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeaderLayoutIndexRoute = HeaderLayoutIndexRouteImport.update({
-  id: '/',
-  path: '/',
+const HeaderLayoutHomeRoute = HeaderLayoutHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const HeaderLayoutAdminRoute = HeaderLayoutAdminRouteImport.update({
@@ -216,9 +222,10 @@ const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof HeaderLayoutIndexRoute
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof HeaderLayoutAdminRoute
+  '/home': typeof HeaderLayoutHomeRoute
   '/og/': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -248,9 +255,10 @@ export interface FileRoutesByFullPath {
   '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof HeaderLayoutAdminRoute
-  '/': typeof HeaderLayoutIndexRoute
+  '/home': typeof HeaderLayoutHomeRoute
   '/og': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -280,10 +288,11 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
   '/login': typeof LoginRoute
   '/_header-layout/admin': typeof HeaderLayoutAdminRoute
-  '/_header-layout/': typeof HeaderLayoutIndexRoute
+  '/_header-layout/home': typeof HeaderLayoutHomeRoute
   '/og/': typeof OgIndexRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -318,6 +327,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/admin'
+    | '/home'
     | '/og/'
     | '/apps/$tag'
     | '/apps/all'
@@ -347,9 +357,10 @@ export interface FileRouteTypes {
     | '/products/$productId/reviews/$reviewId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/login'
     | '/admin'
-    | '/'
+    | '/home'
     | '/og'
     | '/apps/$tag'
     | '/apps/all'
@@ -378,10 +389,11 @@ export interface FileRouteTypes {
     | '/products/$productId/reviews/$reviewId/edit'
   id:
     | '__root__'
+    | '/'
     | '/_header-layout'
     | '/login'
     | '/_header-layout/admin'
-    | '/_header-layout/'
+    | '/_header-layout/home'
     | '/og/'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
@@ -412,6 +424,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   HeaderLayoutRoute: typeof HeaderLayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
   OgIndexRoute: typeof OgIndexRoute
@@ -438,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/og/': {
       id: '/og/'
       path: '/og'
@@ -445,11 +465,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_header-layout/': {
-      id: '/_header-layout/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof HeaderLayoutIndexRouteImport
+    '/_header-layout/home': {
+      id: '/_header-layout/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HeaderLayoutHomeRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/admin': {
@@ -667,7 +687,7 @@ const HeaderLayoutProductsProductIdReviewsRouteWithChildren =
 
 interface HeaderLayoutRouteChildren {
   HeaderLayoutAdminRoute: typeof HeaderLayoutAdminRoute
-  HeaderLayoutIndexRoute: typeof HeaderLayoutIndexRoute
+  HeaderLayoutHomeRoute: typeof HeaderLayoutHomeRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
   HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
@@ -690,7 +710,7 @@ interface HeaderLayoutRouteChildren {
 
 const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutAdminRoute: HeaderLayoutAdminRoute,
-  HeaderLayoutIndexRoute: HeaderLayoutIndexRoute,
+  HeaderLayoutHomeRoute: HeaderLayoutHomeRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
   HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
@@ -720,6 +740,7 @@ const HeaderLayoutRouteWithChildren = HeaderLayoutRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   HeaderLayoutRoute: HeaderLayoutRouteWithChildren,
   LoginRoute: LoginRoute,
   OgIndexRoute: OgIndexRoute,

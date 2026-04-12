@@ -220,7 +220,7 @@ function DevListingProductAccountsPage() {
         <Flex style={styles.navLinks}>
           <AppLink to="/dev/app-tags">App tags</AppLink>
           <AppLink to="/dev/categories">Categories</AppLink>
-          <AppLink to="/">Home</AppLink>
+          <AppLink to="/home">Home</AppLink>
         </Flex>
 
         <Flex direction="column" style={styles.pageHeader}>

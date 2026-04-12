@@ -50,7 +50,7 @@ import { buildRouteOgMeta } from "../lib/og-meta";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 
-export const Route = createFileRoute("/_header-layout/")({
+export const Route = createFileRoute("/_header-layout/home")({
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(
@@ -918,7 +918,7 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
         </Flex>
       </Card>
     </RouterLink>
-  );
+  )
 }
 
 function StoreIcon({

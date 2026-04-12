@@ -261,7 +261,7 @@ function DevCategoriesPage() {
         <Flex gap="xl">
           <AppLink to={"/categories/all" as never}>Back to categories</AppLink>
           <AppLink to="/dev/app-tags">App tags</AppLink>
-          <AppLink to="/">Home</AppLink>
+          <AppLink to="/home">Home</AppLink>
         </Flex>
 
         <Flex direction="column" style={styles.pageHeader}>

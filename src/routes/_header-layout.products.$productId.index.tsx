@@ -134,6 +134,9 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
     const ogDescription = primaryTag
       ? `${listing.tagline} Tag: ${primaryTag}.`
       : listing.tagline;
+    const preloadHeroImages = listing.heroImageUrl
+      ? [listing.heroImageUrl]
+      : [];
 
     return {
       productId: listing.id,
@@ -147,16 +150,23 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       ogTitle: `${listing.name} | at-store`,
       ogDescription,
       ogImage: listing.heroImageUrl || null,
+      preloadHeroImages,
     };
   },
-  head: ({ loaderData }) =>
-    buildRouteOgMeta({
+  head: ({ loaderData }) => ({
+    ...buildRouteOgMeta({
       title: loaderData?.ogTitle ?? "Product | at-store",
       description:
         loaderData?.ogDescription ||
         "Discover product details, links, and reviews on at-store.",
       image: loaderData?.ogImage,
     }),
+    links: (loaderData?.preloadHeroImages ?? []).map((href) => ({
+      rel: "preload",
+      as: "image",
+      href,
+    })),
+  }),
   component: ProductPage,
 });
 
@@ -192,27 +202,9 @@ const styles = stylex.create({
   },
   hero: {
     borderRadius: radius["3xl"],
-    borderStyle: "solid",
-    borderWidth: 1,
     cornerShape: "squircle",
     overflow: "hidden",
     position: "relative",
-  },
-  heroBlue: {
-    backgroundImage: `linear-gradient(135deg, ${blue.solid1} 0%, ${blue.solid2} 45%, ${blue.border3} 100%)`,
-    borderColor: blue.border1,
-  },
-  heroPink: {
-    backgroundImage: `linear-gradient(135deg, ${pink.solid1} 0%, ${pink.solid2} 45%, ${purple.solid1} 100%)`,
-    borderColor: pink.border1,
-  },
-  heroPurple: {
-    backgroundImage: `linear-gradient(135deg, ${purple.solid1} 0%, ${purple.solid2} 45%, ${pink.border3} 100%)`,
-    borderColor: purple.border1,
-  },
-  heroGreen: {
-    backgroundImage: `linear-gradient(135deg, ${green.solid1} 0%, ${green.solid2} 45%, ${green.border3} 100%)`,
-    borderColor: green.border1,
   },
   heroImage: {
     aspectRatio: "16 / 9",
@@ -708,7 +700,7 @@ function ProductPage() {
                 Back
               </Link>
             ) : (
-              <AppLink to="/">
+              <AppLink to="/home">
                 <ChevronLeft />
                 Home
               </AppLink>
@@ -953,7 +945,7 @@ function HeroSection({ listing }: { listing: DirectoryListingDetail }) {
   return (
     <Flex direction="column" gap="6xl">
       {listing.heroImageUrl && (
-        <div {...stylex.props(styles.hero, getHeroSurface(listing.accent))}>
+        <div {...stylex.props(styles.hero)}>
           <img
             alt={`${listing.name} preview`}
             src={listing.heroImageUrl}
@@ -1170,14 +1162,6 @@ function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
       </Card>
     </RouterLink>
   );
-}
-
-function getHeroSurface(accent: DirectoryListingDetail["accent"]) {
-  if (accent === "pink") return styles.heroPink;
-  if (accent === "purple") return styles.heroPurple;
-  if (accent === "green") return styles.heroGreen;
-
-  return styles.heroBlue;
 }
 
 function getInitials(name: string) {

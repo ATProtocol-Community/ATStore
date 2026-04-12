@@ -108,6 +108,15 @@ const largeHeaderStyles = stylex.create({
   },
 });
 
+const heroStyles = stylex.create({
+  small: {
+    marginBottom: verticalSpace["8xl"],
+  },
+  large: {
+    marginBottom: verticalSpace["8xl"],
+  },
+});
+
 const sharedStyles = stylex.create({
   smallTitle: {
     // eslint-disable-next-line @stylexjs/valid-styles
@@ -123,19 +132,19 @@ const sharedStyles = stylex.create({
     textBoxEdge: "cap alphabetic",
     // eslint-disable-next-line @stylexjs/valid-styles
     textBoxTrim: "trim-both",
-    gridColumnEnd: 'title',
-    gridColumnStart: 'title',
-    gridRowEnd: 'title',
-    gridRowStart: 'title',
+    gridColumnEnd: "title",
+    gridColumnStart: "title",
+    gridRowEnd: "title",
+    gridRowStart: "title",
     flexGrow: 1,
     fontFamily: fontFamily["title"],
     minWidth: 0,
   },
   description: {
-    gridColumnEnd: 'description',
-    gridColumnStart: 'description',
-    gridRowEnd: 'description',
-    gridRowStart: 'description',
+    gridColumnEnd: "description",
+    gridColumnStart: "description",
+    gridRowEnd: "description",
+    gridRowStart: "description",
     display: {
       default: "none",
       [breakpoints.sm]: "block",
@@ -146,10 +155,10 @@ const sharedStyles = stylex.create({
     flexShrink: 0,
   },
   largeActions: {
-    gridColumnEnd: 'actions',
-    gridColumnStart: 'actions',
-    gridRowEnd: 'actions',
-    gridRowStart: 'actions',
+    gridColumnEnd: "actions",
+    gridColumnStart: "actions",
+    gridRowEnd: "actions",
+    gridRowStart: "actions",
     gap: {
       default: gap["xs"],
       [breakpoints.sm]: sizeSpace["sm"],
@@ -157,10 +166,10 @@ const sharedStyles = stylex.create({
     minHeight: sizeSpace["3xl"],
   },
   icon: {
-    gridColumnEnd: 'icon',
-    gridColumnStart: 'icon',
-    gridRowEnd: 'icon',
-    gridRowStart: 'icon',
+    gridColumnEnd: "icon",
+    gridColumnStart: "icon",
+    gridRowEnd: "icon",
+    gridRowStart: "icon",
     borderRadius: radius.lg,
     // eslint-disable-next-line @stylexjs/valid-styles, @stylexjs/sort-keys
     cornerShape: "squircle",
@@ -405,6 +414,21 @@ export const PageIcon = ({ style, ...props }: PageIconProps) => {
       {...stylex.props(sharedStyles.icon, style)}
     />
   );
+};
+
+export interface PageHeroProps extends StyleXComponentProps<
+  React.ComponentProps<"section">
+> {}
+
+/**
+ * Section wrapper for page hero/content blocks.
+ */
+export const PageHero = ({ style, ...props }: PageHeroProps) => {
+  const variant = usePageContext();
+  const isSmall = variant === "small";
+  const heroStyle = isSmall ? heroStyles.small : heroStyles.large;
+
+  return <section {...props} {...stylex.props(heroStyle, style)} />;
 };
 
 export interface PageTitleProps extends StyleXComponentProps<

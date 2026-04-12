@@ -190,7 +190,7 @@ export function DirectoryCategoryBranchPage({
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" style={styles.pageContent}>
             <Flex gap="xl" style={styles.navLinks}>
-              <AppLink to="/">Back to home</AppLink>
+              <AppLink to="/home">Back to home</AppLink>
               <AppLink to={"/categories/all" as never}>All branches</AppLink>
               <AppLink to={copy.alternateHref as never}>
                 Browse {copy.alternateLabel}

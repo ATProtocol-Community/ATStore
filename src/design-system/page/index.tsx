@@ -3,6 +3,7 @@ import {
   PageBackLink,
   PageDescription,
   PageHeader,
+  PageHero,
   PageIcon,
   PageRoot,
   PageStickyFooter,
@@ -13,6 +14,7 @@ import {
 export const Page = {
   Root: PageRoot,
   Header: PageHeader,
+  Hero: PageHero,
   BackLink: PageBackLink,
   Title: PageTitle,
   Description: PageDescription,
