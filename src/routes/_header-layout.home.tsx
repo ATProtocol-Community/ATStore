@@ -49,6 +49,7 @@ import { getHomePageHeroArtSpec } from "../lib/home-page-hero-art";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
+import { StarRating } from "../design-system/star-rating";
 
 export const Route = createFileRoute("/_header-layout/home")({
   loader: async ({ context }) => {
@@ -909,7 +910,11 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
               <Text size="sm" weight="semibold">
                 {listing.rating != null ? listing.rating.toFixed(1) : "—"}
               </Text>
-              <SmallBody variant="secondary">Rating</SmallBody>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+                showReviewCount
+              />
             </Flex>
             <Button size="lg" variant="secondary">
               {listing.priceLabel}
