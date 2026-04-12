@@ -1,8 +1,9 @@
 /**
  * Match Bluesky post text + URLs + facet handles to directory listings.
+ * Does not match on product display name (too many false positives).
  */
 
-export type MatchType = 'handle' | 'url' | 'name' | 'standard_site_doc'
+export type MatchType = 'handle' | 'url' | 'standard_site_doc'
 
 export type ListingMentionIndexRow = {
   id: string
@@ -193,21 +194,6 @@ export function facetLinkUris(facets: FacetSlice[] | undefined): string[] {
   return out
 }
 
-function hasWordBoundaryName(haystackLower: string, name: string): boolean {
-  const n = name.trim().toLowerCase()
-  if (n.length < 4) return false
-  let i = 0
-  while ((i = haystackLower.indexOf(n, i)) !== -1) {
-    const before = i === 0 || !/[a-z0-9]/i.test(haystackLower[i - 1]!)
-    const after =
-      i + n.length >= haystackLower.length ||
-      !/[a-z0-9]/i.test(haystackLower[i + n.length]!)
-    if (before && after) return true
-    i += 1
-  }
-  return false
-}
-
 export type MentionHit = {
   storeListingId: string
   matchType: MatchType
@@ -295,18 +281,6 @@ export function matchPostToListings(input: {
   const hasStandardSite =
     textLower.includes('standard.site') ||
     allUrls.some((u) => u.includes('standard.site'))
-
-  for (const row of input.index.listings) {
-    const name = row.name?.trim() ?? ''
-    if (name.length >= 4 && hasWordBoundaryName(textLower, name)) {
-      mergeHit(byId, {
-        storeListingId: row.id,
-        matchType: 'name',
-        confidence: 0.55,
-        evidence: { name },
-      })
-    }
-  }
 
   if (hasStandardSite) {
     for (const row of input.index.listings) {

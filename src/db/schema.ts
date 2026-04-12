@@ -421,7 +421,7 @@ export const storeListingMentions = pgTable(
     authorHandle: text('author_handle'),
     postText: text('post_text'),
     postCreatedAt: timestamp('post_created_at', { withTimezone: true }).notNull(),
-    /** Primary match: handle | url | name | standard_site_doc */
+    /** Primary match: handle | url | standard_site_doc (legacy rows may be `name`) */
     matchType: text('match_type').notNull(),
     matchConfidence: doublePrecision('match_confidence').notNull().default(1),
     matchEvidence: jsonb('match_evidence').$type<Record<string, unknown> | unknown[]>(),

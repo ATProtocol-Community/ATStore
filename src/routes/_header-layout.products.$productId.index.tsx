@@ -999,7 +999,7 @@ function ProductPage() {
           <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
         ) : null}
 
-        {listingMentions.length > 0 ? (
+        {/* {listingMentions.length > 0 ? (
           <Flex direction="column" gap="3xl">
             <Heading2>On Bluesky</Heading2>
             <SmallBody variant="secondary">
@@ -1012,7 +1012,7 @@ function ProductPage() {
               ))}
             </Flex>
           </Flex>
-        ) : null}
+        ) : null} */}
 
         <Flex gap="4xl" direction="column">
           <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>

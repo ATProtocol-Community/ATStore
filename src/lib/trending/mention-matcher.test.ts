@@ -194,28 +194,6 @@ describe('matchPostToListings', () => {
     expect(urlHit?.evidence).toMatchObject({ slugInUrlPath: 'long-name-here' })
   })
 
-  it('matches product name with word boundaries', () => {
-    const index = buildListingMentionIndex([
-      {
-        id: 'f',
-        name: 'Acme Suite',
-        slug: 'acme-suite',
-        sourceUrl: 'https://acme.test',
-        externalUrl: null,
-        productAccountHandle: null,
-      },
-    ])
-    const hits = matchPostToListings({
-      index,
-      text: 'Acme Suite is underrated compared to Acme Suite Pro',
-      urls: [],
-      facetHandles: [],
-    })
-    expect(
-      hits.some((h) => h.storeListingId === 'f' && h.matchType === 'name'),
-    ).toBe(true)
-  })
-
   it('matches standard.site context with slug in text', () => {
     const index = buildListingMentionIndex([
       {
