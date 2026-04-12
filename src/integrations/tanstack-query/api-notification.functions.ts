@@ -4,6 +4,7 @@ import { getRequest } from '@tanstack/react-start/server'
 import { and, desc, eq, ne } from 'drizzle-orm'
 import { z } from 'zod'
 
+import { fetchBlueskyHandleForDid } from '#/lib/bluesky-public-profile'
 import { getAtprotoSessionForRequest } from '#/middleware/auth'
 import { dbMiddleware } from './db-middleware'
 
@@ -17,6 +18,7 @@ export interface ProductNotification {
   listingName: string
   listingSlug: string | null
   actorDid: string
+  actorHandle: string | null
   actorDisplayName: string | null
   actorAvatarUrl: string | null
   reviewRating: number | null
@@ -87,6 +89,17 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         .limit(data.limit),
     ])
 
+    const actorDids = Array.from(
+      new Set([
+        ...reviewRows.map((row) => row.actorDid),
+        ...favoriteRows.map((row) => row.actorDid),
+      ]),
+    )
+    const actorHandleEntries = await Promise.all(
+      actorDids.map(async (did) => [did, await fetchBlueskyHandleForDid(did)] as const),
+    )
+    const actorHandleByDid = new Map(actorHandleEntries)
+
     const merged = [
       ...reviewRows.map((row) => ({
         id: `review:${row.id}`,
@@ -96,6 +109,7 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         listingName: row.listingName,
         listingSlug: row.listingSlug,
         actorDid: row.actorDid,
+        actorHandle: actorHandleByDid.get(row.actorDid) ?? null,
         actorDisplayName: row.actorDisplayName?.trim() || null,
         actorAvatarUrl: row.actorAvatarUrl?.trim() || null,
         reviewRating: row.reviewRating,
@@ -109,6 +123,7 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         listingName: row.listingName,
         listingSlug: row.listingSlug,
         actorDid: row.actorDid,
+        actorHandle: actorHandleByDid.get(row.actorDid) ?? null,
         actorDisplayName: null,
         actorAvatarUrl: null,
         reviewRating: null,

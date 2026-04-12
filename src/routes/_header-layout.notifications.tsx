@@ -181,7 +181,8 @@ function NotificationsPage() {
         <div {...stylex.props(styles.notificationsList)}>
           {notifications.map((item) => {
             const isLike = item.type === "listing_liked";
-            const actor = item.actorDisplayName || item.actorDid;
+            const actor =
+              item.actorHandle || item.actorDisplayName || "Someone";
             const productId = getDirectoryListingSlug({
               slug: item.listingSlug,
               name: item.listingName,

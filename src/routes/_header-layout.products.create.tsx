@@ -83,6 +83,18 @@ function CreateProductListingPage() {
             imageBase64: await blobToBase64(values.pendingIconBlob),
           }
         : undefined;
+      const screenshotImages =
+        values.pendingScreenshotBlobs.length > 0
+          ? await Promise.all(
+              values.pendingScreenshotBlobs.map(async (blob) => ({
+                mimeType:
+                  blob.type && blob.type.startsWith("image/")
+                    ? blob.type
+                    : "image/png",
+                imageBase64: await blobToBase64(blob),
+              })),
+            )
+          : undefined;
 
       return directoryListingApi.createOwnedProductListing({
         data: {
@@ -94,6 +106,7 @@ function CreateProductListingPage() {
           productHandle: values.productHandle,
           ...(heroImage ? { heroImage } : {}),
           ...(iconImage ? { iconImage } : {}),
+          ...(screenshotImages ? { screenshotImages } : {}),
         },
       });
     },
@@ -119,6 +132,7 @@ function CreateProductListingPage() {
           categorySlug: "",
           heroImageUrl: null,
           iconUrl: null,
+          screenshotUrls: [],
         }}
         onCancel={() => {
           void navigate({ to: "/" });

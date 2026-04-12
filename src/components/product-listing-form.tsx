@@ -1,6 +1,13 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { GripVertical, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import {
+  ListBox as AriaListBox,
+  ListBoxItem as AriaListBoxItem,
+  type DropTarget,
+  useDragAndDrop,
+} from "react-aria-components";
 
 import { ImageCropperDialog } from "#/components/image-cropper-dialog";
 import { UserHandleAutocomplete } from "#/components/user-handle-autocomplete";
@@ -13,7 +20,6 @@ import {
 } from "../design-system/file-drop-zone";
 import { Flex } from "../design-system/flex";
 import { Form } from "../design-system/form";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Page } from "../design-system/page";
 import { Select, SelectItem } from "../design-system/select";
 import { TextArea } from "../design-system/text-area";
@@ -49,6 +55,43 @@ type AppSlugOption = {
   id: string;
   label: string;
 };
+
+type ScreenshotItem = {
+  id: string;
+  previewUrl: string;
+  blob: Blob | null;
+};
+
+const MAX_SCREENSHOT_COUNT = 4;
+
+function reorderScreenshotItems(
+  items: ScreenshotItem[],
+  movedKeys: Set<React.Key>,
+  target: DropTarget,
+): ScreenshotItem[] {
+  if (target.type !== "item") {
+    return items;
+  }
+  const movingIds = new Set([...movedKeys].map((key) => String(key)));
+  const movingItems = items.filter((item) => movingIds.has(item.id));
+  if (movingItems.length === 0) {
+    return items;
+  }
+  const remainingItems = items.filter((item) => !movingIds.has(item.id));
+  const targetIndex = remainingItems.findIndex(
+    (item) => item.id === String(target.key),
+  );
+  if (targetIndex < 0) {
+    return items;
+  }
+  const insertIndex =
+    target.dropPosition === "after" ? targetIndex + 1 : targetIndex;
+  return [
+    ...remainingItems.slice(0, insertIndex),
+    ...movingItems,
+    ...remainingItems.slice(insertIndex),
+  ];
+}
 
 function collectProtocolCategoryOptions(
   nodes: CategoryTreeNode[],
@@ -235,6 +278,9 @@ const styles = stylex.create({
     justifyContent: "center",
     minHeight: 0,
   },
+  imageDropZoneScreenshots: {
+    height: size["9xl"],
+  },
   imageDropZoneHero: {
     aspectRatio: "16 / 9",
     padding: 0,
@@ -244,6 +290,52 @@ const styles = stylex.create({
     padding: 0,
     alignSelf: "flex-start",
     width: size["9xl"],
+  },
+  screenshotPreviewGrid: {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    gap: gap.md,
+    width: "100%",
+  },
+  screenshotPreviewCard: {
+    backgroundColor: uiColor.bg,
+    borderColor: uiColor.border1,
+    borderRadius: radius.lg,
+    borderStyle: "solid",
+    borderWidth: 1,
+    cornerShape: "squircle",
+    display: "flex",
+    flexDirection: "column",
+    gap: gap.sm,
+    width: "220px",
+    overflow: "hidden",
+    padding: horizontalSpace.sm,
+  },
+  screenshotPreviewImage: {
+    backgroundColor: uiColor.overlayBackdrop,
+    borderColor: uiColor.border1,
+    borderRadius: radius.lg,
+    borderStyle: "solid",
+    borderWidth: 1,
+    cornerShape: "squircle",
+    objectFit: "cover",
+    overflow: "hidden",
+    width: 200,
+    height: "auto",
+  },
+  screenshotPreviewActions: {
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  screenshotDropZoneContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+  },
+  screenshotDropZoneHint: {
+    textAlign: "center",
   },
   stickyFooterActions: {
     justifyContent: "flex-end",
@@ -259,6 +351,7 @@ export type ProductListingFormSubmitValues = {
   categorySlug: string;
   pendingHeroBlob: Blob | null;
   pendingIconBlob: Blob | null;
+  pendingScreenshotBlobs: Blob[];
 };
 
 export type ProductListingFormInitialValues = {
@@ -270,6 +363,7 @@ export type ProductListingFormInitialValues = {
   categorySlug: string;
   heroImageUrl?: string | null;
   iconUrl?: string | null;
+  screenshotUrls?: string[];
 };
 
 type ProductListingFormProps = {
@@ -400,11 +494,43 @@ export function ProductListingForm({
   const [pendingIconPreviewUrl, setPendingIconPreviewUrl] = useState<
     string | null
   >(null);
+  const pendingScreenshotBlobsRef = useRef<Blob[]>([]);
+  const screenshotIdCounterRef = useRef(0);
+  const pendingScreenshotObjectUrlsRef = useRef<Set<string>>(new Set());
+  const [screenshotItems, setScreenshotItems] = useState<ScreenshotItem[]>(() =>
+    (initialValues.screenshotUrls ?? [])
+      .slice(0, MAX_SCREENSHOT_COUNT)
+      .map((url, index) => ({
+        id: `initial-${String(index)}-${url}`,
+        previewUrl: url,
+        blob: null,
+      })),
+  );
   const hasHeroImage = Boolean(
     pendingHeroPreviewUrl || initialValues.heroImageUrl,
   );
   const hasIconImage = Boolean(pendingIconPreviewUrl || initialValues.iconUrl);
-  const hasRequiredImages = hasHeroImage && hasIconImage;
+  const hasRequiredScreenshots = screenshotItems.length >= 1;
+  const hasRequiredImages =
+    hasHeroImage && hasIconImage && hasRequiredScreenshots;
+  const isEditingPendingScreenshots = screenshotItems.some(
+    (item) => item.blob !== null,
+  );
+
+  const { dragAndDropHooks } = useDragAndDrop({
+    getItems: (keys) =>
+      [...keys].map((key) => ({
+        "text/plain": String(key),
+      })),
+    onReorder: (event) => {
+      if (!isEditingPendingScreenshots) {
+        return;
+      }
+      setScreenshotItems((currentItems) =>
+        reorderScreenshotItems(currentItems, event.keys, event.target),
+      );
+    },
+  });
 
   useEffect(() => {
     return () => {
@@ -422,6 +548,21 @@ export function ProductListingForm({
     };
   }, [pendingIconPreviewUrl]);
 
+  useEffect(() => {
+    pendingScreenshotBlobsRef.current = screenshotItems
+      .map((item) => item.blob)
+      .filter((blob): blob is Blob => blob != null);
+  }, [screenshotItems]);
+
+  useEffect(() => {
+    return () => {
+      for (const url of pendingScreenshotObjectUrlsRef.current) {
+        URL.revokeObjectURL(url);
+      }
+      pendingScreenshotObjectUrlsRef.current.clear();
+    };
+  }, []);
+
   function onPickFile(kind: "hero" | "icon", file: File | undefined) {
     if (!file || !file.type.startsWith("image/")) {
       return;
@@ -430,6 +571,51 @@ export function ProductListingForm({
     setCropKind(kind);
     setCropSourceBlob(file);
     setCropperOpen(true);
+  }
+
+  function onPickScreenshots(files: File[]) {
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length === 0) {
+      return;
+    }
+    const hasPendingItems = screenshotItems.some((item) => item.blob != null);
+    if (!hasPendingItems) {
+      for (const url of pendingScreenshotObjectUrlsRef.current) {
+        URL.revokeObjectURL(url);
+      }
+      pendingScreenshotObjectUrlsRef.current.clear();
+    }
+    const baseItems = hasPendingItems ? screenshotItems : [];
+    const availableSlots = MAX_SCREENSHOT_COUNT - baseItems.length;
+    if (availableSlots <= 0) {
+      return;
+    }
+    const incomingItems = imageFiles.slice(0, availableSlots).map((file) => {
+      screenshotIdCounterRef.current += 1;
+      const previewUrl = URL.createObjectURL(file);
+      pendingScreenshotObjectUrlsRef.current.add(previewUrl);
+      return {
+        id: `pending-${String(screenshotIdCounterRef.current)}`,
+        previewUrl,
+        blob: file,
+      } satisfies ScreenshotItem;
+    });
+    setScreenshotItems([...baseItems, ...incomingItems]);
+  }
+
+  function onRemoveScreenshot(id: string) {
+    const itemToRemove = screenshotItems.find((item) => item.id === id);
+    if (!itemToRemove) {
+      return;
+    }
+    if (
+      itemToRemove.blob != null &&
+      pendingScreenshotObjectUrlsRef.current.has(itemToRemove.previewUrl)
+    ) {
+      URL.revokeObjectURL(itemToRemove.previewUrl);
+      pendingScreenshotObjectUrlsRef.current.delete(itemToRemove.previewUrl);
+    }
+    setScreenshotItems(screenshotItems.filter((item) => item.id !== id));
   }
 
   return (
@@ -446,6 +632,7 @@ export function ProductListingForm({
             categorySlug,
             pendingHeroBlob: pendingHeroBlobRef.current,
             pendingIconBlob: pendingIconBlobRef.current,
+            pendingScreenshotBlobs: pendingScreenshotBlobsRef.current,
           });
         }}
       >
@@ -692,6 +879,102 @@ export function ProductListingForm({
                       Change icon
                     </FileDropDefaultTrigger>
                   </FileDropZone>
+                </Flex>
+                <Flex direction="column" style={styles.imageAsset}>
+                  <Flex style={styles.imageAssetHeader}>
+                    <Flex style={styles.requiredLabel}>
+                      <Text size="sm" variant="secondary">
+                        Screenshots (1-4)
+                      </Text>
+                      <Text size="sm" variant="critical">
+                        *
+                      </Text>
+                    </Flex>
+                  </Flex>
+                  {screenshotItems.length < MAX_SCREENSHOT_COUNT ? (
+                    <FileDropZone
+                      acceptedFileTypes={["image/*"]}
+                      isDisabled={isSubmitting}
+                      onAddFiles={onPickScreenshots}
+                      style={[
+                        styles.imageDropZone,
+                        styles.imageDropZoneScreenshots,
+                      ]}
+                    >
+                      <Flex
+                        direction="column"
+                        gap="sm"
+                        style={styles.screenshotDropZoneContent}
+                      >
+                        <Text
+                          size="sm"
+                          variant="secondary"
+                          style={styles.screenshotDropZoneHint}
+                        >
+                          Add screenshots ({screenshotItems.length}/
+                          {MAX_SCREENSHOT_COUNT})
+                        </Text>
+                        <FileDropDefaultTrigger aria-label="Select screenshots">
+                          Add screenshots
+                        </FileDropDefaultTrigger>
+                      </Flex>
+                    </FileDropZone>
+                  ) : null}
+                  {screenshotItems.length > 0 ? (
+                    <AriaListBox
+                      aria-label="Selected screenshots"
+                      items={screenshotItems}
+                      selectionMode="none"
+                      dragAndDropHooks={
+                        isEditingPendingScreenshots
+                          ? dragAndDropHooks
+                          : undefined
+                      }
+                      {...stylex.props(styles.screenshotPreviewGrid)}
+                    >
+                      {(item) => (
+                        <AriaListBoxItem
+                          id={item.id}
+                          textValue="Screenshot"
+                          {...stylex.props(styles.screenshotPreviewCard)}
+                        >
+                          <img
+                            src={item.previewUrl}
+                            alt=""
+                            {...stylex.props(styles.screenshotPreviewImage)}
+                          />
+                          <Flex style={styles.screenshotPreviewActions}>
+                            <Button
+                              slot="drag"
+                              size="sm"
+                              variant="secondary"
+                              isDisabled={isSubmitting}
+                            >
+                              <Flex align="center" gap="xs">
+                                <GripVertical size={14} />
+                                Reorder
+                              </Flex>
+                            </Button>
+                            {isEditingPendingScreenshots ? (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                isDisabled={isSubmitting}
+                                onPress={() => {
+                                  onRemoveScreenshot(item.id);
+                                }}
+                              >
+                                <Flex align="center" gap="xs">
+                                  <Trash2 size={14} />
+                                  Delete
+                                </Flex>
+                              </Button>
+                            ) : null}
+                          </Flex>
+                        </AriaListBoxItem>
+                      )}
+                    </AriaListBox>
+                  ) : null}
                 </Flex>
               </Flex>
             </CardBody>

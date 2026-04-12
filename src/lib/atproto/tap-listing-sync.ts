@@ -76,25 +76,13 @@ export function summarizeBlobRefForDebug(raw: unknown): string {
   return `{ $type=${t ?? 'n/a'} keys=${keys.length} [${keySample}] ${mime} ref.keys=[${refKeys}] ref.$link=${linkShort} top.cid=${cid}${refExtra} }`
 }
 
-/** True if `ref` looks like a CID pointer (JSON, DAG-CBOR, or Tap/indigo multihash struct). */
-function refLooksLikeBlobPointer(ref: object): boolean {
-  const r = ref as Record<string, unknown>
-  if (typeof r.$link === 'string' && r.$link.length > 0) return true
-  if (r.bytes !== undefined) return true
-  // Tap / indigo often serialize blob refs as { code, version, hash } (multihash) instead of { $link }.
-  if (r.hash !== undefined) return true
-  return false
-}
-
 function blobRefAcceptableForTap(raw: unknown): boolean {
   if (isBlob(raw) || isLegacyBlob(raw)) return true
   if (typeof raw !== 'object' || raw === null) return false
   const o = raw as Record<string, unknown>
   if (typeof o.mimeType !== 'string' || o.mimeType.length === 0) return false
-  if (typeof o.cid === 'string' && o.cid.length > 0) return true
-  const ref = o.ref
-  if (ref && typeof ref === 'object' && refLooksLikeBlobPointer(ref)) return true
-  return false
+  // Accept any blob shape we can actually resolve into a CID.
+  return Boolean(getBlobCidString(raw))
 }
 
 const categorySlugLexicon = z

@@ -110,6 +110,7 @@ export type ListingDetailInMemoryImage = {
 export type ListingDetailBlobOverrides = {
   icon?: ListingDetailInMemoryImage
   heroImage?: ListingDetailInMemoryImage
+  screenshots?: ListingDetailInMemoryImage[]
 }
 
 export type ListingDetailRecordExtras = {
@@ -176,13 +177,22 @@ export async function buildListingDetailRecordWithBlobs(
   )
 
   const screenshots: AtprotoBlob[] = []
-  for (const u of screenshotUrls) {
-    try {
-      const { bytes, mimeType } = await resolveUrlToImageBytes(u)
-      if (!mimeType.startsWith('image/')) continue
-      screenshots.push(await uploadImageBlob(client, bytes, mimeType))
-    } catch {
-      /* Stale CDN URL or missing blob — omit screenshot */
+  if (blobOverrides?.screenshots && blobOverrides.screenshots.length > 0) {
+    for (const screenshot of blobOverrides.screenshots.slice(0, 4)) {
+      if (!screenshot.mimeType.startsWith('image/')) continue
+      screenshots.push(
+        await uploadImageBlob(client, screenshot.bytes, screenshot.mimeType),
+      )
+    }
+  } else {
+    for (const u of screenshotUrls.slice(0, 4)) {
+      try {
+        const { bytes, mimeType } = await resolveUrlToImageBytes(u)
+        if (!mimeType.startsWith('image/')) continue
+        screenshots.push(await uploadImageBlob(client, bytes, mimeType))
+      } catch {
+        /* Stale CDN URL or missing blob — omit screenshot */
+      }
     }
   }
 

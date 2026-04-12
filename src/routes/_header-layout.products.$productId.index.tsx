@@ -753,6 +753,19 @@ function ProductPage() {
             <MetaCard label="Domain" value={scope || "Unknown"} />
           </Flex>
         )}
+
+        {/* screenshots */}
+        {listing.screenshots.length > 0 ? (
+          <Flex direction="column" gap="2xl">
+            <Heading2>Screenshots</Heading2>
+            <Flex direction="column" gap="2xl">
+              {listing.screenshots.map((screenshot) => (
+                <img src={screenshot} alt="Screenshot" />
+              ))}
+            </Flex>
+          </Flex>
+        ) : null}
+
         {ecosystemRootId && isRootApp ? (
           <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
         ) : null}

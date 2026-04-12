@@ -120,12 +120,19 @@ export async function publishOwnedListingDetail(
   const { uri } = await putListingDetailRecord(client, ownerRepoDid, rk, record)
   const recordIconUrl = blobLikeToBskyCdnUrl(record.icon, ownerRepoDid)
   const recordHeroImageUrl = blobLikeToBskyCdnUrl(record.heroImage, ownerRepoDid)
+  const recordScreenshotUrls = (record.screenshots ?? [])
+    .map((blob) => blobLikeToBskyCdnUrl(blob, ownerRepoDid))
+    .filter((url): url is string => Boolean(url))
   return {
     uri,
     dbUrls: {
       ...dbUrls,
       iconUrl: recordIconUrl ?? dbUrls.iconUrl,
       heroImageUrl: recordHeroImageUrl ?? dbUrls.heroImageUrl,
+      screenshotUrls:
+        recordScreenshotUrls.length > 0
+          ? recordScreenshotUrls
+          : dbUrls.screenshotUrls,
     },
   }
 }

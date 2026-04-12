@@ -158,6 +158,23 @@ function EditProductListingPage() {
         });
       }
 
+      if (values.pendingScreenshotBlobs.length > 0) {
+        await directoryListingApi.updateOwnedProductListingScreenshots({
+          data: {
+            listingId: productId,
+            screenshots: await Promise.all(
+              values.pendingScreenshotBlobs.map(async (blob) => ({
+                mimeType:
+                  blob.type && blob.type.startsWith("image/")
+                    ? blob.type
+                    : "image/png",
+                imageBase64: await blobToBase64(blob),
+              })),
+            ),
+          },
+        });
+      }
+
       return result;
     },
     onSuccess: async (result) => {
@@ -188,6 +205,7 @@ function EditProductListingPage() {
         categorySlug: listing.categorySlug ?? "",
         heroImageUrl: listing.heroImageUrl ?? null,
         iconUrl: listing.iconUrl ?? null,
+        screenshotUrls: listing.screenshots ?? [],
       }}
       onCancel={() => {
         void navigate({

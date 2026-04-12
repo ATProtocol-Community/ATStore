@@ -3337,6 +3337,16 @@ const createOwnedProductListingInput = z.object({
       imageBase64: z.string().min(1),
     })
     .optional(),
+  screenshotImages: z
+    .array(
+      z.object({
+        mimeType: z.string().min(3).max(128),
+        imageBase64: z.string().min(1),
+      }),
+    )
+    .min(1)
+    .max(4)
+    .optional(),
 })
 
 const getProductListingEditAccessInput = z.object({
@@ -3526,10 +3536,11 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       | {
           heroImage?: { bytes: Uint8Array; mimeType: string }
           icon?: { bytes: Uint8Array; mimeType: string }
+          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>
         }
       | undefined
 
-    if (data.heroImage || data.iconImage) {
+    if (data.heroImage || data.iconImage || (data.screenshotImages?.length ?? 0) > 0) {
       blobOverrides = {}
       if (data.heroImage) {
         const heroMime = data.heroImage.mimeType.trim().toLowerCase()
@@ -3559,6 +3570,22 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
           mimeType: iconMime,
         }
       }
+      if (data.screenshotImages && data.screenshotImages.length > 0) {
+        blobOverrides.screenshots = data.screenshotImages.map((screenshot, index) => {
+          const screenshotMime = screenshot.mimeType.trim().toLowerCase()
+          if (!screenshotMime.startsWith('image/')) {
+            throw new Error(`Screenshot ${index + 1} must be an image.`)
+          }
+          const screenshotRaw = Buffer.from(screenshot.imageBase64, 'base64')
+          if (screenshotRaw.length === 0 || screenshotRaw.length > 12_000_000) {
+            throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
+          }
+          return {
+            bytes: Uint8Array.from(screenshotRaw),
+            mimeType: screenshotMime,
+          }
+        })
+      }
     }
 
     const { record } = await buildListingDetailRecordWithBlobs(
@@ -3580,6 +3607,19 @@ const updateOwnedProductListingImageInput = z.object({
   kind: z.enum(['hero', 'icon']),
   mimeType: z.string().min(3).max(128),
   imageBase64: z.string().min(1),
+})
+
+const updateOwnedProductListingScreenshotsInput = z.object({
+  listingId: z.string().uuid(),
+  screenshots: z
+    .array(
+      z.object({
+        mimeType: z.string().min(3).max(128),
+        imageBase64: z.string().min(1),
+      }),
+    )
+    .min(1)
+    .max(4),
 })
 
 const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
@@ -3733,6 +3773,69 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
         })
         .where(eq(t.id, full.id))
     }
+
+    return { ok: true as const }
+  })
+
+const updateOwnedProductListingScreenshots = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(updateOwnedProductListingScreenshotsInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to update images.')
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+
+    if (full.repoDid?.trim() !== session.did) {
+      throw new Error(
+        'Only the account that hosts the listing record can edit it.',
+      )
+    }
+
+    if (full.productAccountDid?.trim() !== session.did) {
+      throw new Error('This listing is not associated with your account.')
+    }
+
+    const screenshots = data.screenshots.map((screenshot, index) => {
+      const mimeType = screenshot.mimeType.trim().toLowerCase()
+      if (!mimeType.startsWith('image/')) {
+        throw new Error(`Screenshot ${index + 1} must be an image.`)
+      }
+      let raw: Buffer
+      try {
+        raw = Buffer.from(screenshot.imageBase64, 'base64')
+      } catch {
+        throw new Error(`Screenshot ${index + 1} has invalid image data.`)
+      }
+      if (raw.length === 0 || raw.length > 12_000_000) {
+        throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
+      }
+      return {
+        bytes: Uint8Array.from(raw),
+        mimeType,
+      }
+    })
+
+    const { uri, dbUrls } = await publishOwnedListingDetail(
+      session.client,
+      session.did,
+      full,
+      undefined,
+      { screenshots },
+    )
+
+    const now = new Date()
+    const t = context.schema.storeListings
+    await context.db
+      .update(t)
+      .set({
+        screenshotUrls: dbUrls.screenshotUrls,
+        atUri: uri,
+        updatedAt: now,
+      })
+      .where(eq(t.id, full.id))
 
     return { ok: true as const }
   })
@@ -3949,6 +4052,7 @@ export const directoryListingApi = {
   createOwnedProductListing,
   updateOwnedProductListing,
   updateOwnedProductListingImage,
+  updateOwnedProductListingScreenshots,
   claimProductListingToPds,
   getProfileOwnedProductListings,
   getProfileOwnedProductListingsQueryOptions,
