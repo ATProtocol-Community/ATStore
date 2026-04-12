@@ -3023,6 +3023,7 @@ export type ListingMissingProductAccountHandleItem = {
   slug: string
   name: string
   iconUrl: string | null
+  externalUrl: string | null
   productAccountDid: string | null
 }
 
@@ -3037,10 +3038,16 @@ const getListingsMissingProductAccountHandle = createServerFn({ method: 'GET' })
         slug: t.slug,
         name: t.name,
         iconUrl: t.iconUrl,
+        externalUrl: t.externalUrl,
         productAccountDid: t.productAccountDid,
       })
       .from(t)
-      .where(sql`coalesce(trim(${t.productAccountHandle}), '') = ''`)
+      .where(
+        and(
+          sql`coalesce(trim(${t.productAccountHandle}), '') = ''`,
+          sql`${t.productAccountHandleIgnoredAt} is null`,
+        ),
+      )
       .orderBy(asc(t.name))
 
     return rows.map((row) => ({
@@ -3105,11 +3112,20 @@ const setProductAccountHandleDev = createServerFn({ method: 'POST' })
     }
 
     const updates: { productAccountHandle?: string; productAccountDid?: string } = {}
-    if (data.handle?.trim()) {
-      updates.productAccountHandle = normalizeManualProductAccountHandle(data.handle)
+    const normalizedHandle = data.handle?.trim()
+      ? normalizeManualProductAccountHandle(data.handle)
+      : null
+    if (normalizedHandle) {
+      updates.productAccountHandle = normalizedHandle
     }
     if (data.did?.trim()) {
       updates.productAccountDid = normalizeManualProductAccountDid(data.did)
+    } else if (normalizedHandle) {
+      const resolvedDid = await resolveBlueskyHandleToDid(normalizedHandle)
+      if (!resolvedDid) {
+        throw new Error('Could not resolve that handle to a DID.')
+      }
+      updates.productAccountDid = resolvedDid
     }
     if (!updates.productAccountHandle && !updates.productAccountDid) {
       throw new Error('Either handle or DID is required.')
@@ -3120,6 +3136,40 @@ const setProductAccountHandleDev = createServerFn({ method: 'POST' })
       .update(t)
       .set({
         ...updates,
+        productAccountHandleIgnoredAt: null,
+        updatedAt: now,
+      })
+      .where(eq(t.id, data.listingId))
+
+    return { ok: true as const }
+  })
+
+const ignoreMissingProductAccountHandleDevInput = z.object({
+  listingId: z.string().uuid(),
+})
+
+const ignoreMissingProductAccountHandleDev = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(ignoreMissingProductAccountHandleDevInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+    const t = context.schema.storeListings
+
+    const [found] = await context.db
+      .select({ id: t.id })
+      .from(t)
+      .where(eq(t.id, data.listingId))
+      .limit(1)
+
+    if (!found) {
+      throw new Error('Listing not found.')
+    }
+
+    const now = new Date()
+    await context.db
+      .update(t)
+      .set({
+        productAccountHandleIgnoredAt: now,
         updatedAt: now,
       })
       .where(eq(t.id, data.listingId))
@@ -3558,6 +3608,7 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       claimedAt: null,
       productAccountDid: session.did,
       productAccountHandle,
+      productAccountHandleIgnoredAt: null,
       migratedFromAtUri: null,
       claimKey: null,
       reviewCount: 0,
@@ -4119,6 +4170,7 @@ export const directoryListingApi = {
   getListingsMissingProductAccountHandle,
   getListingsMissingProductAccountHandleQueryOptions,
   setProductAccountHandleDev,
+  ignoreMissingProductAccountHandleDev,
   applyProductAccountCandidatesBatch,
   confirmProductAccountCandidate,
   rejectProductAccountCandidate,

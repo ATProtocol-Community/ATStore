@@ -197,6 +197,10 @@ export const storeListings = pgTable(
     productAccountDid: text('product_account_did'),
     /** Resolved via public API at Tap ingest; not stored on the ATProto record. */
     productAccountHandle: text('product_account_handle'),
+    /** Dev tooling override: hide listings that intentionally have no product handle. */
+    productAccountHandleIgnoredAt: timestamp('product_account_handle_ignored_at', {
+      withTimezone: true,
+    }),
     /**
      * Mirror of `fyi.atstore.listing.detail.migratedFromAtUri` — prior listing detail AT URI after a PDS claim.
      * Used with `at_uri` so review ingest can resolve `subject` before and after migration.

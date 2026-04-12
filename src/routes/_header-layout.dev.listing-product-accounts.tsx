@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
+import { UserHandleAutocomplete } from "../components/user-handle-autocomplete";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
@@ -10,7 +11,6 @@ import { Checkbox } from "../design-system/checkbox";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { TextField } from "../design-system/text-field";
 import { criticalColor, uiColor } from "../design-system/theme/color.stylex";
 import {
   gap,
@@ -133,6 +133,24 @@ function profileUrl(didOrHandle: string) {
   return `https://bsky.app/profile/${encodeURIComponent(actor)}`;
 }
 
+function guessDomainHandleFromUrl(rawUrl: string | null | undefined) {
+  const raw = rawUrl?.trim();
+  if (!raw) return null;
+  const withProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw)
+    ? raw
+    : `https://${raw}`;
+  try {
+    const host = new URL(withProtocol).hostname.trim().toLowerCase();
+    const normalizedHost = host.replace(/\.$/, "").replace(/^www\./, "");
+    if (!normalizedHost || /\s/.test(normalizedHost)) {
+      return null;
+    }
+    return normalizedHost;
+  } catch {
+    return null;
+  }
+}
+
 function getInitials(name: string) {
   return name
     .split(/\s+/)
@@ -151,14 +169,30 @@ function DevListingProductAccountsPage() {
     ...directoryListingApi.getPendingProductAccountCandidatesQueryOptions,
   });
 
-  const { data: missingHandleRows, isFetching: missingHandleFetching } =
-    useQuery({
-      ...directoryListingApi.getListingsMissingProductAccountHandleQueryOptions,
-    });
+  const {
+    data: missingHandleRows,
+    isFetching: missingHandleFetching,
+    isError: isMissingHandleError,
+    error: missingHandleError,
+  } = useQuery({
+    ...directoryListingApi.getListingsMissingProductAccountHandleQueryOptions,
+  });
 
   const saveHandleMutation = useMutation({
-    mutationFn: (vars: { listingId: string; handle?: string; did?: string }) =>
+    mutationFn: (vars: { listingId: string; handle?: string }) =>
       directoryListingApi.setProductAccountHandleDev({ data: vars }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey:
+          directoryListingApi.getListingsMissingProductAccountHandleQueryOptions
+            .queryKey,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
+    },
+  });
+  const ignoreMissingHandleMutation = useMutation({
+    mutationFn: (vars: { listingId: string }) =>
+      directoryListingApi.ignoreMissingProductAccountHandleDev({ data: vars }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey:
@@ -213,6 +247,11 @@ function DevListingProductAccountsPage() {
     saveHandleMutation.isPending && saveHandleMutation.variables
       ? saveHandleMutation.variables.listingId
       : null;
+  const pendingIgnoreId =
+    ignoreMissingHandleMutation.isPending &&
+    ignoreMissingHandleMutation.variables
+      ? ignoreMissingHandleMutation.variables.listingId
+      : null;
 
   return (
     <Page.Root variant="large" style={styles.page}>
@@ -236,12 +275,19 @@ function DevListingProductAccountsPage() {
           <Heading2>Missing handle (@unknown on /apps/tags)</Heading2>
           <Body style={styles.meta}>
             Listings with no stored Bluesky handle (empty or whitespace only).
-            You can manually save handle and/or DID to Postgres only; the
-            ATProto listing record still uses <code>productAccountDid</code>{" "}
-            when set.
+            Enter a handle and this page will resolve the DID for you before
+            saving to Postgres.
           </Body>
           {missingHandleFetching && !missingHandleRows?.length ? (
             <SmallBody>Loading…</SmallBody>
+          ) : isMissingHandleError ? (
+            <Card style={styles.rowCard}>
+              <Text size="sm" style={styles.errorText}>
+                {missingHandleError instanceof Error
+                  ? missingHandleError.message
+                  : String(missingHandleError)}
+              </Text>
+            </Card>
           ) : !missingHandleRows?.length ? (
             <Card style={styles.rowCard}>
               <Body>Every listing has a non-empty handle in the database.</Body>
@@ -257,10 +303,20 @@ function DevListingProductAccountsPage() {
                       ? saveHandleMutation.error instanceof Error
                         ? saveHandleMutation.error.message
                         : String(saveHandleMutation.error)
-                      : undefined
+                      : ignoreMissingHandleMutation.isError &&
+                          ignoreMissingHandleMutation.variables?.listingId ===
+                            listing.id
+                        ? ignoreMissingHandleMutation.error instanceof Error
+                          ? ignoreMissingHandleMutation.error.message
+                          : String(ignoreMissingHandleMutation.error)
+                        : undefined
                   }
+                  isIgnoring={pendingIgnoreId === listing.id}
                   isSaving={pendingSaveId === listing.id}
                   listing={listing}
+                  onIgnore={(listingId) => {
+                    ignoreMissingHandleMutation.mutate({ listingId });
+                  }}
                   onSave={(listingId, payload) => {
                     saveHandleMutation.mutate({ listingId, ...payload });
                   }}
@@ -326,20 +382,21 @@ function DevListingProductAccountsPage() {
 function MissingHandleRow({
   listing,
   onSave,
+  onIgnore,
   isSaving,
+  isIgnoring,
   errorMessage,
 }: {
   listing: ListingMissingProductAccountHandleItem;
-  onSave: (
-    listingId: string,
-    payload: { handle?: string; did?: string },
-  ) => void;
+  onSave: (listingId: string, payload: { handle?: string }) => void;
+  onIgnore: (listingId: string) => void;
   isSaving: boolean;
+  isIgnoring: boolean;
   errorMessage?: string;
 }) {
   const [handleValue, setHandleValue] = useState("");
-  const [didValue, setDidValue] = useState("");
-  const canSave = Boolean(handleValue.trim() || didValue.trim());
+  const canSave = Boolean(handleValue.trim());
+  const attemptDomainHandle = guessDomainHandleFromUrl(listing.externalUrl);
 
   return (
     <Card style={styles.rowCard}>
@@ -376,33 +433,63 @@ function MissingHandleRow({
             ) : (
               <> · no product DID</>
             )}
+            {attemptDomainHandle ? (
+              <>
+                {" "}
+                ·{" "}
+                <a
+                  href={profileUrl(attemptDomainHandle)}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Attempt @{attemptDomainHandle}
+                </a>
+              </>
+            ) : null}
           </SmallBody>
           <Flex style={styles.handleFieldRow}>
-            <TextField
-              label="Bluesky handle"
-              onChange={setHandleValue}
-              placeholder="e.g. myproduct.bsky.social"
-              style={styles.handleInput}
-              value={handleValue}
-            />
-            <TextField
-              label="Bluesky DID"
-              onChange={setDidValue}
-              placeholder="e.g. did:plc:abc123..."
-              style={styles.handleInput}
-              value={didValue}
-            />
+            <Flex style={styles.handleInput}>
+              <UserHandleAutocomplete
+                label="Bluesky handle"
+                onValueChange={setHandleValue}
+                placeholder="e.g. myproduct.bsky.social"
+                value={handleValue}
+              />
+            </Flex>
+            <Button
+              isDisabled={
+                !attemptDomainHandle ||
+                isSaving ||
+                isIgnoring ||
+                handleValue.trim() === attemptDomainHandle
+              }
+              onPress={() => {
+                if (attemptDomainHandle) {
+                  setHandleValue(attemptDomainHandle);
+                }
+              }}
+              variant="secondary"
+            >
+              Use attempt
+            </Button>
             <Button
               isDisabled={!canSave || isSaving}
               isPending={isSaving}
               onPress={() =>
                 onSave(listing.id, {
-                  did: didValue.trim() || undefined,
                   handle: handleValue.trim() || undefined,
                 })
               }
             >
-              Save account info
+              Save handle
+            </Button>
+            <Button
+              isDisabled={isSaving || isIgnoring}
+              isPending={isIgnoring}
+              onPress={() => onIgnore(listing.id)}
+              variant="secondary"
+            >
+              Ignore listing
             </Button>
           </Flex>
           {errorMessage ? (
