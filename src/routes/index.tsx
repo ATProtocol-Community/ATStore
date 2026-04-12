@@ -32,7 +32,6 @@ import {
   ShieldCheck,
   Sparkles,
   UserRound,
-  UserSquare2,
   Wrench,
 } from "lucide-react";
 import { HeaderLayout } from "#/design-system/header-layout";
@@ -49,6 +48,8 @@ import {
 import { formatAppTagLabel } from "#/lib/app-tag-metadata";
 import { getListingsForCategoryBranch } from "#/lib/ecosystem-listings";
 import { getDirectoryListingSlug } from "#/lib/directory-listing-slugs";
+import { getHomePageHeroArtSpec } from "#/lib/home-page-hero-art";
+import { buildRouteOgMeta } from "#/lib/og-meta";
 import { Body, SmallBody } from "#/design-system/typography";
 import { useHover } from "react-aria";
 import { StarRating } from "#/design-system/star-rating";
@@ -71,6 +72,15 @@ export const Route = createFileRoute("/")({
     };
   },
   head: ({ loaderData }) => ({
+    ...buildRouteOgMeta({
+      title: "at-store | The Atmosphere",
+      description:
+        "Discover apps and tools across the Atmosphere, with open identity and portable data.",
+      image:
+        getHomePageHeroArtSpec("home-og")?.assetPath ??
+        loaderData?.preloadHeroImages?.[0] ??
+        null,
+    }),
     links: (loaderData?.preloadHeroImages ?? []).map((href) => ({
       rel: "preload",
       as: "image",
@@ -711,6 +721,9 @@ const styles = stylex.create({
     fontWeight: fontWeight.semibold,
     marginTop: verticalSpace.xs,
   },
+  bottomMetaContainer: {
+    paddingTop: verticalSpace["6xl"],
+  },
   bottomMeta: {
     color: uiColor.text1,
     fontFamily: fontFamily.sans,
@@ -930,9 +943,20 @@ function RouteComponent() {
             )}
           />
 
-          <p {...stylex.props(styles.bottomMeta)}>
-            <strong>{allApps.length}+</strong> apps already on the Atmosphere.
-          </p>
+          <Flex
+            justify="center"
+            direction="column"
+            align="center"
+            gap="xl"
+            style={styles.bottomMetaContainer}
+          >
+            <ButtonLink to="/apps/tags" type="button" size="xl">
+              Browse all apps
+            </ButtonLink>
+            <p {...stylex.props(styles.bottomMeta)}>
+              <strong>{allApps.length}+</strong> apps already on the Atmosphere.
+            </p>
+          </Flex>
         </Flex>
       </Page.Hero>
       <Page.Hero style={styles.sectionGray}>
@@ -1013,10 +1037,25 @@ function RouteComponent() {
             )}
           />
 
-          <p {...stylex.props(styles.bottomMeta)}>
-            <strong>{ecosystemApps.length}+</strong> Bluesky ecosystem apps in
-            the directory.
-          </p>
+          <Flex
+            justify="center"
+            direction="column"
+            align="center"
+            style={styles.bottomMetaContainer}
+          >
+            <ButtonLink
+              to="/ecosystems/$app"
+              params={{ app: "bluesky" }}
+              type="button"
+              size="xl"
+            >
+              Browse all
+            </ButtonLink>
+            <p {...stylex.props(styles.bottomMeta)}>
+              <strong>{ecosystemApps.length}+</strong> Bluesky ecosystem apps in
+              the directory.
+            </p>
+          </Flex>
         </Flex>
       </Page.Hero>
       <Page.Hero style={styles.ctaSection}>
