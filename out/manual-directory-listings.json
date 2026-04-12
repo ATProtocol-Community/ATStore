@@ -966,5 +966,370 @@
     "vertical": "devtools",
     "classificationReason": "atpr.to provides AT Protocol-native link management and API tooling useful to developers and technical operators, fitting the developers app category.",
     "categorySlug": "apps/developers"
+  },
+  {
+    "name": "AtChef",
+    "sourceUrl": "https://atchef.eu/",
+    "externalUrl": "https://atchef.eu/",
+    "iconUrl": "/generated/listing-icons/atchef-icon.jpg",
+    "screenshotUrls": [],
+    "tagline": "Create and share recipes on AT Protocol.",
+    "fullDescription": "AtChef is an AT Protocol-native recipe sharing app where people publish and discover dishes through Bluesky identity, making it easy to collect cooking ideas from the community.",
+    "rawCategoryHint": "Food app",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "community_social",
+    "vertical": "food",
+    "classificationReason": "AtChef is a user-facing recipe sharing app built on AT Protocol and centered on community discovery, so it fits the social apps category while mapping to the food app tag.",
+    "categorySlug": "apps/social"
+  },
+  {
+    "name": "blebbit",
+    "sourceUrl": "https://blebbit.app/",
+    "externalUrl": "https://blebbit.app/",
+    "iconUrl": "/generated/listing-icons/blebbit-icon.jpg",
+    "screenshotUrls": [
+      "/generated/listings/blebbit-screenshot.jpg"
+    ],
+    "tagline": "A thoughtful blend of Discord + Reddit + Groups.",
+    "fullDescription": "blebbit is an AT Protocol community spaces app that combines forum-style communities, chats, and feeds into one social experience.",
+    "rawCategoryHint": "Social app",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "community_social",
+    "vertical": "social",
+    "classificationReason": "blebbit is a user-facing AT Protocol app for communities, chats, and feeds, so it fits the social apps category.",
+    "categorySlug": "apps/social"
+  },
+  {
+    "name": "BridgeBeats",
+    "sourceUrl": "https://bridgebeats.link/",
+    "externalUrl": "https://bridgebeats.link/",
+    "iconUrl": "/generated/listings/bridgebeats-icon.svg",
+    "screenshotUrls": [],
+    "tagline": "Share music links across streaming services.",
+    "fullDescription": "BridgeBeats is a music link conversion service that matches tracks and albums across Apple Music, Spotify, and Tidal using ISRC/UPC and metadata, then generates shareable cross-platform links for listeners, Discord communities, and developer integrations.",
+    "rawCategoryHint": "Audio app",
+    "scope": "web",
+    "productType": "service",
+    "domain": "media-discovery",
+    "vertical": "audio",
+    "classificationReason": "BridgeBeats is a user-facing music utility focused on cross-platform track and album link matching and sharing, so it fits an apps/audio category.",
+    "categorySlug": "apps/audio"
+  },
+  {
+    "name": "bragsheet",
+    "sourceUrl": "https://bragsheet.social/",
+    "externalUrl": "https://bragsheet.social/",
+    "iconUrl": "/generated/listing-icons/bragsheet-icon.jpg",
+    "screenshotUrls": [
+      "/generated/listings/bragsheet-screenshot.jpg"
+    ],
+    "tagline": "Share the wins you're proud of.",
+    "fullDescription": "bragsheet is a personal page app built on AT Protocol where you log in with Bluesky and curate accomplishments as a living record of what you have done. Entries are tied back to your Bluesky identity so your profile and reputation signals remain portable across the network rather than locked to a single platform.",
+    "rawCategoryHint": "personal page",
+    "scope": "bluesky",
+    "productType": "standalone_app",
+    "domain": "identity",
+    "vertical": null,
+    "classificationReason": "bragsheet centers on handle-linked personal pages and accomplishment profiles for Bluesky users, making it a profile utility that fits apps/bluesky/tool while mapping to the Personal Page app tag.",
+    "categorySlug": "apps/bluesky/tool"
+  },
+  {
+    "name": "Unthread",
+    "sourceUrl": "https://unthread.at/",
+    "externalUrl": "https://unthread.at/",
+    "iconUrl": "/generated/listings/unthread-icon.svg",
+    "screenshotUrls": [],
+    "tagline": "Draft and publish Bluesky threads in one place.",
+    "fullDescription": "Unthread is a focused Bluesky client for writing thread-style posts, saving drafts, and publishing finished unthreads from a dedicated drafts-and-posts workflow.",
+    "rawCategoryHint": "Bluesky client",
+    "scope": "bluesky",
+    "productType": "application",
+    "domain": "social",
+    "vertical": "creator-tools",
+    "classificationReason": "Unthread is an end-user Bluesky client focused on composing, saving, and publishing thread-style posts.",
+    "categorySlug": "apps/bluesky/client"
+  },
+  {
+    "name": "WeListSkyBlue",
+    "sourceUrl": "https://welistskyblue.com/",
+    "externalUrl": "https://welistskyblue.com/",
+    "iconUrl": "/generated/listings/welistskyblue-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/welistskyblue-screenshot.jpg"
+    ],
+    "appTags": [
+      "productivity"
+    ],
+    "tagline": "Social Task Management App. Built on AT Protocol.",
+    "fullDescription": "WeListSkyBlue is a social task management app built on AT Protocol that helps people organize tasks, track progress, and celebrate completions with social activity features.",
+    "rawCategoryHint": "Productivity",
+    "scope": null,
+    "productType": "standalone_app",
+    "domain": null,
+    "vertical": "productivity",
+    "classificationReason": "WeListSkyBlue is a standalone AT Protocol application focused on collaborative task tracking and completion workflows, so it best fits a productivity app classification.",
+    "categorySlug": "apps/welistskyblue"
+  },
+  {
+    "name": "Lexicon Community",
+    "sourceUrl": "https://lexicon.community/",
+    "externalUrl": "https://lexicon.community/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "A working group to create community ATProtocol Lexicons.",
+    "fullDescription": "Lexicon Community is a community working group that develops and coordinates AT Protocol lexicons, with open governance, discussion, and shared schema work across contributors.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Lexicon Community organizes and maintains shared AT Protocol lexicon definitions and related schema collaboration, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "Red Dwarf",
+    "sourceUrl": "https://reddwarf.app/",
+    "externalUrl": "https://reddwarf.app/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "Independent Bluesky client that does not depend on AppView servers.",
+    "fullDescription": "Red Dwarf is an independent Bluesky web client that fetches records directly from each user's PDS and reconstructs relationships through backlinks, with optional AppView usage as an optimization layer.",
+    "rawCategoryHint": "Bluesky web client",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "social",
+    "vertical": "social-network",
+    "classificationReason": "A user-facing Bluesky client app for reading and interacting with AT Protocol content without requiring AppView infrastructure.",
+    "categorySlug": "apps/bluesky/client"
+  },
+  {
+    "name": "Mackinac",
+    "sourceUrl": "https://mackinac.social/",
+    "externalUrl": "https://app.mackinac.social/",
+    "iconUrl": "/generated/listings/mackinac-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/mackinac-screenshot.png"
+    ],
+    "appTags": [],
+    "tagline": "Your bridge to the Social Web.",
+    "fullDescription": "Mackinac is a native iOS client for AT Protocol and Bluesky that helps people connect across the Fediverse and Atmosphere from one app.",
+    "rawCategoryHint": "Native iOS AT Protocol and Bluesky client",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "social",
+    "vertical": "social-network",
+    "classificationReason": "Mackinac is a user-facing Bluesky/AT Protocol client app for browsing and posting on the social web, so it fits apps/bluesky/client.",
+    "categorySlug": "apps/bluesky/client"
+  },
+  {
+    "name": "Juttu",
+    "sourceUrl": "https://juttu.app/",
+    "externalUrl": "https://juttu.app/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "developer"
+    ],
+    "tagline": "Comments that live on the open web",
+    "fullDescription": "Juttu is an open-source comments widget built on AT Protocol where each comment is a real Bluesky post owned by the commenter, with no reader tracking and simple drop-in HTML integration.",
+    "rawCategoryHint": "Comments",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "comments",
+    "vertical": "developer-tools",
+    "classificationReason": "Embeddable developer-facing comments widget that uses Bluesky reply threads as the comment backend.",
+    "categorySlug": "apps/juttu"
+  },
+  {
+    "name": "dropb.at",
+    "sourceUrl": "https://dropb.at/",
+    "externalUrl": "https://dropb.at/",
+    "iconUrl": "/generated/listings/dropb-at-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/dropb-at-screenshot.png"
+    ],
+    "appTags": [
+      "productivity"
+    ],
+    "tagline": "Share and manage text, photos and other files on the AT Protocol.",
+    "fullDescription": "dropb.at is an AT Protocol file-sharing app for uploading, organizing, and sharing text, photos, and other files while keeping control of your data and server choice.",
+    "rawCategoryHint": "File sharing",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "file-sharing",
+    "vertical": "productivity",
+    "classificationReason": "dropb.at focuses on personal file management and sharing workflows, which fits a productivity-oriented app category.",
+    "categorySlug": "apps/dropbat"
+  },
+  {
+    "name": "Open Evnt",
+    "sourceUrl": "https://evnt.directory/",
+    "externalUrl": "https://evnt.directory/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "A modern data format for events.",
+    "fullDescription": "Open Evnt is a modern, JSON-based event data format and schema toolkit that also defines AT Protocol lexicons for interoperable event publishing across apps and directories.",
+    "rawCategoryHint": "Event data format with AT Protocol lexicons",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Open Evnt defines and publishes AT Protocol event lexicons (including directory.evnt.event) and related schema tooling for developers, so it fits protocol/lexicon.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "Anchor",
+    "sourceUrl": "https://dropanchor.app/",
+    "externalUrl": "https://dropanchor.app/",
+    "iconUrl": "/generated/listing-icons/anchor-icon.jpg",
+    "screenshotUrls": [],
+    "appTags": [
+      "location"
+    ],
+    "tagline": "Your personal location journal.",
+    "fullDescription": "Anchor is a personal location journal app that lets you save meaningful places and revisit them over time. It uses Bluesky sign-in for account access and focuses on lightweight, map-centered memory keeping.",
+    "rawCategoryHint": "Location journal app",
+    "scope": "bluesky",
+    "productType": "standalone_app",
+    "domain": "location",
+    "vertical": null,
+    "classificationReason": "Anchor is a standalone location-focused product with its own brand and workflow for saving and revisiting places, so it fits best as an app-root listing at apps/drop-anchor.",
+    "categorySlug": "apps/drop-anchor"
+  },
+  {
+    "name": "deck belcher",
+    "sourceUrl": "https://deckbelcher.com/",
+    "externalUrl": "https://deckbelcher.com/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "games"
+    ],
+    "tagline": "Organize, build, and share decks on Atmosphere.",
+    "fullDescription": "Deck Belcher is an atproto-powered deck companion for Atmosphere where players can organize decks, browse cards, and share builds with the community.",
+    "rawCategoryHint": "Games",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "gaming",
+    "vertical": "deck-building",
+    "classificationReason": "It is a consumer app for Atmosphere card game players with deck management and discovery features.",
+    "categorySlug": "apps/deckbelcher"
+  },
+  {
+    "name": "Chronosky",
+    "sourceUrl": "https://chronosky.app/",
+    "externalUrl": "https://chronosky.app/",
+    "iconUrl": "/generated/listing-icons/chronosky-icon.jpg",
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "Schedule your Bluesky posts with ease.",
+    "fullDescription": "Chronosky is a Bluesky scheduling app for planning, scheduling, and publishing posts when your audience is most engaged, with support for rich media, link card previews, flexible timezone-aware scheduling, and multilingual workflows.",
+    "rawCategoryHint": "Bluesky scheduling app",
+    "scope": "bluesky",
+    "productType": "app",
+    "domain": "social-publishing",
+    "vertical": "creator-tools",
+    "classificationReason": "Chronosky focuses on scheduling and publishing posts for Bluesky users, which fits the Bluesky scheduling apps category.",
+    "categorySlug": "apps/bluesky/scheduling"
+  },
+  {
+    "name": "LinkedClaims",
+    "sourceUrl": "https://linkedclaims.com/",
+    "externalUrl": "https://linkedclaims.com/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "developer"
+    ],
+    "tagline": "Decentralized verifiable claims on AT Protocol",
+    "fullDescription": "LinkedClaims is an open standard and toolkit for publishing signed, verifiable claims about any URI-addressable subject using AT Protocol records, including support for endorsements, disputes, confidence ratings, and evidence attachments.",
+    "rawCategoryHint": "Developer infrastructure",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": "identity",
+    "classificationReason": "LinkedClaims provides developer-facing AT Protocol primitives, schema, and tooling for issuing and verifying signed claims, so it fits a developer-oriented apps category.",
+    "categorySlug": "apps/linkedclaims"
+  },
+  {
+    "name": "Stratos",
+    "sourceUrl": "https://stratos.zone/",
+    "externalUrl": "https://stratos.zone/",
+    "iconUrl": "/generated/listings/stratos-icon.svg",
+    "screenshotUrls": [],
+    "appTags": [
+      "developer"
+    ],
+    "tagline": "Private permissioned data for ATprotocol",
+    "fullDescription": "Stratos is a private, permissioned data layer for AT Protocol that stores boundary-scoped records off the firehose and serves them through protocol-native hydration.",
+    "rawCategoryHint": "Developer Infrastructure",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "developer-tools",
+    "vertical": "privacy",
+    "classificationReason": "Stratos provides permissioned shared-data infrastructure and integration docs for AT Protocol clients and operators.",
+    "categorySlug": "apps/stratos"
+  },
+  {
+    "name": "Octosphere",
+    "sourceUrl": "https://octosphere.social/",
+    "externalUrl": "https://octosphere.social/",
+    "iconUrl": "/generated/listings/octosphere-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/octosphere-screenshot.png"
+    ],
+    "appTags": [
+      "science"
+    ],
+    "tagline": "Connecting open science with the social web",
+    "fullDescription": "Octosphere bridges academic publishing and the social web by syncing publications from Octopus to the AT Protocol, helping researchers share work beyond traditional journals.",
+    "rawCategoryHint": "Science",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "research",
+    "vertical": "science",
+    "classificationReason": "AT Protocol app focused on scientific publication discovery and sharing.",
+    "categorySlug": "apps/octosphere"
+  },
+  {
+    "name": "Hyperscan",
+    "sourceUrl": "https://www.hyperscan.dev/",
+    "externalUrl": "https://www.hyperscan.dev/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "Explore the Hypersphere across DIDs, handles, collections, and network activity.",
+    "fullDescription": "Hyperscan is an ATProto data explorer from Hypercerts/GainForest for searching DIDs, handles, collections, and pages, with network analytics, live stream tooling, indexer management, and developer utilities.",
+    "rawCategoryHint": "Data explorer",
+    "scope": "atproto",
+    "productType": "tool",
+    "domain": "discovery",
+    "vertical": "developer tools",
+    "classificationReason": "Hyperscan is a protocol-level explorer for inspecting ATProto repos, collections, and network/indexer activity rather than an end-user social client.",
+    "categorySlug": "protocol/data-explorer"
+  },
+  {
+    "name": "Chavatar",
+    "sourceUrl": "https://chavatar.app/",
+    "externalUrl": "https://chavatar.app/",
+    "iconUrl": "/generated/listings/chavatar-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/chavatar-screenshot.png"
+    ],
+    "appTags": [],
+    "tagline": "Automatically rotate your Bluesky avatar.",
+    "fullDescription": "Chavatar is a Bluesky utility that automatically rotates your profile avatar so you can keep your identity fresh without manual uploads. It is aimed at people who want lightweight profile personalization with a simple, focused workflow.",
+    "rawCategoryHint": "Bluesky tool",
+    "scope": "bluesky",
+    "productType": "standalone_app",
+    "domain": "identity",
+    "vertical": null,
+    "classificationReason": "Chavatar is a user-facing Bluesky utility focused on profile avatar personalization and automation, so it fits the Bluesky tools category with an identity domain.",
+    "categorySlug": "apps/bluesky/tool"
   }
 ]

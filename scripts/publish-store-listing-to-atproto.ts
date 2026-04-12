@@ -11,6 +11,9 @@
  */
 import 'dotenv/config'
 
+import { stat } from 'node:fs/promises'
+import path from 'node:path'
+
 import { eq, ilike } from 'drizzle-orm'
 
 import { db, dbClient } from '../src/db/index.server'
@@ -19,6 +22,53 @@ import { publishDirectoryListingDetail } from '../src/lib/atproto/publish-direct
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+async function fileExists(absolutePath: string): Promise<boolean> {
+  try {
+    await stat(absolutePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function findFirstLocalGeneratedAsset(
+  relativeCandidates: string[],
+): Promise<string | null> {
+  for (const rel of relativeCandidates) {
+    const absolutePath = path.resolve(process.cwd(), 'public', rel)
+    if (await fileExists(absolutePath)) {
+      return `/${rel}`
+    }
+  }
+  return null
+}
+
+async function resolveLocalGeneratedAssetPatch(slug: string): Promise<{
+  iconUrl?: string
+  heroImageUrl?: string
+}> {
+  const iconUrl = await findFirstLocalGeneratedAsset([
+    `generated/listing-icons/${slug}-icon.jpg`,
+    `generated/listing-icons/${slug}-icon.png`,
+    `generated/listing-icons/${slug}-icon.webp`,
+    `generated/listing-icons/${slug}-icon.svg`,
+  ])
+
+  const heroImageUrl = await findFirstLocalGeneratedAsset([
+    `generated/listings/${slug}-screenshot.jpg`,
+    `generated/listings/${slug}-screenshot.png`,
+    `generated/listings/${slug}-screenshot.webp`,
+    `generated/listings/${slug}-hero.jpg`,
+    `generated/listings/${slug}-hero.png`,
+    `generated/listings/${slug}-hero.webp`,
+  ])
+
+  return {
+    ...(iconUrl ? { iconUrl } : {}),
+    ...(heroImageUrl ? { heroImageUrl } : {}),
+  }
+}
 
 async function main() {
   const arg = (process.argv[2] ?? 'kich').trim()
@@ -57,8 +107,17 @@ async function main() {
   }
 
   const row = rows[0]!
+  const patch = await resolveLocalGeneratedAssetPatch(row.slug)
+  if (patch.iconUrl || patch.heroImageUrl) {
+    console.log(
+      `Using local generated assets for ${row.slug}: icon=${patch.iconUrl ?? 'unchanged'} hero=${patch.heroImageUrl ?? 'unchanged'}`,
+    )
+  }
 
-  const { uri } = await publishDirectoryListingDetail(row)
+  const { uri } = await publishDirectoryListingDetail(
+    row,
+    Object.keys(patch).length > 0 ? patch : undefined,
+  )
   console.log(`Published ${row.slug}: ${uri}`)
   console.log('Postgres will update when Tap ingests this record.')
 }

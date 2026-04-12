@@ -15,7 +15,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft, ExternalLink, Heart } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
 import { Avatar } from "../design-system/avatar";
@@ -61,6 +61,7 @@ import {
 import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
+import { normalizeAppTags, tagsEqual } from "../lib/app-tags";
 import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
@@ -69,6 +70,7 @@ import { buildRouteOgMeta } from "../lib/og-meta";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { BlueskyIcon } from "#/components/bluesky-icon";
 import { ToggleButton } from "#/design-system/toggle-button";
+import { TextField } from "#/design-system/text-field";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -421,7 +423,7 @@ const styles = stylex.create({
     boxShadow: shadow.md,
     position: "fixed",
     right: horizontalSpace["4xl"],
-    width: "min(22rem, calc(100% - 2rem))",
+    width: "min(28rem, calc(100% - 2rem))",
     zIndex: 1,
   },
   devToolbarBody: {
@@ -433,6 +435,16 @@ const styles = stylex.create({
   },
   devToolbarButtons: {
     gap: gap["lg"],
+  },
+  devToolbarFieldGroup: {
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    borderTopColor: uiColor.border2,
+    gap: gap["lg"],
+    paddingTop: verticalSpace["lg"],
+  },
+  devToolbarHelp: {
+    color: uiColor.text2,
   },
   devToolbarStatus: {
     minHeight: "1.25rem",
@@ -580,8 +592,34 @@ function ProductPage() {
   const [isScreenshotLightboxOpen, setIsScreenshotLightboxOpen] =
     useState(false);
   const [screenshotLightboxIndex, setScreenshotLightboxIndex] = useState(0);
+  const [pendingListingMetadataSave, setPendingListingMetadataSave] = useState<
+    null | "category" | "tags"
+  >(null);
+  const [devCategorySlugDraft, setDevCategorySlugDraft] = useState(
+    listing.categorySlug ?? "",
+  );
+  const [devAppTagsDraft, setDevAppTagsDraft] = useState(
+    listing.appTags.join(", "),
+  );
 
   const listingId = listing.id;
+  const normalizedDevAppTagsDraft = normalizeAppTags(
+    devAppTagsDraft
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean),
+  );
+  const nextCategorySlug = devCategorySlugDraft.trim() || null;
+  const categoryDirty = nextCategorySlug !== listing.categorySlug;
+  const tagsDirty = !tagsEqual(normalizedDevAppTagsDraft, listing.appTags);
+
+  useEffect(() => {
+    setDevCategorySlugDraft(listing.categorySlug ?? "");
+  }, [listing.categorySlug]);
+
+  useEffect(() => {
+    setDevAppTagsDraft(listing.appTags.join(", "));
+  }, [listing.appTags]);
 
   function dismissImageReview() {
     setImageReviewDraft(null);
@@ -733,6 +771,88 @@ function ProductPage() {
       });
     } finally {
       setPendingGeneration(null);
+    }
+  }
+
+  async function saveDevCategory() {
+    if (pendingListingMetadataSave || !categoryDirty) {
+      return;
+    }
+    setPendingListingMetadataSave("category");
+    setToolbarStatus(null);
+    try {
+      await directoryListingApi.updateDirectoryListingCategoryAssignment({
+        data: {
+          id: listingId,
+          categorySlug: nextCategorySlug,
+        },
+      });
+      setToolbarStatus({
+        tone: "neutral",
+        text: nextCategorySlug
+          ? `Saved category: ${nextCategorySlug}`
+          : "Cleared category assignment (defaults to misc on publish).",
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: detailQueryOptions.queryKey,
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: relatedQueryOptions.queryKey,
+          exact: true,
+        }),
+        router.invalidate(),
+      ]);
+    } catch (error) {
+      setToolbarStatus({
+        tone: "critical",
+        text:
+          error instanceof Error ? error.message : "Category update failed.",
+      });
+    } finally {
+      setPendingListingMetadataSave(null);
+    }
+  }
+
+  async function saveDevAppTags() {
+    if (pendingListingMetadataSave || !tagsDirty) {
+      return;
+    }
+    setPendingListingMetadataSave("tags");
+    setToolbarStatus(null);
+    try {
+      await directoryListingApi.updateDirectoryListingAppTags({
+        data: {
+          id: listingId,
+          appTags: normalizedDevAppTagsDraft,
+        },
+      });
+      setToolbarStatus({
+        tone: "neutral",
+        text:
+          normalizedDevAppTagsDraft.length > 0
+            ? `Saved tags: ${normalizedDevAppTagsDraft.join(", ")}`
+            : "Cleared all app tags.",
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: detailQueryOptions.queryKey,
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: relatedQueryOptions.queryKey,
+          exact: true,
+        }),
+        router.invalidate(),
+      ]);
+    } catch (error) {
+      setToolbarStatus({
+        tone: "critical",
+        text: error instanceof Error ? error.message : "Tag update failed.",
+      });
+    } finally {
+      setPendingListingMetadataSave(null);
     }
   }
 
@@ -1016,6 +1136,63 @@ function ProductPage() {
               >
                 Generate description
               </Button>
+            </Flex>
+            <Flex direction="column" style={styles.devToolbarFieldGroup}>
+              <Text size="sm" weight="semibold">
+                Category
+              </Text>
+              <TextField
+                label="Category slug"
+                value={devCategorySlugDraft}
+                onChange={setDevCategorySlugDraft}
+                placeholder="apps/bluesky/clients"
+              />
+              <Button
+                variant="secondary"
+                isPending={pendingListingMetadataSave === "category"}
+                isDisabled={
+                  pendingGeneration !== null ||
+                  imageReviewDraft !== null ||
+                  pendingListingMetadataSave !== null ||
+                  !categoryDirty
+                }
+                onPress={() => void saveDevCategory()}
+              >
+                Save category
+              </Button>
+              <SmallBody style={styles.devToolbarHelp}>
+                Current: {listing.categorySlug ?? "none"}
+              </SmallBody>
+            </Flex>
+            <Flex direction="column" style={styles.devToolbarFieldGroup}>
+              <Text size="sm" weight="semibold">
+                App tags
+              </Text>
+              <TextField
+                label="Comma-separated tags"
+                value={devAppTagsDraft}
+                onChange={setDevAppTagsDraft}
+                placeholder="social, developer-tool"
+              />
+              <Button
+                variant="secondary"
+                isPending={pendingListingMetadataSave === "tags"}
+                isDisabled={
+                  pendingGeneration !== null ||
+                  imageReviewDraft !== null ||
+                  pendingListingMetadataSave !== null ||
+                  !tagsDirty
+                }
+                onPress={() => void saveDevAppTags()}
+              >
+                Save tags
+              </Button>
+              <SmallBody style={styles.devToolbarHelp}>
+                Current:{" "}
+                {listing.appTags.length > 0
+                  ? listing.appTags.join(", ")
+                  : "none"}
+              </SmallBody>
             </Flex>
             <Text
               size="sm"

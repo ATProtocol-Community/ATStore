@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import 'dotenv/config'
 
+import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, extname, resolve } from 'node:path'
 
@@ -17,6 +18,7 @@ type InputRecord = {
   externalUrl: string | null
   iconUrl: string | null
   screenshotUrls: string[]
+  appTags: string[]
   tagline: string | null
   fullDescription: string | null
   rawCategoryHint: string | null
@@ -32,11 +34,13 @@ type ScriptArgs = {
   help: boolean
   dryRun: boolean
   shouldImport: boolean
+  shouldGenerateAssets: boolean
   name: string | null
   sourceUrl: string | null
   externalUrl: string | null
   iconUrl: string | null
   screenshotUrls: string[]
+  appTags: string[]
   iconAssetUrl: string | null
   screenshotAssetUrls: string[]
   categorySlug: string | null
@@ -60,11 +64,13 @@ function parseArgs(argv: string[]): ScriptArgs {
     help: false,
     dryRun: false,
     shouldImport: true,
+    shouldGenerateAssets: true,
     name: null,
     sourceUrl: null,
     externalUrl: null,
     iconUrl: null,
     screenshotUrls: [],
+    appTags: [],
     iconAssetUrl: null,
     screenshotAssetUrls: [],
     categorySlug: null,
@@ -94,6 +100,10 @@ function parseArgs(argv: string[]): ScriptArgs {
       out.shouldImport = false
       continue
     }
+    if (arg === '--no-generate-assets') {
+      out.shouldGenerateAssets = false
+      continue
+    }
     if (arg === '--name') {
       out.name = argv[++i] ?? null
       continue
@@ -113,6 +123,11 @@ function parseArgs(argv: string[]): ScriptArgs {
     if (arg === '--screenshot-url') {
       const value = argv[++i] ?? null
       if (value) out.screenshotUrls.push(value)
+      continue
+    }
+    if (arg === '--app-tag') {
+      const value = argv[++i] ?? null
+      if (value) out.appTags.push(value)
       continue
     }
     if (arg === '--icon-asset-url') {
@@ -195,6 +210,7 @@ Content:
 Assets:
   --icon-url <path>                Existing local/public icon path
   --screenshot-url <path>          Existing local/public screenshot path (repeatable)
+  --app-tag <text>                 App tag for discovery/filtering (repeatable)
   --icon-asset-url <url>           Download remote icon into public/generated/listings
   --screenshot-asset-url <url>     Download remote screenshot into public/generated/listings (repeatable)
   --asset-slug <slug>              Override generated asset filename prefix
@@ -204,6 +220,7 @@ Assets:
 
 Flags:
   --no-import                      Only update out/manual-directory-listings.json
+  --no-generate-assets             Skip running hero/icon generation helper after import
   --dry-run                        Print intended record without writing
   -h, --help                       Show help
 
@@ -236,6 +253,18 @@ function assertNonEmptyString(value: string | null, field: string): string {
 function normalizeNullableString(value: string | null | undefined): string | null {
   const normalized = value?.trim() ?? ''
   return normalized ? normalized : null
+}
+
+function normalizeTags(values: string[]): string[] {
+  const seen = new Set<string>()
+  const tags: string[] = []
+  for (const value of values) {
+    const tag = value.trim().toLowerCase()
+    if (!tag || seen.has(tag)) continue
+    seen.add(tag)
+    tags.push(tag)
+  }
+  return tags
 }
 
 function normalizeHttpUrl(raw: string | null | undefined, field: string): string {
@@ -364,6 +393,7 @@ function buildRecord(args: ScriptArgs, assets: {
     externalUrl,
     iconUrl: assets.iconUrl,
     screenshotUrls: assets.screenshotUrls,
+    appTags: normalizeTags(args.appTags),
     tagline: normalizeNullableString(args.tagline),
     fullDescription: normalizeNullableString(args.fullDescription),
     rawCategoryHint: normalizeNullableString(args.rawCategoryHint),
@@ -453,6 +483,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
         externalUrl: record.externalUrl,
         iconUrl: record.iconUrl,
         screenshotUrls: record.screenshotUrls,
+        appTags: record.appTags,
         tagline: record.tagline,
         fullDescription: record.fullDescription,
         categorySlugs: record.categorySlug ? [record.categorySlug] : [],
@@ -466,6 +497,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
           externalUrl: record.externalUrl,
           iconUrl: record.iconUrl,
           screenshotUrls: record.screenshotUrls,
+          appTags: record.appTags,
           tagline: record.tagline,
           fullDescription: record.fullDescription,
           categorySlugs: record.categorySlug ? [record.categorySlug] : [],
@@ -476,6 +508,49 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
   } finally {
     await dbClient.end({ timeout: 5 })
   }
+}
+
+async function runCommand(command: string, args: string[]) {
+  await new Promise<void>((resolvePromise, rejectPromise) => {
+    const child = spawn(command, args, {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      env: process.env,
+    })
+
+    child.on('error', rejectPromise)
+    child.on('exit', (code, signal) => {
+      if (typeof code === 'number' && code === 0) {
+        resolvePromise()
+        return
+      }
+      rejectPromise(
+        new Error(
+          signal
+            ? `${command} exited due to signal ${signal}`
+            : `${command} exited with code ${code ?? 'unknown'}`,
+        ),
+      )
+    })
+  })
+}
+
+async function runListingImageGeneration(record: InputRecord) {
+  const baseArgs = [
+    'run',
+    'generate:listing-images',
+    '--',
+    '--input',
+    'out/manual-directory-listings.json',
+    '--id',
+    record.sourceUrl,
+    '--limit',
+    '1',
+    '--concurrency',
+    '1',
+  ]
+  await runCommand('pnpm', baseArgs)
+  await runCommand('pnpm', [...baseArgs, '--icon'])
 }
 
 async function main() {
@@ -504,6 +579,23 @@ async function main() {
     await importRecord(record, args.dryRun)
     if (!args.dryRun) {
       console.log(`Imported "${record.name}" into store_listings.`)
+    }
+
+    const hasIconInput = Boolean(args.iconAssetUrl ?? args.iconUrl)
+    const hasScreenshotInput = args.screenshotAssetUrls.length > 0 || args.screenshotUrls.length > 0
+    const shouldGenerateNow = args.shouldGenerateAssets && !hasIconInput && !hasScreenshotInput
+
+    if (shouldGenerateNow) {
+      if (args.dryRun) {
+        console.log('Dry run: would generate hero and icon assets from listing page context.')
+      } else {
+        console.log('Generating hero and icon assets via generate:listing-images...')
+        await runListingImageGeneration(record)
+      }
+    } else if (!args.shouldGenerateAssets) {
+      console.log('Skipped asset generation (--no-generate-assets).')
+    } else {
+      console.log('Skipped asset generation because icon/screenshot assets were provided explicitly.')
     }
   } else {
     console.log('Skipped DB import.')

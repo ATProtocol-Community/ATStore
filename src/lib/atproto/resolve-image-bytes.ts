@@ -35,7 +35,9 @@ export async function resolveUrlToImageBytes(
     return { bytes: buf, mimeType: mt }
   }
 
-  if (import.meta.env.SSR) {
+  // In Node scripts (publish/import), `import.meta.env.SSR` is not guaranteed.
+  // Use runtime detection so `/generated/...` paths resolve from `public/`.
+  if (typeof window === 'undefined') {
     const { readPublicImageFile } = await import(
       '#/lib/atproto/resolve-image-bytes.server'
     )

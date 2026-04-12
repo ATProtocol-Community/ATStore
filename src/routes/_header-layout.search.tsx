@@ -32,6 +32,7 @@ import {
   directoryListingApi,
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { formatAppTagLabel } from "../lib/app-tag-metadata";
 import { getDirectoryCategoryOption } from "../lib/directory-categories";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
@@ -277,6 +278,17 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
   const listingPathLabel = getDirectoryCategoryOption(
     listing.categorySlug,
   )?.pathLabel;
+  const categorySegments = (listing.categorySlug ?? "")
+    .split("/")
+    .filter(Boolean);
+  const isProtocolListing = categorySegments[0] === "protocol";
+  const isAppListing =
+    categorySegments[0] === "apps" || categorySegments[0] === "app";
+  const isTopLevelAppListing = isAppListing && categorySegments.length === 2;
+  const appSubpathLabel =
+    isAppListing && categorySegments.length >= 3
+      ? categorySegments.slice(1).join("/")
+      : null;
 
   return (
     <Card style={styles.listingCard}>
@@ -315,9 +327,19 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
           style={styles.listingFooter}
         >
           <Flex align="center" gap="sm" style={styles.listingTags}>
-            <Badge size="sm" variant="primary">
-              {listingPathLabel ?? listing.category}
-            </Badge>
+            {isTopLevelAppListing && listing.appTags.length > 0 ? (
+              listing.appTags.map((tag) => (
+                <Badge key={tag} size="sm" variant="primary">
+                  {formatAppTagLabel(tag)}
+                </Badge>
+              ))
+            ) : (
+              <Badge size="sm" variant="primary">
+                {isProtocolListing
+                  ? (listingPathLabel ?? listing.category)
+                  : (appSubpathLabel ?? listingPathLabel ?? listing.category)}
+              </Badge>
+            )}
           </Flex>
           <Flex align="center" gap="sm" style={styles.listingFooterRating}>
             <SmallBody variant="secondary">

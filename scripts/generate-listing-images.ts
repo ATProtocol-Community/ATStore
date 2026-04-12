@@ -776,12 +776,13 @@ async function processListing(
     .update(storeListings)
     .set({
       heroImageUrl: publicPath,
-      screenshotUrls: [publicPath],
       updatedAt: new Date(),
     })
     .where(eq(storeListings.id, listing.id))
 
-  console.log(`Updated store_listings hero + screenshot URLs for ${listing.name}.`)
+  console.log(
+    `Updated store_listings heroImageUrl for ${listing.name} (left screenshotUrls unchanged).`,
+  )
 }
 
 async function processListingIcon(

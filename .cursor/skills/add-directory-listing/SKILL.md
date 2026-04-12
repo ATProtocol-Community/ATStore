@@ -39,9 +39,10 @@ Default to importing and publishing. Use `--no-import` only when the user explic
    - logo, favicon, or `og:image`
 2. Prefer local assets over remote runtime URLs.
    - Download useful brand assets into `public/generated/listings/`
-   - If the site has no good square icon, first try the in-app `Generate icon` dev action to create a local candidate from the homepage screenshot
+   - For script-based flows, rely on `npm run listing:add -- ...` to trigger hero/icon generation automatically (it now calls the same generation pipeline used by dev mode)
+   - Keep generated hero output in `heroImageUrl`; do not treat it as a screenshot replacement
    - The generated icon prompt uses style fallbacks: brand mark first, then motif/monogram from the wordmark, then a restrained gradient-plus-symbol treatment for weak branding
-   - If the generated result still feels generic or off-brand, create a simple local SVG icon inspired by the branding instead
+   - If generated hero/icon results still feel generic or off-brand, refine with better source inputs or create a simple local SVG icon inspired by the branding
 3. Add or update the manual source entry with `npm run listing:add -- ...` (import by default)
 4. Publish to ATProto (default):
    - `pnpm listing:publish-store <slug-or-uuid>`
@@ -53,7 +54,7 @@ Default to importing and publishing. Use `--no-import` only when the user explic
 - Prefer SVG for handcrafted icons.
 - Use filenames like `<slug>-icon.svg`, `<slug>-logo.png`, `<slug>-screenshot.png`.
 - Keep icons readable at small sizes.
-- Treat AI-generated icons as drafts to review, not guaranteed final assets.
+- Treat AI-generated hero/icon assets as drafts to review, not guaranteed final assets.
 - When handcrafting an icon, stay close to the site's visual language instead of inventing a new brand.
 
 ## Script
@@ -80,6 +81,7 @@ Common flags:
 - `--icon-asset-url`
 - `--screenshot-asset-url` (repeatable)
 - `--asset-slug`
+- `--no-generate-assets`
 - `--no-import`
 - `--dry-run`
 
@@ -110,7 +112,7 @@ Good fallback pattern:
 
 - Confirm `out/manual-directory-listings.json` contains the intended record.
 - Confirm downloaded/generated assets exist under `public/generated/listings/`.
-- If you used the in-app generator, confirm the resulting `iconUrl` or `screenshotUrls[0]` point at local generated assets.
+- If you used the in-app generators, confirm `iconUrl` points at a local generated asset and verify `heroImageUrl` separately.
 - If published, confirm the command returns an `at://` URI.
 - If imported (default), confirm the listing row resolves to the expected `iconUrl` and `categorySlug`.
 
