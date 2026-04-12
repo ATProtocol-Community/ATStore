@@ -150,6 +150,24 @@ function parsePostRecord(record: unknown): {
   }
 }
 
+/** Returned by `ingestJetstreamCommitLine` for metrics and consumer logging. */
+export type JetstreamIngestMeta = {
+  eventKind?: string
+  collection?: string
+  operation?: string
+  postUri?: string
+  repoDid?: string
+  /** Rows written or delete rows that triggered recompute */
+  listingMatches?: number
+  skipReason?: string
+}
+
+export type JetstreamIngestResult = {
+  time_us: number
+  processed: boolean
+  meta?: JetstreamIngestMeta
+}
+
 /**
  * Apply one Jetstream JSON line: upsert mentions for creates, remove for deletes.
  */
@@ -157,7 +175,7 @@ export async function ingestJetstreamCommitLine(
   db: Database,
   line: string,
   index: ListingMentionIndex,
-): Promise<{ time_us: number; processed: boolean } | null> {
+): Promise<JetstreamIngestResult | null> {
   let evt: z.infer<typeof jetstreamEventSchema>
   try {
     evt = jetstreamEventSchema.parse(JSON.parse(line))
@@ -166,7 +184,14 @@ export async function ingestJetstreamCommitLine(
   }
 
   if (evt.kind !== 'commit' || !evt.commit) {
-    return { time_us: evt.time_us, processed: false }
+    return {
+      time_us: evt.time_us,
+      processed: false,
+      meta: {
+        eventKind: evt.kind ?? '(none)',
+        skipReason: 'non_commit_event',
+      },
+    }
   }
 
   const { operation, collection, rkey, cid, record } = evt.commit
@@ -174,7 +199,15 @@ export async function ingestJetstreamCommitLine(
   const postUri = `at://${did}/app.bsky.feed.post/${rkey}`
 
   if (collection !== 'app.bsky.feed.post') {
-    return { time_us: evt.time_us, processed: false }
+    return {
+      time_us: evt.time_us,
+      processed: false,
+      meta: {
+        collection,
+        repoDid: did,
+        skipReason: 'collection_filtered',
+      },
+    }
   }
 
   if (operation === 'delete') {
@@ -191,16 +224,43 @@ export async function ingestJetstreamCommitLine(
     for (const id of uniqueIds) {
       await recomputeListingTrending(db, id)
     }
-    return { time_us: evt.time_us, processed: true }
+    return {
+      time_us: evt.time_us,
+      processed: true,
+      meta: {
+        postUri,
+        operation: 'delete',
+        repoDid: did,
+        listingMatches: uniqueIds.length,
+      },
+    }
   }
 
   if (operation !== 'create' && operation !== 'update') {
-    return { time_us: evt.time_us, processed: false }
+    return {
+      time_us: evt.time_us,
+      processed: false,
+      meta: {
+        postUri,
+        operation,
+        repoDid: did,
+        skipReason: 'operation_filtered',
+      },
+    }
   }
 
   const parsedPost = parsePostRecord(record)
   if (!parsedPost) {
-    return { time_us: evt.time_us, processed: false }
+    return {
+      time_us: evt.time_us,
+      processed: false,
+      meta: {
+        postUri,
+        operation,
+        repoDid: did,
+        skipReason: 'unparsed_post',
+      },
+    }
   }
 
   const text = parsedPost.text
@@ -219,7 +279,16 @@ export async function ingestJetstreamCommitLine(
   })
 
   if (hits.length === 0) {
-    return { time_us: evt.time_us, processed: false }
+    return {
+      time_us: evt.time_us,
+      processed: false,
+      meta: {
+        postUri,
+        operation,
+        repoDid: did,
+        skipReason: 'no_listing_match',
+      },
+    }
   }
 
   const createdAt = parsedPost.createdAt
@@ -267,5 +336,14 @@ export async function ingestJetstreamCommitLine(
     await recomputeListingTrending(db, id)
   }
 
-  return { time_us: evt.time_us, processed: true }
+  return {
+    time_us: evt.time_us,
+    processed: true,
+    meta: {
+      postUri,
+      operation,
+      repoDid: did,
+      listingMatches: hits.length,
+    },
+  }
 }

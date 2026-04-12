@@ -6,13 +6,15 @@
  * Env:
  *   DATABASE_URL=…                    (required)
  *   JETSTREAM_URL=…                  (default: wss://jetstream2.us-east.bsky.network/subscribe)
- *   JETSTREAM_CURSOR_BUFFER_SEC=5   (subtract from saved cursor on reconnect for overlap)
- *   JETSTREAM_VERBOSE=1
+ *   JETSTREAM_CURSOR_BUFFER_SEC=5     (subtract from saved cursor on reconnect for overlap)
+ *   JETSTREAM_VERBOSE=1             (log every matched post / delete with metadata)
+ *   JETSTREAM_STATS_INTERVAL_SEC=60 (periodic summary line; set 0 to disable)
  */
 import 'dotenv/config'
 
 import WebSocket from 'ws'
 
+import type { JetstreamIngestResult } from '#/lib/trending/jetstream-ingest'
 import {
   getJetstreamCursor,
   ingestJetstreamCommitLine,
@@ -23,6 +25,30 @@ import {
 function verbose() {
   const v = process.env.JETSTREAM_VERBOSE?.trim().toLowerCase()
   return v === '1' || v === 'true'
+}
+
+function statsIntervalSec(): number {
+  const raw = process.env.JETSTREAM_STATS_INTERVAL_SEC?.trim()
+  if (raw === '0') return 0
+  if (!raw) return 60
+  const n = Number.parseInt(raw, 10)
+  return Number.isFinite(n) && n >= 0 ? n : 60
+}
+
+function ts(): string {
+  return new Date().toISOString()
+}
+
+function log(
+  level: 'info' | 'warn' | 'error' | 'debug',
+  msg: string,
+  extra?: Record<string, unknown>,
+) {
+  const base = `[jetstream] ${ts()} [${level}] ${msg}`
+  const out = extra && Object.keys(extra).length > 0 ? [base, extra] : [base]
+  if (level === 'error') console.error(...out)
+  else if (level === 'warn') console.warn(...out)
+  else console.log(...out)
 }
 
 function parseJetstreamTimeUs(line: string): number | null {
@@ -51,58 +77,193 @@ function buildJetstreamUrl(cursor?: number): string {
   return u.toString()
 }
 
+type Stats = {
+  startedAt: number
+  messages: number
+  /** `ingestJetstreamCommitLine` returned null (invalid JSON / schema) */
+  ingestParseFailures: number
+  nonCommitEvents: number
+  collectionFiltered: number
+  operationFiltered: number
+  unparsedPost: number
+  noListingMatch: number
+  /** create/update that wrote ≥1 mention row */
+  upsertsWithMatches: number
+  deletesProcessed: number
+  cursorSaves: number
+  ingestErrors: number
+}
+
+function createStats(): Stats {
+  return {
+    startedAt: Date.now(),
+    messages: 0,
+    ingestParseFailures: 0,
+    nonCommitEvents: 0,
+    collectionFiltered: 0,
+    operationFiltered: 0,
+    unparsedPost: 0,
+    noListingMatch: 0,
+    upsertsWithMatches: 0,
+    deletesProcessed: 0,
+    cursorSaves: 0,
+    ingestErrors: 0,
+  }
+}
+
+function applyIngestStats(stats: Stats, result: JetstreamIngestResult | null) {
+  if (result === null) {
+    stats.ingestParseFailures += 1
+    return
+  }
+  const m = result.meta
+  const sr = m?.skipReason
+  if (sr === 'non_commit_event') stats.nonCommitEvents += 1
+  else if (sr === 'collection_filtered') stats.collectionFiltered += 1
+  else if (sr === 'operation_filtered') stats.operationFiltered += 1
+  else if (sr === 'unparsed_post') stats.unparsedPost += 1
+  else if (sr === 'no_listing_match') stats.noListingMatch += 1
+
+  if (result.processed) {
+    if (m?.operation === 'delete') {
+      stats.deletesProcessed += 1
+    } else if (
+      (m?.operation === 'create' || m?.operation === 'update') &&
+      (m?.listingMatches ?? 0) > 0
+    ) {
+      stats.upsertsWithMatches += 1
+    }
+  }
+}
+
+function logVerboseIngest(result: JetstreamIngestResult) {
+  if (!verbose() || !result.processed) return
+  const m = result.meta
+  log('info', 'ingest_processed', {
+    time_us: result.time_us,
+    postUri: m?.postUri,
+    operation: m?.operation,
+    repoDid: m?.repoDid,
+    listingMatches: m?.listingMatches,
+  })
+}
+
+function logStatsSummary(stats: Stats) {
+  const elapsedSec = Math.max(
+    1,
+    Math.round((Date.now() - stats.startedAt) / 1000),
+  )
+  log('info', 'stats', {
+    elapsedSec,
+    messages: stats.messages,
+    msgsPerSec: Number((stats.messages / elapsedSec).toFixed(2)),
+    ingestParseFailures: stats.ingestParseFailures,
+    nonCommitEvents: stats.nonCommitEvents,
+    collectionFiltered: stats.collectionFiltered,
+    operationFiltered: stats.operationFiltered,
+    unparsedPost: stats.unparsedPost,
+    noListingMatch: stats.noListingMatch,
+    upsertsWithMatches: stats.upsertsWithMatches,
+    deletesProcessed: stats.deletesProcessed,
+    cursorSaves: stats.cursorSaves,
+    ingestErrors: stats.ingestErrors,
+  })
+}
+
 async function main() {
   if (!process.env.DATABASE_URL?.trim()) {
-    console.error('[jetstream] DATABASE_URL is required.')
+    log('error', 'DATABASE_URL is required.')
     process.exit(1)
   }
 
   const { db } = await import('#/db/index.server')
 
   let index = await loadListingMentionIndex(db, true)
+  const initialCursor = await getJetstreamCursor(db)
+  log('info', 'startup', {
+    listingIndexSize: index.listings.length,
+    savedCursorTimeUs: initialCursor ?? null,
+    statsIntervalSec: statsIntervalSec(),
+    verbose: verbose(),
+  })
+
   setInterval(() => {
     void loadListingMentionIndex(db, true).then((i) => {
       index = i
+      log('info', 'mention_index_reloaded', { listingCount: i.listings.length })
     })
   }, 5 * 60 * 1000)
 
-  let lastCursor = await getJetstreamCursor(db)
+  let lastCursor = initialCursor
   let reconnectDelayMs = 2000
   let shouldRun = true
+  const stats = createStats()
+
+  const intervalSec = statsIntervalSec()
+  let statsTimer: ReturnType<typeof setInterval> | undefined
+  if (intervalSec > 0) {
+    statsTimer = setInterval(() => {
+      logStatsSummary(stats)
+    }, intervalSec * 1000)
+    statsTimer.unref?.()
+  }
 
   const connect = () => {
     const url = buildJetstreamUrl(lastCursor)
-    if (verbose()) {
-      console.log(`[jetstream] connecting ${url}`)
-    }
+    log('info', 'connecting', {
+      url,
+      resumeCursorTimeUs: lastCursor ?? null,
+    })
 
     const ws = new WebSocket(url)
 
     ws.on('open', () => {
       reconnectDelayMs = 2000
-      console.log('[jetstream] connected')
+      log('info', 'websocket_open', {
+        resumeCursorTimeUs: lastCursor ?? null,
+      })
     })
 
     ws.on('message', async (data: WebSocket.RawData) => {
+      stats.messages += 1
       const line =
         typeof data === 'string' ? data : Buffer.from(data as Buffer).toString('utf8')
       const timeUs = parseJetstreamTimeUs(line)
+      let result: JetstreamIngestResult | null = null
       try {
-        const result = await ingestJetstreamCommitLine(db, line, index)
-        if (verbose() && result?.processed) {
-          console.log(`[jetstream] processed time_us=${String(result.time_us)}`)
+        result = await ingestJetstreamCommitLine(db, line, index)
+        applyIngestStats(stats, result)
+        if (result) {
+          logVerboseIngest(result)
         }
       } catch (err) {
-        console.error('[jetstream] ingest error', err)
+        stats.ingestErrors += 1
+        log('error', 'ingest_threw', {
+          err: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+          linePreview: line.length > 200 ? `${line.slice(0, 200)}…` : line,
+        })
       }
-      if (timeUs != null) {
-        lastCursor = timeUs
-        await saveJetstreamCursor(db, timeUs)
+      const cursorToSave = timeUs ?? result?.time_us ?? null
+      if (cursorToSave != null) {
+        lastCursor = cursorToSave
+        await saveJetstreamCursor(db, cursorToSave)
+        stats.cursorSaves += 1
+      } else if (result) {
+        log('warn', 'no_cursor_in_event', {
+          processed: result.processed,
+        })
       }
     })
 
-    ws.on('close', (code) => {
-      console.warn(`[jetstream] closed code=${String(code)} — reconnecting in ${String(reconnectDelayMs)}ms`)
+    ws.on('close', (code, reason) => {
+      const reasonStr =
+        typeof reason === 'string' ? reason : reason?.toString?.() ?? ''
+      log('warn', 'websocket_closed', {
+        code,
+        reason: reasonStr || '(none)',
+        reconnectInMs: reconnectDelayMs,
+      })
       if (!shouldRun) return
       setTimeout(() => {
         reconnectDelayMs = Math.min(reconnectDelayMs * 2, 120_000)
@@ -111,7 +272,9 @@ async function main() {
     })
 
     ws.on('error', (err) => {
-      console.error('[jetstream] socket error', err)
+      log('error', 'websocket_error', {
+        message: err instanceof Error ? err.message : String(err),
+      })
     })
   }
 
@@ -119,6 +282,8 @@ async function main() {
 
   const shutdown = () => {
     shouldRun = false
+    if (statsTimer) clearInterval(statsTimer)
+    log('info', 'shutdown', { finalStats: { ...stats } })
     process.exit(0)
   }
   process.on('SIGINT', shutdown)
@@ -126,6 +291,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[jetstream] fatal', err)
+  log('error', 'fatal', {
+    err: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+  })
   process.exit(1)
 })
