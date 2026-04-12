@@ -25,6 +25,7 @@ import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
+import { Lightbox } from "../design-system/lightbox";
 import { Page } from "../design-system/page";
 import { StarRating } from "../design-system/star-rating";
 import { fontSize } from "../design-system/theme/typography.stylex";
@@ -485,6 +486,44 @@ const styles = stylex.create({
     gap: gap["2xl"],
     justifyContent: "flex-end",
   },
+  screenshotsSection: {
+    paddingTop: verticalSpace["4xl"],
+  },
+  screenshotCarousel: {
+    display: "flex",
+    flexDirection: "row",
+    gap: gap["xl"],
+    overflowX: "auto",
+    overscrollBehaviorX: "contain",
+    scrollSnapType: "x mandatory",
+    width: "100%",
+  },
+  screenshotSlide: {
+    flexShrink: 0,
+    flexBasis: "auto",
+    scrollSnapAlign: "start",
+  },
+  screenshotButton: {
+    appearance: "none",
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    borderStyle: "solid",
+    borderWidth: 0,
+    cursor: "zoom-in",
+    display: "block",
+    margin: 0,
+    padding: 0,
+    width: "auto",
+  },
+  screenshotImage: {
+    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
+    borderRadius: radius["md"],
+    display: "block",
+    height: "auto",
+    maxHeight: 180,
+    objectFit: "contain",
+    width: "auto",
+  },
 });
 
 function ProductPage() {
@@ -535,6 +574,9 @@ function ProductPage() {
     tone: "neutral" | "critical";
     text: string;
   } | null>(null);
+  const [isScreenshotLightboxOpen, setIsScreenshotLightboxOpen] =
+    useState(false);
+  const [screenshotLightboxIndex, setScreenshotLightboxIndex] = useState(0);
 
   const listingId = listing.id;
 
@@ -756,19 +798,47 @@ function ProductPage() {
 
         {/* screenshots */}
         {listing.screenshots.length > 0 ? (
-          <Flex direction="column" gap="2xl">
-            <Heading2>Screenshots</Heading2>
-            <Flex direction="column" gap="2xl">
-              {listing.screenshots.map((screenshot) => (
-                <img src={screenshot} alt="Screenshot" />
+          <Flex direction="column" gap="4xl" style={styles.screenshotsSection}>
+            <Text size="2xl" weight="semibold">
+              Screenshots
+            </Text>
+            <div {...stylex.props(styles.screenshotCarousel)}>
+              {listing.screenshots.map((screenshot, index) => (
+                <div
+                  key={`${screenshot}-${String(index)}`}
+                  {...stylex.props(styles.screenshotSlide)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScreenshotLightboxIndex(index);
+                      setIsScreenshotLightboxOpen(true);
+                    }}
+                    {...stylex.props(styles.screenshotButton)}
+                  >
+                    <img
+                      src={screenshot}
+                      alt={`${listing.name} screenshot ${String(index + 1)}`}
+                      {...stylex.props(styles.screenshotImage)}
+                    />
+                  </button>
+                </div>
               ))}
-            </Flex>
+            </div>
+            <Lightbox
+              isOpen={isScreenshotLightboxOpen}
+              onOpenChange={setIsScreenshotLightboxOpen}
+              images={listing.screenshots}
+              initialIndex={screenshotLightboxIndex}
+              alt={`${listing.name} screenshot`}
+            />
           </Flex>
         ) : null}
 
         {ecosystemRootId && isRootApp ? (
           <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
         ) : null}
+
         <Flex gap="4xl" direction="column">
           <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
             <Flex

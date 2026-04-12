@@ -158,10 +158,20 @@ function EditProductListingPage() {
         });
       }
 
-      if (values.pendingScreenshotBlobs.length > 0) {
+      const initialScreenshotUrls = (listing.screenshots ?? []).slice(0, 4);
+      const retainedScreenshotUrls = values.retainedScreenshotUrls;
+      const screenshotsChanged =
+        values.pendingScreenshotBlobs.length > 0 ||
+        retainedScreenshotUrls.length !== initialScreenshotUrls.length ||
+        retainedScreenshotUrls.some(
+          (url, index) => url !== initialScreenshotUrls[index],
+        );
+
+      if (screenshotsChanged) {
         await directoryListingApi.updateOwnedProductListingScreenshots({
           data: {
             listingId: productId,
+            retainedExistingScreenshotUrls: retainedScreenshotUrls,
             screenshots: await Promise.all(
               values.pendingScreenshotBlobs.map(async (blob) => ({
                 mimeType:

@@ -39,6 +39,7 @@ import * as dbSchema from '#/db/schema'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import { parseAtUriParts } from '#/lib/atproto/at-uri'
 import { buildListingDetailRecordWithBlobs } from '#/lib/atproto/listing-record'
+import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
 import {
   createAtstorePublishClient,
   getAtstoreRepoDid,
@@ -3611,6 +3612,7 @@ const updateOwnedProductListingImageInput = z.object({
 
 const updateOwnedProductListingScreenshotsInput = z.object({
   listingId: z.string().uuid(),
+  retainedExistingScreenshotUrls: z.array(z.string().min(1)).max(4).default([]),
   screenshots: z
     .array(
       z.object({
@@ -3618,7 +3620,6 @@ const updateOwnedProductListingScreenshotsInput = z.object({
         imageBase64: z.string().min(1),
       }),
     )
-    .min(1)
     .max(4),
 })
 
@@ -3798,7 +3799,12 @@ const updateOwnedProductListingScreenshots = createServerFn({ method: 'POST' })
       throw new Error('This listing is not associated with your account.')
     }
 
-    const screenshots = data.screenshots.map((screenshot, index) => {
+    const retainedExistingScreenshotUrls = data.retainedExistingScreenshotUrls
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0)
+      .slice(0, 4)
+
+    const uploadedScreenshots = data.screenshots.map((screenshot, index) => {
       const mimeType = screenshot.mimeType.trim().toLowerCase()
       if (!mimeType.startsWith('image/')) {
         throw new Error(`Screenshot ${index + 1} must be an image.`)
@@ -3818,12 +3824,49 @@ const updateOwnedProductListingScreenshots = createServerFn({ method: 'POST' })
       }
     })
 
+    const keepExistingScreenshotsAsBlobs =
+      retainedExistingScreenshotUrls.length > 0 && uploadedScreenshots.length > 0
+        ? await Promise.all(
+            retainedExistingScreenshotUrls.map(async (url, index) => {
+              const existingIndex = index + 1
+              let resolved
+              try {
+                resolved = await resolveUrlToImageBytes(url)
+              } catch {
+                throw new Error(
+                  `Could not keep existing screenshot ${existingIndex}; please re-upload it.`,
+                )
+              }
+              if (
+                !resolved.mimeType.startsWith('image/') ||
+                resolved.bytes.length === 0 ||
+                resolved.bytes.length > 12_000_000
+              ) {
+                throw new Error(
+                  `Existing screenshot ${existingIndex} is invalid; please re-upload it.`,
+                )
+              }
+              return resolved
+            }),
+          )
+        : []
+
+    const finalScreenshotOverrides =
+      retainedExistingScreenshotUrls.length === 0 &&
+      uploadedScreenshots.length === 0
+        ? []
+        : uploadedScreenshots.length > 0
+          ? [...keepExistingScreenshotsAsBlobs, ...uploadedScreenshots].slice(0, 4)
+          : undefined
+
     const { uri, dbUrls } = await publishOwnedListingDetail(
       session.client,
       session.did,
       full,
-      undefined,
-      { screenshots },
+      { screenshotUrls: retainedExistingScreenshotUrls },
+      finalScreenshotOverrides !== undefined
+        ? { screenshots: finalScreenshotOverrides }
+        : undefined,
     )
 
     const now = new Date()

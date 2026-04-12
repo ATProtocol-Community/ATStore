@@ -177,7 +177,7 @@ export async function buildListingDetailRecordWithBlobs(
   )
 
   const screenshots: AtprotoBlob[] = []
-  if (blobOverrides?.screenshots && blobOverrides.screenshots.length > 0) {
+  if (blobOverrides?.screenshots !== undefined) {
     for (const screenshot of blobOverrides.screenshots.slice(0, 4)) {
       if (!screenshot.mimeType.startsWith('image/')) continue
       screenshots.push(

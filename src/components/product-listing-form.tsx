@@ -352,6 +352,7 @@ export type ProductListingFormSubmitValues = {
   pendingHeroBlob: Blob | null;
   pendingIconBlob: Blob | null;
   pendingScreenshotBlobs: Blob[];
+  retainedScreenshotUrls: string[];
 };
 
 export type ProductListingFormInitialValues = {
@@ -513,9 +514,6 @@ export function ProductListingForm({
   const hasRequiredScreenshots = screenshotItems.length >= 1;
   const hasRequiredImages =
     hasHeroImage && hasIconImage && hasRequiredScreenshots;
-  const isEditingPendingScreenshots = screenshotItems.some(
-    (item) => item.blob !== null,
-  );
 
   const { dragAndDropHooks } = useDragAndDrop({
     getItems: (keys) =>
@@ -523,9 +521,6 @@ export function ProductListingForm({
         "text/plain": String(key),
       })),
     onReorder: (event) => {
-      if (!isEditingPendingScreenshots) {
-        return;
-      }
       setScreenshotItems((currentItems) =>
         reorderScreenshotItems(currentItems, event.keys, event.target),
       );
@@ -578,14 +573,8 @@ export function ProductListingForm({
     if (imageFiles.length === 0) {
       return;
     }
-    const hasPendingItems = screenshotItems.some((item) => item.blob != null);
-    if (!hasPendingItems) {
-      for (const url of pendingScreenshotObjectUrlsRef.current) {
-        URL.revokeObjectURL(url);
-      }
-      pendingScreenshotObjectUrlsRef.current.clear();
-    }
-    const baseItems = hasPendingItems ? screenshotItems : [];
+
+    const baseItems = screenshotItems;
     const availableSlots = MAX_SCREENSHOT_COUNT - baseItems.length;
     if (availableSlots <= 0) {
       return;
@@ -633,6 +622,9 @@ export function ProductListingForm({
             pendingHeroBlob: pendingHeroBlobRef.current,
             pendingIconBlob: pendingIconBlobRef.current,
             pendingScreenshotBlobs: pendingScreenshotBlobsRef.current,
+            retainedScreenshotUrls: screenshotItems
+              .filter((item) => item.blob == null)
+              .map((item) => item.previewUrl),
           });
         }}
       >
@@ -925,11 +917,7 @@ export function ProductListingForm({
                       aria-label="Selected screenshots"
                       items={screenshotItems}
                       selectionMode="none"
-                      dragAndDropHooks={
-                        isEditingPendingScreenshots
-                          ? dragAndDropHooks
-                          : undefined
-                      }
+                      dragAndDropHooks={dragAndDropHooks}
                       {...stylex.props(styles.screenshotPreviewGrid)}
                     >
                       {(item) => (
@@ -955,21 +943,19 @@ export function ProductListingForm({
                                 Reorder
                               </Flex>
                             </Button>
-                            {isEditingPendingScreenshots ? (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                isDisabled={isSubmitting}
-                                onPress={() => {
-                                  onRemoveScreenshot(item.id);
-                                }}
-                              >
-                                <Flex align="center" gap="xs">
-                                  <Trash2 size={14} />
-                                  Delete
-                                </Flex>
-                              </Button>
-                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              isDisabled={isSubmitting}
+                              onPress={() => {
+                                onRemoveScreenshot(item.id);
+                              }}
+                            >
+                              <Flex align="center" gap="xs">
+                                <Trash2 size={14} />
+                                Delete
+                              </Flex>
+                            </Button>
                           </Flex>
                         </AriaListBoxItem>
                       )}
