@@ -85,7 +85,7 @@ export const Route = createFileRoute("/og/")({
           const description = getQueryText(
             url.searchParams,
             "description",
-            "Discover apps and protocol tooling across the Bluesky ecosystem.",
+            "Discover apps and protocol tooling across the Atmosphere ecosystem.",
             220,
           );
           const avatarUrl = getQueryUrl(url.searchParams, "avatar");

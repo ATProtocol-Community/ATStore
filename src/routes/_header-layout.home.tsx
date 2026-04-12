@@ -65,7 +65,7 @@ export const Route = createFileRoute("/_header-layout/home")({
     buildRouteOgMeta({
       title: "at-store | Apps on the Atmosphere",
       description:
-        "Discover apps and protocol tools on the Atmosphere directory, with open identity and portable data.",
+        "Discover apps and tools across the Atmosphere. Find you next favorite app today!",
       image: getHomePageHeroArtSpec("home-og")?.assetPath,
     }),
   component: HomePage,
@@ -918,7 +918,7 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
         </Flex>
       </Card>
     </RouterLink>
-  )
+  );
 }
 
 function StoreIcon({
