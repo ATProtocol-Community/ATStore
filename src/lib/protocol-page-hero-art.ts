@@ -25,6 +25,15 @@ const PROTOCOL_PAGE_HERO_ART_SPECS: ProtocolPageHeroArtSpec[] = [
     subjectPrompt:
       "a premium browse-and-search view of the AT Protocol ecosystem with polished infrastructure cards, flowing query lanes, stacked service surfaces, linked data pathways, and abstract directory-like discovery geometry without literal logos",
   },
+  {
+    heroId: "search",
+    label: "All Listings Search",
+    assetPath: "/generated/protocol-page-heroes/search.png",
+    palettePrompt:
+      "electric blue, cyan, violet, pink, mint, deep indigo, and crisp white highlights",
+    subjectPrompt:
+      "a premium cross-category search experience spanning apps and protocol tools, with floating listing cards, glassy query surfaces, discovery paths, layered metadata chips, and abstract marketplace navigation energy",
+  },
 ];
 
 const protocolPageHeroArtSpecById = new Map(

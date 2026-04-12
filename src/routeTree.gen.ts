@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OgIndexRouteImport } from './routes/og.index'
+import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutHomeRouteImport } from './routes/_header-layout.home'
 import { Route as HeaderLayoutAdminRouteImport } from './routes/_header-layout.admin'
@@ -61,6 +62,11 @@ const OgIndexRoute = OgIndexRouteImport.update({
   id: '/og/',
   path: '/og/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const HeaderLayoutSearchRoute = HeaderLayoutSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const HeaderLayoutNotificationsRoute =
   HeaderLayoutNotificationsRouteImport.update({
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof HeaderLayoutAdminRoute
   '/home': typeof HeaderLayoutHomeRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
+  '/search': typeof HeaderLayoutSearchRoute
   '/og/': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -268,6 +275,7 @@ export interface FileRoutesByTo {
   '/admin': typeof HeaderLayoutAdminRoute
   '/home': typeof HeaderLayoutHomeRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
+  '/search': typeof HeaderLayoutSearchRoute
   '/og': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/_header-layout/admin': typeof HeaderLayoutAdminRoute
   '/_header-layout/home': typeof HeaderLayoutHomeRoute
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
+  '/_header-layout/search': typeof HeaderLayoutSearchRoute
   '/og/': typeof OgIndexRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -339,6 +348,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/home'
     | '/notifications'
+    | '/search'
     | '/og/'
     | '/apps/$tag'
     | '/apps/all'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/home'
     | '/notifications'
+    | '/search'
     | '/og'
     | '/apps/$tag'
     | '/apps/all'
@@ -407,6 +418,7 @@ export interface FileRouteTypes {
     | '/_header-layout/admin'
     | '/_header-layout/home'
     | '/_header-layout/notifications'
+    | '/_header-layout/search'
     | '/og/'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
@@ -477,6 +489,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/og/'
       preLoaderRoute: typeof OgIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_header-layout/search': {
+      id: '/_header-layout/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof HeaderLayoutSearchRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/notifications': {
       id: '/_header-layout/notifications'
@@ -709,6 +728,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutAdminRoute: typeof HeaderLayoutAdminRoute
   HeaderLayoutHomeRoute: typeof HeaderLayoutHomeRoute
   HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
+  HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
   HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
@@ -733,6 +753,7 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutAdminRoute: HeaderLayoutAdminRoute,
   HeaderLayoutHomeRoute: HeaderLayoutHomeRoute,
   HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
+  HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
   HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,

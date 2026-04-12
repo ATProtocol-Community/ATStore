@@ -33,12 +33,12 @@ const styles = stylex.create({
     borderRadius: "999px",
     borderStyle: "solid",
     borderWidth: 2,
-    height: size.lg,
+    height: size.xs,
     pointerEvents: "none",
     position: "absolute",
     right: "-2px",
     top: "-2px",
-    width: size.lg,
+    width: size.xs,
   },
 });
 
@@ -76,75 +76,69 @@ export function NavbarAuth() {
   if (session?.user) {
     const initial = session.user.name?.charAt(0).toUpperCase() ?? "U";
     return (
-      <NavbarAction alwaysVisible>
-        <Menu
-          size="lg"
-          trigger={
-            <div {...stylex.props(styles.avatarTriggerWrapper)}>
-              <AvatarButton
-                size="md"
-                src={session.user.image ?? undefined}
-                fallback={initial}
-              />
-              {unreadCount > 0 && <span {...stylex.props(styles.unreadDot)} />}
-            </div>
-          }
-          placement="bottom end"
+      <Menu
+        size="lg"
+        trigger={
+          <div {...stylex.props(styles.avatarTriggerWrapper)}>
+            <AvatarButton
+              size="md"
+              src={session.user.image ?? undefined}
+              fallback={initial}
+            />
+            {unreadCount > 0 && <span {...stylex.props(styles.unreadDot)} />}
+          </div>
+        }
+        placement="bottom end"
+      >
+        <MenuItem
+          onPress={() => {
+            void navigate({ to: "/notifications" });
+          }}
         >
-          <MenuItem
-            onPress={() => {
-              void navigate({ to: "/notifications" });
-            }}
-          >
-            <Flex align="center" gap="md">
-              Notifications
-              {unreadCount > 0 && (
-                <Badge size="sm" variant="primary">
-                  {unreadCount}
-                </Badge>
-              )}
-            </Flex>
-          </MenuItem>
-          <MenuItem
-            onPress={() => {
-              const did = session.user.did;
-              if (did == null || did === "") {
-                return;
-              }
-              const handle = userProfile?.blueskyHandle?.trim();
-              const actor =
-                handle != null && handle !== ""
-                  ? handle.replace(/^@+/, "")
-                  : did;
-              void navigate({
-                to: "/profile/$actor",
-                params: { actor },
-              });
-            }}
-          >
-            Profile
-          </MenuItem>
-          <MenuItem
-            onPress={() => {
-              void navigate({ to: "/products/create" });
-            }}
-          >
-            Submit a product
-          </MenuItem>
-          <MenuSeparator />
-          <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
-            Log out
-          </MenuItem>
-        </Menu>
-      </NavbarAction>
+          <Flex align="center" gap="md">
+            Notifications
+            {unreadCount > 0 && (
+              <Badge size="sm" variant="primary">
+                {unreadCount}
+              </Badge>
+            )}
+          </Flex>
+        </MenuItem>
+        <MenuItem
+          onPress={() => {
+            const did = session.user.did;
+            if (did == null || did === "") {
+              return;
+            }
+            const handle = userProfile?.blueskyHandle?.trim();
+            const actor =
+              handle != null && handle !== "" ? handle.replace(/^@+/, "") : did;
+            void navigate({
+              to: "/profile/$actor",
+              params: { actor },
+            });
+          }}
+        >
+          Profile
+        </MenuItem>
+        <MenuItem
+          onPress={() => {
+            void navigate({ to: "/products/create" });
+          }}
+        >
+          Submit a product
+        </MenuItem>
+        <MenuSeparator />
+        <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
+          Log out
+        </MenuItem>
+      </Menu>
     );
   }
 
   return (
-    <NavbarAction alwaysVisible>
-      <ButtonLink to="/login" variant="secondary" size="md">
-        Log in
-      </ButtonLink>
-    </NavbarAction>
+    <ButtonLink to="/login" variant="secondary" size="md">
+      Log in
+    </ButtonLink>
   );
 }

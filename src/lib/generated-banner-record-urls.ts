@@ -63,5 +63,6 @@ export const GENERATED_BANNER_RECORD_URLS: Record<string, string> = {
   "/generated/protocol-categories/pds.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-categories/pds.png@png",
   "/generated/protocol-categories/sync.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-categories/sync.png@png",
   "/generated/protocol-page-heroes/listings.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-page-heroes/listings.png@png",
+  "/generated/protocol-page-heroes/search.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-page-heroes/search.png@png",
   "/generated/protocol-page-heroes/tags.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/protocol-page-heroes/tags.png@png"
 }

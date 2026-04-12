@@ -1747,6 +1747,24 @@ const getAllProtocolListingsQueryOptions = queryOptions({
   queryFn: async () => getAllProtocolListings(),
 })
 
+const getAllListings = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const table = context.schema.storeListings
+    const rows = await context.db
+      .select(getListingSelect(table))
+      .from(table)
+      .where(listingPublicWhere(table))
+      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+
+    return rows.map(toListingCard)
+  })
+
+const getAllListingsQueryOptions = queryOptions({
+  queryKey: ['storeListings', 'allListings'],
+  queryFn: async () => getAllListings(),
+})
+
 const getDirectoryListingDetail = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(
@@ -3879,6 +3897,8 @@ export const directoryListingApi = {
   getProtocolCategoryPageQueryOptions,
   getAllProtocolListings,
   getAllProtocolListingsQueryOptions,
+  getAllListings,
+  getAllListingsQueryOptions,
   getDirectoryListingDetail,
   getDirectoryListingDetailQueryOptions,
   getDirectoryListingDetailBySlug,
