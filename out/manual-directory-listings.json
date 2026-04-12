@@ -1331,5 +1331,27 @@
     "vertical": null,
     "classificationReason": "Chavatar is a user-facing Bluesky utility focused on profile avatar personalization and automation, so it fits the Bluesky tools category with an identity domain.",
     "categorySlug": "apps/bluesky/tool"
+  },
+  {
+    "name": "Sequoia",
+    "sourceUrl": "https://sequoia.pub/",
+    "externalUrl": "https://sequoia.pub/",
+    "iconUrl": "/generated/listing-icons/sequoia-icon.jpg",
+    "screenshotUrls": [
+      "/generated/listings/sequoia-screenshot.jpg"
+    ],
+    "appTags": [
+      "developer",
+      "publishing"
+    ],
+    "tagline": "Publish evergreen content to the ATmosphere.",
+    "fullDescription": "Sequoia is a simple CLI for turning existing static blog content into standard.site documents and publishing them to the AT Protocol. It supports OAuth-based auth, framework integrations, and local or CI workflows so developers can ship evergreen posts to the ATmosphere with minimal migration overhead.",
+    "rawCategoryHint": "Publishing CLI",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": "publishing",
+    "classificationReason": "Sequoia is a developer-focused CLI for publishing standard.site content to the AT Protocol, so it fits a dedicated app category for Sequoia ecosystem tooling.",
+    "categorySlug": "apps/sequoia"
   }
 ]
