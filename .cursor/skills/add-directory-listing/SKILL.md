@@ -17,7 +17,7 @@ Add a new manual listing to the at-store directory with:
 - optional DB import
 
 Use the repo script for the repetitive parts and do lightweight research for the judgment calls.
-Default to `--no-import` unless the user explicitly asks for DB import.
+Default to importing and publishing. Use `--no-import` only when the user explicitly asks for JSON-only changes.
 
 ## Inputs to gather
 
@@ -42,10 +42,10 @@ Default to `--no-import` unless the user explicitly asks for DB import.
    - If the site has no good square icon, first try the in-app `Generate icon` dev action to create a local candidate from the homepage screenshot
    - The generated icon prompt uses style fallbacks: brand mark first, then motif/monogram from the wordmark, then a restrained gradient-plus-symbol treatment for weak branding
    - If the generated result still feels generic or off-brand, create a simple local SVG icon inspired by the branding instead
-3. Add or update the manual source entry with `npm run listing:add -- ... --no-import`
-4. Publish to ATProto (preferred default):
+3. Add or update the manual source entry with `npm run listing:add -- ...` (import by default)
+4. Publish to ATProto (default):
    - `pnpm listing:publish-store <slug-or-uuid>`
-5. Verify DB import only if the user explicitly asked for import.
+5. Verify DB import unless the user explicitly requested `--no-import`.
 
 ## Asset rules
 
@@ -61,7 +61,7 @@ Default to `--no-import` unless the user explicitly asks for DB import.
 Primary command:
 
 ```bash
-npm run listing:add -- --name "Product" --source-url "https://source" --category-slug "protocol/pds" --no-import ...
+npm run listing:add -- --name "Product" --source-url "https://source" --category-slug "protocol/pds" ...
 ```
 
 Common flags:
@@ -112,7 +112,7 @@ Good fallback pattern:
 - Confirm downloaded/generated assets exist under `public/generated/listings/`.
 - If you used the in-app generator, confirm the resulting `iconUrl` or `screenshotUrls[0]` point at local generated assets.
 - If published, confirm the command returns an `at://` URI.
-- If imported (explicit opt-in), confirm the listing row resolves to the expected `iconUrl` and `categorySlug`.
+- If imported (default), confirm the listing row resolves to the expected `iconUrl` and `categorySlug`.
 
 ## Examples
 

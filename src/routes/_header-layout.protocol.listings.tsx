@@ -4,6 +4,7 @@ import {
   createFileRoute,
   createLink,
   Link as RouterLink,
+  useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -16,6 +17,7 @@ import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
+import { Select, SelectItem } from "../design-system/select";
 import { StarRating } from "../design-system/star-rating";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
@@ -37,10 +39,23 @@ import { Badge } from "#/design-system/badge";
 
 const LinkLink = createLink(Link);
 
+const sortOptions = [
+  { id: "trending", label: "Trending" },
+  { id: "newest", label: "Newest" },
+] as const;
+
 export const Route = createFileRoute("/_header-layout/protocol/listings")({
-  loader: ({ context }) =>
+  validateSearch: (search): { sort: "trending" | "newest" } => ({
+    sort: search.sort === "newest" ? "newest" : "trending",
+  }),
+  loaderDeps: ({ search }) => ({
+    sort: search.sort,
+  }),
+  loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(
-      directoryListingApi.getAllProtocolListingsQueryOptions,
+      directoryListingApi.getAllProtocolListingsQueryOptions({
+        sort: deps.sort === "newest" ? "newest" : "popular",
+      }),
     ),
   head: () =>
     buildRouteOgMeta({
@@ -64,9 +79,16 @@ const styles = stylex.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
+  resultsActions: {
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
   resultCount: {
     letterSpacing: "0.16em",
     textTransform: "uppercase",
+  },
+  sortSelect: {
+    minWidth: "12rem",
   },
   listingGrid: {
     display: "grid",
@@ -141,8 +163,12 @@ const styles = stylex.create({
 });
 
 function ProtocolListingsPage() {
+  const search = Route.useSearch();
+  const router = useRouter();
   const { data: listings } = useSuspenseQuery(
-    directoryListingApi.getAllProtocolListingsQueryOptions,
+    directoryListingApi.getAllProtocolListingsQueryOptions({
+      sort: search.sort === "newest" ? "newest" : "popular",
+    }),
   );
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
@@ -205,6 +231,29 @@ function ProtocolListingsPage() {
                   normalizedQuery,
                 )}
               </SmallBody>
+            </Flex>
+            <Flex gap="xl" style={styles.resultsActions}>
+              <Select
+                aria-label="Sort protocol listings"
+                items={sortOptions}
+                placeholder="Sort protocol listings"
+                size="lg"
+                style={styles.sortSelect}
+                value={search.sort}
+                variant="secondary"
+                onChange={(key) => {
+                  if (key !== "trending" && key !== "newest") {
+                    return;
+                  }
+
+                  void router.navigate({
+                    to: "/protocol/listings",
+                    search: { sort: key },
+                  });
+                }}
+              >
+                {(item) => <SelectItem>{item.label}</SelectItem>}
+              </Select>
             </Flex>
           </Flex>
 

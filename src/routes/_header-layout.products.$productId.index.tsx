@@ -212,6 +212,9 @@ const styles = stylex.create({
     cornerShape: "squircle",
     overflow: "hidden",
     position: "relative",
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderColor: uiColor.component3,
   },
   heroImage: {
     aspectRatio: "16 / 9",

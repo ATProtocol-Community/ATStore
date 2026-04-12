@@ -784,7 +784,6 @@ function buildProtocolCategoryGroups(rows: DirectoryListingRow[]): DirectoryProt
 function buildAllProtocolListings(rows: DirectoryListingRow[]) {
   return dedupeListings(rows.filter(isBrowseableProtocolRow))
     .map(toListingCard)
-    .sort((left, right) => left.name.localeCompare(right.name))
 }
 
 function buildHomePageTagSummaries(
@@ -1725,9 +1724,15 @@ function getProtocolCategoryPageQueryOptions(
   })
 }
 
+const getAllProtocolListingsInput = z.object({
+  sort: z.enum(['popular', 'newest']).default('popular'),
+})
+
 const getAllProtocolListings = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
-  .handler(async ({ context }) => {
+  .inputValidator(getAllProtocolListingsInput)
+  .handler(async ({ data, context }) => {
+    const input = getAllProtocolListingsInput.parse(data)
     const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
@@ -1738,33 +1743,61 @@ const getAllProtocolListings = createServerFn({ method: 'GET' })
           sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
         ),
       )
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(
+        input.sort === 'newest'
+          ? desc(table.createdAt)
+          : desc(table.updatedAt),
+        desc(table.createdAt),
+      )
 
     return buildAllProtocolListings(rows)
   })
 
-const getAllProtocolListingsQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'allProtocol'],
-  queryFn: async () => getAllProtocolListings(),
+function getAllProtocolListingsQueryOptions(
+  input: z.input<typeof getAllProtocolListingsInput> = {},
+) {
+  const normalizedInput = getAllProtocolListingsInput.parse(input)
+
+  return queryOptions({
+    queryKey: ['storeListings', 'allProtocol', normalizedInput],
+    queryFn: async () => getAllProtocolListings({ data: normalizedInput }),
+  })
+}
+
+const getAllListingsInput = z.object({
+  sort: z.enum(['popular', 'newest']).default('popular'),
 })
 
 const getAllListings = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
-  .handler(async ({ context }) => {
+  .inputValidator(getAllListingsInput)
+  .handler(async ({ data, context }) => {
+    const input = getAllListingsInput.parse(data)
     const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(listingPublicWhere(table))
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(
+        input.sort === 'newest'
+          ? desc(table.createdAt)
+          : desc(table.updatedAt),
+        desc(table.createdAt),
+      )
 
     return rows.map(toListingCard)
   })
 
-const getAllListingsQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'allListings'],
-  queryFn: async () => getAllListings(),
-})
+function getAllListingsQueryOptions(
+  input: z.input<typeof getAllListingsInput> = {},
+) {
+  const normalizedInput = getAllListingsInput.parse(input)
+
+  return queryOptions({
+    queryKey: ['storeListings', 'allListings', normalizedInput],
+    queryFn: async () => getAllListings({ data: normalizedInput }),
+  })
+}
 
 const getDirectoryListingDetail = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])

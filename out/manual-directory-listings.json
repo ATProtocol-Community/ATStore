@@ -646,5 +646,325 @@
     "vertical": null,
     "classificationReason": "Docs.surf is a standalone reader and discovery app built around the Standard.site publishing ecosystem, so it fits best as an app-root entry at apps/docs-surf rather than as protocol infrastructure.",
     "categorySlug": "apps/docs-surf"
+  },
+  {
+    "name": "Bluefeed",
+    "sourceUrl": "https://www.bluefeed.app/",
+    "externalUrl": "https://www.bluefeed.app/",
+    "iconUrl": "/generated/listings/bluefeed-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/bluefeed-screenshot.jpg"
+    ],
+    "tagline": "Feed Builder & Viewer for Bluesky.",
+    "fullDescription": "Bluefeed is a web app for building and viewing custom Bluesky feeds, helping users curate timeline experiences around specific topics and communities.",
+    "rawCategoryHint": "Feed Builder",
+    "scope": "bluesky",
+    "productType": "tool",
+    "domain": "feed-discovery",
+    "vertical": null,
+    "classificationReason": "Bluefeed is purpose-built for creating and browsing custom Bluesky feeds, so it fits the Bluesky feed-generators category.",
+    "categorySlug": "apps/bluesky/feed-generators"
+  },
+  {
+    "name": "Skyblur",
+    "sourceUrl": "https://skyblur.uk/",
+    "externalUrl": "https://skyblur.uk/",
+    "iconUrl": "/generated/listings/skyblur-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/skyblur-screenshot.png"
+    ],
+    "tagline": "Post spoiler-protected Bluesky content with bracket-based blur markup.",
+    "fullDescription": "Skyblur is an AT Protocol-compatible posting tool for Bluesky that lets you mask spoiler text by wrapping segments in square brackets before publishing. It posts directly to Bluesky with blurred placeholders in-feed while preserving a readable unblurred version in Skyblur, so people can opt in to reveal hidden content.",
+    "rawCategoryHint": "Bluesky moderation",
+    "scope": "bluesky",
+    "productType": "standalone_app",
+    "domain": "moderation",
+    "vertical": null,
+    "classificationReason": "Skyblur helps users apply spoiler masking and content warnings to Bluesky posts, which is a moderation and safety workflow, so it fits apps/bluesky/moderation.",
+    "categorySlug": "apps/bluesky/moderation"
+  },
+  {
+    "name": "SensorThings on ATProto",
+    "sourceUrl": "https://sensorthings.dev/",
+    "externalUrl": "https://sensorthings.dev/",
+    "iconUrl": "/generated/listings/sensorthings-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/sensorthings-screenshot.png"
+    ],
+    "tagline": "Map and time-series explorer for environmental sensor records on AT Protocol.",
+    "fullDescription": "SensorThings on ATProto is a web app for exploring Irish environmental monitoring data published as signed AT Protocol records. It visualizes station locations and datastream history for water levels, ocean conditions, air quality, and weather while exposing the underlying OGC SensorThings-style entity model and AT-URI-linked records.",
+    "rawCategoryHint": "Location app",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "discovery",
+    "vertical": null,
+    "classificationReason": "The product is a user-facing geospatial and time-series exploration app centered on station locations and place-based sensor datastreams, so it fits an apps/location category.",
+    "categorySlug": "apps/location"
+  },
+  {
+    "name": "mapped.at",
+    "sourceUrl": "https://mapped.at/",
+    "externalUrl": "https://mapped.at/",
+    "iconUrl": "/generated/listings/mapped-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/mapped-screenshot.gif"
+    ],
+    "tagline": "Trails and activities, built on the open AT protocol.",
+    "fullDescription": "mapped.at is an AT Protocol app for discovering community trails, logging outdoor activities, and connecting with other adventurers on an open, decentralized network.",
+    "rawCategoryHint": "Location app",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "location",
+    "vertical": null,
+    "classificationReason": "mapped.at centers on trail discovery and activity logging with social features, making it a location-focused AT Protocol app.",
+    "categorySlug": "apps/location"
+  },
+  {
+    "name": "GainForest",
+    "sourceUrl": "https://gainforest.app/",
+    "externalUrl": "https://gainforest.app/",
+    "iconUrl": "/generated/listings/gainforest-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/gainforest-screenshot.jpg"
+    ],
+    "tagline": "Protecting and restoring Earth's forests with transparent conservation data.",
+    "fullDescription": "GainForest is a decentralized platform for forest conservation that combines satellite monitoring, AI models, and transparent funding flows to support restoration and stewardship projects. The app visualizes project locations and environmental signals while helping communities and supporters track outcomes over time.",
+    "rawCategoryHint": "Location app",
+    "scope": "cross-network",
+    "productType": "app",
+    "domain": "location",
+    "vertical": null,
+    "classificationReason": "GainForest is map- and place-centric, presenting conservation projects through geospatial context and location-based monitoring, so it fits apps/location.",
+    "categorySlug": "apps/location"
+  },
+  {
+    "name": "FreeMix",
+    "sourceUrl": "https://freemix.fm/",
+    "externalUrl": "https://freemix.fm/",
+    "iconUrl": "/generated/listings/freemix-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/freemix-screenshot.png"
+    ],
+    "tagline": "Your music. Your stems. Your rules.",
+    "fullDescription": "FreeMix is a decentralized music platform built on AT Protocol for sharing, discovering, and remixing tracks, stems, and samples with clear open licensing. It supports producer-focused workflows like stem uploads, remix trees, activity feeds, and explicit license controls so artists can collaborate while keeping rights transparent.",
+    "rawCategoryHint": "Music Remix App",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "music",
+    "vertical": null,
+    "classificationReason": "FreeMix is a standalone AT Protocol-native music product focused on uploading, licensing, and remixing tracks and stems, so it fits best as an app-root entry at apps/freemix with a music domain.",
+    "categorySlug": "apps/freemix"
+  },
+  {
+    "name": "Hyperboards",
+    "sourceUrl": "https://www.hyperboards.org/",
+    "externalUrl": "https://www.hyperboards.org/",
+    "iconUrl": "/generated/listings/hyperboards-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/hyperboards-screenshot.jpg"
+    ],
+    "tagline": "See who built what, beautifully.",
+    "fullDescription": "Hyperboards is an ATProto-native app for turning signed contributor records into live, embeddable treemap boards. It helps open-source teams, climate projects, DAOs, and collectives make contribution data visible with portable, verifiable attribution that updates continuously.",
+    "rawCategoryHint": "Developer Tool",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Hyperboards is a builder-focused ATProto tool for recording and visualizing contribution data in embeddable boards, making it a strong fit for the Bluesky tooling category and the Developers app tag.",
+    "categorySlug": "apps/bluesky/tool"
+  },
+  {
+    "name": "dinger.tv",
+    "sourceUrl": "https://dinger.tv/",
+    "externalUrl": "https://dinger.tv/",
+    "iconUrl": "/generated/listings/dinger-tv-icon.jpg",
+    "screenshotUrls": [
+      "/generated/listings/dinger-tv-screenshot.png"
+    ],
+    "tagline": "Live Home Run Control Center for Bluesky.",
+    "fullDescription": "dinger.tv is a sports feed app for Bluesky that tracks MLB home run posts in real time. You can follow every home run by default, or sign in with Bluesky to favorite specific players and teams, save those picks, and narrow the feed to exactly the hitters and clubs you care about.",
+    "rawCategoryHint": "Sports feed app",
+    "scope": "bluesky",
+    "productType": "standalone_app",
+    "domain": "feed-discovery",
+    "vertical": "sports",
+    "classificationReason": "dinger.tv is a user-facing sports app with its own product identity that helps people customize and preview a Bluesky home run feed, so it fits best as an app-root listing at apps/dinger-tv with a sports vertical.",
+    "categorySlug": "apps/dinger-tv"
+  },
+  {
+    "name": "Passing Reads",
+    "sourceUrl": "https://www.passingreads.org/",
+    "externalUrl": "https://www.passingreads.org/",
+    "iconUrl": "/generated/listings/passingreads-icon.png",
+    "screenshotUrls": [],
+    "tagline": "Share your old books with new friends and discover stories nearby.",
+    "fullDescription": "Passing Reads is a local book-sharing app where people leave physical books for others to find, read, and pass on. It helps readers discover nearby dropped books, track community activity, and print labels so books can keep moving from one reader to the next.",
+    "rawCategoryHint": "Location app",
+    "scope": "cross-network",
+    "productType": "app",
+    "domain": "location",
+    "vertical": "books",
+    "classificationReason": "Passing Reads centers on finding and sharing physical books by nearby location, so it best fits apps/location with a books vertical.",
+    "categorySlug": "apps/location"
+  },
+  {
+    "name": "ATBuddy",
+    "sourceUrl": "https://atbuddy.app/",
+    "externalUrl": "https://atbuddy.app/",
+    "iconUrl": "/generated/listings/atbuddy-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atbuddy-screenshot.svg"
+    ],
+    "tagline": "Your AT Protocol Companion",
+    "fullDescription": "ATBuddy is a decentralized virtual-pet companion built on AT Protocol. You hatch, feed, and care for your buddy through the app or by mentioning @atbuddy.app on Bluesky for commands like stats, user lookup, achievements, and help, with buddy state stored in your own PDS account rather than in a centralized backend.",
+    "rawCategoryHint": "Virtual Pet",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "games",
+    "vertical": null,
+    "classificationReason": "ATBuddy is a standalone consumer game experience built around an AT Protocol identity with gameplay interactions in-app and via Bluesky, so it fits best as an app-root listing with games domain at apps/atbuddy.",
+    "categorySlug": "apps/atbuddy"
+  },
+  {
+    "name": "Registry.Blue",
+    "sourceUrl": "https://registry.blue/",
+    "externalUrl": "https://registry.blue/",
+    "iconUrl": "/generated/listings/registry-blue-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/registry-blue-screenshot.png"
+    ],
+    "tagline": "A wishlist and registry app, powered by the AT Protocol.",
+    "fullDescription": "Registry.Blue is an AT Protocol-native wishlist and registry app where people can create, share, and manage gift wishlists with Bluesky login.",
+    "rawCategoryHint": "Social app",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "community_social",
+    "vertical": null,
+    "classificationReason": "Registry.Blue is a user-facing social wishlist product with its own brand and workflow, so it fits best as an app-root listing at apps/registry-blue while also mapping to the Social app tag.",
+    "categorySlug": "apps/registry-blue"
+  },
+  {
+    "name": "Botwatch",
+    "sourceUrl": "https://botwatch.net/",
+    "externalUrl": "https://botwatch.net/",
+    "iconUrl": "/generated/listings/botwatch-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/botwatch-screenshot.jpg"
+    ],
+    "tagline": "Fight bots with shared bot and trust scores.",
+    "fullDescription": "Botwatch is a trust and anti-bot app where people flag suspected bot accounts, verify humans, and publish trust scores others can evaluate. It is built to make moderation and reputation signals transparent and verifiable so communities can decide who to trust.",
+    "rawCategoryHint": "Developer Tool",
+    "scope": "bluesky",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Botwatch provides technical trust and bot-scoring infrastructure for Bluesky communities, so it fits the Bluesky tooling category and the Developer app tag.",
+    "categorySlug": "apps/bluesky/tool"
+  },
+  {
+    "name": "Ptah Protocol",
+    "sourceUrl": "https://ptah.world/",
+    "externalUrl": "https://ptah.world/",
+    "iconUrl": "/generated/listings/ptah-protocol-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/ptah-protocol-screenshot.png"
+    ],
+    "tagline": "Open infrastructure for creative authorship on the AT Protocol.",
+    "fullDescription": "Ptah Protocol is an open lexicon suite for creative world-building on AT Protocol, with fifteen record types for authorship, attribution, lineage, rights, and versioned creative objects across media. It publishes production schemas under world.ptah.* so any AppView or client can index and render interoperable records without a central platform owner.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "Ptah Protocol defines and publishes interoperable AT Protocol lexicon schemas under world.ptah.* for modeling creative records, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "ATCR",
+    "sourceUrl": "https://atcr.io/",
+    "externalUrl": "https://atcr.io/",
+    "iconUrl": "/generated/listings/atcr-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/atcr-screenshot.png"
+    ],
+    "tagline": "Push and pull Docker images on the AT Protocol.",
+    "fullDescription": "ATCR is a distributed container registry for AT Protocol that lets developers push and pull OCI-compatible Docker images with standard Docker commands while browsing and discovering public registries.",
+    "rawCategoryHint": "Developers",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "developer-infrastructure",
+    "vertical": "devops",
+    "classificationReason": "ATCR provides developer infrastructure for building and deploying AT Protocol services using OCI container workflows.",
+    "categorySlug": "apps/developers"
+  },
+  {
+    "name": "Markpub.at",
+    "sourceUrl": "https://markpub.at/",
+    "externalUrl": "https://markpub.at/",
+    "iconUrl": "/generated/listings/markpub-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/markpub-at-screenshot.jpg"
+    ],
+    "tagline": "ATProto lexicons for portable Markdown publishing.",
+    "fullDescription": "Markpub.at publishes the at.markpub.markdown lexicon family for embedding Markdown in AT Protocol records, including metadata for flavor, rendering rules, facets, and optional front matter/lenses.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "spec",
+    "domain": "publishing",
+    "vertical": null,
+    "classificationReason": "Defines reusable ATProto lexicon schemas for representing and transporting Markdown content across apps.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "Starrysky",
+    "sourceUrl": "https://starrysky.app/",
+    "externalUrl": "https://starrysky.app/",
+    "iconUrl": "/generated/listings/starrysky-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/starrysky-screenshot.svg"
+    ],
+    "tagline": "AT Protocol based streaks and achievements.",
+    "fullDescription": "Starrysky is a productivity app built on AT Protocol that helps users maintain daily check-in streaks and track achievements tied to their social identity.",
+    "rawCategoryHint": "Productivity",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "productivity",
+    "vertical": "productivity",
+    "classificationReason": "Starrysky is a standalone AT Protocol app focused on daily habits, streak tracking, and achievement progress, which maps best to productivity.",
+    "categorySlug": "apps/productivity"
+  },
+  {
+    "name": "lore.farm",
+    "sourceUrl": "https://lore.farm/",
+    "externalUrl": "https://lore.farm/",
+    "iconUrl": "/generated/listings/lore-farm-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/lore-farm-screenshot.png"
+    ],
+    "tagline": "Collectivized canon for fictional worlds.",
+    "fullDescription": "lore.farm is an AT Protocol indexer for collaborative worldbuilding that tracks lore and canon declarations as verifiable records across Bluesky and the ATmosphere, helping communities build collectively owned fictional worlds.",
+    "rawCategoryHint": "Social app",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "community_social",
+    "vertical": "social",
+    "classificationReason": "lore.farm is a user-facing collaborative storytelling product built on AT Protocol where communities create and curate shared canon, so it fits an apps/social classification.",
+    "categorySlug": "apps/social"
+  },
+  {
+    "name": "atpr.to",
+    "sourceUrl": "https://atpr.to/",
+    "externalUrl": "https://atpr.to/",
+    "iconUrl": "/generated/listings/atpr-to-icon.svg",
+    "screenshotUrls": [],
+    "tagline": "AT Protocol URL shortener — links stored in your own PDS.",
+    "fullDescription": "atpr.to is an AT Protocol URL shortener that lets users create, manage, and search short links tied to their handle or DID, with QR exports and JSON API access.",
+    "rawCategoryHint": "Developers",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "developer-infrastructure",
+    "vertical": "devtools",
+    "classificationReason": "atpr.to provides AT Protocol-native link management and API tooling useful to developers and technical operators, fitting the developers app category.",
+    "categorySlug": "apps/developers"
   }
 ]

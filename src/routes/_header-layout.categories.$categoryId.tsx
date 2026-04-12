@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
+import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
@@ -40,6 +41,7 @@ import { Body, Heading1, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import {
   directoryListingApi,
+  type DirectoryCategoryPageData,
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
@@ -50,6 +52,7 @@ import {
 } from "../lib/directory-categories";
 import { getCategoryBentoArtSpec } from "../lib/category-bento-art";
 import { getEcosystemHeroAssetPathForCategory } from "../lib/ecosystem-hero-art";
+import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
@@ -157,6 +160,15 @@ const styles = stylex.create({
   },
   childDescription: {
     color: uiColor.textContrast,
+  },
+  relatedSection: {
+    gap: gap["5xl"],
+  },
+  relatedHeader: {
+    maxWidth: "44rem",
+  },
+  relatedDescription: {
+    maxWidth: "40rem",
   },
   listingGrid: {
     display: "grid",
@@ -362,6 +374,9 @@ function CategoryPage() {
       categoryId,
     }),
   );
+  const { data: categoryTree } = useSuspenseQuery(
+    directoryListingApi.getDirectoryCategoryTreeQueryOptions,
+  );
 
   if (!data) {
     throw notFound();
@@ -380,6 +395,7 @@ function CategoryPage() {
           `${category.pathIds[0]}/${category.pathIds[1]}`,
         )
       : null;
+  const otherAppCategories = getOtherAppCategories(data, categoryTree);
 
   return (
     <Page.Root variant="large" style={styles.page}>
@@ -438,8 +454,46 @@ function CategoryPage() {
             </Grid>
           </Flex>
         ) : null}
+
+        {otherAppCategories.length > 0 ? (
+          <RelatedAppCategoriesSection
+            categories={otherAppCategories}
+            listings={data.listings}
+          />
+        ) : null}
       </Flex>
     </Page.Root>
+  );
+}
+
+function RelatedAppCategoriesSection({
+  categories,
+  listings,
+}: {
+  categories: DirectoryCategoryTreeNode[];
+  listings: DirectoryListingCard[];
+}) {
+  return (
+    <Flex direction="column" style={styles.relatedSection}>
+      <Flex direction="column" gap="4xl" style={styles.relatedHeader}>
+        <Text size="3xl" weight="semibold">
+          Other app categories
+        </Text>
+        <Body variant="secondary" style={styles.relatedDescription}>
+          Explore neighboring app categories to discover more tools in adjacent
+          workflows.
+        </Body>
+      </Flex>
+      <Grid style={styles.childGrid}>
+        {categories.map((category) => (
+          <EcosystemCategoryCard
+            key={category.id}
+            category={category}
+            imageSrc={pickListingImageForCategoryBranch(category.id, listings)}
+          />
+        ))}
+      </Grid>
+    </Flex>
   );
 }
 
@@ -576,16 +630,68 @@ function getAccentSurface(accent: DirectoryListingCard["accent"]) {
   return styles.blueSurface;
 }
 
-function getAccentGlow(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.pinkGlow;
-  if (accent === "purple") return styles.purpleGlow;
-  if (accent === "green") return styles.greenGlow;
-
-  return styles.blueGlow;
-}
-
 function formatCount(count: number) {
   return `${count} ${count === 1 ? "listing" : "listings"}`;
+}
+
+function getOtherAppCategories(
+  pageData: DirectoryCategoryPageData,
+  categoryTree: DirectoryCategoryTreeNode[],
+) {
+  const currentCategory = pageData.category;
+  if (currentCategory.pathIds[0] !== "apps") {
+    return [];
+  }
+
+  const parentCategoryId = currentCategory.pathIds.slice(0, -1).join("/");
+  const parentNode = findCategoryNodeById(categoryTree, parentCategoryId);
+  const appsRootNode = findCategoryNodeById(categoryTree, "apps");
+
+  const siblingCategories =
+    parentNode?.children.filter((node) => node.id !== currentCategory.id) ?? [];
+
+  const appRootCategories =
+    appsRootNode?.children.filter((node) => node.id !== currentCategory.id) ??
+    [];
+
+  const allCandidates = [...siblingCategories, ...appRootCategories];
+  const seen = new Set<string>();
+
+  return allCandidates
+    .filter((category) => category.count > 0)
+    .filter((category) => {
+      if (seen.has(category.id)) {
+        return false;
+      }
+      seen.add(category.id);
+      return true;
+    })
+    .sort((left, right) => {
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+
+      return left.label.localeCompare(right.label);
+    })
+    .slice(0, 3);
+}
+
+function findCategoryNodeById(
+  nodes: DirectoryCategoryTreeNode[],
+  categoryId: string,
+): DirectoryCategoryTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === categoryId) {
+      return node;
+    }
+
+    const match = findCategoryNodeById(node.children, categoryId);
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
 }
 
 function getInitials(name: string) {
