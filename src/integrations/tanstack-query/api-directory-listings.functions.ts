@@ -66,6 +66,8 @@ import {
 } from '#/lib/bluesky-public-profile'
 import { findEligibleProductClaimsForDid } from '#/lib/product-claim-eligibility'
 import { protocolRecordImageUrlOrNull } from '#/lib/atproto/protocol-record-image-url'
+import { bskyAppPostUrlFromAtUri } from '#/lib/bsky-app-urls'
+import { trendingScoreSortEnabled } from '#/lib/trending/config'
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -83,6 +85,18 @@ function listingPublicWhere(
 ) {
   const pub = eq(table.verificationStatus, 'verified')
   return extra ? and(pub, extra) : pub
+}
+
+/** "Popular" / trending ordering — uses `trending_score` when enabled, else legacy `updatedAt`. */
+function orderByPopularListingSort(table: typeof dbSchema.storeListings) {
+  if (!trendingScoreSortEnabled()) {
+    return [desc(table.updatedAt), desc(table.createdAt)]
+  }
+  return [
+    sql`${table.trendingScore} DESC NULLS LAST`,
+    desc(table.updatedAt),
+    desc(table.createdAt),
+  ]
 }
 
 /** Listing has a two-segment path under `apps/…` or `protocol/…` (e.g. `apps/bluesky`). */
@@ -196,6 +210,19 @@ export interface DirectoryListingReview {
   reviewCreatedAt: string
   authorDisplayName: string | null
   authorAvatarUrl: string | null
+}
+
+/** Bluesky post stored from Jetstream mention matching. */
+export interface DirectoryListingMention {
+  id: string
+  postUri: string
+  bskyPostUrl: string | null
+  authorDid: string
+  authorHandle: string | null
+  postText: string | null
+  postCreatedAt: string
+  matchType: string
+  matchConfidence: number
 }
 
 /** Listing summary embedded in a review shown on a user profile. */
@@ -380,6 +407,11 @@ const getRelatedDirectoryListingsInput = z.object({
 
 const getDirectoryListingReviewsInput = z.object({
   id: z.string().min(1),
+})
+
+const getDirectoryListingMentionsInput = z.object({
+  id: z.string().min(1),
+  limit: z.number().int().min(1).max(50).default(12),
 })
 
 const createDirectoryListingReviewInput = z.object({
@@ -1318,7 +1350,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
             sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
           ),
         )
-        .orderBy(desc(table.updatedAt), desc(table.createdAt))
+        .orderBy(...orderByPopularListingSort(table))
         .limit(30),
       context.db
         .select(listingSelect)
@@ -1340,7 +1372,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
             sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
           ),
         )
-        .orderBy(desc(table.updatedAt), desc(table.createdAt))
+        .orderBy(...orderByPopularListingSort(table))
         .limit(96),
       context.db
         .select(listingSelect)
@@ -1351,7 +1383,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
             sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'protocol'),
           ),
         )
-        .orderBy(desc(table.updatedAt), desc(table.createdAt)),
+        .orderBy(...orderByPopularListingSort(table)),
       (async (): Promise<DirectoryListingRow[]> => {
         const configured = await context.db
           .select({
@@ -1493,7 +1525,7 @@ const getDirectoryCategories = createServerFn({ method: 'GET' })
       .select(getListingSelect(table))
       .from(table)
       .where(listingPublicWhere(table))
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
       .limit(500)
 
     return buildCategories(rows, 12)
@@ -1534,7 +1566,7 @@ const getDirectoryCategoryPage = createServerFn({ method: 'GET' })
       .select(getListingSelect(table))
       .from(table)
       .where(listingPublicWhere(table))
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
 
     const tree = buildDirectoryCategoryTree(
       rows.flatMap((row) => row.categorySlugs ?? []),
@@ -1584,7 +1616,7 @@ const getAppsByTag = createServerFn({ method: 'GET' })
           sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
         ),
       )
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
 
     return buildAppTagGroups(rows)
   })
@@ -1614,10 +1646,9 @@ const getAllApps = createServerFn({ method: 'GET' })
         ),
       )
       .orderBy(
-        input.sort === 'newest'
-          ? desc(table.createdAt)
-          : desc(table.updatedAt),
-        desc(table.createdAt),
+        ...(input.sort === 'newest'
+          ? [desc(table.createdAt)]
+          : orderByPopularListingSort(table)),
       )
 
     return buildAllApps(rows)
@@ -1646,7 +1677,7 @@ const getAppsByTagPage = createServerFn({ method: 'GET' })
           sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
         ),
       )
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
 
     const groups = buildAppTagGroups(rows)
     const tag = findAppTagBySlug(
@@ -1683,7 +1714,7 @@ const getProtocolCategories = createServerFn({ method: 'GET' })
           sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
         ),
       )
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
 
     return buildProtocolCategoryGroups(rows)
   })
@@ -1707,7 +1738,7 @@ const getProtocolCategoryPage = createServerFn({ method: 'GET' })
           sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
         ),
       )
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
 
     const groups = buildProtocolCategoryGroups(rows)
     return findProtocolCategoryBySlugParam(groups, data.category) ?? null
@@ -1744,10 +1775,9 @@ const getAllProtocolListings = createServerFn({ method: 'GET' })
         ),
       )
       .orderBy(
-        input.sort === 'newest'
-          ? desc(table.createdAt)
-          : desc(table.updatedAt),
-        desc(table.createdAt),
+        ...(input.sort === 'newest'
+          ? [desc(table.createdAt)]
+          : orderByPopularListingSort(table)),
       )
 
     return buildAllProtocolListings(rows)
@@ -1779,10 +1809,9 @@ const getAllListings = createServerFn({ method: 'GET' })
       .from(table)
       .where(listingPublicWhere(table))
       .orderBy(
-        input.sort === 'newest'
-          ? desc(table.createdAt)
-          : desc(table.updatedAt),
-        desc(table.createdAt),
+        ...(input.sort === 'newest'
+          ? [desc(table.createdAt)]
+          : orderByPopularListingSort(table)),
       )
 
     return rows.map(toListingCard)
@@ -1965,6 +1994,71 @@ function getDirectoryListingReviewsQueryOptions(id: string) {
   return queryOptions({
     queryKey: ['storeListings', 'reviews', id],
     queryFn: async () => getDirectoryListingReviews({ data: { id } }),
+  })
+}
+
+const getDirectoryListingMentions = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .inputValidator(getDirectoryListingMentionsInput)
+  .handler(async ({ data, context }) => {
+    if (!isUuid(data.id)) {
+      return []
+    }
+
+    const table = context.schema.storeListings
+    const [listing] = await context.db
+      .select({ id: table.id })
+      .from(table)
+      .where(listingPublicWhere(table, eq(table.id, data.id)))
+      .limit(1)
+
+    if (!listing) {
+      return []
+    }
+
+    const m = context.schema.storeListingMentions
+    const rows = await context.db
+      .select({
+        id: m.id,
+        postUri: m.postUri,
+        authorDid: m.authorDid,
+        authorHandle: m.authorHandle,
+        postText: m.postText,
+        postCreatedAt: m.postCreatedAt,
+        matchType: m.matchType,
+        matchConfidence: m.matchConfidence,
+      })
+      .from(m)
+      .where(eq(m.storeListingId, listing.id))
+      .orderBy(desc(m.postCreatedAt))
+      .limit(data.limit)
+
+    const enriched: DirectoryListingMention[] = rows.map((row) => ({
+      id: row.id,
+      postUri: row.postUri,
+      bskyPostUrl: bskyAppPostUrlFromAtUri(row.postUri),
+      authorDid: row.authorDid,
+      authorHandle: row.authorHandle,
+      postText: row.postText,
+      postCreatedAt: row.postCreatedAt.toISOString(),
+      matchType: row.matchType,
+      matchConfidence: row.matchConfidence,
+    }))
+
+    return enriched
+  })
+
+function getDirectoryListingMentionsQueryOptions(
+  id: string,
+  limit: number = 12,
+) {
+  const normalized = getDirectoryListingMentionsInput.parse({ id, limit })
+  return queryOptions({
+    queryKey: ['storeListings', 'mentions', normalized.id, normalized.limit],
+    queryFn: async () =>
+      getDirectoryListingMentions({
+        data: { id: normalized.id, limit: normalized.limit },
+      }),
   })
 }
 
@@ -2387,7 +2481,7 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
         })
         .from(table)
         .where(listingPublicWhere(table, ne(table.id, data.id)))
-        .orderBy(desc(table.updatedAt), desc(table.createdAt))
+        .orderBy(...orderByPopularListingSort(table))
         .limit(128),
     ])
 
@@ -2494,7 +2588,7 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
             : undefined,
         ),
       )
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
       .limit(data.limit)
 
     return rows.map(toListingCard)
@@ -2532,7 +2626,7 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
         updatedAt: table.updatedAt,
       })
       .from(table)
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
 
     return rows
       .map((row) => {
@@ -2609,7 +2703,7 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
         rawCategoryHint: sql<string | null>`null::text`.as('rawCategoryHint'),
       })
       .from(table)
-      .orderBy(desc(table.updatedAt), desc(table.createdAt))
+      .orderBy(...orderByPopularListingSort(table))
 
     const popular = popularTagsFromAllAssignments(
       rows.map((row) => row.appTags ?? []),
@@ -3613,6 +3707,11 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       claimKey: null,
       reviewCount: 0,
       averageRating: null,
+      favoriteCount: 0,
+      mentionCount24h: 0,
+      mentionCount7d: 0,
+      trendingScore: null,
+      trendingUpdatedAt: null,
       createdAt: now,
       updatedAt: now,
     }
@@ -4135,6 +4234,8 @@ export const directoryListingApi = {
   getDirectoryListingDetailBySlugQueryOptions,
   getDirectoryListingReviews,
   getDirectoryListingReviewsQueryOptions,
+  getDirectoryListingMentions,
+  getDirectoryListingMentionsQueryOptions,
   getUserProfileReviewsPageData,
   getUserProfileReviewsPageDataQueryOptions,
   getProfileFavoriteListings,

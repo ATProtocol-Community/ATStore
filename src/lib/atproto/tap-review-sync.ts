@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Database } from '#/db/index.server'
 import * as schema from '#/db/schema'
 import { COLLECTION, NSID } from '#/lib/atproto/nsids'
+import { recomputeListingTrending } from '#/lib/trending/recompute-listing-trending'
 
 const reviewBodySchema = z.object({
   subject: z
@@ -116,6 +117,8 @@ export async function recomputeListingReviewAggregates(
       updatedAt: new Date(),
     })
     .where(eq(schema.storeListings.id, storeListingId))
+
+  await recomputeListingTrending(db, storeListingId)
 }
 
 /**

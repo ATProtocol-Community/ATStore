@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Database } from '#/db/index.server'
 import * as schema from '#/db/schema'
 import { COLLECTION, NSID } from '#/lib/atproto/nsids'
+import { recomputeListingTrending } from '#/lib/trending/recompute-listing-trending'
 
 const favoriteBodySchema = z.object({
   subject: z
@@ -135,6 +136,8 @@ export async function upsertListingFavoriteFromTap(input: {
         updatedAt: new Date(),
       },
     })
+
+  await recomputeListingTrending(db, listing.id)
 }
 
 export async function deleteListingFavoriteFromTap(input: {
@@ -144,10 +147,17 @@ export async function deleteListingFavoriteFromTap(input: {
 }) {
   const { db, did, rkey } = input
 
-  await db.delete(schema.storeListingFavorites).where(
-    and(
-      eq(schema.storeListingFavorites.authorDid, did),
-      eq(schema.storeListingFavorites.rkey, rkey),
-    ),
-  )
+  const deleted = await db
+    .delete(schema.storeListingFavorites)
+    .where(
+      and(
+        eq(schema.storeListingFavorites.authorDid, did),
+        eq(schema.storeListingFavorites.rkey, rkey),
+      ),
+    )
+    .returning({ storeListingId: schema.storeListingFavorites.storeListingId })
+
+  for (const row of deleted) {
+    await recomputeListingTrending(db, row.storeListingId)
+  }
 }

@@ -43,6 +43,8 @@
     "lex:status": "node scripts/goat-lex.mjs lex status",
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
     "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts",
+    "jetstream:consumer": "tsx -r dotenv/config scripts/jetstream-consumer.ts",
+    "backfill:trending": "tsx -r dotenv/config scripts/backfill-trending-scores.ts",
     "discover:product-bsky": "tsx -r dotenv/config scripts/discover-product-bsky-candidates.ts",
     "fix:feed-creator-url": "tsx -r dotenv/config scripts/fix-bluesky-feed-creator-external-url.ts",
     "lexicon:websites": "tsx scripts/collect-lexicon-garden-websites.ts",
@@ -96,6 +98,7 @@
     "tailwindcss": "^4.1.18",
     "universal-cookie": "^8.1.0",
     "web-haptics": "^0.0.6",
+    "ws": "^8.20.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -108,6 +111,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.4",
     "browserslist": "^4.28.2",
     "drizzle-kit": "^0.31.10",

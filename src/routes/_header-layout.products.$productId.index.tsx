@@ -52,6 +52,7 @@ import {
   directoryListingApi,
   type DirectoryListingCard,
   type DirectoryListingDetail,
+  type DirectoryListingMention,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import {
@@ -104,6 +105,12 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
     const listingReviews = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
     );
+    const listingMentions = await context.queryClient.ensureQueryData(
+      directoryListingApi.getDirectoryListingMentionsQueryOptions(
+        listing.id,
+        8,
+      ),
+    );
     const session = await context.queryClient.ensureQueryData(
       user.getSessionQueryOptions,
     );
@@ -154,6 +161,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       listing,
       relatedProducts,
       listingReviews,
+      listingMentions,
       session,
       editAccess,
       ogTitle: `${listing.name} | at-store`,
@@ -541,6 +549,34 @@ const styles = stylex.create({
   },
 });
 
+function BlueskyMentionCard({ mention }: { mention: DirectoryListingMention }) {
+  const href = mention.bskyPostUrl ?? undefined;
+  const date = new Date(mention.postCreatedAt).toLocaleString();
+  return (
+    <Card>
+      <Flex direction="column" gap="md">
+        <Flex justify="between" align="center" gap="xl" wrap>
+          <Text size="sm" weight="semibold">
+            {mention.authorHandle ?? mention.authorDid}
+          </Text>
+          <SmallBody variant="secondary">{date}</SmallBody>
+        </Flex>
+        {mention.postText ? (
+          <Body variant="secondary">{mention.postText}</Body>
+        ) : null}
+        <Flex gap="md" align="center" wrap>
+          <Badge variant="default">{mention.matchType}</Badge>
+          {href ? (
+            <Link href={href} target="_blank" rel="noreferrer">
+              View post <ExternalLink size={14} />
+            </Link>
+          ) : null}
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
 function ProductPage() {
   const {
     productId,
@@ -549,6 +585,7 @@ function ProductPage() {
     listing,
     relatedProducts,
     listingReviews,
+    listingMentions,
     session,
     editAccess,
   } = Route.useLoaderData();
@@ -960,6 +997,21 @@ function ProductPage() {
 
         {ecosystemRootId && isRootApp ? (
           <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
+        ) : null}
+
+        {listingMentions.length > 0 ? (
+          <Flex direction="column" gap="3xl">
+            <Heading2>On Bluesky</Heading2>
+            <SmallBody variant="secondary">
+              Recent posts that mention this listing (matched by product handle,
+              link, or name).
+            </SmallBody>
+            <Flex direction="column" gap="2xl">
+              {listingMentions.map((mention) => (
+                <BlueskyMentionCard key={mention.id} mention={mention} />
+              ))}
+            </Flex>
+          </Flex>
         ) : null}
 
         <Flex gap="4xl" direction="column">

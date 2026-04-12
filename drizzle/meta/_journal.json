@@ -141,6 +141,13 @@
       "when": 1777000000000,
       "tag": "0019_store_listings_product_account_handle_ignored_at",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777100000000,
+      "tag": "0020_store_listing_trending",
+      "breakpoints": true
     }
   ]
 }

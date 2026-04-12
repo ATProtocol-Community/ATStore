@@ -1,9 +1,11 @@
 import { relations, sql } from 'drizzle-orm'
 import {
+  bigint,
   boolean,
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -214,6 +216,14 @@ export const storeListings = pgTable(
     reviewCount: integer('review_count').notNull().default(0),
     /** Null when `reviewCount` is 0; else mean of star ratings (1–5). */
     averageRating: doublePrecision('average_rating'),
+    /** Denormalized from `store_listing_favorites` (Tap ingest). */
+    favoriteCount: integer('favorite_count').notNull().default(0),
+    /** Bluesky posts in last 24h (Jetstream); denormalized for cards/admin. */
+    mentionCount24h: integer('mention_count_24h').notNull().default(0),
+    mentionCount7d: integer('mention_count_7d').notNull().default(0),
+    /** Cached decayed trending score; null until first compute/backfill. */
+    trendingScore: doublePrecision('trending_score'),
+    trendingUpdatedAt: timestamp('trending_updated_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -239,6 +249,9 @@ export const storeListings = pgTable(
     repoRkeyIdx: uniqueIndex('store_listings_repo_did_rkey_idx').on(
       table.repoDid,
       table.rkey,
+    ),
+    trendingScoreIdx: index('store_listings_trending_score_idx').on(
+      table.trendingScore,
     ),
   }),
 )
@@ -381,6 +394,54 @@ export const storeListingFavorites = pgTable(
   }),
 )
 
+/** Jetstream consumer cursor (microseconds `time_us` from last processed event). */
+export const jetstreamConsumerState = pgTable('jetstream_consumer_state', {
+  id: text('id').primaryKey(),
+  timeUs: bigint('time_us', { mode: 'number' }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+})
+
+/**
+ * Bluesky posts that mention a directory listing (handle / URL / name / standard.site).
+ * One row per (listing, post).
+ */
+export const storeListingMentions = pgTable(
+  'store_listing_mentions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    storeListingId: uuid('store_listing_id')
+      .notNull()
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
+    source: text('source').notNull(),
+    postUri: text('post_uri').notNull(),
+    postCid: text('post_cid'),
+    authorDid: text('author_did').notNull(),
+    authorHandle: text('author_handle'),
+    postText: text('post_text'),
+    postCreatedAt: timestamp('post_created_at', { withTimezone: true }).notNull(),
+    /** Primary match: handle | url | name | standard_site_doc */
+    matchType: text('match_type').notNull(),
+    matchConfidence: doublePrecision('match_confidence').notNull().default(1),
+    matchEvidence: jsonb('match_evidence').$type<Record<string, unknown> | unknown[]>(),
+    indexedAt: timestamp('indexed_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingPostUnique: uniqueIndex('store_listing_mentions_listing_post_uri_idx').on(
+      table.storeListingId,
+      table.postUri,
+    ),
+    listingCreatedIdx: index('store_listing_mentions_listing_created_idx').on(
+      table.storeListingId,
+      table.postCreatedAt,
+    ),
+    postUriIdx: index('store_listing_mentions_post_uri_idx').on(table.postUri),
+  }),
+)
+
 /** App-side claim workflow against @store-hosted listings (protocol layer is separate). */
 export const listingClaims = pgTable(
   'listing_claims',
@@ -422,6 +483,10 @@ export type StoreListingReview = typeof storeListingReviews.$inferSelect
 export type NewStoreListingReview = typeof storeListingReviews.$inferInsert
 export type StoreListingFavorite = typeof storeListingFavorites.$inferSelect
 export type NewStoreListingFavorite = typeof storeListingFavorites.$inferInsert
+export type JetstreamConsumerState = typeof jetstreamConsumerState.$inferSelect
+export type NewJetstreamConsumerState = typeof jetstreamConsumerState.$inferInsert
+export type StoreListingMention = typeof storeListingMentions.$inferSelect
+export type NewStoreListingMention = typeof storeListingMentions.$inferInsert
 export type ListingClaim = typeof listingClaims.$inferSelect
 export type NewListingClaim = typeof listingClaims.$inferInsert
 export type StoreListingProductAccountCandidate =
