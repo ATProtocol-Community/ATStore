@@ -4,5 +4,5 @@ export function bskyAppPostUrlFromAtUri(atUri: string): string | null {
   const m = /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/.exec(trimmed)
   if (!m) return null
   const [, did, rkey] = m
-  return `https://bsky.app/profile/${encodeURIComponent(did)}/post/${encodeURIComponent(rkey)}`
+  return `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`
 }

@@ -90,6 +90,7 @@ export async function loadListingMentionIndex(
       sourceUrl: schema.storeListings.sourceUrl,
       externalUrl: schema.storeListings.externalUrl,
       productAccountHandle: schema.storeListings.productAccountHandle,
+      categorySlugs: schema.storeListings.categorySlugs,
     })
     .from(schema.storeListings)
 

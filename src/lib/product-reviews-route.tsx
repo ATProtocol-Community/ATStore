@@ -7,10 +7,9 @@ import type { ReactNode } from "react";
 
 import { Avatar } from "../design-system/avatar";
 import { Flex } from "../design-system/flex";
-import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { Body } from "../design-system/typography";
+import { SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
@@ -18,6 +17,7 @@ import {
   getLegacyDirectoryListingId,
 } from "./directory-listing-slugs";
 import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
+import { size } from "../design-system/theme/semantic-spacing.stylex";
 
 const AppLink = createLink(Link);
 
@@ -28,6 +28,10 @@ const styles = stylex.create({
   },
   backLinkRow: {
     alignItems: "center",
+  },
+  avatar: {
+    height: size["6xl"],
+    width: size["6xl"],
   },
 });
 
@@ -124,6 +128,7 @@ export function ProductReviewsPageChrome({
             fallback={getInitials(listing.name)}
             size="xl"
             src={listing.iconUrl || undefined}
+            style={styles.avatar}
           />
           <Flex direction="column" gap="2xl">
             <Text
@@ -133,7 +138,7 @@ export function ProductReviewsPageChrome({
             >
               {listing.name}
             </Text>
-            <Body>{listing.tagline}</Body>
+            <SmallBody variant="secondary">{listing.tagline}</SmallBody>
           </Flex>
         </Flex>
 

@@ -148,6 +148,13 @@
       "when": 1777100000000,
       "tag": "0020_store_listing_trending",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1777200000000,
+      "tag": "0021_clear_store_listing_mentions",
+      "breakpoints": true
     }
   ]
 }

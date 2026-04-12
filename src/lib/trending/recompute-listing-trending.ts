@@ -1,7 +1,8 @@
-import { and, eq, gte, sql } from 'drizzle-orm'
+import { and, eq, gte, ne, sql } from 'drizzle-orm'
 
 import type { Database } from '#/db/index.server'
 import * as schema from '#/db/schema'
+import { shouldOmitUrlMentionsForBlueskyPlatformListing } from '#/lib/directory-categories'
 import {
   trendingDecayWindowDays,
   trendingFavoriteHalfLifeDays,
@@ -18,6 +19,21 @@ import {
 function windowStart(): Date {
   const days = trendingDecayWindowDays()
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+}
+
+function storeListingMentionsInWindow(
+  storeListingId: string,
+  since: Date,
+  omitUrlMentions: boolean,
+) {
+  const parts = [
+    eq(schema.storeListingMentions.storeListingId, storeListingId),
+    gte(schema.storeListingMentions.postCreatedAt, since),
+  ]
+  if (omitUrlMentions) {
+    parts.push(ne(schema.storeListingMentions.matchType, 'url'))
+  }
+  return and(...parts)
 }
 
 /**
@@ -74,6 +90,7 @@ async function sumDecayedMentions(
   db: Database,
   storeListingId: string,
   halfLifeDays: number,
+  omitUrlMentions: boolean,
 ): Promise<number> {
   const since = windowStart()
   const rows = await db
@@ -82,10 +99,7 @@ async function sumDecayedMentions(
     })
     .from(schema.storeListingMentions)
     .where(
-      and(
-        eq(schema.storeListingMentions.storeListingId, storeListingId),
-        gte(schema.storeListingMentions.postCreatedAt, since),
-      ),
+      storeListingMentionsInWindow(storeListingId, since, omitUrlMentions),
     )
 
   const now = Date.now()
@@ -101,6 +115,7 @@ async function countMentionsSince(
   db: Database,
   storeListingId: string,
   since: Date,
+  omitUrlMentions: boolean,
 ): Promise<number> {
   const [agg] = await db
     .select({
@@ -108,10 +123,7 @@ async function countMentionsSince(
     })
     .from(schema.storeListingMentions)
     .where(
-      and(
-        eq(schema.storeListingMentions.storeListingId, storeListingId),
-        gte(schema.storeListingMentions.postCreatedAt, since),
-      ),
+      storeListingMentionsInWindow(storeListingId, since, omitUrlMentions),
     )
   return Number(agg?.cnt ?? 0)
 }
@@ -124,6 +136,7 @@ export async function recomputeListingTrending(db: Database, storeListingId: str
     .select({
       reviewCount: schema.storeListings.reviewCount,
       averageRating: schema.storeListings.averageRating,
+      categorySlugs: schema.storeListings.categorySlugs,
     })
     .from(schema.storeListings)
     .where(eq(schema.storeListings.id, storeListingId))
@@ -131,15 +144,24 @@ export async function recomputeListingTrending(db: Database, storeListingId: str
 
   if (!listing) return
 
+  const omitUrlMentions = shouldOmitUrlMentionsForBlueskyPlatformListing(
+    listing.categorySlugs,
+  )
+
   const now = new Date()
   const d24 = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
   const [mention24, mention7, decayedFav, decayedMen] = await Promise.all([
-    countMentionsSince(db, storeListingId, d24),
-    countMentionsSince(db, storeListingId, d7),
+    countMentionsSince(db, storeListingId, d24, omitUrlMentions),
+    countMentionsSince(db, storeListingId, d7, omitUrlMentions),
     sumDecayedFavorites(db, storeListingId, trendingFavoriteHalfLifeDays()),
-    sumDecayedMentions(db, storeListingId, trendingMentionHalfLifeDays()),
+    sumDecayedMentions(
+      db,
+      storeListingId,
+      trendingMentionHalfLifeDays(),
+      omitUrlMentions,
+    ),
   ])
 
   const [favRow] = await db

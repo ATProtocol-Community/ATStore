@@ -3,6 +3,8 @@
  * Does not match on product display name (too many false positives).
  */
 
+import { shouldOmitUrlMentionsForBlueskyPlatformListing } from '#/lib/directory-categories'
+
 export type MatchType = 'handle' | 'url' | 'standard_site_doc'
 
 export type ListingMentionIndexRow = {
@@ -12,6 +14,8 @@ export type ListingMentionIndexRow = {
   sourceUrl: string
   externalUrl: string | null
   productAccountHandle: string | null
+  /** When set, used to drop noisy URL matches for specific listings (e.g. Bluesky platform). */
+  categorySlugs?: string[]
 }
 
 export type ListingMentionIndex = {
@@ -305,7 +309,14 @@ export function matchPostToListings(input: {
     }
   }
 
-  return [...byId.values()]
+  const listingById = new Map(input.index.listings.map((r) => [r.id, r]))
+
+  return [...byId.values()].filter((hit) => {
+    if (hit.matchType !== 'url') return true
+    const row = listingById.get(hit.storeListingId)
+    if (!row) return true
+    return !shouldOmitUrlMentionsForBlueskyPlatformListing(row.categorySlugs)
+  })
 }
 
 export function excerptText(text: string, max = 380): string {

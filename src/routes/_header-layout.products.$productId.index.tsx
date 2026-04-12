@@ -39,20 +39,15 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import {
-  Body,
-  Heading2,
-  SmallBody,
-  SubLabel,
-} from "../design-system/typography";
+import { Body, SmallBody, SubLabel } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
 import {
   directoryListingApi,
   type DirectoryListingCard,
   type DirectoryListingDetail,
-  type DirectoryListingMention,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import {
@@ -105,10 +100,10 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
     const listingReviews = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
     );
-    const listingMentions = await context.queryClient.ensureQueryData(
+    const listingMentionsResult = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingMentionsQueryOptions(
         listing.id,
-        8,
+        3,
       ),
     );
     const session = await context.queryClient.ensureQueryData(
@@ -161,7 +156,8 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       listing,
       relatedProducts,
       listingReviews,
-      listingMentions,
+      listingMentions: listingMentionsResult.mentions,
+      listingMentionTotal: listingMentionsResult.total,
       session,
       editAccess,
       ogTitle: `${listing.name} | at-store`,
@@ -188,6 +184,11 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
 });
 
 const styles = stylex.create({
+  header: {
+    height: size["3xl"],
+    display: "flex",
+    alignItems: "center",
+  },
   iconButton: {
     height: size["4xl"],
     width: size["4xl"],
@@ -354,7 +355,6 @@ const styles = stylex.create({
     textAlign: "right",
   },
   reviewsHeader: {
-    alignItems: "flex-start",
     paddingTop: verticalSpace["5xl"],
   },
   reviewsHeaderTop: {
@@ -373,7 +373,7 @@ const styles = stylex.create({
   },
   relatedGrid: {
     display: "grid",
-    gap: gap["2xl"],
+    gap: gap["xl"],
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
@@ -549,34 +549,6 @@ const styles = stylex.create({
   },
 });
 
-function BlueskyMentionCard({ mention }: { mention: DirectoryListingMention }) {
-  const href = mention.bskyPostUrl ?? undefined;
-  const date = new Date(mention.postCreatedAt).toLocaleString();
-  return (
-    <Card>
-      <Flex direction="column" gap="md">
-        <Flex justify="between" align="center" gap="xl" wrap>
-          <Text size="sm" weight="semibold">
-            {mention.authorHandle ?? mention.authorDid}
-          </Text>
-          <SmallBody variant="secondary">{date}</SmallBody>
-        </Flex>
-        {mention.postText ? (
-          <Body variant="secondary">{mention.postText}</Body>
-        ) : null}
-        <Flex gap="md" align="center" wrap>
-          <Badge variant="default">{mention.matchType}</Badge>
-          {href ? (
-            <Link href={href} target="_blank" rel="noreferrer">
-              View post <ExternalLink size={14} />
-            </Link>
-          ) : null}
-        </Flex>
-      </Flex>
-    </Card>
-  );
-}
-
 function ProductPage() {
   const {
     productId,
@@ -586,6 +558,7 @@ function ProductPage() {
     relatedProducts,
     listingReviews,
     listingMentions,
+    listingMentionTotal,
     session,
     editAccess,
   } = Route.useLoaderData();
@@ -958,8 +931,8 @@ function ProductPage() {
 
         {/* screenshots */}
         {listing.screenshots.length > 0 ? (
-          <Flex direction="column" gap="4xl" style={styles.screenshotsSection}>
-            <Text size="2xl" weight="semibold">
+          <Flex direction="column" gap="3xl" style={styles.screenshotsSection}>
+            <Text size="2xl" weight="semibold" style={styles.header}>
               Screenshots
             </Text>
             <div {...stylex.props(styles.screenshotCarousel)}>
@@ -999,21 +972,6 @@ function ProductPage() {
           <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
         ) : null}
 
-        {/* {listingMentions.length > 0 ? (
-          <Flex direction="column" gap="3xl">
-            <Heading2>On Bluesky</Heading2>
-            <SmallBody variant="secondary">
-              Recent posts that mention this listing (matched by product handle,
-              link, or name).
-            </SmallBody>
-            <Flex direction="column" gap="2xl">
-              {listingMentions.map((mention) => (
-                <BlueskyMentionCard key={mention.id} mention={mention} />
-              ))}
-            </Flex>
-          </Flex>
-        ) : null} */}
-
         <Flex gap="4xl" direction="column">
           <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
             <Flex
@@ -1022,8 +980,10 @@ function ProductPage() {
               justify="between"
               style={styles.reviewsHeaderTop}
             >
-              <Flex gap="4xl" align="center">
-                <Heading2>Reviews</Heading2>
+              <Flex gap="3xl" align="center">
+                <Text size="2xl" weight="semibold" style={styles.header}>
+                  Reviews
+                </Text>
                 <Flex gap="md" style={styles.ratingRow}>
                   <StarRating
                     rating={listing.rating}
@@ -1039,7 +999,6 @@ function ProductPage() {
                 <ButtonLink
                   to="/products/$productId/reviews"
                   params={{ productId: productSlug }}
-                  size="lg"
                   variant="secondary"
                 >
                   View all
@@ -1091,6 +1050,39 @@ function ProductPage() {
             Create review
           </ButtonLink>
         </Flex>
+
+        {listingMentions.length > 0 ? (
+          <Flex direction="column" gap="3xl">
+            <Flex
+              align="center"
+              justify="between"
+              gap="2xl"
+              wrap
+              style={styles.reviewsHeader}
+            >
+              <Text size="2xl" weight="semibold" style={styles.header}>
+                Mentions
+              </Text>
+              {listingMentionTotal > 3 ? (
+                <Flex gap="xl">
+                  <ButtonLink
+                    to="/products/$productId/mentions"
+                    params={{ productId: productSlug }}
+                    variant="secondary"
+                  >
+                    View all
+                  </ButtonLink>
+                </Flex>
+              ) : null}
+            </Flex>
+            <Flex direction="column">
+              {listingMentions.map((mention) => (
+                <BlueskyMentionCard key={mention.id} mention={mention} />
+              ))}
+            </Flex>
+          </Flex>
+        ) : null}
+
         {relatedProducts.length > 0 ? (
           <RelatedProductsSection listings={relatedProducts} />
         ) : null}
@@ -1145,7 +1137,7 @@ function ProductPage() {
           </Flex>
         </Card>
       ) : null}
-      {import.meta.env.DEV ? (
+      {import.meta.env.DEV && false ? (
         <Card style={styles.devToolbar}>
           <Flex direction="column" style={styles.devToolbarBody}>
             <Text size="sm" weight="semibold">
@@ -1481,9 +1473,11 @@ function ProductEcosystemSection({
 
   return (
     <Flex direction="column" gap="4xl" style={styles.ecosystemSection}>
-      <Flex align="center" gap="5xl" style={styles.ecosystemHeader}>
+      <Flex align="center" gap="3xl" style={styles.ecosystemHeader}>
         <Flex direction="column" gap="2xl">
-          <Heading2>Ecosystem</Heading2>
+          <Text size="2xl" weight="semibold" style={styles.header}>
+            Ecosystem
+          </Text>
           <Body variant="secondary">
             Discover tools and products built for this app.
           </Body>
@@ -1525,8 +1519,10 @@ function RelatedProductsSection({
   listings: DirectoryListingCard[];
 }) {
   return (
-    <Flex direction="column" gap="4xl" style={styles.relatedSection}>
-      <Heading2>More Apps</Heading2>
+    <Flex direction="column" gap="3xl" style={styles.relatedSection}>
+      <Text size="2xl" weight="semibold" style={styles.header}>
+        More Apps
+      </Text>
       <Grid style={styles.relatedGrid}>
         {listings.map((listing) => (
           <RelatedProductCard key={listing.id} listing={listing} />

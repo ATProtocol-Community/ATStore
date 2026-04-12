@@ -1,7 +1,18 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
@@ -20,6 +31,7 @@ import {
   getDirectoryCategoryDescendantIds,
   getDirectoryCategoryOption,
   primaryCategorySlug,
+  shouldOmitUrlMentionsForBlueskyPlatformListing,
   type DirectoryCategoryAccent,
   type DirectoryCategoryTreeNode,
 } from '../../lib/directory-categories'
@@ -218,11 +230,20 @@ export interface DirectoryListingMention {
   postUri: string
   bskyPostUrl: string | null
   authorDid: string
+  /** Resolved from DB and/or public Bluesky profile API. */
   authorHandle: string | null
+  /** From `app.bsky.actor.getProfile` when available. */
+  authorDisplayName: string | null
+  authorAvatarUrl: string | null
   postText: string | null
   postCreatedAt: string
   matchType: string
   matchConfidence: number
+}
+
+export interface DirectoryListingMentionsResult {
+  mentions: DirectoryListingMention[]
+  total: number
 }
 
 /** Listing summary embedded in a review shown on a user profile. */
@@ -2002,21 +2023,34 @@ const getDirectoryListingMentions = createServerFn({ method: 'GET' })
   .inputValidator(getDirectoryListingMentionsInput)
   .handler(async ({ data, context }) => {
     if (!isUuid(data.id)) {
-      return []
+      return { mentions: [], total: 0 }
     }
 
     const table = context.schema.storeListings
     const [listing] = await context.db
-      .select({ id: table.id })
+      .select({ id: table.id, categorySlugs: table.categorySlugs })
       .from(table)
       .where(listingPublicWhere(table, eq(table.id, data.id)))
       .limit(1)
 
     if (!listing) {
-      return []
+      return { mentions: [], total: 0 }
     }
 
+    const omitUrl = shouldOmitUrlMentionsForBlueskyPlatformListing(
+      listing.categorySlugs,
+    )
     const m = context.schema.storeListingMentions
+    const mentionWhere: SQL = omitUrl
+      ? and(eq(m.storeListingId, listing.id), ne(m.matchType, 'url'))!
+      : eq(m.storeListingId, listing.id)
+
+    const [{ total: mentionCount }] = await context.db
+      .select({ total: count() })
+      .from(m)
+      .where(mentionWhere)
+    const total = Number(mentionCount ?? 0)
+
     const rows = await context.db
       .select({
         id: m.id,
@@ -2029,23 +2063,49 @@ const getDirectoryListingMentions = createServerFn({ method: 'GET' })
         matchConfidence: m.matchConfidence,
       })
       .from(m)
-      .where(eq(m.storeListingId, listing.id))
+      .where(mentionWhere)
       .orderBy(desc(m.postCreatedAt))
       .limit(data.limit)
 
-    const enriched: DirectoryListingMention[] = rows.map((row) => ({
-      id: row.id,
-      postUri: row.postUri,
-      bskyPostUrl: bskyAppPostUrlFromAtUri(row.postUri),
-      authorDid: row.authorDid,
-      authorHandle: row.authorHandle,
-      postText: row.postText,
-      postCreatedAt: row.postCreatedAt.toISOString(),
-      matchType: row.matchType,
-      matchConfidence: row.matchConfidence,
-    }))
+    const profileByDid = new Map<
+      string,
+      Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>
+    >()
 
-    return enriched
+    async function profileForDid(
+      did: string,
+    ): Promise<Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>> {
+      if (profileByDid.has(did)) return profileByDid.get(did) ?? null
+      const p = await fetchBlueskyPublicProfileFields(did)
+      profileByDid.set(did, p)
+      return p
+    }
+
+    const enriched: DirectoryListingMention[] = await Promise.all(
+      rows.map(async (row) => {
+        const profile = await profileForDid(row.authorDid)
+        const handle =
+          row.authorHandle?.trim() || profile?.handle?.trim() || null
+        const authorDisplayName = profile?.displayName?.trim() || null
+        const authorAvatarUrl = profile?.avatarUrl ?? null
+
+        return {
+          id: row.id,
+          postUri: row.postUri,
+          bskyPostUrl: bskyAppPostUrlFromAtUri(row.postUri),
+          authorDid: row.authorDid,
+          authorHandle: handle,
+          authorDisplayName,
+          authorAvatarUrl,
+          postText: row.postText,
+          postCreatedAt: row.postCreatedAt.toISOString(),
+          matchType: row.matchType,
+          matchConfidence: row.matchConfidence,
+        }
+      }),
+    )
+
+    return { mentions: enriched, total }
   })
 
 function getDirectoryListingMentionsQueryOptions(

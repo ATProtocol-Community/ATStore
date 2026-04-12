@@ -143,6 +143,17 @@ export function primaryCategorySlug(
   return first?.trim() ?? null
 }
 
+/**
+ * The Bluesky client root listing (`apps/bluesky`) would match almost every post that links to
+ * `bsky.app` as a URL mention; those posts are usually not about the product. Call sites omit
+ * `matchType === 'url'` rows for this listing (ingest, counts, product UI).
+ */
+export function shouldOmitUrlMentionsForBlueskyPlatformListing(
+  categorySlugs: string[] | null | undefined,
+): boolean {
+  return primaryCategorySlug(categorySlugs) === 'apps/bluesky'
+}
+
 export function getDirectoryBrowsePath(categoryId: string | null | undefined) {
   const option = getDirectoryCategoryOption(categoryId)
   const rootCategoryId = option?.pathIds[0]

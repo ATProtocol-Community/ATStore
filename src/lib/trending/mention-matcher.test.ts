@@ -218,6 +218,39 @@ describe('matchPostToListings', () => {
     ).toBe(true)
   })
 
+  it('omits URL/domain matches for the Bluesky platform root listing (apps/bluesky)', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'bsky',
+        name: 'Bluesky',
+        slug: 'bluesky',
+        sourceUrl: 'https://bsky.app',
+        externalUrl: null,
+        productAccountHandle: 'bsky.app',
+        categorySlugs: ['apps/bluesky'],
+      },
+    ])
+    const fromGenericBskyLink = matchPostToListings({
+      index,
+      text: '',
+      urls: ['https://bsky.app/profile/someone/post/xyz'],
+      facetHandles: [],
+    })
+    expect(fromGenericBskyLink.some((h) => h.matchType === 'url')).toBe(false)
+
+    const fromHandle = matchPostToListings({
+      index,
+      text: '',
+      urls: [],
+      facetHandles: ['bsky.app'],
+    })
+    expect(
+      fromHandle.some(
+        (h) => h.storeListingId === 'bsky' && h.matchType === 'handle',
+      ),
+    ).toBe(true)
+  })
+
   it('keeps highest-confidence hit when multiple signals match', () => {
     const index = buildListingMentionIndex([
       {
