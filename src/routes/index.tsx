@@ -47,6 +47,7 @@ import {
   type DirectoryListingCard,
 } from "#/integrations/tanstack-query/api-directory-listings.functions";
 import { formatAppTagLabel } from "#/lib/app-tag-metadata";
+import { getListingsForCategoryBranch } from "#/lib/ecosystem-listings";
 import { getDirectoryListingSlug } from "#/lib/directory-listing-slugs";
 import { Body, SmallBody } from "#/design-system/typography";
 import { useHover } from "react-aria";
@@ -57,12 +58,16 @@ const ButtonLink = createLink(Button);
 
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
-    const apps = await context.queryClient.ensureQueryData(
-      directoryListingApi.getAllAppsQueryOptions({ sort: "popular" }),
+    const ecosystemData = await context.queryClient.ensureQueryData(
+      directoryListingApi.getDirectoryCategoryPageQueryOptions({
+        categoryId: BLUESKY_ECOSYSTEM_CATEGORY_ID,
+      }),
     );
 
     return {
-      preloadHeroImages: getGroupHeroPreloadImages(apps),
+      preloadHeroImages: getGroupHeroPreloadImagesFromEcosystem(
+        ecosystemData?.listings ?? [],
+      ),
     };
   },
   head: ({ loaderData }) => ({
@@ -106,19 +111,7 @@ const INTRO_FEATURES = [
     icon: ShieldCheck,
   },
 ] as const;
-const BUILT_DIFFERENT = [
-  {
-    title: "Universal Identity",
-    body: "Your @handle works on every Atmosphere app. One login, hundreds of apps. When someone mentions you, it works everywhere — one identity, recognized across the Atmosphere.",
-    icon: UserSquare2,
-  },
 
-  {
-    title: "Great for Personal Websites",
-    body: "Your @handle can be your own domain. Your identity, your brand — no handle squatting.",
-    icon: Globe,
-  },
-] as const;
 const DATA_CONTROL = [
   {
     title: "Portability",
@@ -138,6 +131,7 @@ const DATA_CONTROL = [
 ] as const;
 const MAX_BROWSER_TAGS = 8;
 const MAX_BROWSER_APPS = 12;
+const BLUESKY_ECOSYSTEM_CATEGORY_ID = "apps/bluesky";
 
 const styles = stylex.create({
   grow: {
@@ -733,22 +727,68 @@ function RouteComponent() {
     directoryListingApi.getAllAppsQueryOptions({ sort: "popular" }),
   );
   const tagStats = useMemo(() => buildTagStats(allApps), [allApps]);
-  const browserTags = useMemo(
+  const appBrowserTags = useMemo(
     () => tagStats.slice(0, MAX_BROWSER_TAGS),
     [tagStats],
   );
-  const [activeTag, setActiveTag] = useState<string | null>(
-    browserTags[0]?.tag ?? null,
+  const [activeAppTag, setActiveAppTag] = useState<string | null>(
+    appBrowserTags[0]?.tag ?? null,
   );
-  const activeTagValue = activeTag ?? browserTags[0]?.tag ?? null;
-  const featuredApps = useMemo(() => {
-    if (!activeTagValue) {
+  const activeAppTagValue = activeAppTag ?? appBrowserTags[0]?.tag ?? null;
+  const appFeaturedApps = useMemo(() => {
+    if (!activeAppTagValue) {
       return allApps;
     }
 
-    return allApps.filter((app) => app.appTags.includes(activeTagValue));
-  }, [activeTagValue, allApps]);
-  const browserApps = featuredApps.length > 0 ? featuredApps : allApps;
+    return allApps.filter((app) => app.appTags.includes(activeAppTagValue));
+  }, [activeAppTagValue, allApps]);
+  const appBrowserApps = appFeaturedApps.length > 0 ? appFeaturedApps : allApps;
+
+  const { data: blueskyEcosystemData } = useSuspenseQuery(
+    directoryListingApi.getDirectoryCategoryPageQueryOptions({
+      categoryId: BLUESKY_ECOSYSTEM_CATEGORY_ID,
+    }),
+  );
+  const ecosystemApps = blueskyEcosystemData?.listings ?? allApps;
+  const browserCategories = useMemo(
+    () =>
+      (blueskyEcosystemData?.category.children ?? [])
+        .map((category) => ({
+          id: category.id,
+          label: category.label,
+          listings: getListingsForCategoryBranch(category.id, ecosystemApps),
+        }))
+        .filter((category) => category.listings.length > 0)
+        .sort((a) => (a.label === "Client" ? -1 : 1))
+        .slice(0, MAX_BROWSER_TAGS),
+    [blueskyEcosystemData?.category.children, ecosystemApps],
+  );
+  const ecosystemBrowserTags = useMemo(
+    () =>
+      browserCategories.map((category) => ({
+        tag: category.id,
+        label: category.label,
+      })),
+    [browserCategories],
+  );
+  const [activeEcosystemTag, setActiveEcosystemTag] = useState<string | null>(
+    ecosystemBrowserTags[0]?.tag ?? null,
+  );
+  const activeEcosystemTagValue =
+    activeEcosystemTag ?? ecosystemBrowserTags[0]?.tag ?? null;
+  const ecosystemFeaturedApps = useMemo(() => {
+    if (!activeEcosystemTagValue) {
+      return ecosystemApps;
+    }
+
+    return (
+      browserCategories.find(
+        (category) => category.id === activeEcosystemTagValue,
+      )?.listings ?? ecosystemApps
+    );
+  }, [activeEcosystemTagValue, browserCategories, ecosystemApps]);
+  const ecosystemBrowserApps =
+    ecosystemFeaturedApps.length > 0 ? ecosystemFeaturedApps : ecosystemApps;
 
   return (
     <HeaderLayout.Root style={styles.shell}>
@@ -863,16 +903,16 @@ function RouteComponent() {
             </p>
           </Flex>
 
-          {browserTags.length > 0 ? (
+          {appBrowserTags.length > 0 ? (
             <div {...stylex.props(styles.chipRow)}>
-              {browserTags.map((tag) => (
+              {appBrowserTags.map((tag) => (
                 <button
                   key={tag.tag}
                   type="button"
-                  onClick={() => setActiveTag(tag.tag)}
+                  onClick={() => setActiveAppTag(tag.tag)}
                   {...stylex.props(
                     styles.chip,
-                    activeTagValue === tag.tag && styles.chipActive,
+                    activeAppTagValue === tag.tag && styles.chipActive,
                   )}
                 >
                   {formatAppTagLabel(tag.tag)}
@@ -882,7 +922,7 @@ function RouteComponent() {
           ) : null}
 
           <FeaturedListingGrid
-            items={browserApps.slice(0, MAX_BROWSER_APPS)}
+            items={appBrowserApps.slice(0, MAX_BROWSER_APPS)}
             getKey={(app) => app.id}
             isFeatured={(_, index) => index === 0}
             renderItem={(app, { featured }) => (
@@ -896,37 +936,6 @@ function RouteComponent() {
         </Flex>
       </Page.Hero>
       <Page.Hero style={styles.sectionGray}>
-        <div {...stylex.props(styles.twoCol)}>
-          <Flex direction="column" gap="7xl">
-            <Flex direction="column" gap="lg">
-              <div {...stylex.props(styles.sectionEyebrow)}>Architecture</div>
-              <h2 {...stylex.props(styles.sectionHeading)}>Built different.</h2>
-              <p {...stylex.props(styles.sectionBody)}>
-                Every layer of the Atmosphere is designed around openness,
-                portability, and real ownership.
-              </p>
-            </Flex>
-            <Flex gap="lg" wrap>
-              {BUILT_DIFFERENT.map((item) => (
-                <article key={item.title} {...stylex.props(styles.featureCard)}>
-                  <span {...stylex.props(styles.featureIcon)}>
-                    <item.icon size={20} />
-                  </span>
-                  <Flex direction="column" gap="md">
-                    <div {...stylex.props(styles.featureTitleRow)}>
-                      <h3 {...stylex.props(styles.featureTitle)}>
-                        {item.title}
-                      </h3>
-                    </div>
-                    <p {...stylex.props(styles.featureBody)}>{item.body}</p>
-                  </Flex>
-                </article>
-              ))}
-            </Flex>
-          </Flex>
-        </div>
-      </Page.Hero>
-      <Page.Hero style={styles.sectionWhite}>
         <div {...stylex.props(styles.twoCol)}>
           <Flex direction="column" gap="7xl">
             <Flex direction="column" gap="lg">
@@ -960,6 +969,55 @@ function RouteComponent() {
             </Flex>
           </Flex>
         </div>
+      </Page.Hero>
+      <Page.Hero style={styles.sectionWhite}>
+        <Flex direction="column" gap="6xl" style={styles.twoCol}>
+          <Flex direction="column" gap="4xl" style={styles.appBrowserHeader}>
+            <div {...stylex.props(styles.appBrowserEyebrow)}>
+              Organic Ecosystem
+            </div>
+            <h2 {...stylex.props(styles.sectionHeading)}>Apps for your Apps</h2>
+            <p {...stylex.props(styles.appBrowserDescription)}>
+              Since you own your Atmosphere account, anyone can build new apps
+              with you data. Ditch the walled gardens and build your own.
+            </p>
+            <p {...stylex.props(styles.appBrowserDescription)}>
+              Below you can explore apps and tools that work with Bluesky.
+            </p>
+          </Flex>
+
+          {ecosystemBrowserTags.length > 0 ? (
+            <div {...stylex.props(styles.chipRow)}>
+              {ecosystemBrowserTags.map((tag) => (
+                <button
+                  key={tag.tag}
+                  type="button"
+                  onClick={() => setActiveEcosystemTag(tag.tag)}
+                  {...stylex.props(
+                    styles.chip,
+                    activeEcosystemTagValue === tag.tag && styles.chipActive,
+                  )}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <FeaturedListingGrid
+            items={ecosystemBrowserApps.slice(0, MAX_BROWSER_APPS)}
+            getKey={(app) => app.id}
+            isFeatured={(_, index) => index === 0}
+            renderItem={(app, { featured }) => (
+              <AppBrowserListingCard featured={featured} listing={app} />
+            )}
+          />
+
+          <p {...stylex.props(styles.bottomMeta)}>
+            <strong>{ecosystemApps.length}+</strong> Bluesky ecosystem apps in
+            the directory.
+          </p>
+        </Flex>
       </Page.Hero>
       <Page.Hero style={styles.ctaSection}>
         <div {...stylex.props(styles.accountLogo)}>
@@ -1003,18 +1061,12 @@ function buildTagStats(apps: DirectoryListingCard[]) {
     .sort((a, b) => b.count - a.count);
 }
 
-function getGroupHeroPreloadImages(apps: DirectoryListingCard[]) {
-  const topGroupTags = buildTagStats(apps)
-    .slice(0, MAX_BROWSER_TAGS)
-    .map((group) => group.tag);
+function getGroupHeroPreloadImagesFromEcosystem(apps: DirectoryListingCard[]) {
   const heroUrls = new Set<string>();
 
-  for (const tag of topGroupTags) {
-    const firstWithHero = apps.find(
-      (app) => app.appTags.includes(tag) && Boolean(app.heroImageUrl),
-    );
-    if (firstWithHero?.heroImageUrl) {
-      heroUrls.add(firstWithHero.heroImageUrl);
+  for (const app of apps.slice(0, MAX_BROWSER_APPS)) {
+    if (app.heroImageUrl) {
+      heroUrls.add(app.heroImageUrl);
     }
   }
 
@@ -1087,5 +1139,5 @@ function AppBrowserListingCard({
         )}
       </Card>
     </RouterLink>
-  )
+  );
 }
