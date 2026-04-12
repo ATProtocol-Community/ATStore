@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
@@ -595,6 +595,18 @@ function requireCards(
   }
 
   return cards.slice(0, desiredCount)
+}
+
+function resolveConfiguredHomeHeroRows(input: {
+  configuredRows: DirectoryListingRow[]
+  fallbackRows: DirectoryListingRow[]
+  desiredCount: number
+}) {
+  if (input.configuredRows.length >= input.desiredCount) {
+    return input.configuredRows.slice(0, input.desiredCount)
+  }
+
+  return input.fallbackRows.slice(0, input.desiredCount)
 }
 
 function buildCategories(rows: DirectoryListingRow[], limit = 4) {
@@ -1270,9 +1282,11 @@ const getHomePageData = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
     const table = context.schema.storeListings
+    const homeHeroTable = context.schema.homePageHeroListings
     const listingSelect = getListingSelect(table)
 
-    const [recentRows, newestRows, tagRows, protocolRows] = await Promise.all([
+    const [recentRows, newestRows, tagRows, protocolRows, configuredHomeHeroRows] =
+      await Promise.all([
       context.db
         .select(listingSelect)
         .from(table)
@@ -1316,6 +1330,37 @@ const getHomePageData = createServerFn({ method: 'GET' })
           ),
         )
         .orderBy(desc(table.updatedAt), desc(table.createdAt)),
+      (async (): Promise<DirectoryListingRow[]> => {
+        const configured = await context.db
+          .select({
+            listingId: homeHeroTable.storeListingId,
+          })
+          .from(homeHeroTable)
+          .orderBy(asc(homeHeroTable.position))
+
+        if (configured.length === 0) {
+          return [] as DirectoryListingRow[]
+        }
+
+        const configuredListingIds = configured.map((row) => row.listingId)
+        const configuredListingRows = (await context.db
+          .select(listingSelect)
+          .from(table)
+          .where(
+            listingPublicWhere(
+              table,
+              and(
+                inArray(table.id, configuredListingIds),
+                sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
+              ),
+            ),
+          )) as DirectoryListingRow[]
+
+        const rowsById = new Map(configuredListingRows.map((row) => [row.id, row]))
+        return configuredListingIds
+          .map((id) => rowsById.get(id) ?? null)
+          .filter((row): row is DirectoryListingRow => row !== null)
+      })(),
     ])
 
     if (recentRows.length === 0) {
@@ -1324,7 +1369,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
 
     const dedupedRecentRows = dedupeListings(recentRows)
     const dedupedRecentAppRows = dedupedRecentRows.filter(isHomePageFeaturedAppRow)
-    const featuredSource =
+    const fallbackFeaturedSource =
       dedupedRecentAppRows.find(
         (row) =>
           row.heroImageUrl ||
@@ -1332,14 +1377,21 @@ const getHomePageData = createServerFn({ method: 'GET' })
           row.iconUrl,
       ) || dedupedRecentAppRows[0]
 
+    const heroRows = resolveConfiguredHomeHeroRows({
+      configuredRows: dedupeListings(configuredHomeHeroRows),
+      fallbackRows: dedupedRecentAppRows,
+      desiredCount: 3,
+    })
+    const featuredSource = heroRows[0] ?? fallbackFeaturedSource
+
     if (!featuredSource) {
       throw new Error('No homepage featured listing found')
     }
 
     const featured = toListingCard(featuredSource)
-    const remainingAppRows = dedupedRecentAppRows.filter(
-      (row) => row.id !== featuredSource.id,
-    )
+    const remainingAppRows = heroRows.length > 1
+      ? heroRows.slice(1)
+      : dedupedRecentAppRows.filter((row) => row.id !== featuredSource.id)
 
     const spotlights = requireCards(
       remainingAppRows.slice(0, 2).map(toListingCard),

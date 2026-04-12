@@ -412,11 +412,7 @@ function AppTagListingCard({
       {...stylex.props(styles.listingLink)}
     >
       <Card
-        style={[
-          styles.listingCard,
-          featured && styles.listingCardFeatured,
-          featured && getAccentSurface(listing.accent),
-        ]}
+        style={[styles.listingCard, featured && styles.listingCardFeatured]}
       >
         {featured && listing.heroImageUrl ? (
           <img
@@ -504,14 +500,6 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
-}
-
-function getAccentSurface(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.pinkSurface;
-  if (accent === "purple") return styles.purpleSurface;
-  if (accent === "green") return styles.greenSurface;
-
-  return styles.blueSurface;
 }
 
 function getRelatedAppTagGroups(

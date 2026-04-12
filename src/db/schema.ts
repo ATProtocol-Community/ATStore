@@ -239,6 +239,32 @@ export const storeListings = pgTable(
   }),
 )
 
+/** Ordered homepage hero slots managed from admin. */
+export const homePageHeroListings = pgTable(
+  'home_page_hero_listings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    position: integer('position').notNull(),
+    storeListingId: uuid('store_listing_id')
+      .notNull()
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    positionUniqueIdx: uniqueIndex('home_page_hero_listings_position_idx').on(
+      table.position,
+    ),
+    listingUniqueIdx: uniqueIndex('home_page_hero_listings_listing_idx').on(
+      table.storeListingId,
+    ),
+  }),
+)
+
 /** Queued Bluesky account candidates for manual verification (dev tooling + discovery script). */
 export const storeListingProductAccountCandidates = pgTable(
   'store_listing_product_account_candidates',
@@ -347,6 +373,8 @@ export type Embedding = typeof embeddings.$inferSelect
 export type NewEmbedding = typeof embeddings.$inferInsert
 export type StoreListing = typeof storeListings.$inferSelect
 export type NewStoreListing = typeof storeListings.$inferInsert
+export type HomePageHeroListing = typeof homePageHeroListings.$inferSelect
+export type NewHomePageHeroListing = typeof homePageHeroListings.$inferInsert
 export type StoreListingReview = typeof storeListingReviews.$inferSelect
 export type NewStoreListingReview = typeof storeListingReviews.$inferInsert
 export type ListingClaim = typeof listingClaims.$inferSelect
