@@ -973,21 +973,41 @@ function HeroSection({
       )
     : null;
   const favoriteMutation = useMutation({
-    mutationFn: async () => {
-      if (favoriteStatus.isFavorited) {
-        await directoryListingApi.unfavoriteDirectoryListing({
+    mutationFn: async (nextIsFavorited: boolean) => {
+      if (nextIsFavorited) {
+        await directoryListingApi.favoriteDirectoryListing({
           data: { listingId: productId },
         });
         return;
       }
-      await directoryListingApi.favoriteDirectoryListing({
+      await directoryListingApi.unfavoriteDirectoryListing({
         data: { listingId: productId },
       });
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onMutate: async (nextIsFavorited: boolean) => {
+      await queryClient.cancelQueries({
         queryKey: favoriteStatusQueryOptions.queryKey,
         exact: true,
+      });
+      const previousFavoriteStatus = queryClient.getQueryData(
+        favoriteStatusQueryOptions.queryKey,
+      );
+      queryClient.setQueryData(favoriteStatusQueryOptions.queryKey, {
+        isFavorited: nextIsFavorited,
+      });
+      return { previousFavoriteStatus };
+    },
+    onError: (_error, _nextIsFavorited, context) => {
+      if (context?.previousFavoriteStatus !== undefined) {
+        queryClient.setQueryData(
+          favoriteStatusQueryOptions.queryKey,
+          context.previousFavoriteStatus,
+        );
+      }
+    },
+    onSuccess: async (_result, nextIsFavorited) => {
+      queryClient.setQueryData(favoriteStatusQueryOptions.queryKey, {
+        isFavorited: nextIsFavorited,
       });
       if (profileFavoritesQueryOptions) {
         await queryClient.invalidateQueries({
@@ -995,6 +1015,12 @@ function HeroSection({
           exact: true,
         });
       }
+      window.setTimeout(() => {
+        void queryClient.invalidateQueries({
+          queryKey: favoriteStatusQueryOptions.queryKey,
+          exact: true,
+        });
+      }, 10_000);
     },
   });
   const canFavorite =
@@ -1058,7 +1084,9 @@ function HeroSection({
               size="lg"
               isSelected={favoriteStatus.isFavorited}
               isDisabled={favoriteMutation.isPending}
-              onPress={() => void favoriteMutation.mutateAsync()}
+              onPress={() =>
+                void favoriteMutation.mutateAsync(!favoriteStatus.isFavorited)
+              }
               aria-label={
                 favoriteStatus.isFavorited ? "Unfavorite" : "Favorite"
               }

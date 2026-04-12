@@ -7,10 +7,12 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { Link as AriaLink } from "react-aria-components";
+import { useState } from "react";
 
 import { BlueskyIcon } from "#/components/bluesky-icon";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { Avatar } from "../design-system/avatar";
+import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Page } from "../design-system/page";
 import {
@@ -31,6 +33,7 @@ import { radius } from "../design-system/theme/radius.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 
 const RouterLink = createLink(AriaLink);
+const FAVORITES_PREVIEW_LIMIT = 4;
 
 const styles = stylex.create({
   page: {
@@ -207,6 +210,12 @@ function UserProfilePage() {
     ? page.handle.replace(/^@+/, "")
     : did;
   const blueskyProfileUrl = `https://bsky.app/profile/${blueskyProfileId}`;
+  const [showAllFavorites, setShowAllFavorites] = useState(false);
+  const hasMoreFavorites = favoriteProducts.length > FAVORITES_PREVIEW_LIMIT;
+  const visibleFavoriteProducts =
+    showAllFavorites || !hasMoreFavorites
+      ? favoriteProducts
+      : favoriteProducts.slice(0, FAVORITES_PREVIEW_LIMIT);
 
   return (
     <Page.Root variant="small" style={styles.page}>
@@ -240,9 +249,22 @@ function UserProfilePage() {
 
       {favoriteProducts.length > 0 ? (
         <Flex direction="column" gap="4xl" style={styles.ownedSection}>
-          <Heading3>Favorites</Heading3>
+          <Flex justify="between" align="center" gap="lg">
+            <Heading3>Favorites</Heading3>
+            {hasMoreFavorites ? (
+              <Button
+                variant="secondary"
+                size="md"
+                onPress={() => {
+                  setShowAllFavorites((current) => !current);
+                }}
+              >
+                {showAllFavorites ? "Show less" : "Show more"}
+              </Button>
+            ) : null}
+          </Flex>
           <div {...stylex.props(styles.ownedGrid)}>
-            {favoriteProducts.map((favorite) => (
+            {visibleFavoriteProducts.map((favorite) => (
               <RouterLink
                 key={favorite.id}
                 to="/products/$productId"
@@ -261,7 +283,11 @@ function UserProfilePage() {
                     {...stylex.props(styles.ownedIcon)}
                   />
                 ) : null}
-                <Flex direction="column" gap="xl" style={styles.ownedTextColumn}>
+                <Flex
+                  direction="column"
+                  gap="xl"
+                  style={styles.ownedTextColumn}
+                >
                   <Text size="lg" weight="bold">
                     {favorite.name}
                   </Text>
@@ -328,24 +354,26 @@ function UserProfilePage() {
       <Flex direction="column" gap="4xl" style={styles.reviews}>
         <Heading3>Reviews</Heading3>
         {page.reviews.length > 0 ? (
-          page.reviews.map((review) => (
-            <DirectoryListingReviewCard
-              key={review.id}
-              listingId={review.listing.id}
-              reviewedListing={review.listing}
-              review={review}
-              viewerDid={session?.user?.did ?? null}
-              onEditReview={() => {
-                void navigate({
-                  to: "/products/$productId/reviews/$reviewId/edit",
-                  params: {
-                    productId: getDirectoryListingSlug(review.listing),
-                    reviewId: review.id,
-                  },
-                });
-              }}
-            />
-          ))
+          <Flex direction="column" gap="lg">
+            {page.reviews.map((review) => (
+              <DirectoryListingReviewCard
+                key={review.id}
+                listingId={review.listing.id}
+                reviewedListing={review.listing}
+                review={review}
+                viewerDid={session?.user?.did ?? null}
+                onEditReview={() => {
+                  void navigate({
+                    to: "/products/$productId/reviews/$reviewId/edit",
+                    params: {
+                      productId: getDirectoryListingSlug(review.listing),
+                      reviewId: review.id,
+                    },
+                  });
+                }}
+              />
+            ))}
+          </Flex>
         ) : (
           <Flex
             direction="column"
