@@ -3,11 +3,15 @@ import "dotenv/config";
 
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { db, dbClient } from "../src/db/index.server";
+import { storeListings } from "../src/db/schema";
 
 import {
-  ECOSYSTEM_HERO_ART_SPECS,
+  getEcosystemHeroArtSpec,
   getEcosystemHeroArtPrompt,
 } from "../src/lib/ecosystem-hero-art";
+import { getDirectoryCategoryOption } from "../src/lib/directory-categories";
 
 const GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image-preview" as const;
 const OUTPUT_DIR = path.resolve(process.cwd(), "public/generated/ecosystem-heroes");
@@ -114,6 +118,98 @@ function getExtensionFromMimeType(mimeType: string) {
   return ".png";
 }
 
+function normalizePrefix(prefix: string | undefined): string {
+  if (!prefix) return "";
+  const trimmed = prefix.trim().replace(/^\/+|\/+$/g, "");
+  return trimmed ? `${trimmed}/` : "";
+}
+
+type S3LookupContext = {
+  client: S3Client;
+  bucket: string;
+  keyPrefix: string;
+};
+
+function getS3LookupContext(): S3LookupContext | null {
+  const endpoint = process.env.AWS_ENDPOINT?.trim();
+  const region = process.env.AWS_REGION?.trim();
+  const bucket = process.env.AWS_BUCKET_NAME?.trim();
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
+
+  if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey) {
+    return null;
+  }
+
+  return {
+    client: new S3Client({
+      endpoint,
+      region,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    }),
+    bucket,
+    keyPrefix: normalizePrefix(process.env.AWS_BUCKET_PREFIX),
+  };
+}
+
+async function s3ObjectExists(
+  context: S3LookupContext,
+  key: string,
+): Promise<boolean> {
+  try {
+    await context.client.send(
+      new HeadObjectCommand({
+        Bucket: context.bucket,
+        Key: key,
+      }),
+    );
+    return true;
+  } catch (error) {
+    const statusCode = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    const name = (error as { name?: string }).name;
+
+    if (statusCode === 404 || name === "NotFound" || name === "NoSuchKey") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+async function getSpecsFromDatabase() {
+  const rows = await db
+    .select({ categorySlugs: storeListings.categorySlugs })
+    .from(storeListings);
+
+  const categoryIds = new Set<string>();
+
+  for (const row of rows) {
+    for (const slug of row.categorySlugs ?? []) {
+      const normalized = slug.trim().toLowerCase();
+      const parts = normalized.split("/").filter(Boolean);
+      if (parts.length < 2 || parts[0] !== "apps") {
+        continue;
+      }
+      categoryIds.add(parts.join("/"));
+    }
+  }
+
+  const specs = [...categoryIds]
+    .sort((a, b) => a.localeCompare(b))
+    .map((categoryId) => {
+      const option = getDirectoryCategoryOption(categoryId);
+      return getEcosystemHeroArtSpec(option?.id ?? categoryId);
+    })
+    .filter((spec) => spec != null);
+
+  return specs;
+}
+
 async function generateImage(prompt: string) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
   const response = await fetch(endpoint, {
@@ -170,10 +266,21 @@ async function main() {
   }
 
   await mkdir(OUTPUT_DIR, { recursive: true });
+  const s3Lookup = getS3LookupContext();
 
-  const specs = ECOSYSTEM_HERO_ART_SPECS.filter((spec) =>
-    args.categoryId ? spec.categoryId === args.categoryId : true,
-  ).slice(0, args.limit ?? Number.POSITIVE_INFINITY);
+  if (s3Lookup) {
+    console.log("S3 lookup enabled for existing asset checks.");
+  } else {
+    console.warn(
+      "S3 lookup disabled (missing AWS env vars); falling back to local file checks only.",
+    );
+  }
+
+  const allSpecs = await getSpecsFromDatabase();
+  const selectedSpecs = args.categoryId
+    ? [getEcosystemHeroArtSpec(args.categoryId)].filter((spec) => spec != null)
+    : allSpecs;
+  const specs = selectedSpecs.slice(0, args.limit ?? Number.POSITIVE_INFINITY);
 
   if (specs.length === 0) {
     console.log("No matching ecosystem hero assets to generate.");
@@ -183,14 +290,24 @@ async function main() {
   for (const spec of specs) {
     const targetPath = path.resolve(process.cwd(), `public${spec.assetPath}`);
     const prompt = getEcosystemHeroArtPrompt(spec);
+    const objectKey = `${s3Lookup?.keyPrefix ?? ""}${spec.assetPath.replace(/^\//, "")}`;
 
-    if (args.dryRun) {
-      console.log(`\n[Dry run] ${spec.categoryId} -> ${targetPath}\n${prompt}\n`);
+    if (!args.force && s3Lookup && (await s3ObjectExists(s3Lookup, objectKey))) {
+      console.log(
+        `Skipping ${spec.label} (${spec.categoryId}) because it already exists in s3://${s3Lookup.bucket}/${objectKey}.`,
+      );
       continue;
     }
 
     if (!args.force && (await fileExists(targetPath))) {
-      console.log(`Skipping ${spec.label} (${spec.categoryId}) because it already exists.`);
+      console.log(
+        `Skipping ${spec.label} (${spec.categoryId}) because it already exists locally.`,
+      );
+      continue;
+    }
+
+    if (args.dryRun) {
+      console.log(`\n[Dry run] ${spec.categoryId} -> ${targetPath}\n${prompt}\n`);
       continue;
     }
 
@@ -211,4 +328,6 @@ async function main() {
 await main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
+}).finally(async () => {
+  await dbClient.end({ timeout: 5 });
 });

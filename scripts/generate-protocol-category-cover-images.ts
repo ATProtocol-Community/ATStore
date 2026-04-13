@@ -3,6 +3,7 @@ import "dotenv/config";
 
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { storeListings } from "../src/db/schema";
 import { db, dbClient } from "../src/db/index.server";
@@ -126,6 +127,69 @@ function getExtensionFromMimeType(mimeType: string) {
   return ".png";
 }
 
+function normalizePrefix(prefix: string | undefined): string {
+  if (!prefix) return "";
+  const trimmed = prefix.trim().replace(/^\/+|\/+$/g, "");
+  return trimmed ? `${trimmed}/` : "";
+}
+
+type S3LookupContext = {
+  client: S3Client;
+  bucket: string;
+  keyPrefix: string;
+};
+
+function getS3LookupContext(): S3LookupContext | null {
+  const endpoint = process.env.AWS_ENDPOINT?.trim();
+  const region = process.env.AWS_REGION?.trim();
+  const bucket = process.env.AWS_BUCKET_NAME?.trim();
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
+
+  if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey) {
+    return null;
+  }
+
+  return {
+    client: new S3Client({
+      endpoint,
+      region,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    }),
+    bucket,
+    keyPrefix: normalizePrefix(process.env.AWS_BUCKET_PREFIX),
+  };
+}
+
+async function s3ObjectExists(
+  context: S3LookupContext,
+  key: string,
+): Promise<boolean> {
+  try {
+    await context.client.send(
+      new HeadObjectCommand({
+        Bucket: context.bucket,
+        Key: key,
+      }),
+    );
+    return true;
+  } catch (error) {
+    const statusCode = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    const name = (error as { name?: string }).name;
+
+    if (statusCode === 404 || name === "NotFound" || name === "NoSuchKey") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 async function generateImage(prompt: string) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
   const response = await fetch(endpoint, {
@@ -219,6 +283,15 @@ async function main() {
   await mkdir(OUTPUT_DIR, { recursive: true });
 
   let specs = await getSpecsFromDatabase();
+  const s3Lookup = getS3LookupContext();
+
+  if (s3Lookup) {
+    console.log("S3 lookup enabled for existing asset checks.");
+  } else {
+    console.warn(
+      "S3 lookup disabled (missing AWS env vars); falling back to local file checks only.",
+    );
+  }
 
   if (args.segment) {
     const option = getDirectoryCategoryOption(`protocol/${args.segment}`);
@@ -236,16 +309,24 @@ async function main() {
   for (const spec of specs) {
     const targetPath = path.resolve(process.cwd(), `public${spec.assetPath}`);
     const prompt = getProtocolCategoryCoverArtPrompt(spec);
+    const objectKey = `${s3Lookup?.keyPrefix ?? ""}${spec.assetPath.replace(/^\//, "")}`;
 
-    if (args.dryRun) {
-      console.log(`\n[Dry run] ${spec.segment} -> ${targetPath}\n${prompt}\n`);
+    if (!args.force && s3Lookup && (await s3ObjectExists(s3Lookup, objectKey))) {
+      console.log(
+        `Skipping ${spec.label} (${spec.segment}) because it already exists in s3://${s3Lookup.bucket}/${objectKey}.`,
+      );
       continue;
     }
 
     if (!args.force && (await fileExists(targetPath))) {
       console.log(
-        `Skipping ${spec.label} (${spec.segment}) because it already exists.`,
+        `Skipping ${spec.label} (${spec.segment}) because it already exists locally.`,
       );
+      continue;
+    }
+
+    if (args.dryRun) {
+      console.log(`\n[Dry run] ${spec.segment} -> ${targetPath}\n${prompt}\n`);
       continue;
     }
 

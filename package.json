@@ -18,6 +18,7 @@
     "generate:app-tag-hero-images": "tsx scripts/generate-app-tag-hero-images.ts",
     "generate:ecosystem-hero-images": "tsx scripts/generate-ecosystem-hero-images.ts",
     "generate:protocol-page-hero-images": "tsx scripts/generate-protocol-page-hero-images.ts",
+    "generate:missing-category-headers": "tsx scripts/generate-missing-category-headers.ts",
     "generate:home-page-hero-images": "tsx scripts/generate-home-page-hero-images.ts",
     "generate:social-avatar": "tsx scripts/generate-social-avatar-image.ts",
     "generate:listings-header-image": "tsx scripts/generate-listings-header-image.ts",

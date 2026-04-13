@@ -1,3 +1,5 @@
+import { GENERATED_BANNER_RECORD_URLS } from "./generated-banner-record-urls";
+
 export interface EcosystemHeroArtSpec {
   categoryId: string;
   label: string;
@@ -71,11 +73,21 @@ const ecosystemHeroArtSpecByCategoryId = new Map(
 );
 
 export function getEcosystemHeroArtSpec(categoryId: string) {
-  return ecosystemHeroArtSpecByCategoryId.get(categoryId) ?? null;
+  const fromStatic = ecosystemHeroArtSpecByCategoryId.get(categoryId);
+  if (fromStatic) {
+    return fromStatic;
+  }
+
+  return buildDefaultEcosystemHeroArtSpec(categoryId);
 }
 
 export function getEcosystemHeroAssetPathForCategory(categoryId: string) {
-  return getEcosystemHeroArtSpec(categoryId)?.assetPath ?? null;
+  const assetPath = getEcosystemHeroArtSpec(categoryId)?.assetPath;
+  if (!assetPath) {
+    return null;
+  }
+
+  return GENERATED_BANNER_RECORD_URLS[assetPath] ? assetPath : null;
 }
 
 export function getEcosystemHeroArtPrompt(spec: EcosystemHeroArtSpec) {
@@ -94,3 +106,49 @@ export function getEcosystemHeroArtPrompt(spec: EcosystemHeroArtSpec) {
 }
 
 export { ECOSYSTEM_HERO_ART_SPECS };
+
+function buildDefaultEcosystemHeroArtSpec(
+  categoryId: string,
+): EcosystemHeroArtSpec | null {
+  const segments = categoryId
+    .trim()
+    .toLowerCase()
+    .split("/")
+    .filter(Boolean);
+
+  if (segments.length < 2 || segments[0] !== "apps") {
+    return null;
+  }
+
+  const assetSlug = segments.slice(1).join("-");
+  if (!assetSlug) {
+    return null;
+  }
+
+  const appName = formatSegmentTitleCase(segments[1] ?? "App");
+  const branchLabel =
+    segments.length > 2
+      ? formatSegmentTitleCase((segments[segments.length - 1] ?? "Category").replace(
+          /-/g,
+          " ",
+        ))
+      : "Ecosystem";
+  const label = `${appName} ${branchLabel}`.trim();
+
+  return {
+    categoryId: segments.join("/"),
+    label,
+    assetPath: `/generated/ecosystem-heroes/${assetSlug}.png`,
+    palettePrompt:
+      "electric blue, cyan, indigo, violet, mint, and soft white highlights",
+    subjectPrompt: `premium abstract ecosystem artwork for "${label}" with polished app cards, layered social surfaces, modular utility panels, and dynamic discovery pathways`,
+  };
+}
+
+function formatSegmentTitleCase(value: string): string {
+  return value
+    .split(/[\s-_]+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}

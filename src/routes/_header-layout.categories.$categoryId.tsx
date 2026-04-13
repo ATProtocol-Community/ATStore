@@ -719,18 +719,22 @@ function getOtherAppCategories(
     return [];
   }
 
+  const ecosystemRootId = currentCategory.pathIds.slice(0, 2).join("/");
   const parentCategoryId = currentCategory.pathIds.slice(0, -1).join("/");
+  const ecosystemRootNode = findCategoryNodeById(categoryTree, ecosystemRootId);
   const parentNode = findCategoryNodeById(categoryTree, parentCategoryId);
-  const appsRootNode = findCategoryNodeById(categoryTree, "apps");
+  if (!ecosystemRootNode) {
+    return [];
+  }
 
   const siblingCategories =
     parentNode?.children.filter((node) => node.id !== currentCategory.id) ?? [];
 
-  const appRootCategories =
-    appsRootNode?.children.filter((node) => node.id !== currentCategory.id) ??
-    [];
+  const ecosystemCategories = flattenCategoryNodes(
+    ecosystemRootNode.children,
+  ).filter((node) => node.id !== currentCategory.id);
 
-  const allCandidates = [...siblingCategories, ...appRootCategories];
+  const allCandidates = [...siblingCategories, ...ecosystemCategories];
   const seen = new Set<string>();
 
   return allCandidates
@@ -750,6 +754,17 @@ function getOtherAppCategories(
       return left.label.localeCompare(right.label);
     })
     .slice(0, 3);
+}
+
+function flattenCategoryNodes(
+  nodes: DirectoryCategoryTreeNode[],
+): DirectoryCategoryTreeNode[] {
+  const flattened: DirectoryCategoryTreeNode[] = [];
+  for (const node of nodes) {
+    flattened.push(node);
+    flattened.push(...flattenCategoryNodes(node.children));
+  }
+  return flattened;
 }
 
 function findCategoryNodeById(

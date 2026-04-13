@@ -133,6 +133,13 @@ const styles = stylex.create({
     minHeight: 0,
     textDecoration: "none",
   },
+  content: {
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: gap["4xl"],
+    minHeight: 0,
+  },
   listingHeader: {
     gap: gap["2xl"],
   },
@@ -301,69 +308,72 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
       : null;
 
   return (
-    <Card style={styles.listingCard}>
-      <Flex direction="column" style={styles.listingCardBody}>
-        <RouterLink
-          to="/products/$productId"
-          params={{ productId: getDirectoryListingSlug(listing) }}
-          {...stylex.props(styles.listingLink)}
-        >
-          <Flex gap="2xl" align="center" style={styles.listingHeader}>
-            <Avatar
-              alt={listing.name}
-              fallback={getInitials(listing.name)}
-              size="xl"
-              src={listing.iconUrl || undefined}
-            />
-            <Flex direction="column" gap="xl" style={styles.listingInfo}>
-              <Text size="xl" weight="semibold">
-                {listing.name}
-              </Text>
+    <RouterLink
+      {...stylex.props(styles.listingLink)}
+      to="/products/$productId"
+      params={{ productId: getDirectoryListingSlug(listing) }}
+    >
+      <Card style={[styles.listingCard]}>
+        <Flex direction="column" style={styles.listingCardBody}>
+          <div {...stylex.props(styles.content)}>
+            <Flex gap="2xl" align="center" style={styles.listingHeader}>
+              <Avatar
+                alt={listing.name}
+                fallback={getInitials(listing.name)}
+                size="xl"
+                src={listing.iconUrl || undefined}
+              />
+              <Flex direction="column" gap="xl" style={styles.listingInfo}>
+                <Text size="xl" weight="semibold">
+                  {listing.name}
+                </Text>
+                <SmallBody variant="secondary">
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                </SmallBody>
+              </Flex>
+            </Flex>
+
+            <Body variant="secondary" style={styles.listingTagline}>
+              {listing.tagline}
+            </Body>
+          </div>
+
+          <Flex
+            justify="between"
+            gap="xl"
+            align="start"
+            style={styles.listingFooter}
+          >
+            <Flex align="center" gap="sm" style={styles.listingTags}>
+              {isTopLevelAppListing && listing.appTags.length > 0 ? (
+                listing.appTags.map((tag) => (
+                  <Badge key={tag} size="sm" variant="primary">
+                    {formatAppTagLabel(tag)}
+                  </Badge>
+                ))
+              ) : (
+                <Badge size="sm" variant="primary">
+                  {isProtocolListing
+                    ? (listingPathLabel ?? listing.category)
+                    : (appSubpathLabel ?? listingPathLabel ?? listing.category)}
+                </Badge>
+              )}
+            </Flex>
+            <Flex align="center" gap="sm" style={styles.listingFooterRating}>
               <SmallBody variant="secondary">
-                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
               </SmallBody>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+                showReviewCount
+              />
             </Flex>
           </Flex>
-
-          <Body variant="secondary" style={styles.listingTagline}>
-            {listing.tagline}
-          </Body>
-        </RouterLink>
-
-        <Flex
-          justify="between"
-          gap="xl"
-          align="start"
-          style={styles.listingFooter}
-        >
-          <Flex align="center" gap="sm" style={styles.listingTags}>
-            {isTopLevelAppListing && listing.appTags.length > 0 ? (
-              listing.appTags.map((tag) => (
-                <Badge key={tag} size="sm" variant="primary">
-                  {formatAppTagLabel(tag)}
-                </Badge>
-              ))
-            ) : (
-              <Badge size="sm" variant="primary">
-                {isProtocolListing
-                  ? (listingPathLabel ?? listing.category)
-                  : (appSubpathLabel ?? listingPathLabel ?? listing.category)}
-              </Badge>
-            )}
-          </Flex>
-          <Flex align="center" gap="sm" style={styles.listingFooterRating}>
-            <SmallBody variant="secondary">
-              {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-            </SmallBody>
-            <StarRating
-              rating={listing.rating}
-              reviewCount={listing.reviewCount}
-              showReviewCount
-            />
-          </Flex>
         </Flex>
-      </Flex>
-    </Card>
+      </Card>
+    </RouterLink>
   );
 }
 

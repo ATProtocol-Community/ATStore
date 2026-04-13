@@ -103,7 +103,8 @@ export function EcosystemListingCard({
                 <Flex align="center" gap="lg" style={styles.ratingRow}>
                   <SmallBody variant="secondary">
                     @
-                    {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                    {listing.productAccountHandle?.replace(/^@/, "") ||
+                      "unknown"}
                   </SmallBody>
                 </Flex>
               </Flex>
