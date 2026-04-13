@@ -1,6 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  createLink,
+  notFound,
+  useRouter,
+} from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -14,6 +19,7 @@ import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
+import { Select, SelectItem } from "../design-system/select";
 import {
   gap,
   verticalSpace,
@@ -32,9 +38,27 @@ import {
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 const AppLink = createLink(Link);
+const sortOptions = [
+  { id: "popular", label: "Trending" },
+  { id: "newest", label: "Newest" },
+  { id: "alphabetical", label: "Alphabetical" },
+] as const;
 
 export const Route = createFileRoute("/_header-layout/ecosystems/$app/all")({
-  loader: async ({ context, params }) => {
+  validateSearch: (
+    search,
+  ): { sort: "popular" | "newest" | "alphabetical" } => ({
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
+  }),
+  loaderDeps: ({ search }) => ({
+    sort: search.sort,
+  }),
+  loader: async ({ context, params, deps }) => {
     const categoryId = getAppEcosystemCategoryIdFromRouteParam(params.app);
     if (!categoryId) {
       throw notFound();
@@ -43,7 +67,7 @@ export const Route = createFileRoute("/_header-layout/ecosystems/$app/all")({
     const data = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryCategoryPageQueryOptions({
         categoryId,
-        sort: "popular",
+        sort: deps.sort,
       }),
     );
 
@@ -91,6 +115,13 @@ const styles = stylex.create({
     letterSpacing: "0.16em",
     textTransform: "uppercase",
   },
+  resultsActions: {
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  sortSelect: {
+    minWidth: "12rem",
+  },
   emptyState: {
     gap: gap["lg"],
     maxWidth: "40rem",
@@ -103,6 +134,8 @@ const styles = stylex.create({
 });
 
 function EcosystemAllPage() {
+  const search = Route.useSearch();
+  const router = useRouter();
   const { app } = Route.useLoaderData();
   const categoryId = getAppEcosystemCategoryIdFromRouteParam(app);
   if (!categoryId) {
@@ -117,7 +150,7 @@ function EcosystemAllPage() {
   const { data } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryPageQueryOptions({
       categoryId,
-      sort: "popular",
+      sort: search.sort,
     }),
   );
 
@@ -190,6 +223,34 @@ function EcosystemAllPage() {
                   normalizedQuery,
                 )}
               </SmallBody>
+            </Flex>
+            <Flex gap="xl" style={styles.resultsActions}>
+              <Select
+                aria-label="Sort ecosystem listings"
+                items={sortOptions}
+                placeholder="Sort listings"
+                size="lg"
+                style={styles.sortSelect}
+                value={search.sort}
+                variant="secondary"
+                onChange={(key) => {
+                  if (
+                    key !== "popular" &&
+                    key !== "newest" &&
+                    key !== "alphabetical"
+                  ) {
+                    return;
+                  }
+
+                  void router.navigate({
+                    to: "/ecosystems/$app/all",
+                    params: { app },
+                    search: { sort: key },
+                  });
+                }}
+              >
+                {(item) => <SelectItem>{item.label}</SelectItem>}
+              </Select>
             </Flex>
           </Flex>
 

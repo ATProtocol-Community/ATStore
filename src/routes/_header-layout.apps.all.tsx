@@ -40,7 +40,7 @@ import { Badge } from "#/design-system/badge";
 const LinkLink = createLink(Link);
 
 const sortOptions = [
-  { id: "popular", label: "Popular" },
+  { id: "popular", label: "Trending" },
   { id: "newest", label: "Newest" },
   { id: "alphabetical", label: "Alphabetical" },
 ] as const;
