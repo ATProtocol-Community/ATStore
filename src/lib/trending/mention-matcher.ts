@@ -152,6 +152,17 @@ function canonicalUrlForExactMatch(raw: string): string | null {
   }
 }
 
+function listingHosts(row: ListingMentionIndexRow): Set<string> {
+  const hosts = new Set<string>()
+  const sourceHost = hostnameFromUrl(row.sourceUrl)
+  if (sourceHost) hosts.add(sourceHost)
+  if (row.externalUrl) {
+    const externalHost = hostnameFromUrl(row.externalUrl)
+    if (externalHost) hosts.add(externalHost)
+  }
+  return hosts
+}
+
 export function buildListingMentionIndex(
   rows: ListingMentionIndexRow[],
 ): ListingMentionIndex {
@@ -325,10 +336,12 @@ export function matchPostToListings(input: {
 
   for (const u of allUrls) {
     const host = hostnameFromUrl(u)
+    if (!host) continue
     for (const row of input.index.listings) {
       const slug = row.slug?.trim() ?? ''
       if (!slug || !urlPathContainsSlug(u, slug)) continue
-      if (host && shouldUseExactUrlMatchOnly(host)) continue
+      if (!listingHosts(row).has(host)) continue
+      if (shouldUseExactUrlMatchOnly(host)) continue
       mergeHit(byId, {
         storeListingId: row.id,
         matchType: 'url',

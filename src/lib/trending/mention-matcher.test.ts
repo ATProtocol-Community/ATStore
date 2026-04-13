@@ -172,7 +172,7 @@ describe('matchPostToListings', () => {
     ).toBe(true)
   })
 
-  it('matches listing slug in URL path even when host differs', () => {
+  it('does not match listing slug in URL path when host differs', () => {
     const index = buildListingMentionIndex([
       {
         id: 'e',
@@ -189,9 +189,55 @@ describe('matchPostToListings', () => {
       urls: ['https://blog.partner.org/reviews/long-name-here'],
       facetHandles: [],
     })
-    const urlHit = hits.find((h) => h.storeListingId === 'e' && h.matchType === 'url')
+    expect(hits.some((h) => h.storeListingId === 'e')).toBe(false)
+  })
+
+  it('matches listing slug path on listing domain', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'anchor',
+        name: 'Anchor',
+        slug: 'anchor',
+        sourceUrl: 'https://dropanchor.app',
+        externalUrl: null,
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'feature docs',
+      urls: ['https://dropanchor.app/anchor/setup'],
+      facetHandles: [],
+    })
+
+    const urlHit = hits.find(
+      (h) => h.storeListingId === 'anchor' && h.matchType === 'url',
+    )
     expect(urlHit).toBeDefined()
-    expect(urlHit?.evidence).toMatchObject({ slugInUrlPath: 'long-name-here' })
+    expect(urlHit?.confidence).toBeGreaterThanOrEqual(0.82)
+  })
+
+  it('does not match anchor slug path on unrelated domain', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'anchor2',
+        name: 'Anchor',
+        slug: 'anchor',
+        sourceUrl: 'https://dropanchor.app',
+        externalUrl: null,
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'news',
+      urls: ['https://briefly.co/anchor/world-news/story/foo'],
+      facetHandles: [],
+    })
+
+    expect(hits.some((h) => h.storeListingId === 'anchor2')).toBe(false)
   })
 
   it('matches standard.site context with slug in text', () => {

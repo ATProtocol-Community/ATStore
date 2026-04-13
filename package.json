@@ -44,6 +44,7 @@
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
     "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts",
     "jetstream:consumer": "tsx -r dotenv/config scripts/jetstream-consumer.ts",
+    "cleanup:jetstream-github-domain-mentions": "tsx -r dotenv/config scripts/cleanup-jetstream-github-domain-mentions.ts",
     "backfill:trending": "tsx -r dotenv/config scripts/backfill-trending-scores.ts",
     "discover:product-bsky": "tsx -r dotenv/config scripts/discover-product-bsky-candidates.ts",
     "fix:feed-creator-url": "tsx -r dotenv/config scripts/fix-bluesky-feed-creator-external-url.ts",
