@@ -1,6 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
+import { RichText } from "@atproto/api";
 import { createLink, Link as RouterLink } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
+import type { ReactNode } from "react";
 
 import type { DirectoryListingMention } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { Avatar } from "../design-system/avatar";
@@ -62,6 +64,36 @@ const styles = stylex.create({
   mentionPostText: {
     paddingTop: verticalSpace["md"],
   },
+  postText: {
+    whiteSpace: "pre-wrap",
+  },
+  facetLink: {
+    color: uiColor.primary,
+    textDecoration: "underline",
+  },
+  embedCard: {
+    borderColor: uiColor.component2,
+    borderRadius: radius.md,
+    borderStyle: "solid",
+    borderWidth: 1,
+    color: "inherit",
+    overflow: "hidden",
+    textDecoration: "none",
+    maxWidth: 400,
+  },
+  embedThumb: {
+    display: "block",
+    height: 120,
+    objectFit: "cover",
+    width: "100%",
+    aspectRatio: 16 / 9,
+  },
+  embedBody: {
+    padding: verticalSpace["3xl"],
+  },
+  embedUrl: {
+    overflowWrap: "anywhere",
+  },
 });
 
 function mentionAuthorLabel(mention: DirectoryListingMention): string {
@@ -72,6 +104,71 @@ function mentionAuthorLabel(mention: DirectoryListingMention): string {
       ? `${mention.authorDid.slice(0, 10)}…`
       : mention.authorDid)
   );
+}
+
+function renderPostText(mention: DirectoryListingMention) {
+  const text = mention.postText;
+  if (!text) return null;
+  const facets = mention.postFacets;
+  if (!facets || facets.length === 0) {
+    return <Body style={styles.postText}>{text}</Body>;
+  }
+
+  const richText = new RichText({
+    text,
+    facets: facets as ConstructorParameters<typeof RichText>[0]["facets"],
+  });
+
+  const parts: ReactNode[] = [];
+  let i = 0;
+  for (const segment of richText.segments()) {
+    const key = `segment-${i++}`;
+    if (segment.isLink() && segment.link?.uri) {
+      parts.push(
+        <a
+          key={key}
+          href={segment.link.uri}
+          target="_blank"
+          rel="noreferrer"
+          {...stylex.props(styles.facetLink)}
+        >
+          {segment.text}
+        </a>,
+      );
+      continue;
+    }
+    if (segment.isMention() && segment.mention?.did) {
+      parts.push(
+        <a
+          key={key}
+          href={`https://bsky.app/profile/${segment.mention.did}`}
+          target="_blank"
+          rel="noreferrer"
+          {...stylex.props(styles.facetLink)}
+        >
+          {segment.text}
+        </a>,
+      );
+      continue;
+    }
+    if (segment.isTag() && segment.tag?.tag) {
+      parts.push(
+        <a
+          key={key}
+          href={`https://bsky.app/hashtag/${encodeURIComponent(segment.tag.tag)}`}
+          target="_blank"
+          rel="noreferrer"
+          {...stylex.props(styles.facetLink)}
+        >
+          {segment.text}
+        </a>,
+      );
+      continue;
+    }
+    parts.push(<span key={key}>{segment.text}</span>);
+  }
+
+  return <Body style={styles.postText}>{parts}</Body>;
 }
 
 export function BlueskyMentionCard({
@@ -87,8 +184,7 @@ export function BlueskyMentionCard({
     Boolean(displayName) &&
     handlePlain.length > 0 &&
     displayName!.toLowerCase() !== handlePlain.toLowerCase();
-
-  console.log(mention);
+  const embed = mention.postEmbed;
   return (
     <Card size="lg" style={styles.mentionCard}>
       <CardHeader>
@@ -134,7 +230,36 @@ export function BlueskyMentionCard({
       </CardHeader>
       <CardBody>
         <Flex direction="column" gap="4xl" style={styles.mentionPostText}>
-          {mention.postText ? <Body>{mention.postText}</Body> : null}
+          {renderPostText(mention)}
+          {embed ? (
+            <a
+              href={embed.uri}
+              target="_blank"
+              rel="noreferrer"
+              {...stylex.props(styles.embedCard)}
+            >
+              {embed.thumbUrl ? (
+                <img
+                  alt=""
+                  src={embed.thumbUrl}
+                  {...stylex.props(styles.embedThumb)}
+                />
+              ) : null}
+              <Flex direction="column" gap="lg" style={styles.embedBody}>
+                {embed.title ? (
+                  <Text size="sm" weight="semibold">
+                    {embed.title}
+                  </Text>
+                ) : null}
+                {embed.description ? (
+                  <SmallBody variant="secondary">{embed.description}</SmallBody>
+                ) : null}
+                <SmallBody variant="secondary" style={styles.embedUrl}>
+                  {embed.uri}
+                </SmallBody>
+              </Flex>
+            </a>
+          ) : null}
           <SmallBody variant="secondary">
             {Intl.DateTimeFormat("en-US", {
               dateStyle: "short",

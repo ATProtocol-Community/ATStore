@@ -104,6 +104,11 @@ describe('matchPostToListings', () => {
     expect(hits.some((h) => h.storeListingId === 'a' && h.matchType === 'url')).toBe(
       true,
     )
+    const hit = hits.find((h) => h.storeListingId === 'a' && h.matchType === 'url')
+    expect(hit?.evidence).toMatchObject({
+      host: 'coolapp.example.com',
+      url: 'https://coolapp.example.com/pricing',
+    })
   })
 
   it('matches product handle from facet handles list', () => {
@@ -409,6 +414,83 @@ describe('matchPostToListings', () => {
     expect(
       hits.some((h) => h.storeListingId === 'ios2' && h.matchType === 'url'),
     ).toBe(true)
+  })
+
+  it('matches tangled root listing by host for any subpath', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'tangled-root',
+        name: 'Tangled',
+        slug: 'tangled',
+        sourceUrl: 'https://tangled.org/?ref=directory',
+        externalUrl: 'https://tangled.org/?ref=directory',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'new project',
+      urls: ['https://tangled.org/someone.example/my-project'],
+      facetHandles: [],
+    })
+
+    expect(
+      hits.some((h) => h.storeListingId === 'tangled-root' && h.matchType === 'url'),
+    ).toBe(true)
+  })
+
+  it('does not host-match tangled subpath listings for unrelated tangled URLs', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'tangled-sub',
+        name: 'lex-gql',
+        slug: 'lex-gql',
+        sourceUrl: 'https://tangled.org/chadtmiller.com/lex-gql',
+        externalUrl: 'https://tangled.org/chadtmiller.com/lex-gql',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'cool thread',
+      urls: ['https://tangled.org/someone-else.dev/other-project'],
+      facetHandles: [],
+    })
+
+    expect(hits.some((h) => h.storeListingId === 'tangled-sub')).toBe(false)
+  })
+
+  it('matches tangled subpath listings only on exact URL', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'tangled-sub-2',
+        name: 'pds.js',
+        slug: 'pds-js',
+        sourceUrl: 'https://tangled.org/chadtmiller.com/pds.js',
+        externalUrl: 'https://tangled.org/chadtmiller.com/pds.js',
+        productAccountHandle: null,
+      },
+    ])
+
+    const exactHits = matchPostToListings({
+      index,
+      text: '',
+      urls: ['https://tangled.org/chadtmiller.com/pds.js?ref=foo'],
+      facetHandles: [],
+    })
+    expect(exactHits.some((h) => h.storeListingId === 'tangled-sub-2')).toBe(true)
+
+    const childPathHits = matchPostToListings({
+      index,
+      text: '',
+      urls: ['https://tangled.org/chadtmiller.com/pds.js/docs'],
+      facetHandles: [],
+    })
+    expect(
+      childPathHits.some((h) => h.storeListingId === 'tangled-sub-2'),
+    ).toBe(false)
   })
 
   it('keeps highest-confidence hit when multiple signals match', () => {

@@ -236,14 +236,168 @@ export interface DirectoryListingMention {
   authorDisplayName: string | null
   authorAvatarUrl: string | null
   postText: string | null
+  postFacets: DirectoryListingPostFacet[] | null
   postCreatedAt: string
   matchType: string
   matchConfidence: number
+  matchEvidence: Record<string, {}> | null
+  postEmbed: DirectoryListingPostEmbed | null
 }
 
 export interface DirectoryListingMentionsResult {
   mentions: DirectoryListingMention[]
   total: number
+}
+
+export interface DirectoryListingPostEmbed {
+  type: 'external_link'
+  uri: string
+  title: string | null
+  description: string | null
+  thumbUrl: string | null
+}
+
+export interface DirectoryListingPostFacet {
+  index: { byteStart: number; byteEnd: number }
+  features: Array<{
+    $type: string
+    uri?: string
+    did?: string
+    tag?: string
+  }>
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const t = value.trim()
+  return t.length > 0 ? t : null
+}
+
+function extractExternalEmbedFromUnknown(
+  node: unknown,
+): DirectoryListingPostEmbed | null {
+  if (!node || typeof node !== 'object') return null
+  const obj = node as Record<string, unknown>
+  const ext = obj.external
+  if (ext && typeof ext === 'object' && !Array.isArray(ext)) {
+    const extObj = ext as Record<string, unknown>
+    const uri = asNonEmptyString(extObj.uri)
+    if (uri) {
+      return {
+        type: 'external_link',
+        uri,
+        title: asNonEmptyString(extObj.title),
+        description: asNonEmptyString(extObj.description),
+        thumbUrl: asNonEmptyString(extObj.thumb),
+      }
+    }
+  }
+  return (
+    extractExternalEmbedFromUnknown(obj.media) ??
+    extractExternalEmbedFromUnknown(obj.embed) ??
+    null
+  )
+}
+
+async function fetchBlueskyPostEmbedsByUri(
+  postUris: string[],
+): Promise<
+  Map<
+    string,
+    {
+      embed: DirectoryListingPostEmbed | null
+      text: string | null
+      facets: DirectoryListingPostFacet[] | null
+    }
+  >
+> {
+  const uniqueUris = [...new Set(postUris.map((u) => u.trim()).filter(Boolean))]
+  if (uniqueUris.length === 0) return new Map()
+  const chunks: string[][] = []
+  for (let i = 0; i < uniqueUris.length; i += 25) {
+    chunks.push(uniqueUris.slice(i, i + 25))
+  }
+  const out = new Map<
+    string,
+    {
+      embed: DirectoryListingPostEmbed | null
+      text: string | null
+      facets: DirectoryListingPostFacet[] | null
+    }
+  >()
+  try {
+    for (const chunk of chunks) {
+      const url = new URL(
+        'xrpc/app.bsky.feed.getPosts',
+        'https://public.api.bsky.app',
+      )
+      for (const uri of chunk) {
+        url.searchParams.append('uris', uri)
+      }
+      const response = await fetch(url.toString(), {
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) continue
+      const json = (await response.json()) as {
+        posts?: Array<{ uri?: string; embed?: unknown; record?: unknown }>
+      }
+      for (const post of json.posts ?? []) {
+        const uri = asNonEmptyString(post.uri)
+        if (!uri) continue
+        const embed = extractExternalEmbedFromUnknown(post.embed)
+        const record =
+          post.record && typeof post.record === 'object'
+            ? (post.record as Record<string, unknown>)
+            : null
+        const text = asNonEmptyString(record?.text) ?? null
+        const facetsRaw = Array.isArray(record?.facets)
+          ? (record.facets as unknown[])
+          : null
+        const facets =
+          facetsRaw
+            ?.map((facet) => {
+              if (!facet || typeof facet !== 'object') return null
+              const f = facet as Record<string, unknown>
+              const idx =
+                f.index && typeof f.index === 'object'
+                  ? (f.index as Record<string, unknown>)
+                  : null
+              const byteStart =
+                typeof idx?.byteStart === 'number' ? idx.byteStart : null
+              const byteEnd = typeof idx?.byteEnd === 'number' ? idx.byteEnd : null
+              const featuresRaw = Array.isArray(f.features)
+                ? (f.features as unknown[])
+                : null
+              if (byteStart == null || byteEnd == null || !featuresRaw) return null
+              const features = featuresRaw
+                .map((feature) => {
+                  if (!feature || typeof feature !== 'object') return null
+                  const x = feature as Record<string, unknown>
+                  const $type = asNonEmptyString(x.$type)
+                  if (!$type) return null
+                  return {
+                    $type,
+                    uri: asNonEmptyString(x.uri) ?? undefined,
+                    did: asNonEmptyString(x.did) ?? undefined,
+                    tag: asNonEmptyString(x.tag) ?? undefined,
+                  }
+                })
+                .filter((v): v is NonNullable<typeof v> => v != null)
+              if (features.length === 0) return null
+              return { index: { byteStart, byteEnd }, features }
+            })
+            .filter((v): v is NonNullable<typeof v> => v != null) ?? null
+        out.set(uri, {
+          embed,
+          text,
+          facets: facets && facets.length > 0 ? facets : null,
+        })
+      }
+    }
+    return out
+  } catch {
+    return out
+  }
 }
 
 /** Listing summary embedded in a review shown on a user profile. */
@@ -2061,11 +2215,16 @@ const getDirectoryListingMentions = createServerFn({ method: 'GET' })
         postCreatedAt: m.postCreatedAt,
         matchType: m.matchType,
         matchConfidence: m.matchConfidence,
+        matchEvidence: m.matchEvidence,
       })
       .from(m)
       .where(mentionWhere)
       .orderBy(desc(m.postCreatedAt))
       .limit(data.limit)
+
+    const postDataByPostUri = await fetchBlueskyPostEmbedsByUri(
+      rows.map((row) => row.postUri),
+    )
 
     const profileByDid = new Map<
       string,
@@ -2097,10 +2256,18 @@ const getDirectoryListingMentions = createServerFn({ method: 'GET' })
           authorHandle: handle,
           authorDisplayName,
           authorAvatarUrl,
-          postText: row.postText,
+          postText: postDataByPostUri.get(row.postUri)?.text ?? row.postText,
+          postFacets: postDataByPostUri.get(row.postUri)?.facets ?? null,
           postCreatedAt: row.postCreatedAt.toISOString(),
           matchType: row.matchType,
           matchConfidence: row.matchConfidence,
+          matchEvidence:
+            row.matchEvidence &&
+            typeof row.matchEvidence === 'object' &&
+            !Array.isArray(row.matchEvidence)
+              ? (row.matchEvidence as Record<string, {}>)
+              : null,
+          postEmbed: postDataByPostUri.get(row.postUri)?.embed ?? null,
         }
       }),
     )

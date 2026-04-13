@@ -30,6 +30,8 @@ const SHARED_HOSTS_REQUIRING_EXACT_URL_MATCH = new Set([
   'apps.apple.com',
 ])
 
+const HOSTS_WITH_ROOT_LISTING_AND_PATH_LISTINGS = new Set(['tangled.org'])
+
 function normalizeHandle(h: string): string {
   return h.trim().replace(/^@/, '').toLowerCase()
 }
@@ -139,6 +141,26 @@ function shouldUseExactUrlMatchOnly(host: string): boolean {
   return SHARED_HOSTS_REQUIRING_EXACT_URL_MATCH.has(host)
 }
 
+function normalizedPathFromUrl(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    const u = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`)
+    return u.pathname.replace(/\/+$/, '') || '/'
+  } catch {
+    return null
+  }
+}
+
+function shouldUseExactUrlMatchOnlyForListingUrl(rawUrl: string, host: string): boolean {
+  if (shouldUseExactUrlMatchOnly(host)) return true
+  if (HOSTS_WITH_ROOT_LISTING_AND_PATH_LISTINGS.has(host)) {
+    const path = normalizedPathFromUrl(rawUrl)
+    return path !== '/' && path != null
+  }
+  return false
+}
+
 function canonicalUrlForExactMatch(raw: string): string | null {
   const trimmed = raw.trim()
   if (!trimmed) return null
@@ -150,6 +172,18 @@ function canonicalUrlForExactMatch(raw: string): string | null {
   } catch {
     return null
   }
+}
+
+function listingRequiresExactUrlOnlyForHost(
+  row: ListingMentionIndexRow,
+  host: string,
+): boolean {
+  const urls = [row.sourceUrl, row.externalUrl].filter(
+    (u): u is string => typeof u === 'string' && u.trim().length > 0,
+  )
+  const hostUrls = urls.filter((u) => hostnameFromUrl(u) === host)
+  if (hostUrls.length === 0) return false
+  return hostUrls.every((u) => shouldUseExactUrlMatchOnlyForListingUrl(u, host))
 }
 
 function listingHosts(row: ListingMentionIndexRow): Set<string> {
@@ -178,7 +212,7 @@ export function buildListingMentionIndex(
 
     const su = hostnameFromUrl(row.sourceUrl)
     if (su) {
-      if (shouldUseExactUrlMatchOnly(su)) {
+      if (shouldUseExactUrlMatchOnlyForListingUrl(row.sourceUrl, su)) {
         const key = canonicalUrlForExactMatch(row.sourceUrl)
         if (key) addToMap(byExactUrl, key, row.id)
       } else {
@@ -188,7 +222,7 @@ export function buildListingMentionIndex(
 
     const eu = row.externalUrl ? hostnameFromUrl(row.externalUrl) : null
     if (eu && row.externalUrl) {
-      if (shouldUseExactUrlMatchOnly(eu)) {
+      if (shouldUseExactUrlMatchOnlyForListingUrl(row.externalUrl, eu)) {
         const key = canonicalUrlForExactMatch(row.externalUrl)
         if (key) addToMap(byExactUrl, key, row.id)
       } else {
@@ -272,11 +306,15 @@ export function matchPostToListings(input: {
 }): MentionHit[] {
   const textLower = input.text.toLowerCase()
   const urlHosts = new Set<string>()
+  const firstUrlByHost = new Map<string, string>()
   const exactUrlCandidates = new Set<string>()
   const allUrls = [...input.urls]
   for (const u of allUrls) {
     const h = hostnameFromUrl(u)
-    if (h) urlHosts.add(h)
+    if (h) {
+      urlHosts.add(h)
+      if (!firstUrlByHost.has(h)) firstUrlByHost.set(h, u)
+    }
     const exact = canonicalUrlForExactMatch(u)
     if (exact) exactUrlCandidates.add(exact)
   }
@@ -311,12 +349,13 @@ export function matchPostToListings(input: {
   for (const host of urlHosts) {
     const ids = input.index.byDomain.get(host)
     if (!ids) continue
+    const matchedUrl = firstUrlByHost.get(host)
     for (const id of ids) {
       mergeHit(byId, {
         storeListingId: id,
         matchType: 'url',
         confidence: 0.9,
-        evidence: { host },
+        evidence: matchedUrl ? { host, url: matchedUrl } : { host },
       })
     }
   }
@@ -341,7 +380,7 @@ export function matchPostToListings(input: {
       const slug = row.slug?.trim() ?? ''
       if (!slug || !urlPathContainsSlug(u, slug)) continue
       if (!listingHosts(row).has(host)) continue
-      if (shouldUseExactUrlMatchOnly(host)) continue
+      if (listingRequiresExactUrlOnlyForHost(row, host)) continue
       mergeHit(byId, {
         storeListingId: row.id,
         matchType: 'url',
