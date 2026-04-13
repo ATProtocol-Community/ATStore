@@ -40,13 +40,21 @@ import { Badge } from "#/design-system/badge";
 const LinkLink = createLink(Link);
 
 const sortOptions = [
-  { id: "trending", label: "Trending" },
+  { id: "popular", label: "Trending" },
   { id: "newest", label: "Newest" },
+  { id: "alphabetical", label: "Alphabetical" },
 ] as const;
 
 export const Route = createFileRoute("/_header-layout/protocol/listings")({
-  validateSearch: (search): { sort: "trending" | "newest" } => ({
-    sort: search.sort === "newest" ? "newest" : "trending",
+  validateSearch: (
+    search,
+  ): { sort: "popular" | "newest" | "alphabetical" } => ({
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
   }),
   loaderDeps: ({ search }) => ({
     sort: search.sort,
@@ -54,7 +62,7 @@ export const Route = createFileRoute("/_header-layout/protocol/listings")({
   loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(
       directoryListingApi.getAllProtocolListingsQueryOptions({
-        sort: deps.sort === "newest" ? "newest" : "popular",
+        sort: deps.sort,
       }),
     ),
   head: () =>
@@ -167,7 +175,7 @@ function ProtocolListingsPage() {
   const router = useRouter();
   const { data: listings } = useSuspenseQuery(
     directoryListingApi.getAllProtocolListingsQueryOptions({
-      sort: search.sort === "newest" ? "newest" : "popular",
+      sort: search.sort,
     }),
   );
   const [query, setQuery] = useState("");
@@ -242,7 +250,11 @@ function ProtocolListingsPage() {
                 value={search.sort}
                 variant="secondary"
                 onChange={(key) => {
-                  if (key !== "trending" && key !== "newest") {
+                  if (
+                    key !== "popular" &&
+                    key !== "newest" &&
+                    key !== "alphabetical"
+                  ) {
                     return;
                   }
 
@@ -327,6 +339,7 @@ function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
               <RouterLink
                 params={{ category: protocolCategory.segment }}
                 to="/protocol/$category"
+                search={{ sort: "popular" }}
                 {...stylex.props(styles.categoryLink)}
               >
                 <Badge size="sm" variant="primary">

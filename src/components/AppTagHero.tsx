@@ -2,14 +2,12 @@ import * as stylex from "@stylexjs/stylex";
 
 import { Flex } from "../design-system/flex";
 import { ui } from "../design-system/theme/semantic-color.stylex";
-import {
-  gap,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
+import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { resolveBannerRecordUrl } from "../lib/banner-record-url";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 
 interface AppTagHeroProps {
   eyebrow?: string;
@@ -43,12 +41,25 @@ const styles = stylex.create({
     width: "100%",
   },
   copy: {
-    maxWidth: "56rem",
-    paddingTop: verticalSpace["2xl"],
+    paddingTop: {
+      default: verticalSpace["2xl"],
+      [breakpoints.sm]: verticalSpace["6xl"],
+    },
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: "min(100%, 24rem)",
   },
   eyebrow: {
     letterSpacing: "0.16em",
     textTransform: "uppercase",
+  },
+  action: {
+    flexGrow: {
+      default: 1,
+      [breakpoints.sm]: 0,
+    },
+    flexShrink: 0,
   },
 });
 
@@ -71,7 +82,7 @@ export function AppTagHero({
         )}
       </div>
 
-      <Flex justify="between" gap="5xl" align="start">
+      <Flex justify="between" gap="5xl" align="end" wrap>
         <Flex direction="column" gap="5xl" style={styles.copy}>
           {eyebrow ? (
             <SmallBody style={styles.eyebrow}>{eyebrow}</SmallBody>
@@ -82,7 +93,7 @@ export function AppTagHero({
           {description ? <Body variant="secondary">{description}</Body> : null}
         </Flex>
         {action ? (
-          <Flex align="center" gap="md">
+          <Flex align="center" justify="end" gap="md" style={styles.action}>
             {action}
           </Flex>
         ) : null}

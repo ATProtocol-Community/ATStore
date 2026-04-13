@@ -62,6 +62,7 @@ export const Route = createFileRoute("/")({
     const ecosystemData = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryCategoryPageQueryOptions({
         categoryId: BLUESKY_ECOSYSTEM_CATEGORY_ID,
+        sort: "popular",
       }),
     );
 
@@ -760,6 +761,7 @@ function RouteComponent() {
   const { data: blueskyEcosystemData } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryPageQueryOptions({
       categoryId: BLUESKY_ECOSYSTEM_CATEGORY_ID,
+      sort: "popular",
     }),
   );
   const ecosystemApps = blueskyEcosystemData?.listings ?? allApps;

@@ -41,7 +41,10 @@ export const Route = createFileRoute("/_header-layout/ecosystems/$app/all")({
     }
 
     const data = await context.queryClient.ensureQueryData(
-      directoryListingApi.getDirectoryCategoryPageQueryOptions({ categoryId }),
+      directoryListingApi.getDirectoryCategoryPageQueryOptions({
+        categoryId,
+        sort: "popular",
+      }),
     );
 
     if (!data) {
@@ -112,7 +115,10 @@ function EcosystemAllPage() {
   }
 
   const { data } = useSuspenseQuery(
-    directoryListingApi.getDirectoryCategoryPageQueryOptions({ categoryId }),
+    directoryListingApi.getDirectoryCategoryPageQueryOptions({
+      categoryId,
+      sort: "popular",
+    }),
   );
 
   if (!data) {

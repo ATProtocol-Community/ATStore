@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
-import { ChevronLeft, Search } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
 import {
@@ -9,7 +9,6 @@ import {
   ecosystemListingGridStyles,
 } from "../components/EcosystemListingCard";
 import { Button } from "../design-system/button";
-import { IconButton } from "../design-system/icon-button";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
@@ -35,7 +34,6 @@ import {
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 const ButtonLink = createLink(Button);
-const IconButtonLink = createLink(IconButton);
 const AppLink = createLink(Link);
 const INITIAL_SECTION_LISTING_COUNT = 6;
 
@@ -47,7 +45,10 @@ export const Route = createFileRoute("/_header-layout/ecosystems/$app/")({
     }
 
     const data = await context.queryClient.ensureQueryData(
-      directoryListingApi.getDirectoryCategoryPageQueryOptions({ categoryId }),
+      directoryListingApi.getDirectoryCategoryPageQueryOptions({
+        categoryId,
+        sort: "popular",
+      }),
     );
 
     if (!data) {
@@ -129,7 +130,10 @@ function EcosystemIndexPage() {
   }
 
   const { data } = useSuspenseQuery(
-    directoryListingApi.getDirectoryCategoryPageQueryOptions({ categoryId }),
+    directoryListingApi.getDirectoryCategoryPageQueryOptions({
+      categoryId,
+      sort: "popular",
+    }),
   );
 
   if (!data) {
@@ -160,14 +164,10 @@ function EcosystemIndexPage() {
               <ChevronLeft />
               {category.label}
             </AppLink>
-            <IconButtonLink
-              params={{ app: appSegment }}
-              to="/ecosystems/$app/all"
-              variant="secondary"
-              style={styles.searchButton}
-            >
-              <Search />
-            </IconButtonLink>
+
+            <AppLink to="/ecosystems/$app/all" params={{ app: appSegment }}>
+              All tools
+            </AppLink>
           </Flex>
 
           <AppTagHero
@@ -226,6 +226,7 @@ function EcosystemCategorySection({
           <ButtonLink
             to="/categories/$categoryId"
             params={{ categoryId: category.id }}
+            search={{ sort: "popular" }}
             size="lg"
             variant="secondary"
           >

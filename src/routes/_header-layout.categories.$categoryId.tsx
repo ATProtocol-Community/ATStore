@@ -5,6 +5,7 @@ import {
   Link as RouterLink,
   notFound,
   createLink,
+  useRouter,
 } from "@tanstack/react-router";
 import {
   ChevronLeft,
@@ -24,6 +25,7 @@ import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
+import { Select, SelectItem } from "../design-system/select";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
@@ -58,12 +60,31 @@ import { buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
 
 const AppLink = createLink(Link);
+const sortOptions = [
+  { id: "popular", label: "Popular" },
+  { id: "newest", label: "Newest" },
+  { id: "alphabetical", label: "Alphabetical" },
+] as const;
 
 export const Route = createFileRoute("/_header-layout/categories/$categoryId")({
-  loader: async ({ context, params }) => {
+  validateSearch: (
+    search,
+  ): { sort: "popular" | "newest" | "alphabetical" } => ({
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
+  }),
+  loaderDeps: ({ search }) => ({
+    sort: search.sort,
+  }),
+  loader: async ({ context, params, deps }) => {
     const data = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryCategoryPageQueryOptions({
         categoryId: params.categoryId,
+        sort: deps.sort,
       }),
     );
 
@@ -106,11 +127,26 @@ const styles = stylex.create({
   pageContent: {
     gap: {
       default: gap["6xl"],
-      [breakpoints.xl]: gap["8xl"],
+      [breakpoints.xl]: gap["7xl"],
     },
   },
   navLinks: {
     flexWrap: "wrap",
+  },
+  resultsHeader: {
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  resultsActions: {
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  resultCount: {
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  },
+  sortSelect: {
+    minWidth: "12rem",
   },
   eyebrow: {
     letterSpacing: "0.16em",
@@ -368,10 +404,13 @@ const styles = stylex.create({
 });
 
 function CategoryPage() {
+  const search = Route.useSearch();
+  const router = useRouter();
   const { categoryId } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryPageQueryOptions({
       categoryId,
+      sort: search.sort,
     }),
   );
   const { data: categoryTree } = useSuspenseQuery(
@@ -420,6 +459,34 @@ function CategoryPage() {
             title={category.label}
             description={category.description}
             imageSrc={categoryImageSrc}
+            action={
+              <Select
+                aria-label="Sort category listings"
+                items={sortOptions}
+                placeholder="Sort listings"
+                size="lg"
+                style={styles.sortSelect}
+                value={search.sort}
+                variant="secondary"
+                onChange={(key) => {
+                  if (
+                    key !== "popular" &&
+                    key !== "newest" &&
+                    key !== "alphabetical"
+                  ) {
+                    return;
+                  }
+
+                  void router.navigate({
+                    to: "/categories/$categoryId",
+                    params: { categoryId },
+                    search: { sort: key },
+                  });
+                }}
+              >
+                {(item) => <SelectItem>{item.label}</SelectItem>}
+              </Select>
+            }
           />
         </Flex>
 
@@ -508,6 +575,7 @@ function ChildCategoryCard({
     <RouterLink
       to="/categories/$categoryId"
       params={{ categoryId: category.id }}
+      search={{ sort: "popular" }}
       {...stylex.props(styles.childCardLink)}
     >
       <div

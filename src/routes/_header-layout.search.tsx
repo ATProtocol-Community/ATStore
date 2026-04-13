@@ -41,13 +41,21 @@ import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
 const LinkLink = createLink(Link);
 
 const sortOptions = [
-  { id: "trending", label: "Trending" },
+  { id: "popular", label: "Trending" },
   { id: "newest", label: "Newest" },
+  { id: "alphabetical", label: "Alphabetical" },
 ] as const;
 
 export const Route = createFileRoute("/_header-layout/search")({
-  validateSearch: (search): { sort: "trending" | "newest" } => ({
-    sort: search.sort === "newest" ? "newest" : "trending",
+  validateSearch: (
+    search,
+  ): { sort: "popular" | "newest" | "alphabetical" } => ({
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
   }),
   loaderDeps: ({ search }) => ({
     sort: search.sort,
@@ -55,7 +63,7 @@ export const Route = createFileRoute("/_header-layout/search")({
   loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(
       directoryListingApi.getAllListingsQueryOptions({
-        sort: deps.sort === "newest" ? "newest" : "popular",
+        sort: deps.sort,
       }),
     ),
   head: () =>
@@ -162,7 +170,7 @@ function SearchPage() {
   const router = useRouter();
   const { data: listings } = useSuspenseQuery(
     directoryListingApi.getAllListingsQueryOptions({
-      sort: search.sort === "newest" ? "newest" : "popular",
+      sort: search.sort,
     }),
   );
   const [query, setQuery] = useState("");
@@ -237,7 +245,11 @@ function SearchPage() {
                 value={search.sort}
                 variant="secondary"
                 onChange={(key) => {
-                  if (key !== "trending" && key !== "newest") {
+                  if (
+                    key !== "popular" &&
+                    key !== "newest" &&
+                    key !== "alphabetical"
+                  ) {
                     return;
                   }
 

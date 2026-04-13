@@ -96,6 +96,21 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
         limit: 3,
       }),
     );
+    const protocolCategorySegment = getProtocolCategorySegment(
+      listing.categorySlugs,
+    );
+    const protocolCategoryGroup = protocolCategorySegment
+      ? await context.queryClient.ensureQueryData(
+          directoryListingApi.getProtocolCategoryPageQueryOptions({
+            category: protocolCategorySegment,
+            sort: "popular",
+          }),
+        )
+      : null;
+    const relatedProtocolTools =
+      protocolCategoryGroup?.listings
+        .filter((candidate) => candidate.id !== listing.id)
+        .slice(0, 3) ?? [];
 
     const listingReviews = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
@@ -127,6 +142,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       await context.queryClient.ensureQueryData(
         directoryListingApi.getDirectoryCategoryPageQueryOptions({
           categoryId: ecosystemRootId,
+          sort: "popular",
         }),
       );
     }
@@ -155,6 +171,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       ecosystemRootId,
       listing,
       relatedProducts,
+      relatedProtocolTools,
       listingReviews,
       listingMentions: listingMentionsResult.mentions,
       listingMentionTotal: listingMentionsResult.total,
@@ -556,6 +573,7 @@ function ProductPage() {
     ecosystemRootId,
     listing,
     relatedProducts,
+    relatedProtocolTools,
     listingReviews,
     listingMentions,
     listingMentionTotal,
@@ -578,6 +596,17 @@ function ProductPage() {
   }
 
   const previewReviews = listingReviews.slice(0, PRODUCT_REVIEW_PREVIEW_COUNT);
+  const hasProtocolCategory = listing.categorySlugs.some((slug) =>
+    isProtocolCategorySlug(slug),
+  );
+  const relatedSectionTitle =
+    hasProtocolCategory && relatedProtocolTools.length > 0
+      ? "More tools"
+      : "More Apps";
+  const relatedSectionListings =
+    hasProtocolCategory && relatedProtocolTools.length > 0
+      ? relatedProtocolTools
+      : relatedProducts;
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
@@ -1083,8 +1112,11 @@ function ProductPage() {
           </Flex>
         ) : null}
 
-        {relatedProducts.length > 0 ? (
-          <RelatedProductsSection listings={relatedProducts} />
+        {relatedSectionListings.length > 0 ? (
+          <RelatedProductsSection
+            listings={relatedSectionListings}
+            title={relatedSectionTitle}
+          />
         ) : null}
       </Flex>
       {import.meta.env.DEV && imageReviewDraft ? (
@@ -1371,6 +1403,7 @@ function HeroSection({
                     key={tag}
                     to="/apps/$tag"
                     params={{ tag: getAppTagSlug(tag) }}
+                    search={{ sort: "popular" }}
                     {...stylex.props(styles.tagLink)}
                   >
                     <Badge size="sm" variant="primary">
@@ -1456,6 +1489,7 @@ function ProductEcosystemSection({
   const { data } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryPageQueryOptions({
       categoryId: ecosystemRootId,
+      sort: "popular",
     }),
   );
 
@@ -1515,13 +1549,15 @@ function ProductEcosystemSection({
 
 function RelatedProductsSection({
   listings,
+  title = "More Apps",
 }: {
   listings: DirectoryListingCard[];
+  title?: string;
 }) {
   return (
     <Flex direction="column" gap="3xl" style={styles.relatedSection}>
       <Text size="2xl" weight="semibold" style={styles.header}>
-        More Apps
+        {title}
       </Text>
       <Grid style={styles.relatedGrid}>
         {listings.map((listing) => (
@@ -1593,4 +1629,13 @@ function getDescriptionBlocks(description: string) {
     .filter(Boolean);
 
   return blocks.length > 0 ? blocks : [description];
+}
+
+function isProtocolCategorySlug(slug: string) {
+  return slug.startsWith("protocol/") && slug.split("/").length === 2;
+}
+
+function getProtocolCategorySegment(categorySlugs: string[]) {
+  const categorySlug = categorySlugs.find(isProtocolCategorySlug);
+  return categorySlug ? (categorySlug.split("/")[1] ?? null) : null;
 }

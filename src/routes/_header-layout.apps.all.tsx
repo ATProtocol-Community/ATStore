@@ -42,11 +42,19 @@ const LinkLink = createLink(Link);
 const sortOptions = [
   { id: "popular", label: "Popular" },
   { id: "newest", label: "Newest" },
+  { id: "alphabetical", label: "Alphabetical" },
 ] as const;
 
 export const Route = createFileRoute("/_header-layout/apps/all")({
-  validateSearch: (search): { sort: "popular" | "newest" } => ({
-    sort: search.sort === "newest" ? "newest" : "popular",
+  validateSearch: (
+    search,
+  ): { sort: "popular" | "newest" | "alphabetical" } => ({
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
   }),
   loaderDeps: ({ search }) => ({
     sort: search.sort,
@@ -249,7 +257,11 @@ function AppsAllPage() {
                 value={search.sort}
                 variant="secondary"
                 onChange={(key) => {
-                  if (key !== "popular" && key !== "newest") {
+                  if (
+                    key !== "popular" &&
+                    key !== "newest" &&
+                    key !== "alphabetical"
+                  ) {
                     return;
                   }
 
@@ -334,6 +346,7 @@ function AllAppsListingCard({ listing }: { listing: DirectoryListingCard }) {
                   key={tag}
                   to="/apps/$tag"
                   params={{ tag: getAppTagSlug(tag) }}
+                  search={{ sort: "popular" }}
                   {...stylex.props(styles.listingTagLink)}
                 >
                   <Badge

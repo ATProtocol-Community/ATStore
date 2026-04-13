@@ -5,6 +5,7 @@ import {
   createLink,
   Link as RouterLink,
   notFound,
+  useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 
@@ -17,6 +18,7 @@ import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
+import { Select, SelectItem } from "../design-system/select";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
@@ -48,11 +50,31 @@ import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
 
+const sortOptions = [
+  { id: "popular", label: "Popular" },
+  { id: "newest", label: "Newest" },
+  { id: "alphabetical", label: "Alphabetical" },
+] as const;
+
 export const Route = createFileRoute("/_header-layout/apps/$tag")({
-  loader: async ({ context, params }) => {
+  validateSearch: (
+    search,
+  ): { sort: "popular" | "newest" | "alphabetical" } => ({
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
+  }),
+  loaderDeps: ({ search }) => ({
+    sort: search.sort,
+  }),
+  loader: async ({ context, params, deps }) => {
     const data = await context.queryClient.ensureQueryData(
       directoryListingApi.getAppsByTagPageQueryOptions({
         tag: params.tag,
+        sort: deps.sort,
       }),
     );
 
@@ -84,7 +106,7 @@ const styles = stylex.create({
   pageContent: {
     gap: {
       default: gap["6xl"],
-      [breakpoints.xl]: gap["8xl"],
+      [breakpoints.xl]: gap["7xl"],
     },
   },
   blurContainer: {
@@ -110,6 +132,25 @@ const styles = stylex.create({
   },
   navLinks: {
     flexWrap: "wrap",
+  },
+  resultsHeader: {
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  resultsActions: {
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  resultCount: {
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  },
+  sortSelect: {
+    minWidth: "12rem",
+    flexGrow: {
+      default: 1,
+      [breakpoints.sm]: 0,
+    },
   },
   listingLink: {
     display: "block",
@@ -347,10 +388,13 @@ const styles = stylex.create({
 });
 
 function AppsTagPage() {
+  const search = Route.useSearch();
+  const router = useRouter();
   const { tag } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getAppsByTagPageQueryOptions({
       tag,
+      sort: search.sort,
     }),
   );
   const { data: allGroups } = useSuspenseQuery(
@@ -379,6 +423,34 @@ function AppsTagPage() {
             title={formatAppTagLabel(data.tag)}
             description={getAppTagDescription(data.tag)}
             imageSrc={getAppTagHeroAssetPathForTag(data.tag)}
+            action={
+              <Select
+                aria-label="Sort apps in tag"
+                items={sortOptions}
+                placeholder="Sort apps"
+                size="lg"
+                style={styles.sortSelect}
+                value={search.sort}
+                variant="secondary"
+                onChange={(key) => {
+                  if (
+                    key !== "popular" &&
+                    key !== "newest" &&
+                    key !== "alphabetical"
+                  ) {
+                    return;
+                  }
+
+                  void router.navigate({
+                    to: "/apps/$tag",
+                    params: { tag },
+                    search: { sort: key },
+                  });
+                }}
+              >
+                {(item) => <SelectItem>{item.label}</SelectItem>}
+              </Select>
+            }
           />
         </Flex>
 

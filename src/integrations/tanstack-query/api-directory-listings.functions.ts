@@ -533,8 +533,13 @@ const listDirectoryListingsInput = z.object({
   query: z.string().trim().min(1).optional(),
 })
 
+const listingSortInput = z
+  .enum(['popular', 'newest', 'alphabetical'])
+  .default('popular')
+
 const getDirectoryCategoryPageInput = z.object({
   categoryId: z.string().trim().min(1),
+  sort: listingSortInput,
 })
 
 const updateDirectoryListingCategoryAssignmentInput = z.object({
@@ -569,10 +574,12 @@ const updateDirectoryListingAppTagsInput = z.object({
 
 const getAppsByTagPageInput = z.object({
   tag: z.string().trim().min(1),
+  sort: listingSortInput,
 })
 
 const getProtocolCategoryPageInput = z.object({
   category: z.string().trim().min(1),
+  sort: listingSortInput,
 })
 
 const getRelatedDirectoryListingsInput = z.object({
@@ -886,7 +893,11 @@ function isBrowseableAppRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
   )
 }
 
-function buildAppTagGroups(rows: DirectoryListingAppTagRow[]) {
+function buildAppTagGroups(
+  rows: DirectoryListingAppTagRow[],
+  options?: { preserveListingOrder?: boolean },
+) {
+  const preserveListingOrder = options?.preserveListingOrder ?? false
   const groups = new Map<string, DirectoryListingCard[]>()
 
   for (const row of rows) {
@@ -911,7 +922,9 @@ function buildAppTagGroups(rows: DirectoryListingAppTagRow[]) {
     .map(([tag, listings]) => ({
       tag,
       count: listings.length,
-      listings: [...listings].sort((left, right) => left.name.localeCompare(right.name)),
+      listings: preserveListingOrder
+        ? [...listings]
+        : [...listings].sort((left, right) => left.name.localeCompare(right.name)),
     }) satisfies DirectoryAppTagGroup)
     .sort((left, right) => {
       if (right.count !== left.count) {
@@ -941,7 +954,11 @@ function isBrowseableProtocolRow(row: Pick<DirectoryListingRow, 'categorySlugs'>
   )
 }
 
-function buildProtocolCategoryGroups(rows: DirectoryListingRow[]): DirectoryProtocolCategoryGroup[] {
+function buildProtocolCategoryGroups(
+  rows: DirectoryListingRow[],
+  options?: { preserveListingOrder?: boolean },
+): DirectoryProtocolCategoryGroup[] {
+  const preserveListingOrder = options?.preserveListingOrder ?? false
   const groups = new Map<string, DirectoryListingCard[]>()
 
   for (const row of rows) {
@@ -976,7 +993,9 @@ function buildProtocolCategoryGroups(rows: DirectoryListingRow[]): DirectoryProt
         label: option?.label ?? segment,
         description: option?.description ?? '',
         count: listings.length,
-        listings: [...listings].sort((left, right) => left.name.localeCompare(right.name)),
+        listings: preserveListingOrder
+          ? [...listings]
+          : [...listings].sort((left, right) => left.name.localeCompare(right.name)),
       } satisfies DirectoryProtocolCategoryGroup
     })
     .sort((left, right) => {
@@ -1547,8 +1566,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
             sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
           ),
         )
-        .orderBy(...orderByPopularListingSort(table))
-        .limit(96),
+        .orderBy(...orderByPopularListingSort(table)),
       context.db
         .select(listingSelect)
         .from(table)
@@ -1736,17 +1754,24 @@ const getDirectoryCategoryPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryCategoryPageInput)
   .handler(async ({ data, context }) => {
+    const input = getDirectoryCategoryPageInput.parse(data)
     const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(listingPublicWhere(table))
-      .orderBy(...orderByPopularListingSort(table))
+      .orderBy(
+        ...(input.sort === 'newest'
+          ? [desc(table.createdAt)]
+          : input.sort === 'alphabetical'
+            ? [asc(table.name)]
+          : orderByPopularListingSort(table)),
+      )
 
     const tree = buildDirectoryCategoryTree(
       rows.flatMap((row) => row.categorySlugs ?? []),
     )
-    const category = findDirectoryCategoryNode(tree, data.categoryId)
+    const category = findDirectoryCategoryNode(tree, input.categoryId)
 
     if (!category) {
       return null
@@ -1793,7 +1818,7 @@ const getAppsByTag = createServerFn({ method: 'GET' })
       )
       .orderBy(...orderByPopularListingSort(table))
 
-    return buildAppTagGroups(rows)
+    return buildAppTagGroups(rows, { preserveListingOrder: true })
   })
 
 const getAppsByTagQueryOptions = queryOptions({
@@ -1802,7 +1827,7 @@ const getAppsByTagQueryOptions = queryOptions({
 })
 
 const getAllAppsInput = z.object({
-  sort: z.enum(['popular', 'newest']).default('popular'),
+  sort: listingSortInput,
 })
 
 const getAllApps = createServerFn({ method: 'GET' })
@@ -1823,6 +1848,8 @@ const getAllApps = createServerFn({ method: 'GET' })
       .orderBy(
         ...(input.sort === 'newest'
           ? [desc(table.createdAt)]
+          : input.sort === 'alphabetical'
+            ? [asc(table.name)]
           : orderByPopularListingSort(table)),
       )
 
@@ -1842,6 +1869,7 @@ const getAppsByTagPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getAppsByTagPageInput)
   .handler(async ({ data, context }) => {
+    const input = getAppsByTagPageInput.parse(data)
     const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
@@ -1852,12 +1880,18 @@ const getAppsByTagPage = createServerFn({ method: 'GET' })
           sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
         ),
       )
-      .orderBy(...orderByPopularListingSort(table))
+      .orderBy(
+        ...(input.sort === 'newest'
+          ? [desc(table.createdAt)]
+          : input.sort === 'alphabetical'
+            ? [asc(table.name)]
+          : orderByPopularListingSort(table)),
+      )
 
-    const groups = buildAppTagGroups(rows)
+    const groups = buildAppTagGroups(rows, { preserveListingOrder: true })
     const tag = findAppTagBySlug(
       groups.map((group) => group.tag),
-      data.tag,
+      input.tag,
     )
 
     if (!tag) {
@@ -1891,7 +1925,7 @@ const getProtocolCategories = createServerFn({ method: 'GET' })
       )
       .orderBy(...orderByPopularListingSort(table))
 
-    return buildProtocolCategoryGroups(rows)
+    return buildProtocolCategoryGroups(rows, { preserveListingOrder: true })
   })
 
 const getProtocolCategoriesQueryOptions = queryOptions({
@@ -1903,6 +1937,7 @@ const getProtocolCategoryPage = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getProtocolCategoryPageInput)
   .handler(async ({ data, context }) => {
+    const input = getProtocolCategoryPageInput.parse(data)
     const table = context.schema.storeListings
     const rows = await context.db
       .select(getListingSelect(table))
@@ -1913,10 +1948,18 @@ const getProtocolCategoryPage = createServerFn({ method: 'GET' })
           sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
         ),
       )
-      .orderBy(...orderByPopularListingSort(table))
+      .orderBy(
+        ...(input.sort === 'newest'
+          ? [desc(table.createdAt)]
+          : input.sort === 'alphabetical'
+            ? [asc(table.name)]
+          : orderByPopularListingSort(table)),
+      )
 
-    const groups = buildProtocolCategoryGroups(rows)
-    return findProtocolCategoryBySlugParam(groups, data.category) ?? null
+    const groups = buildProtocolCategoryGroups(rows, {
+      preserveListingOrder: true,
+    })
+    return findProtocolCategoryBySlugParam(groups, input.category) ?? null
   })
 
 function getProtocolCategoryPageQueryOptions(
@@ -1931,7 +1974,7 @@ function getProtocolCategoryPageQueryOptions(
 }
 
 const getAllProtocolListingsInput = z.object({
-  sort: z.enum(['popular', 'newest']).default('popular'),
+  sort: listingSortInput,
 })
 
 const getAllProtocolListings = createServerFn({ method: 'GET' })
@@ -1952,6 +1995,8 @@ const getAllProtocolListings = createServerFn({ method: 'GET' })
       .orderBy(
         ...(input.sort === 'newest'
           ? [desc(table.createdAt)]
+          : input.sort === 'alphabetical'
+            ? [asc(table.name)]
           : orderByPopularListingSort(table)),
       )
 
@@ -1970,7 +2015,7 @@ function getAllProtocolListingsQueryOptions(
 }
 
 const getAllListingsInput = z.object({
-  sort: z.enum(['popular', 'newest']).default('popular'),
+  sort: listingSortInput,
 })
 
 const getAllListings = createServerFn({ method: 'GET' })
@@ -1986,6 +2031,8 @@ const getAllListings = createServerFn({ method: 'GET' })
       .orderBy(
         ...(input.sort === 'newest'
           ? [desc(table.createdAt)]
+          : input.sort === 'alphabetical'
+            ? [asc(table.name)]
           : orderByPopularListingSort(table)),
       )
 
