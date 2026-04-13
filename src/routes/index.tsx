@@ -823,10 +823,6 @@ function RouteComponent() {
     return allApps.filter((app) => app.appTags.includes(activeAppTagValue));
   }, [activeAppTagValue, allApps]);
   const appBrowserApps = appFeaturedApps.length > 0 ? appFeaturedApps : allApps;
-  const trendingAppBrowserApps = useMemo(
-    () => sortListingsByTrending(appBrowserApps),
-    [appBrowserApps],
-  );
 
   const { data: blueskyEcosystemData } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryPageQueryOptions({
@@ -839,9 +835,13 @@ function RouteComponent() {
     () =>
       (blueskyEcosystemData?.category.children ?? [])
         .map((category) => ({
+          // Keep each category group ordered by trending signals.
+          // For ties, preserve incoming query order instead of forcing alphabetical.
+          listings: sortListingsByTrendingSignals(
+            getListingsForCategoryBranch(category.id, ecosystemApps),
+          ),
           id: category.id,
           label: category.label,
-          listings: getListingsForCategoryBranch(category.id, ecosystemApps),
         }))
         .filter((category) => category.listings.length > 0)
         .sort((a) => (a.label === "Client" ? -1 : 1))
@@ -874,10 +874,6 @@ function RouteComponent() {
   }, [activeEcosystemTagValue, browserCategories, ecosystemApps]);
   const ecosystemBrowserApps =
     ecosystemFeaturedApps.length > 0 ? ecosystemFeaturedApps : ecosystemApps;
-  const trendingEcosystemBrowserApps = useMemo(
-    () => sortListingsByTrending(ecosystemBrowserApps),
-    [ecosystemBrowserApps],
-  );
 
   return (
     <HeaderLayout.Root style={styles.shell}>
@@ -1011,7 +1007,7 @@ function RouteComponent() {
           ) : null}
 
           <FeaturedListingGrid
-            items={trendingAppBrowserApps.slice(0, MAX_BROWSER_APPS)}
+            items={appBrowserApps.slice(0, MAX_BROWSER_APPS)}
             getKey={(app) => app.id}
             isFeatured={(_, index) => index === 0}
             renderItem={(app, { featured }) => (
@@ -1106,7 +1102,7 @@ function RouteComponent() {
           ) : null}
 
           <FeaturedListingGrid
-            items={trendingEcosystemBrowserApps.slice(0, MAX_BROWSER_APPS)}
+            items={ecosystemBrowserApps.slice(0, MAX_BROWSER_APPS)}
             getKey={(app) => app.id}
             isFeatured={(_, index) => index === 0}
             renderItem={(app, { featured }) => (
@@ -1178,14 +1174,12 @@ function buildTagStats(apps: DirectoryListingCard[]) {
     .sort((a, b) => b.count - a.count);
 }
 
-function sortListingsByTrending(
+function sortListingsByTrendingSignals(
   listings: DirectoryListingCard[],
 ): DirectoryListingCard[] {
   return [...listings].sort(
     (a, b) =>
-      b.reviewCount - a.reviewCount ||
-      (b.rating ?? 0) - (a.rating ?? 0) ||
-      a.name.localeCompare(b.name),
+      b.reviewCount - a.reviewCount || (b.rating ?? 0) - (a.rating ?? 0),
   );
 }
 
