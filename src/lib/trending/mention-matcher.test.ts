@@ -269,6 +269,46 @@ describe('matchPostToListings', () => {
     ).toBe(true)
   })
 
+  it('does not substring-match standard.site slug inside larger words', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'semble',
+        name: 'Semble',
+        slug: 'semble',
+        sourceUrl: 'https://semble.so',
+        externalUrl: 'https://semble.so',
+        productAccountHandle: null,
+      },
+    ])
+    const hits = matchPostToListings({
+      index,
+      text: 'reading standard.site blogs that assembles things nicely',
+      urls: ['https://standard.site/posts/123'],
+      facetHandles: [],
+    })
+    expect(hits.some((h) => h.storeListingId === 'semble')).toBe(false)
+  })
+
+  it('does not match standard.site slug from URL path segment alone', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'semble2',
+        name: 'Semble',
+        slug: 'semble',
+        sourceUrl: 'https://semble.so',
+        externalUrl: 'https://semble.so',
+        productAccountHandle: null,
+      },
+    ])
+    const hits = matchPostToListings({
+      index,
+      text: 'see standard.site docs',
+      urls: ['https://standard.site/docs/semble/getting-started'],
+      facetHandles: [],
+    })
+    expect(hits.some((h) => h.storeListingId === 'semble2')).toBe(false)
+  })
+
   it('omits URL/domain matches for the Bluesky platform root listing (apps/bluesky)', () => {
     const index = buildListingMentionIndex([
       {

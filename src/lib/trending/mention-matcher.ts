@@ -128,6 +128,25 @@ export function urlPathContainsSlug(url: string, slug: string): boolean {
   }
 }
 
+function textContainsSlugToken(text: string, slug: string): boolean {
+  const haystack = text.toLowerCase()
+  const needle = slug.trim().toLowerCase()
+  if (needle.length < 2) return false
+  let from = 0
+  while (from <= haystack.length - needle.length) {
+    const at = haystack.indexOf(needle, from)
+    if (at === -1) return false
+    const prev = at === 0 ? '' : haystack[at - 1]
+    const next =
+      at + needle.length >= haystack.length ? '' : haystack[at + needle.length]
+    const prevIsBoundary = prev === '' || !/[a-z0-9-]/.test(prev)
+    const nextIsBoundary = next === '' || !/[a-z0-9-]/.test(next)
+    if (prevIsBoundary && nextIsBoundary) return true
+    from = at + 1
+  }
+  return false
+}
+
 function addToMap(map: Map<string, Set<string>>, key: string, id: string) {
   let set = map.get(key)
   if (!set) {
@@ -403,7 +422,7 @@ export function matchPostToListings(input: {
       if (host && (textLower.includes(host) || allUrls.some((u) => u.includes(host)))) {
         hit = true
       }
-      if (slug && (textLower.includes(slug) || allUrls.some((u) => u.includes(slug)))) {
+      if (slug && textContainsSlugToken(textLower, slug)) {
         hit = true
       }
       if (hit) {
