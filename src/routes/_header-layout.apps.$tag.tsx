@@ -12,6 +12,7 @@ import { ChevronLeft } from "lucide-react";
 import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
+import { HeroImage } from "../components/HeroImage";
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
@@ -156,26 +157,18 @@ const styles = stylex.create({
     display: "block",
     height: "100%",
     textDecoration: "none",
+    position: "relative",
+    zIndex: 1,
+  },
+  listingLinkFeatured: {
+    zIndex: 0,
   },
   listingCard: {
     height: "100%",
     width: "100%",
     boxSizing: "border-box",
   },
-  listingCardFeatured: {
-    borderRadius: radius["3xl"],
-    borderStyle: "solid",
-    borderWidth: 1,
-    color: uiColor.text2,
-    cornerShape: "squircle",
-    overflow: "hidden",
-    position: "relative",
-    boxShadow: shadow["2xl"],
-    // minHeight: {
-    //   default: "20rem",
-    //   [breakpoints.sm]: "32rem",
-    // },
-  },
+
   listingCardBody: {
     gap: gap["4xl"],
     height: "100%",
@@ -210,13 +203,6 @@ const styles = stylex.create({
   listingInfo: {
     flex: 1,
     minWidth: 0,
-  },
-  featuredImageFrame: {
-    height: "100%",
-    inset: 0,
-    objectFit: "cover",
-    position: "absolute",
-    width: "100%",
   },
   accentOverlay: {
     background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 12%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent) 46%, color-mix(in srgb, ${uiColor.overlayBackdrop} 100%, transparent) 100%)`,
@@ -481,66 +467,55 @@ function AppTagListingCard({
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.listingLink)}
+      {...stylex.props(
+        styles.listingLink,
+        featured && styles.listingLinkFeatured,
+      )}
     >
-      <Card
-        style={[styles.listingCard, featured && styles.listingCardFeatured]}
-      >
-        {featured && listing.heroImageUrl ? (
-          <img
+      {featured ? (
+        listing.heroImageUrl && (
+          <HeroImage
+            alt={`${listing.name} preview`}
+            glowIntensity={0.8}
             src={listing.heroImageUrl}
-            alt=""
-            aria-hidden="true"
-            {...stylex.props(styles.featuredImageFrame)}
           />
-        ) : null}
-
-        <Flex
-          direction="column"
-          style={[
-            styles.listingCardBody,
-            featured && styles.listingCardBodyFeatured,
-          ]}
-        >
-          {featured ? (
-            <></>
-          ) : (
-            <>
-              <Flex gap="2xl" align="center" style={styles.listingHeader}>
-                <Avatar
-                  alt={listing.name}
-                  fallback={getInitials(listing.name)}
-                  size="xl"
-                  src={listing.iconUrl || undefined}
-                />
-                <Flex direction="column" gap="xl" style={styles.listingInfo}>
-                  <Text size="xl" weight="semibold">
-                    {listing.name}
-                  </Text>
-                  <SmallBody variant="secondary">
-                    @
-                    {listing.productAccountHandle?.replace(/^@/, "") ||
-                      "unknown"}
-                  </SmallBody>
-                </Flex>
-              </Flex>
-              <Body variant="secondary" style={styles.listingTagline}>
-                {listing.tagline}
-              </Body>
-              <Flex align="center" justify="end" gap="lg">
+        )
+      ) : (
+        <Card style={[styles.listingCard]}>
+          <Flex direction="column" style={[styles.listingCardBody]}>
+            <Flex gap="2xl" align="center" style={styles.listingHeader}>
+              <Avatar
+                alt={listing.name}
+                fallback={getInitials(listing.name)}
+                size="xl"
+                src={listing.iconUrl || undefined}
+              />
+              <Flex direction="column" gap="xl" style={styles.listingInfo}>
+                <Text size="xl" weight="semibold">
+                  {listing.name}
+                </Text>
                 <SmallBody variant="secondary">
-                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
                 </SmallBody>
-                <StarRating
-                  rating={listing.rating}
-                  reviewCount={listing.reviewCount}
-                  showReviewCount
-                />
               </Flex>
-            </>
-          )}
-        </Flex>
-      </Card>
+            </Flex>
+            <Body variant="secondary" style={styles.listingTagline}>
+              {listing.tagline}
+            </Body>
+            <Flex align="center" justify="end" gap="lg">
+              <SmallBody variant="secondary">
+                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+              </SmallBody>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+                showReviewCount
+              />
+            </Flex>
+          </Flex>
+        </Card>
+      )}
     </RouterLink>
   );
 }

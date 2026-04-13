@@ -58,6 +58,7 @@ import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
+import { HeroImage } from "#/components/HeroImage";
 
 const AppLink = createLink(Link);
 const sortOptions = [
@@ -223,7 +224,12 @@ const styles = stylex.create({
   listingLink: {
     display: "block",
     height: "100%",
+    position: "relative",
     textDecoration: "none",
+    zIndex: 1,
+  },
+  listingLinkFeatured: {
+    zIndex: 0,
   },
   listingCard: {
     height: "100%",
@@ -618,63 +624,60 @@ function CategoryListingCard({
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.listingLink)}
+      {...stylex.props(
+        styles.listingLink,
+        featured && styles.listingLinkFeatured,
+      )}
     >
-      <Card
-        style={[
-          styles.listingCard,
-          featured && styles.listingCardFeatured,
-          featured && getAccentSurface(listing.accent),
-        ]}
-      >
-        {featured && listing.heroImageUrl ? (
-          <img
+      {featured ? (
+        listing.heroImageUrl && (
+          <HeroImage
+            alt={`${listing.name} preview`}
+            glowIntensity={0.8}
             src={listing.heroImageUrl}
-            alt=""
-            aria-hidden="true"
-            {...stylex.props(styles.featuredImageFrame)}
           />
-        ) : null}
-        <Flex
-          direction="column"
-          style={[
-            styles.listingCardBody,
-            featured && styles.listingCardBodyFeatured,
-          ]}
-        >
-          {featured ? null : (
-            <>
-              <Flex gap="2xl" align="center" style={styles.listingHeader}>
-                <Avatar
-                  alt={listing.name}
-                  fallback={getInitials(listing.name)}
-                  size="xl"
-                  src={listing.iconUrl || undefined}
-                  style={styles.listingAvatar}
-                />
-                <Flex direction="column" gap="md" style={styles.listingInfo}>
-                  <Text size="xl" weight="semibold">
-                    {listing.name}
-                  </Text>
-                  <Flex align="center" gap="lg">
-                    <SmallBody variant="secondary">
-                      {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-                    </SmallBody>
-                    <StarRating
-                      rating={listing.rating}
-                      reviewCount={listing.reviewCount}
-                      showReviewCount
-                    />
-                  </Flex>
+        )
+      ) : (
+        <Card style={[styles.listingCard]}>
+          {featured && listing.heroImageUrl ? (
+            <img
+              src={listing.heroImageUrl}
+              alt=""
+              aria-hidden="true"
+              {...stylex.props(styles.featuredImageFrame)}
+            />
+          ) : null}
+          <Flex direction="column" style={[styles.listingCardBody]}>
+            <Flex gap="2xl" align="center" style={styles.listingHeader}>
+              <Avatar
+                alt={listing.name}
+                fallback={getInitials(listing.name)}
+                size="xl"
+                src={listing.iconUrl || undefined}
+                style={styles.listingAvatar}
+              />
+              <Flex direction="column" gap="md" style={styles.listingInfo}>
+                <Text size="xl" weight="semibold">
+                  {listing.name}
+                </Text>
+                <Flex align="center" gap="lg">
+                  <SmallBody variant="secondary">
+                    {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  </SmallBody>
+                  <StarRating
+                    rating={listing.rating}
+                    reviewCount={listing.reviewCount}
+                    showReviewCount
+                  />
                 </Flex>
               </Flex>
-              <Body variant="secondary" style={styles.listingTagline}>
-                {listing.tagline}
-              </Body>
-            </>
-          )}
-        </Flex>
-      </Card>
+            </Flex>
+            <Body variant="secondary" style={styles.listingTagline}>
+              {listing.tagline}
+            </Body>
+          </Flex>
+        </Card>
+      )}
     </RouterLink>
   );
 }

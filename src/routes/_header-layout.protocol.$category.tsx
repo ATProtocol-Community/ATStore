@@ -45,6 +45,7 @@ import { getProtocolCategoryCoverAssetPathForSegment } from "../lib/protocol-cat
 import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
 import { StarRating } from "#/design-system/star-rating";
 import { uiColor } from "../design-system/theme/color.stylex";
+import { HeroImage } from "#/components/HeroImage";
 
 const sortOptions = [
   { id: "popular", label: "Popular" },
@@ -154,6 +155,11 @@ const styles = stylex.create({
     display: "block",
     height: "100%",
     textDecoration: "none",
+    position: "relative",
+    zIndex: 1,
+  },
+  listingLinkFeatured: {
+    zIndex: 0,
   },
   listingCard: {
     height: "100%",
@@ -445,76 +451,62 @@ function ProtocolCategoryListingCard({
     <RouterLink
       params={{ productId: getDirectoryListingSlug(listing) }}
       to="/products/$productId"
-      {...stylex.props(styles.listingLink)}
+      {...stylex.props(
+        styles.listingLink,
+        featured && styles.listingLinkFeatured,
+      )}
     >
-      <Card
-        style={[
-          styles.listingCard,
-          featured && styles.listingCardFeatured,
-          featured && getAccentSurface(listing.accent),
-        ]}
-      >
-        {featured && listing.heroImageUrl ? (
-          <img
-            alt=""
-            aria-hidden="true"
+      {featured ? (
+        listing.heroImageUrl && (
+          <HeroImage
+            alt={`${listing.name} preview`}
+            glowIntensity={0.8}
             src={listing.heroImageUrl}
-            {...stylex.props(styles.featuredImageFrame)}
           />
-        ) : null}
-        <Flex
-          direction="column"
-          style={[
-            styles.listingCardBody,
-            featured && styles.listingCardBodyFeatured,
-          ]}
-        >
-          {featured ? (
-            <></>
-          ) : (
-            <>
-              <Flex align="center" gap="2xl" style={styles.listingHeader}>
-                <Avatar
-                  alt={listing.name}
-                  fallback={getInitials(listing.name)}
-                  size="xl"
-                  src={listing.iconUrl || undefined}
+        )
+      ) : (
+        <Card style={[styles.listingCard]}>
+          <Flex direction="column" style={[styles.listingCardBody]}>
+            <Flex align="center" gap="2xl" style={styles.listingHeader}>
+              <Avatar
+                alt={listing.name}
+                fallback={getInitials(listing.name)}
+                size="xl"
+                src={listing.iconUrl || undefined}
+              />
+              <Flex direction="column" gap="md" style={styles.listingInfo}>
+                <Text
+                  font="title"
+                  size={{ default: "lg", sm: "xl" }}
+                  weight="semibold"
+                >
+                  {listing.name}
+                </Text>
+                <SmallBody variant="secondary">
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                </SmallBody>
+              </Flex>
+            </Flex>
+            <Body variant="secondary" style={styles.listingTagline}>
+              {listing.tagline}
+            </Body>
+            <div />
+            <Flex gap="xl" justify="end" style={styles.listingFooter}>
+              <Flex align="center" gap="sm">
+                <SmallBody variant="secondary">
+                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                </SmallBody>
+                <StarRating
+                  rating={listing.rating}
+                  reviewCount={listing.reviewCount}
+                  showReviewCount
                 />
-                <Flex direction="column" gap="md" style={styles.listingInfo}>
-                  <Text
-                    font="title"
-                    size={{ default: "lg", sm: "xl" }}
-                    weight="semibold"
-                  >
-                    {listing.name}
-                  </Text>
-                  <SmallBody variant="secondary">
-                    @
-                    {listing.productAccountHandle?.replace(/^@/, "") ||
-                      "unknown"}
-                  </SmallBody>
-                </Flex>
               </Flex>
-              <Body variant="secondary" style={styles.listingTagline}>
-                {listing.tagline}
-              </Body>
-              <div />
-              <Flex gap="xl" justify="end" style={styles.listingFooter}>
-                <Flex align="center" gap="sm">
-                  <SmallBody variant="secondary">
-                    {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-                  </SmallBody>
-                  <StarRating
-                    rating={listing.rating}
-                    reviewCount={listing.reviewCount}
-                    showReviewCount
-                  />
-                </Flex>
-              </Flex>
-            </>
-          )}
-        </Flex>
-      </Card>
+            </Flex>
+          </Flex>
+        </Card>
+      )}
     </RouterLink>
   );
 }

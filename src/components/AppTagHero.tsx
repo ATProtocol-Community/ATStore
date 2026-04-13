@@ -20,6 +20,8 @@ interface AppTagHeroProps {
 const styles = stylex.create({
   root: {
     width: "100%",
+    position: "relative",
+    zIndex: 1,
   },
   imageFrame: {
     borderRadius: radius["2xl"],

@@ -54,6 +54,7 @@ import { Body, SmallBody } from "#/design-system/typography";
 import { useHover } from "react-aria";
 import { StarRating } from "#/design-system/star-rating";
 import { Button } from "#/design-system/button";
+import { HeroImage } from "#/components/HeroImage";
 
 const ButtonLink = createLink(Button);
 
@@ -707,6 +708,11 @@ const styles = stylex.create({
     display: "block",
     height: "100%",
     textDecoration: "none",
+    position: "relative",
+    zIndex: 1,
+  },
+  appCardLinkFeatured: {
+    zIndex: 0,
   },
   appCard: {
     backgroundColor: {
@@ -1207,26 +1213,25 @@ function AppBrowserListingCard({
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.appCardLink)}
+      {...stylex.props(
+        styles.appCardLink,
+        featured && styles.appCardLinkFeatured,
+      )}
     >
-      <Card
-        data-hovered={isHovered}
-        {...(hoverProps as Omit<typeof hoverProps, "style" | "className">)}
-        style={
-          featured ? [styles.appCard, styles.appCardFeatured] : styles.appCard
-        }
-      >
-        {featured ? (
-          listing.heroImageUrl ? (
-            <img
-              src={listing.heroImageUrl}
-              alt={listing.name}
-              {...stylex.props(styles.featuredImage)}
-            />
-          ) : (
-            <div {...stylex.props(styles.featuredFallback)}>{listing.name}</div>
-          )
-        ) : (
+      {featured ? (
+        listing.heroImageUrl && (
+          <HeroImage
+            alt={`${listing.name} preview`}
+            glowIntensity={0.8}
+            src={listing.heroImageUrl}
+          />
+        )
+      ) : (
+        <Card
+          data-hovered={isHovered}
+          {...(hoverProps as Omit<typeof hoverProps, "style" | "className">)}
+          style={styles.appCard}
+        >
           <div {...stylex.props(styles.appCardBody)}>
             <Flex gap="xl">
               <Avatar
@@ -1258,8 +1263,8 @@ function AppBrowserListingCard({
               />
             </Flex>
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </RouterLink>
   );
 }

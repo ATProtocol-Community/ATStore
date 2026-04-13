@@ -9,11 +9,11 @@ import { ChevronRight } from "lucide-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
 import { AppTagCard } from "../components/AppTagCard";
+import { HeroImage } from "../components/HeroImage";
 import { ProtocolCategoryCard } from "../components/ProtocolCategoryCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
-import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
@@ -88,6 +88,11 @@ const styles = stylex.create({
     textDecoration: "none",
     display: "block",
     height: "100%",
+    position: "relative",
+    zIndex: 1,
+  },
+  bentoLinkFeatured: {
+    zIndex: 0,
   },
   newCardLink: {
     display: "block",
@@ -210,13 +215,6 @@ const styles = stylex.create({
     borderRadius: radius["xl"],
     boxShadow: shadow.xl,
     minHeight: "18rem",
-  },
-  imageLayer: {
-    height: "100%",
-    inset: 0,
-    objectFit: "cover",
-    position: "absolute",
-    width: "100%",
   },
   accentOverlay: {
     background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 12%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent) 46%, color-mix(in srgb, ${uiColor.overlayBackdrop} 100%, transparent) 100%)`,
@@ -724,28 +722,20 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
   );
 }
 
-function HeroCard({
-  listing,
-  badgeLabel = "Featured Extension",
-}: {
-  listing: DirectoryListingCard;
-  badgeLabel?: string;
-}) {
+function HeroCard({ listing }: { listing: DirectoryListingCard }) {
   return (
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink)}
+      {...stylex.props(styles.bentoLink, styles.bentoLinkFeatured)}
     >
-      <Card style={[styles.accentCard, styles.heroCard]}>
-        {listing.heroImageUrl ? (
-          <img
-            src={listing.heroImageUrl}
-            alt=""
-            {...stylex.props(styles.imageLayer)}
-          />
-        ) : null}
-      </Card>
+      {listing.heroImageUrl ? (
+        <HeroImage
+          alt={`${listing.name} preview`}
+          glowIntensity={0.8}
+          src={listing.heroImageUrl}
+        />
+      ) : null}
     </RouterLink>
   );
 }

@@ -44,6 +44,7 @@ import { Text } from "../design-system/typography/text";
 import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
+import { HeroImage } from "../components/HeroImage";
 import {
   directoryListingApi,
   type DirectoryListingCard,
@@ -247,47 +248,6 @@ const styles = stylex.create({
   backLinkRow: {
     alignItems: "center",
     width: "100%",
-  },
-  hero: {
-    borderRadius: radius["3xl"],
-    cornerShape: "squircle",
-    overflow: "hidden",
-    position: "relative",
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: uiColor.component3,
-  },
-  heroImage: {
-    aspectRatio: "16 / 9",
-    display: "block",
-    objectFit: "cover",
-    width: "100%",
-  },
-  heroImageOverlay: {
-    backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 6%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 24%, transparent) 38%, color-mix(in srgb, ${uiColor.overlayBackdrop} 92%, transparent) 100%)`,
-    inset: 0,
-    position: "absolute",
-  },
-  heroFallback: {
-    alignItems: "center",
-    aspectRatio: "16 / 9",
-    display: "flex",
-    justifyContent: "center",
-    width: "100%",
-  },
-  heroFallbackIcon: {
-    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 24%, transparent)`,
-    borderRadius: radius["3xl"],
-    color: uiColor.textContrast,
-    paddingBottom: verticalSpace["3xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
-  },
-  heroOverlay: {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 6%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 24%, transparent) 38%, color-mix(in srgb, ${uiColor.overlayBackdrop} 92%, transparent) 100%)`,
-    inset: 0,
-    position: "absolute",
   },
   heroHeader: {
     boxSizing: "border-box",
@@ -1455,14 +1415,11 @@ function HeroSection({
   return (
     <Flex direction="column" gap="6xl">
       {listing.heroImageUrl && (
-        <div {...stylex.props(styles.hero)}>
-          <img
-            alt={`${listing.name} preview`}
-            src={listing.heroImageUrl}
-            {...stylex.props(styles.heroImage)}
-          />
-          <div {...stylex.props(styles.heroOverlay)} />
-        </div>
+        <HeroImage
+          alt={`${listing.name} preview`}
+          glowIntensity={0.9}
+          src={listing.heroImageUrl}
+        />
       )}
 
       <Flex direction="column" gap="lg">
