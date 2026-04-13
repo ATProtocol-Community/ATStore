@@ -112,6 +112,18 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       protocolCategoryGroup?.listings
         .filter((candidate) => candidate.id !== listing.id)
         .slice(0, 3) ?? [];
+    const categoryGroup = listing.categorySlug
+      ? await context.queryClient.ensureQueryData(
+          directoryListingApi.getDirectoryCategoryPageQueryOptions({
+            categoryId: listing.categorySlug,
+            sort: "popular",
+          }),
+        )
+      : null;
+    const relatedCategoryListings =
+      categoryGroup?.listings
+        .filter((candidate) => candidate.id !== listing.id)
+        .slice(0, 3) ?? [];
 
     const listingReviews = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
@@ -173,6 +185,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       listing,
       relatedProducts,
       relatedProtocolTools,
+      relatedCategoryListings,
       listingReviews,
       listingMentions: listingMentionsResult.mentions,
       listingMentionTotal: listingMentionsResult.total,
@@ -561,6 +574,7 @@ function ProductPage() {
     listing,
     relatedProducts,
     relatedProtocolTools,
+    relatedCategoryListings,
     listingReviews,
     listingMentions,
     listingMentionTotal,
@@ -589,11 +603,15 @@ function ProductPage() {
   const relatedSectionTitle =
     hasProtocolCategory && relatedProtocolTools.length > 0
       ? "More tools"
-      : "More Apps";
+      : relatedCategoryListings.length > 0
+        ? "More in this category"
+        : "More Apps";
   const relatedSectionListings =
     hasProtocolCategory && relatedProtocolTools.length > 0
       ? relatedProtocolTools
-      : relatedProducts;
+      : relatedCategoryListings.length > 0
+        ? relatedCategoryListings
+        : relatedProducts;
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
