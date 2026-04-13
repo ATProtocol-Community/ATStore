@@ -273,14 +273,14 @@ describe('matchPostToListings', () => {
     expect(hits.some((h) => h.storeListingId === 'gh')).toBe(false)
   })
 
-  it('still matches listing-specific github URLs by slug path signal', () => {
+  it('matches listing by exact github URL', () => {
     const index = buildListingMentionIndex([
       {
         id: 'gh2',
-        name: 'Repo Slug Match App',
-        slug: 'repo-slug-match',
-        sourceUrl: 'https://repo-slug-match.com',
-        externalUrl: 'https://github.com/acme/repo-slug-match',
+        name: 'Repo Exact URL App',
+        slug: 'repo-exact-url',
+        sourceUrl: 'https://repo-exact-url.com',
+        externalUrl: 'https://github.com/acme/repo-exact-url',
         productAccountHandle: null,
       },
     ])
@@ -288,12 +288,80 @@ describe('matchPostToListings', () => {
     const hits = matchPostToListings({
       index,
       text: 'release notes',
-      urls: ['https://github.com/acme/repo-slug-match/releases/tag/v1.2.3'],
+      urls: ['https://github.com/acme/repo-exact-url'],
       facetHandles: [],
     })
 
     expect(
       hits.some((h) => h.storeListingId === 'gh2' && h.matchType === 'url'),
+    ).toBe(true)
+  })
+
+  it('does not match github child paths when exact URL differs', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'gh3',
+        name: 'Repo Child Paths',
+        slug: 'repo-child-paths',
+        sourceUrl: 'https://repo-child-paths.com',
+        externalUrl: 'https://github.com/acme/repo-child-paths',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'see release notes',
+      urls: ['https://github.com/acme/repo-child-paths/releases/tag/v1.0.0'],
+      facetHandles: [],
+    })
+
+    expect(hits.some((h) => h.storeListingId === 'gh3')).toBe(false)
+  })
+
+  it('does not domain-match listings solely because their URL is on apps.apple.com', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'ios1',
+        name: 'Today App',
+        slug: 'today-app',
+        sourceUrl: 'https://today-app.dev',
+        externalUrl: 'https://apps.apple.com/us/app/today/id1234567890',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'check this app',
+      urls: ['https://apps.apple.com/us/app/other/id0987654321'],
+      facetHandles: [],
+    })
+
+    expect(hits.some((h) => h.storeListingId === 'ios1')).toBe(false)
+  })
+
+  it('matches listing by exact apps.apple.com URL', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'ios2',
+        name: 'Exact iOS App',
+        slug: 'exact-ios-app',
+        sourceUrl: 'https://exact-ios-app.dev',
+        externalUrl: 'https://apps.apple.com/us/app/exact-ios-app/id4242424242',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'new update',
+      urls: ['https://apps.apple.com/us/app/exact-ios-app/id4242424242?platform=iphone'],
+      facetHandles: [],
+    })
+
+    expect(
+      hits.some((h) => h.storeListingId === 'ios2' && h.matchType === 'url'),
     ).toBe(true)
   })
 

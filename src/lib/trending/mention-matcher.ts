@@ -21,10 +21,14 @@ export type ListingMentionIndexRow = {
 export type ListingMentionIndex = {
   byHandle: Map<string, Set<string>>
   byDomain: Map<string, Set<string>>
+  byExactUrl: Map<string, Set<string>>
   listings: ListingMentionIndexRow[]
 }
 
-const BROAD_HOSTS_TO_SKIP_FOR_DOMAIN_MATCH = new Set(['github.com'])
+const SHARED_HOSTS_REQUIRING_EXACT_URL_MATCH = new Set([
+  'github.com',
+  'apps.apple.com',
+])
 
 function normalizeHandle(h: string): string {
   return h.trim().replace(/^@/, '').toLowerCase()
@@ -131,8 +135,21 @@ function addToMap(map: Map<string, Set<string>>, key: string, id: string) {
   set.add(id)
 }
 
-function shouldSkipDomainLevelMatch(host: string): boolean {
-  return BROAD_HOSTS_TO_SKIP_FOR_DOMAIN_MATCH.has(host)
+function shouldUseExactUrlMatchOnly(host: string): boolean {
+  return SHARED_HOSTS_REQUIRING_EXACT_URL_MATCH.has(host)
+}
+
+function canonicalUrlForExactMatch(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    const u = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`)
+    u.hash = ''
+    const path = u.pathname.replace(/\/+$/, '') || '/'
+    return `${u.hostname.toLowerCase()}${path.toLowerCase()}`
+  } catch {
+    return null
+  }
 }
 
 export function buildListingMentionIndex(
@@ -140,6 +157,7 @@ export function buildListingMentionIndex(
 ): ListingMentionIndex {
   const byHandle = new Map<string, Set<string>>()
   const byDomain = new Map<string, Set<string>>()
+  const byExactUrl = new Map<string, Set<string>>()
 
   for (const row of rows) {
     const h = row.productAccountHandle
@@ -148,13 +166,27 @@ export function buildListingMentionIndex(
     }
 
     const su = hostnameFromUrl(row.sourceUrl)
-    if (su && !shouldSkipDomainLevelMatch(su)) addToMap(byDomain, su, row.id)
+    if (su) {
+      if (shouldUseExactUrlMatchOnly(su)) {
+        const key = canonicalUrlForExactMatch(row.sourceUrl)
+        if (key) addToMap(byExactUrl, key, row.id)
+      } else {
+        addToMap(byDomain, su, row.id)
+      }
+    }
 
     const eu = row.externalUrl ? hostnameFromUrl(row.externalUrl) : null
-    if (eu && !shouldSkipDomainLevelMatch(eu)) addToMap(byDomain, eu, row.id)
+    if (eu && row.externalUrl) {
+      if (shouldUseExactUrlMatchOnly(eu)) {
+        const key = canonicalUrlForExactMatch(row.externalUrl)
+        if (key) addToMap(byExactUrl, key, row.id)
+      } else {
+        addToMap(byDomain, eu, row.id)
+      }
+    }
   }
 
-  return { byHandle, byDomain, listings: rows }
+  return { byHandle, byDomain, byExactUrl, listings: rows }
 }
 
 export type FacetFeature =
@@ -229,10 +261,13 @@ export function matchPostToListings(input: {
 }): MentionHit[] {
   const textLower = input.text.toLowerCase()
   const urlHosts = new Set<string>()
+  const exactUrlCandidates = new Set<string>()
   const allUrls = [...input.urls]
   for (const u of allUrls) {
     const h = hostnameFromUrl(u)
     if (h) urlHosts.add(h)
+    const exact = canonicalUrlForExactMatch(u)
+    if (exact) exactUrlCandidates.add(exact)
   }
 
   const handleCandidates = new Set<string>()
@@ -275,10 +310,25 @@ export function matchPostToListings(input: {
     }
   }
 
+  for (const exactUrl of exactUrlCandidates) {
+    const ids = input.index.byExactUrl.get(exactUrl)
+    if (!ids) continue
+    for (const id of ids) {
+      mergeHit(byId, {
+        storeListingId: id,
+        matchType: 'url',
+        confidence: 0.92,
+        evidence: { exactUrl },
+      })
+    }
+  }
+
   for (const u of allUrls) {
+    const host = hostnameFromUrl(u)
     for (const row of input.index.listings) {
       const slug = row.slug?.trim() ?? ''
       if (!slug || !urlPathContainsSlug(u, slug)) continue
+      if (host && shouldUseExactUrlMatchOnly(host)) continue
       mergeHit(byId, {
         storeListingId: row.id,
         matchType: 'url',
