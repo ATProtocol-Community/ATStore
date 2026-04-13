@@ -23,13 +23,17 @@ const styles = stylex.create({
   },
   imageFrame: {
     borderRadius: radius["2xl"],
+    cornerShape: "squircle",
     maxHeight: "240px",
     overflow: "hidden",
     width: "100%",
   },
   image: {
     display: "block",
-    height: "240px",
+    height: {
+      default: "140px",
+      [breakpoints.sm]: "240px",
+    },
     objectFit: "cover",
     objectPosition: "center",
     width: "100%",

@@ -39,7 +39,7 @@ const styles = stylex.create({
   },
   card: {
     aspectRatio: {
-      default: "16 / 5",
+      default: "16 / 7",
       [breakpoints.sm]: "16 / 9",
     },
     borderRadius: radius.xl,

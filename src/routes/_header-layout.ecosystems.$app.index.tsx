@@ -32,6 +32,7 @@ import {
   pickListingImageForCategoryBranch,
 } from "../lib/ecosystem-listings";
 import { buildRouteOgMeta } from "../lib/og-meta";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -105,7 +106,7 @@ const styles = stylex.create({
     maxWidth: "44rem",
   },
   sectionGrid: {
-    gap: gap["3xl"],
+    gap: gap["lg"],
   },
   emptyState: {
     gap: gap["lg"],
@@ -114,6 +115,12 @@ const styles = stylex.create({
   searchButton: {
     marginTop: `calc(${verticalSpace["2xl"]} * -1)`,
     marginBottom: `calc(${verticalSpace["2xl"]} * -1)`,
+  },
+  pageContent: {
+    gap: {
+      default: 40,
+      [breakpoints.sm]: 64,
+    },
   },
 });
 
@@ -154,7 +161,7 @@ function EcosystemIndexPage() {
 
   return (
     <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" gap="8xl">
+      <Flex direction="column" style={styles.pageContent}>
         <Flex direction="column" gap="4xl">
           <Flex gap="xl" justify="between" style={styles.navLinks}>
             <AppLink
@@ -165,7 +172,11 @@ function EcosystemIndexPage() {
               {category.label}
             </AppLink>
 
-            <AppLink to="/ecosystems/$app/all" params={{ app: appSegment }}>
+            <AppLink
+              to="/ecosystems/$app/all"
+              params={{ app: appSegment }}
+              search={{ sort: "popular" }}
+            >
               All tools
             </AppLink>
           </Flex>
@@ -214,7 +225,7 @@ function EcosystemCategorySection({
   return (
     <Flex direction="column" style={styles.section}>
       <Flex direction="column" gap="4xl" style={styles.sectionHeader}>
-        <Flex justify="between" align="center" gap="2xl">
+        <Flex justify="between" align="end" gap="2xl">
           <Flex direction="column" gap="2xl" style={styles.sectionTitle}>
             <Text size="sm" style={styles.sectionEyebrow}>
               {formatEcosystemListingCount(category.count)}
@@ -222,6 +233,9 @@ function EcosystemCategorySection({
             <Text size="3xl" weight="semibold">
               {category.label}
             </Text>
+            <Body variant="secondary" style={styles.sectionDescription}>
+              {category.description}
+            </Body>
           </Flex>
           <ButtonLink
             to="/categories/$categoryId"
@@ -233,9 +247,6 @@ function EcosystemCategorySection({
             View all
           </ButtonLink>
         </Flex>
-        <Body variant="secondary" style={styles.sectionDescription}>
-          {category.description}
-        </Body>
       </Flex>
 
       <Grid style={[ecosystemListingGridStyles.grid, styles.sectionGrid]}>

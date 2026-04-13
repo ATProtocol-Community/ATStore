@@ -80,7 +80,7 @@ const styles = stylex.create({
   },
   listingGrid: {
     display: "grid",
-    gap: gap["2xl"],
+    gap: gap["lg"],
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -94,7 +94,6 @@ const styles = stylex.create({
   },
   listingCard: {
     height: "100%",
-    minHeight: "15rem",
   },
   listingCardBody: {
     gap: gap["4xl"],
@@ -137,7 +136,9 @@ function ProtocolTagsPage() {
               <ChevronLeft />
               Home
             </LinkLink>
-            <LinkLink to="/protocol/listings">All tools</LinkLink>
+            <LinkLink to="/protocol/listings" search={{ sort: "popular" }}>
+              All tools
+            </LinkLink>
           </Flex>
 
           <AppTagHero
@@ -183,7 +184,7 @@ function ProtocolCategorySection({
   return (
     <Flex direction="column" gap="2xl">
       <Flex direction="column" gap="4xl" style={styles.sectionHeader}>
-        <Flex align="center" gap="2xl" justify="between">
+        <Flex align="end" gap="2xl" justify="between">
           <Flex direction="column" gap="2xl" style={styles.sectionTitle}>
             <Text size="sm" style={styles.sectionEyebrow}>
               {formatProtocolListingCount(group.count)}
@@ -191,19 +192,20 @@ function ProtocolCategorySection({
             <Text size="3xl" weight="semibold">
               {group.label}
             </Text>
+            <Body variant="secondary" style={styles.sectionDescription}>
+              {description}
+            </Body>
           </Flex>
           <ButtonLink
             params={{ category: group.segment }}
             size="lg"
+            search={{ sort: "popular" }}
             to="/protocol/$category"
             variant="secondary"
           >
             View all
           </ButtonLink>
         </Flex>
-        <Body variant="secondary" style={styles.sectionDescription}>
-          {description}
-        </Body>
       </Flex>
 
       <Grid style={styles.listingGrid}>

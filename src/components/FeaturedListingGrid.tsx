@@ -4,6 +4,7 @@ import type { Key, ReactNode } from "react";
 import { Grid } from "../design-system/grid";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { gap } from "../design-system/theme/semantic-spacing.stylex";
+import type { StyleXComponentProps } from "#/design-system/theme";
 
 const styles = stylex.create({
   grid: {
@@ -50,9 +51,10 @@ export function FeaturedListingGrid<T>({
   getKey,
   isFeatured = (_, index) => index % 9 === 0,
   renderItem,
-}: FeaturedListingGridProps<T>) {
+  style,
+}: StyleXComponentProps<FeaturedListingGridProps<T>>) {
   return (
-    <Grid style={styles.grid}>
+    <Grid style={[styles.grid, style]}>
       {items.map((item, index) => {
         const featured = isFeatured(item, index);
 

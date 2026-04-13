@@ -147,6 +147,10 @@ const styles = stylex.create({
   },
   sortSelect: {
     minWidth: "12rem",
+    flexGrow: {
+      default: 1,
+      [breakpoints.sm]: 0,
+    },
   },
   eyebrow: {
     letterSpacing: "0.16em",
@@ -199,6 +203,7 @@ const styles = stylex.create({
   },
   relatedSection: {
     gap: gap["5xl"],
+    paddingTop: verticalSpace["6xl"],
   },
   relatedHeader: {
     maxWidth: "44rem",

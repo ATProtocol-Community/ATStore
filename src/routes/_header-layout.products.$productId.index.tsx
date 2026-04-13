@@ -220,11 +220,24 @@ const styles = stylex.create({
     cornerShape: "squircle",
   },
   ecosystemSection: {
-    marginTop: verticalSpace["5xl"],
+    marginTop: {
+      default: verticalSpace["lg"],
+      [breakpoints.sm]: verticalSpace["5xl"],
+    },
   },
   heroAvatar: {
-    height: size["7xl"],
-    width: size["7xl"],
+    borderRadius: {
+      default: radius["xl"],
+      [breakpoints.sm]: radius["3xl"],
+    },
+    height: {
+      default: size["5xl"],
+      [breakpoints.sm]: size["7xl"],
+    },
+    width: {
+      default: size["5xl"],
+      [breakpoints.sm]: size["7xl"],
+    },
   },
   page: {
     paddingBottom: verticalSpace["11xl"],
@@ -292,6 +305,18 @@ const styles = stylex.create({
   heroTagline: {
     color: uiColor.text1,
   },
+  desktopOnly: {
+    display: {
+      default: "none",
+      [breakpoints.sm]: "block",
+    },
+  },
+  mobileOnly: {
+    display: {
+      default: "flex",
+      [breakpoints.sm]: "none",
+    },
+  },
   tagRow: {
     flexWrap: "wrap",
   },
@@ -351,7 +376,10 @@ const styles = stylex.create({
   },
   descriptionText: {
     whiteSpace: "pre-wrap",
-    fontSize: fontSize["xl"],
+    fontSize: {
+      default: fontSize["lg"],
+      [breakpoints.sm]: fontSize["xl"],
+    },
   },
   detailsCard: {
     boxShadow: shadow.sm,
@@ -406,7 +434,6 @@ const styles = stylex.create({
     },
   },
   ecosystemHeader: {
-    alignItems: "flex-start",
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
@@ -1169,7 +1196,7 @@ function ProductPage() {
           </Flex>
         </Card>
       ) : null}
-      {import.meta.env.DEV ? (
+      {import.meta.env.DEV && false ? (
         <Card style={styles.devToolbar}>
           <Flex direction="column" style={styles.devToolbarBody}>
             <Text size="sm" weight="semibold">
@@ -1365,6 +1392,66 @@ function HeroSection({
   const canFavorite =
     Boolean(session?.user?.did) && Boolean(listing.atUri?.trim());
 
+  const tags = listing.appTags.length > 0 && (
+    <Flex gap="md" style={styles.tagRow}>
+      {listing.appTags.map((tag) => (
+        <RouterLink
+          key={tag}
+          to="/apps/$tag"
+          params={{ tag: getAppTagSlug(tag) }}
+          search={{ sort: "popular" }}
+          {...stylex.props(styles.tagLink)}
+        >
+          <Badge size="sm" variant="primary">
+            {formatAppTagLabel(tag)}
+          </Badge>
+        </RouterLink>
+      ))}
+    </Flex>
+  );
+
+  const actions = (
+    <Flex align="center" gap="md">
+      {session?.user?.did && canFavorite ? (
+        <ToggleButton
+          variant="secondary"
+          size="lg"
+          isSelected={favoriteStatus.isFavorited}
+          isDisabled={favoriteMutation.isPending}
+          onPress={() =>
+            void favoriteMutation.mutateAsync(!favoriteStatus.isFavorited)
+          }
+          aria-label={favoriteStatus.isFavorited ? "Unfavorite" : "Favorite"}
+        >
+          <Heart
+            size={16}
+            fill={favoriteStatus.isFavorited ? "currentColor" : "none"}
+          />
+        </ToggleButton>
+      ) : null}
+      {listing.productAccountDid ? (
+        <AriaLink
+          {...stylex.props(buttonStyles, styles.iconButton)}
+          href={`https://bsky.app/profile/${listing.productAccountDid}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <BlueskyIcon />
+        </AriaLink>
+      ) : null}
+      {primaryLink ? (
+        <ButtonLink
+          to={primaryLink}
+          size="lg"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {listing.priceLabel} <ExternalLink />
+        </ButtonLink>
+      ) : null}
+    </Flex>
+  );
+
   return (
     <Flex direction="column" gap="6xl">
       {listing.heroImageUrl && (
@@ -1378,85 +1465,47 @@ function HeroSection({
         </div>
       )}
 
-      <Flex gap="2xl" align="center" style={styles.heroHeader}>
-        <Avatar
-          alt={listing.name}
-          fallback={getInitials(listing.name)}
-          size="xl"
-          src={listing.iconUrl || undefined}
-          style={styles.heroAvatar}
-        />
-        <Flex direction="column" gap="2xl" style={styles.heroHeaderText}>
-          <Flex gap="xl" align="center">
-            <Text
-              font="title"
-              size={{ default: "4xl", sm: "4xl" }}
-              weight="semibold"
-              style={styles.heroTitle}
-            >
-              {listing.name}
-            </Text>
-            {listing.appTags.length > 0 ? (
-              <Flex gap="md" style={styles.tagRow}>
-                {listing.appTags.map((tag) => (
-                  <RouterLink
-                    key={tag}
-                    to="/apps/$tag"
-                    params={{ tag: getAppTagSlug(tag) }}
-                    search={{ sort: "popular" }}
-                    {...stylex.props(styles.tagLink)}
-                  >
-                    <Badge size="sm" variant="primary">
-                      {formatAppTagLabel(tag)}
-                    </Badge>
-                  </RouterLink>
-                ))}
-              </Flex>
-            ) : null}
-          </Flex>
-          <Body style={styles.heroTagline}>{listing.tagline}</Body>
+      <Flex direction="column" gap="lg">
+        <Flex
+          style={styles.mobileOnly}
+          justify="between"
+          gap="lg"
+          align="center"
+        >
+          {tags}
+          {actions}
         </Flex>
+        <Flex direction="column" gap="lg">
+          <Flex gap="2xl" align="center" style={styles.heroHeader}>
+            <Avatar
+              alt={listing.name}
+              fallback={getInitials(listing.name)}
+              size="xl"
+              src={listing.iconUrl || undefined}
+              style={styles.heroAvatar}
+            />
+            <Flex direction="column" gap="2xl" style={styles.heroHeaderText}>
+              <Flex gap="xl" align="center">
+                <Text
+                  font="title"
+                  size={{ default: "4xl", sm: "4xl" }}
+                  weight="semibold"
+                  style={styles.heroTitle}
+                >
+                  {listing.name}
+                </Text>
+                <div {...stylex.props(styles.desktopOnly)}>{tags}</div>
+              </Flex>
+              <Body style={[styles.heroTagline, styles.desktopOnly]}>
+                {listing.tagline}
+              </Body>
+            </Flex>
 
-        <Flex align="center" gap="md">
-          {session?.user?.did && canFavorite ? (
-            <ToggleButton
-              variant="secondary"
-              size="lg"
-              isSelected={favoriteStatus.isFavorited}
-              isDisabled={favoriteMutation.isPending}
-              onPress={() =>
-                void favoriteMutation.mutateAsync(!favoriteStatus.isFavorited)
-              }
-              aria-label={
-                favoriteStatus.isFavorited ? "Unfavorite" : "Favorite"
-              }
-            >
-              <Heart
-                size={16}
-                fill={favoriteStatus.isFavorited ? "currentColor" : "none"}
-              />
-            </ToggleButton>
-          ) : null}
-          {listing.productAccountDid ? (
-            <AriaLink
-              {...stylex.props(buttonStyles, styles.iconButton)}
-              href={`https://bsky.app/profile/${listing.productAccountDid}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <BlueskyIcon />
-            </AriaLink>
-          ) : null}
-          {primaryLink ? (
-            <ButtonLink
-              to={primaryLink}
-              size="lg"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {listing.priceLabel} <ExternalLink />
-            </ButtonLink>
-          ) : null}
+            <div {...stylex.props(styles.desktopOnly)}>{actions}</div>
+          </Flex>
+          <Body style={[styles.heroTagline, styles.mobileOnly]}>
+            {listing.tagline}
+          </Body>
         </Flex>
       </Flex>
     </Flex>
@@ -1507,8 +1556,8 @@ function ProductEcosystemSection({
 
   return (
     <Flex direction="column" gap="4xl" style={styles.ecosystemSection}>
-      <Flex align="center" gap="3xl" style={styles.ecosystemHeader}>
-        <Flex direction="column" gap="2xl">
+      <Flex align="end" gap="3xl" style={styles.ecosystemHeader}>
+        <Flex direction="column" gap="lg">
           <Text size="2xl" weight="semibold" style={styles.header}>
             Ecosystem
           </Text>
@@ -1518,7 +1567,6 @@ function ProductEcosystemSection({
         </Flex>
         <Flex gap="2xl" style={styles.ecosystemLinks}>
           <ButtonLink
-            size="lg"
             variant="secondary"
             to="/ecosystems/$app"
             params={{ app: appSegment }}

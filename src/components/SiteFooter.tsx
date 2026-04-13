@@ -53,8 +53,7 @@ export function SiteFooter() {
 
       <Footer.Section>
         <Footer.Copyright>
-          {new Date().getFullYear()} at-store. Discover apps and protocol
-          tooling across the Bluesky ecosystem.
+          {new Date().getFullYear()} at-store Copyright. All rights reserved.
         </Footer.Copyright>
       </Footer.Section>
     </Footer.Root>

@@ -91,7 +91,6 @@ const styles = stylex.create({
   },
   searchField: {
     maxWidth: "40rem",
-    width: "100%",
     flexGrow: 1,
   },
   resultsHeader: {
@@ -111,7 +110,7 @@ const styles = stylex.create({
   },
   listingGrid: {
     display: "grid",
-    gap: gap["2xl"],
+    gap: gap["xl"],
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -128,7 +127,6 @@ const styles = stylex.create({
   listingCard: {
     contentVisibility: "auto",
     height: "100%",
-    minHeight: "15rem",
   },
   listingCardBody: {
     gap: gap["4xl"],
@@ -223,8 +221,8 @@ function AppsAllPage() {
           />
         </Flex>
 
-        <Flex direction="column" gap="4xl">
-          <Flex align="center" gap="2xl" style={styles.resultsHeader}>
+        <Flex direction="column" gap="2xl">
+          <Flex align="center" gap="sm" style={styles.resultsHeader}>
             <Flex
               direction="row"
               gap="2xl"

@@ -89,7 +89,7 @@ const styles = stylex.create({
   },
   listingGrid: {
     display: "grid",
-    gap: gap["2xl"],
+    gap: gap["lg"],
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -103,7 +103,6 @@ const styles = stylex.create({
   },
   listingCard: {
     height: "100%",
-    minHeight: "15rem",
   },
   listingCardBody: {
     gap: gap["4xl"],
@@ -128,7 +127,10 @@ const styles = stylex.create({
     maxWidth: "40rem",
   },
   gap: {
-    gap: 64,
+    gap: {
+      default: 40,
+      [breakpoints.sm]: 64,
+    },
   },
 });
 
@@ -185,29 +187,33 @@ function AppTagSection({ group }: { group: DirectoryAppTagGroup }) {
   );
 
   return (
-    <Flex direction="column" gap="2xl">
-      <Flex direction="column" gap="4xl" style={styles.sectionHeader}>
-        <Flex justify="between" align="center" gap="2xl">
-          <Flex direction="column" gap="2xl" style={styles.sectionTitle}>
-            <Text size="sm" style={styles.sectionEyebrow}>
-              {formatAppTagCount(group.count)}
-            </Text>
-            <Text size="3xl" weight="semibold">
-              {formatAppTagLabel(group.tag)}
-            </Text>
-          </Flex>
-          <ButtonLink
-            to="/apps/$tag"
-            params={{ tag: getAppTagSlug(group.tag) }}
-            size="lg"
-            variant="secondary"
-          >
-            View all
-          </ButtonLink>
+    <Flex direction="column" gap="4xl">
+      <Flex
+        justify="between"
+        align="end"
+        gap="2xl"
+        style={styles.sectionHeader}
+      >
+        <Flex direction="column" gap="2xl" style={styles.sectionTitle}>
+          <Text size="sm" style={styles.sectionEyebrow}>
+            {formatAppTagCount(group.count)}
+          </Text>
+          <Text size="3xl" weight="semibold">
+            {formatAppTagLabel(group.tag)}
+          </Text>
+          <Body variant="secondary" style={styles.sectionDescription}>
+            {getAppTagDescription(group.tag)}
+          </Body>
         </Flex>
-        <Body variant="secondary" style={styles.sectionDescription}>
-          {getAppTagDescription(group.tag)}
-        </Body>
+        <ButtonLink
+          to="/apps/$tag"
+          params={{ tag: getAppTagSlug(group.tag) }}
+          search={{ sort: "popular" }}
+          size="lg"
+          variant="secondary"
+        >
+          View all
+        </ButtonLink>
       </Flex>
 
       <Grid style={styles.listingGrid}>

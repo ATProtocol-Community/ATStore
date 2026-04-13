@@ -75,6 +75,9 @@ export const Route = createFileRoute("/_header-layout/home")({
 const AppLink = createLink(Link);
 
 const styles = stylex.create({
+  sectionHeaderAction: {
+    flexShrink: 0,
+  },
   protocolHeader: {
     paddingTop: verticalSpace["8xl"],
   },
@@ -127,8 +130,14 @@ const styles = stylex.create({
     width: "100%",
   },
   pageHeader: {
-    paddingBottom: verticalSpace["11xl"],
-    paddingTop: verticalSpace["8xl"],
+    paddingBottom: {
+      default: verticalSpace["8xl"],
+      [breakpoints.sm]: verticalSpace["11xl"],
+    },
+    paddingTop: {
+      default: verticalSpace["4xl"],
+      [breakpoints.sm]: verticalSpace["8xl"],
+    },
   },
   shellHeader: {
     backdropFilter: "blur(24px) saturate(180%)",
@@ -161,7 +170,10 @@ const styles = stylex.create({
     maxWidth: "42rem",
   },
   pageSections: {
-    gap: gap["8xl"],
+    gap: {
+      default: 40,
+      [breakpoints.sm]: 64,
+    },
   },
   section: {
     width: "100%",
@@ -299,8 +311,7 @@ const styles = stylex.create({
     display: "grid",
     gap: gap["2xl"],
     gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+      default: "repeat(2, minmax(0, 1fr))",
       [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
     },
   },
@@ -383,7 +394,7 @@ const styles = stylex.create({
   },
   newGrid: {
     display: "grid",
-    gap: gap["2xl"],
+    gap: gap["lg"],
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -391,7 +402,6 @@ const styles = stylex.create({
     },
   },
   newCard: {
-    minHeight: "13rem",
     height: "100%",
   },
   newCardContent: {
@@ -515,7 +525,7 @@ function HomePage() {
           <Heading1>Apps on the Atmosphere</Heading1>
           <Text
             variant="secondary"
-            size="2xl"
+            size={{ default: "xl", sm: "2xl" }}
             leading="sm"
             style={styles.headerDescription}
           >
@@ -700,19 +710,16 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
   }
 
   return (
-    <Flex
-      align="center"
-      justify="between"
-      gap="2xl"
-      style={styles.sectionHeader}
-    >
+    <Flex align="end" justify="between" gap="2xl" style={styles.sectionHeader}>
       <div {...stylex.props(styles.sectionHeaderText)}>
         <SmallBody style={styles.eyebrow} variant="secondary">
           {eyebrow}
         </SmallBody>
         <Heading2>{title}</Heading2>
       </div>
-      {action}
+      {action && (
+        <div {...stylex.props(styles.sectionHeaderAction)}>{action}</div>
+      )}
     </Flex>
   );
 }
@@ -894,18 +901,20 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
     >
       <Card style={styles.newCard}>
         <Flex direction="column" gap="4xl" style={styles.newCardContent}>
-          <StoreIcon listing={listing} size="xl" />
-          <Flex direction="column" gap="xl">
-            <Text size="xl" weight="semibold">
-              {listing.name}
-            </Text>
-            <SmallBody variant="secondary">
-              @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-            </SmallBody>
+          <Flex align="center" gap="2xl">
+            <StoreIcon listing={listing} size="xl" />
+            <Flex direction="column" gap="xl">
+              <Text size="xl" weight="semibold">
+                {listing.name}
+              </Text>
+              <SmallBody variant="secondary">
+                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+              </SmallBody>
+            </Flex>
           </Flex>
           <Body variant="secondary">{listing.tagline}</Body>
           <div {...stylex.props(styles.spacer)} />
-          <Flex align="center" justify="between" gap="xl">
+          <Flex align="center" justify="end" gap="xl">
             <Flex align="center" gap="sm">
               <Text size="sm" weight="semibold">
                 {listing.rating != null ? listing.rating.toFixed(1) : "—"}
@@ -916,9 +925,6 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
                 showReviewCount
               />
             </Flex>
-            <Button size="lg" variant="secondary">
-              {listing.priceLabel}
-            </Button>
           </Flex>
         </Flex>
       </Card>

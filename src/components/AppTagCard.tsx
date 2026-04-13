@@ -117,6 +117,7 @@ export function AppTagCard({ tag }: AppTagCardProps) {
     <RouterLink
       to="/apps/$tag"
       params={{ tag: getAppTagSlug(tag.tag) }}
+      search={{ sort: "popular" }}
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}
     >
       {imageSrc ? (
@@ -129,7 +130,11 @@ export function AppTagCard({ tag }: AppTagCardProps) {
       ) : null}
       <div {...stylex.props(styles.cardOverlay)} />
       <Flex direction="column" gap="2xl" style={styles.cardContent}>
-        <Text size="2xl" weight="semibold" style={styles.title}>
+        <Text
+          size={{ default: "xl", sm: "2xl" }}
+          weight="semibold"
+          style={styles.title}
+        >
           {formatAppTagLabel(tag.tag)}
         </Text>
       </Flex>

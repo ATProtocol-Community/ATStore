@@ -149,6 +149,10 @@ const styles = stylex.create({
     flexGrow: 1,
     flexShrink: 0,
     flexBasis: 0,
+    minWidth: 0,
+  },
+  fit: {
+    minWidth: "fit-content",
   },
   page: {
     backgroundColor: uiColor.bg,
@@ -196,6 +200,8 @@ const styles = stylex.create({
     gap: gap["4xl"],
     marginBottom: verticalSpace["8xl"],
     marginTop: verticalSpace["11xl"],
+    paddingLeft: horizontalSpace["2xl"],
+    paddingRight: horizontalSpace["2xl"],
     textAlign: "center",
   },
   eyebrow: {
@@ -277,14 +283,15 @@ const styles = stylex.create({
     borderWidth: 1,
     borderRadius: radius.xl,
     boxShadow: shadow.xl,
-    marginLeft: "auto",
-    marginRight: "auto",
-    maxWidth: "100%",
+    maxWidth: "90vw",
+    boxSizing: "border-box",
     paddingTop: verticalSpace["10xl"],
     paddingBottom: verticalSpace["10xl"],
     paddingLeft: horizontalSpace["7xl"],
     paddingRight: horizontalSpace["7xl"],
     textAlign: "center",
+    marginLeft: horizontalSpace["8xl"],
+    marginRight: horizontalSpace["8xl"],
   },
   accountLogo: {
     alignItems: "center",
@@ -310,7 +317,10 @@ const styles = stylex.create({
   accountHandle: {
     color: uiColor.text2,
     fontFamily: fontFamily.title,
-    fontSize: fontSize["5xl"],
+    fontSize: {
+      default: fontSize["3xl"],
+      [breakpoints.md]: fontSize["5xl"],
+    },
     fontWeight: fontWeight.bold,
     lineHeight: lineHeight.sm,
     margin: 0,
@@ -343,18 +353,42 @@ const styles = stylex.create({
     backgroundColor: uiColor.bgSubtle,
     borderRadius: radius.lg,
     marginBottom: verticalSpace["6xl"],
-    paddingTop: verticalSpace["11xl"],
-    paddingBottom: verticalSpace["11xl"],
-    paddingLeft: horizontalSpace["10xl"],
-    paddingRight: horizontalSpace["10xl"],
+    paddingTop: {
+      default: verticalSpace["2xl"],
+      [breakpoints.md]: verticalSpace["11xl"],
+    },
+    paddingBottom: {
+      default: verticalSpace["2xl"],
+      [breakpoints.md]: verticalSpace["11xl"],
+    },
+    paddingLeft: {
+      default: horizontalSpace["6xl"],
+      [breakpoints.md]: horizontalSpace["10xl"],
+    },
+    paddingRight: {
+      default: horizontalSpace["6xl"],
+      [breakpoints.md]: horizontalSpace["10xl"],
+    },
   },
   sectionWhite: {
     backgroundColor: uiColor.bg,
     marginBottom: verticalSpace["6xl"],
-    paddingTop: verticalSpace["11xl"],
-    paddingBottom: verticalSpace["11xl"],
-    paddingLeft: horizontalSpace["10xl"],
-    paddingRight: horizontalSpace["10xl"],
+    paddingTop: {
+      default: verticalSpace["8xl"],
+      [breakpoints.md]: verticalSpace["11xl"],
+    },
+    paddingBottom: {
+      default: verticalSpace["8xl"],
+      [breakpoints.md]: verticalSpace["11xl"],
+    },
+    paddingLeft: {
+      default: horizontalSpace["6xl"],
+      [breakpoints.md]: horizontalSpace["10xl"],
+    },
+    paddingRight: {
+      default: horizontalSpace["6xl"],
+      [breakpoints.md]: horizontalSpace["10xl"],
+    },
   },
   sectionEyebrow: {
     color: blue.text1,
@@ -383,7 +417,10 @@ const styles = stylex.create({
   sectionBody: {
     color: uiColor.text1,
     fontFamily: fontFamily.sans,
-    fontSize: fontSize.xl,
+    fontSize: {
+      default: fontSize.lg,
+      [breakpoints.md]: fontSize.xl,
+    },
     lineHeight: lineHeight.base,
     margin: 0,
   },
@@ -415,6 +452,7 @@ const styles = stylex.create({
     borderColor: uiColor.border1,
     borderStyle: "solid",
     borderWidth: 1,
+    boxSizing: "border-box",
     borderRadius: radius.md,
     minHeight: verticalSpace["12xl"],
     paddingTop: verticalSpace["4xl"],
@@ -536,8 +574,22 @@ const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: gap["2xl"],
-    paddingBottom: verticalSpace["11xl"],
-    paddingTop: verticalSpace["11xl"],
+    paddingBottom: {
+      default: verticalSpace["8xl"],
+      [breakpoints.md]: verticalSpace["11xl"],
+    },
+    paddingTop: {
+      default: verticalSpace["8xl"],
+      [breakpoints.md]: verticalSpace["11xl"],
+    },
+    paddingLeft: {
+      default: horizontalSpace["6xl"],
+      [breakpoints.md]: horizontalSpace["10xl"],
+    },
+    paddingRight: {
+      default: horizontalSpace["6xl"],
+      [breakpoints.md]: horizontalSpace["10xl"],
+    },
     textAlign: "center",
   },
   ctaTitle: {
@@ -578,6 +630,12 @@ const styles = stylex.create({
   accountCardHero: {
     backgroundColor: uiColor.bg,
     paddingBottom: verticalSpace["11xl"],
+  },
+  sectionBodyGrid: {
+    gap: {
+      default: verticalSpace["6xl"],
+      [breakpoints.md]: verticalSpace["8xl"],
+    },
   },
   sectionBodyContainer: {
     minWidth: 320,
@@ -722,6 +780,14 @@ const styles = stylex.create({
     fontWeight: fontWeight.semibold,
     marginTop: verticalSpace.xs,
   },
+  appBrowserGrid: {
+    ":is(*) > :nth-child(4) ~ *": {
+      display: {
+        default: "none",
+        [breakpoints.md]: "block",
+      },
+    },
+  },
   bottomMetaContainer: {
     paddingTop: verticalSpace["6xl"],
   },
@@ -757,6 +823,10 @@ function RouteComponent() {
     return allApps.filter((app) => app.appTags.includes(activeAppTagValue));
   }, [activeAppTagValue, allApps]);
   const appBrowserApps = appFeaturedApps.length > 0 ? appFeaturedApps : allApps;
+  const trendingAppBrowserApps = useMemo(
+    () => sortListingsByTrending(appBrowserApps),
+    [appBrowserApps],
+  );
 
   const { data: blueskyEcosystemData } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryPageQueryOptions({
@@ -804,6 +874,10 @@ function RouteComponent() {
   }, [activeEcosystemTagValue, browserCategories, ecosystemApps]);
   const ecosystemBrowserApps =
     ecosystemFeaturedApps.length > 0 ? ecosystemFeaturedApps : ecosystemApps;
+  const trendingEcosystemBrowserApps = useMemo(
+    () => sortListingsByTrending(ecosystemBrowserApps),
+    [ecosystemBrowserApps],
+  );
 
   return (
     <HeaderLayout.Root style={styles.shell}>
@@ -858,7 +932,7 @@ function RouteComponent() {
               </h2>
             </Flex>
           </Flex>
-          <Flex gap="8xl" wrap>
+          <Flex wrap style={styles.sectionBodyGrid}>
             <Flex
               direction="column"
               gap="2xl"
@@ -878,7 +952,7 @@ function RouteComponent() {
                 and you're home everywhere.
               </p>
             </Flex>
-            <div {...stylex.props(styles.grow)}>
+            <div {...stylex.props(styles.grow, styles.fit)}>
               <div {...stylex.props(styles.cardGrid2, styles.grow)}>
                 {INTRO_FEATURES.map((item) => (
                   <article
@@ -937,12 +1011,13 @@ function RouteComponent() {
           ) : null}
 
           <FeaturedListingGrid
-            items={appBrowserApps.slice(0, MAX_BROWSER_APPS)}
+            items={trendingAppBrowserApps.slice(0, MAX_BROWSER_APPS)}
             getKey={(app) => app.id}
             isFeatured={(_, index) => index === 0}
             renderItem={(app, { featured }) => (
               <AppBrowserListingCard featured={featured} listing={app} />
             )}
+            style={styles.appBrowserGrid}
           />
 
           <Flex
@@ -1031,12 +1106,13 @@ function RouteComponent() {
           ) : null}
 
           <FeaturedListingGrid
-            items={ecosystemBrowserApps.slice(0, MAX_BROWSER_APPS)}
+            items={trendingEcosystemBrowserApps.slice(0, MAX_BROWSER_APPS)}
             getKey={(app) => app.id}
             isFeatured={(_, index) => index === 0}
             renderItem={(app, { featured }) => (
               <AppBrowserListingCard featured={featured} listing={app} />
             )}
+            style={styles.appBrowserGrid}
           />
 
           <Flex
@@ -1100,6 +1176,17 @@ function buildTagStats(apps: DirectoryListingCard[]) {
   return [...counts.entries()]
     .map(([tag, count]) => ({ tag, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+function sortListingsByTrending(
+  listings: DirectoryListingCard[],
+): DirectoryListingCard[] {
+  return [...listings].sort(
+    (a, b) =>
+      b.reviewCount - a.reviewCount ||
+      (b.rating ?? 0) - (a.rating ?? 0) ||
+      a.name.localeCompare(b.name),
+  );
 }
 
 function getGroupHeroPreloadImagesFromEcosystem(apps: DirectoryListingCard[]) {

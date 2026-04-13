@@ -100,7 +100,7 @@ const styles = stylex.create({
   },
   listingGrid: {
     display: "grid",
-    gap: gap["2xl"],
+    gap: gap["xl"],
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -117,7 +117,6 @@ const styles = stylex.create({
   listingCard: {
     contentVisibility: "auto",
     height: "100%",
-    minHeight: "15rem",
   },
   listingCardBody: {
     gap: gap["4xl"],
@@ -166,7 +165,6 @@ const styles = stylex.create({
   searchFieldRow: {
     flexGrow: 1,
     maxWidth: "40rem",
-    width: "100%",
   },
 });
 
@@ -216,8 +214,8 @@ function ProtocolListingsPage() {
           />
         </Flex>
 
-        <Flex direction="column" gap="4xl">
-          <Flex align="center" gap="2xl" style={styles.resultsHeader}>
+        <Flex direction="column" gap="2xl">
+          <Flex align="center" gap="sm" style={styles.resultsHeader}>
             <Flex
               align="center"
               direction="row"

@@ -25,7 +25,6 @@ const styles = stylex.create({
   listingCard: {
     contentVisibility: "auto",
     height: "100%",
-    minHeight: "15rem",
   },
   listingCardBody: {
     gap: gap["4xl"],
@@ -58,7 +57,7 @@ const styles = stylex.create({
   },
   grid: {
     display: "grid",
-    gap: gap["2xl"],
+    gap: gap["xl"],
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -92,15 +91,10 @@ export function EcosystemListingCard({
                 {listing.name}
               </Text>
               <Flex align="center" gap="lg" style={styles.ratingRow}>
-                <SmallBody variant="secondary">{listing.category}</SmallBody>
                 <SmallBody variant="secondary">
-                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
                 </SmallBody>
-                <StarRating
-                  rating={listing.rating}
-                  reviewCount={listing.reviewCount}
-                  showReviewCount
-                />
               </Flex>
             </Flex>
           </Flex>
@@ -111,13 +105,17 @@ export function EcosystemListingCard({
 
           <div />
 
-          <Flex justify="between" gap="xl" style={styles.listingFooter}>
-            <Text size="sm" weight="semibold">
-              {listing.rating != null
-                ? `${listing.rating.toFixed(1)} rating`
-                : "No reviews yet"}
-            </Text>
-            <Text weight="semibold">{listing.priceLabel}</Text>
+          <Flex justify="end" gap="xl" style={styles.listingFooter}>
+            <Flex align="center" gap="lg" style={styles.ratingRow}>
+              <SmallBody variant="secondary">
+                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+              </SmallBody>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+                showReviewCount
+              />
+            </Flex>
           </Flex>
         </Flex>
       </Card>

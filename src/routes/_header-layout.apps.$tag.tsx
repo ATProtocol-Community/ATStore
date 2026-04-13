@@ -161,7 +161,6 @@ const styles = stylex.create({
     height: "100%",
     width: "100%",
     boxSizing: "border-box",
-    // minHeight: "15rem",
   },
   listingCardFeatured: {
     borderRadius: radius["3xl"],
@@ -323,6 +322,7 @@ const styles = stylex.create({
   },
   relatedSection: {
     gap: gap["5xl"],
+    paddingTop: verticalSpace["6xl"],
   },
   relatedHeader: {
     maxWidth: "44rem",

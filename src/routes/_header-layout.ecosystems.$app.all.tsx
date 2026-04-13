@@ -129,7 +129,6 @@ const styles = stylex.create({
   searchFieldRow: {
     flexGrow: 1,
     maxWidth: "40rem",
-    width: "100%",
   },
 });
 
@@ -200,8 +199,8 @@ function EcosystemAllPage() {
           />
         </Flex>
 
-        <Flex direction="column" gap="4xl" style={styles.searchSection}>
-          <Flex align="center" gap="2xl" style={styles.resultsHeader}>
+        <Flex direction="column" gap="2xl" style={styles.searchSection}>
+          <Flex align="center" gap="md" style={styles.resultsHeader}>
             <Flex
               align="center"
               direction="row"
