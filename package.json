@@ -12,6 +12,7 @@
     "start": "node .output/server/index.mjs",
     "test": "vitest run",
     "scrape:bluesky": "tsx scripts/scrape-bluesky-directory/index.ts",
+    "scrape:at-tracker:websites": "tsx -r dotenv/config scripts/scrape-at-tracker-websites.ts",
     "generate:taxonomy": "tsx scripts/generate-directory-taxonomy.ts",
     "generate:category-art": "tsx -r dotenv/config scripts/generate-category-bento-images.ts",
     "generate:app-tag-hero-images": "tsx scripts/generate-app-tag-hero-images.ts",

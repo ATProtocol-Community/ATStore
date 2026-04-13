@@ -1137,7 +1137,7 @@ function ProductPage() {
           </Flex>
         </Card>
       ) : null}
-      {import.meta.env.DEV && false ? (
+      {import.meta.env.DEV ? (
         <Card style={styles.devToolbar}>
           <Flex direction="column" style={styles.devToolbarBody}>
             <Text size="sm" weight="semibold">

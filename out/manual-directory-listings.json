@@ -1076,8 +1076,10 @@
     "name": "Lexicon Community",
     "sourceUrl": "https://lexicon.community/",
     "externalUrl": "https://lexicon.community/",
-    "iconUrl": null,
-    "screenshotUrls": [],
+    "iconUrl": "/generated/listing-icons/atmo-garden-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/atmo-garden-screenshot.jpg"
+    ],
     "appTags": [],
     "tagline": "A working group to create community ATProtocol Lexicons.",
     "fullDescription": "Lexicon Community is a community working group that develops and coordinates AT Protocol lexicons, with open governance, discussion, and shared schema work across contributors.",
@@ -1353,5 +1355,421 @@
     "vertical": "publishing",
     "classificationReason": "Sequoia is a developer-focused CLI for publishing standard.site content to the AT Protocol, so it fits a dedicated app category for Sequoia ecosystem tooling.",
     "categorySlug": "apps/sequoia"
+  },
+  {
+    "name": "bsky.md",
+    "sourceUrl": "https://bsky.md/",
+    "externalUrl": "https://bsky.md/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "bluesky",
+      "markdown",
+      "api"
+    ],
+    "tagline": "Fetch public Bluesky profiles, posts, feeds, and search results as clean Markdown via simple HTTP endpoints.",
+    "fullDescription": "bsky.md turns public Bluesky data into clean Markdown without authentication or API keys. It provides endpoints for profiles, posts, threads, feeds, likes, followers, following, search, links, and trending topics, making it useful for developers, automation, and coding agents.",
+    "rawCategoryHint": "Bluesky tool",
+    "scope": "bluesky",
+    "productType": "tool",
+    "domain": "developer-tools",
+    "vertical": null,
+    "classificationReason": "Provides a developer-facing HTTP service for reading public Bluesky content as Markdown, which fits a Bluesky tooling utility.",
+    "categorySlug": "apps/bluesky/tool"
+  },
+  {
+    "name": "atmo.garden",
+    "sourceUrl": "https://atmo.garden/",
+    "externalUrl": "https://atmo.garden/",
+    "iconUrl": "/generated/listing-icons/atmo-garden-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/atmo-garden-screenshot.jpg"
+    ],
+    "appTags": [],
+    "tagline": "Communities on Bluesky, experimental.",
+    "fullDescription": "atmo.garden is an experimental Bluesky community directory that helps people discover and browse communities across the ATmosphere by activity and freshness.",
+    "rawCategoryHint": "Social app",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "community_social",
+    "vertical": "social",
+    "classificationReason": "atmo.garden is a user-facing discovery app focused on Bluesky communities and social participation, so it fits apps/social.",
+    "categorySlug": "apps/social"
+  },
+  {
+    "name": "My Location",
+    "sourceUrl": "https://places.app/",
+    "externalUrl": "https://places.app/",
+    "iconUrl": "/generated/listings/my-location-icon.png",
+    "screenshotUrls": [],
+    "appTags": [
+      "location"
+    ],
+    "tagline": "Live GPS coordinates, address lookup, and location file tools in one web app.",
+    "fullDescription": "My Location is a browser-based location utility that shows your current GPS coordinates, reverse-geocoded address context, and map-friendly location metadata. It also supports importing and exporting KML, GPX, and GeoJSON so users can move location tracks and points between mapping workflows and mobile tools.",
+    "rawCategoryHint": "Location tracker",
+    "scope": "cross-network",
+    "productType": "standalone_app",
+    "domain": "location",
+    "vertical": null,
+    "classificationReason": "The product is a standalone consumer location utility centered on coordinate lookup, address context, and geospatial file interchange, which fits apps/location.",
+    "categorySlug": "apps/location"
+  },
+  {
+    "name": "Proto Instant Messenger",
+    "sourceUrl": "https://protoimsg.app/",
+    "externalUrl": "https://protoimsg.app/",
+    "iconUrl": "/generated/listing-icons/proto-instant-messenger-icon.jpg",
+    "screenshotUrls": [],
+    "appTags": [
+      "messaging"
+    ],
+    "tagline": "Private, peer-to-peer communication",
+    "fullDescription": "Proto Instant Messenger is an atproto messaging app focused on private, peer-to-peer communication, with handle-based sign-in, customizable permissions, and multilingual support.",
+    "rawCategoryHint": "messaging",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "communication",
+    "vertical": "social",
+    "classificationReason": "Messaging-first atproto app for direct peer-to-peer communication.",
+    "categorySlug": "apps/protoimsg"
+  },
+  {
+    "name": "sidetrail",
+    "sourceUrl": "https://sidetrail.app/",
+    "externalUrl": "https://sidetrail.app/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "annotation"
+    ],
+    "tagline": "Trails worth walking.",
+    "fullDescription": "Sidetrail is an AT Protocol-powered social annotation app for collecting and sharing trails of posts, links, and notes as guided walks through ideas and conversations.",
+    "rawCategoryHint": "Social annotation",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "annotation",
+    "vertical": null,
+    "classificationReason": "Sidetrail is a user-facing app focused on creating and sharing annotation-style trails, so it fits best as an app-root listing under apps/sidetrail with an annotation discovery tag.",
+    "categorySlug": "apps/sidetrail"
+  },
+  {
+    "name": "Yoten",
+    "sourceUrl": "https://yoten.app/",
+    "externalUrl": "https://yoten.app/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "social"
+    ],
+    "tagline": "A social tracker for your language learning journey.",
+    "fullDescription": "Yoten is a social platform for tracking language-learning progress on AT Protocol. It lets you log study sessions and explore a Study Feed showing what friends and the global community are learning.",
+    "rawCategoryHint": "Language learning social app",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "social",
+    "vertical": "education",
+    "classificationReason": "Consumer AT Protocol app centered on social language-learning session tracking and discovery.",
+    "categorySlug": "apps/yoten"
+  },
+  {
+    "name": "Monomarks",
+    "sourceUrl": "https://monomarks.at/",
+    "externalUrl": "https://monomarks.at/",
+    "iconUrl": "/generated/listings/monomarks-icon.svg",
+    "screenshotUrls": [],
+    "appTags": [
+      "bookmarks"
+    ],
+    "tagline": "Link-sharing for internet archaeologists",
+    "fullDescription": "Monomarks is a social bookmarking app for collecting, organizing, and sharing links, with public collections and discovery aimed at internet archaeology.",
+    "rawCategoryHint": "bookmarks",
+    "scope": "consumer",
+    "productType": "web-app",
+    "domain": "knowledge-management",
+    "vertical": "social-bookmarking",
+    "classificationReason": "Allows users to save and share curated link collections.",
+    "categorySlug": "apps/monomarks"
+  },
+  {
+    "name": "lexicons.bio",
+    "sourceUrl": "https://lexicons.bio/",
+    "externalUrl": "https://lexicons.bio/",
+    "iconUrl": "/generated/listings/lexicons-bio-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/lexicons-bio-screenshot.jpg"
+    ],
+    "appTags": [],
+    "tagline": "AT Protocol lexicons for decentralized biodiversity observation data.",
+    "fullDescription": "lexicons.bio publishes AT Protocol lexicons for decentralized biodiversity observation data, with schemas aligned to Darwin Core Data Package and GBIF standards. It defines shared record formats for observations, associated media, and taxonomic identifications so biodiversity apps can exchange and interpret field data consistently across the AT Protocol ecosystem.",
+    "rawCategoryHint": "Lexicon",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "lexicons.bio is specifically focused on defining and publishing reusable AT Protocol lexicon schemas for biodiversity data, so it fits the protocol/lexicon category.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "checkmate.blue",
+    "sourceUrl": "https://checkmate.blue/",
+    "externalUrl": "https://checkmate.blue/",
+    "iconUrl": "/generated/listings/checkmate-blue-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/checkmate-blue-screenshot.png"
+    ],
+    "appTags": [
+      "games"
+    ],
+    "tagline": "Chess on the Atmosphere",
+    "fullDescription": "checkmate.blue is a chess game built for the Atmosphere network, offering a simple way to play chess in an AT Protocol-native context.",
+    "rawCategoryHint": "Games",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "games",
+    "vertical": "chess",
+    "classificationReason": "checkmate.blue is a consumer game with its own product identity focused on playing chess on the Atmosphere network, so it fits best as an app-root listing under apps/checkmate-blue with games tagging.",
+    "categorySlug": "apps/checkmate-blue"
+  },
+  {
+    "name": "dndx",
+    "sourceUrl": "https://dndx.dev/",
+    "externalUrl": "https://dndx.dev/",
+    "iconUrl": "/generated/listings/dndx-icon.svg",
+    "screenshotUrls": [],
+    "appTags": [
+      "games"
+    ],
+    "tagline": "Searchable D&D compendium and campaign toolkit.",
+    "fullDescription": "dndx is a web-based Dungeons & Dragons reference and campaign utility with searchable compendium content plus browse and tools sections for quick in-session lookup.",
+    "rawCategoryHint": "Games",
+    "scope": null,
+    "productType": "application",
+    "domain": "tabletop-gaming",
+    "vertical": null,
+    "classificationReason": "Community D&D web app centered on compendium search, browse, and gameplay support tools.",
+    "categorySlug": "apps/dndx"
+  },
+  {
+    "name": "Skywell",
+    "sourceUrl": "https://skywell.dev/",
+    "externalUrl": "https://skywell.dev/",
+    "iconUrl": "/generated/listings/skywell-icon.png",
+    "screenshotUrls": [],
+    "appTags": [
+      "work"
+    ],
+    "tagline": "A file sharing service built for AT Protocol.",
+    "fullDescription": "Skywell is a file sharing service for AT Protocol that lets people upload and share files in a decentralized social ecosystem.",
+    "rawCategoryHint": "Work",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "file-sharing",
+    "vertical": "productivity",
+    "classificationReason": "Skywell is an AT Protocol-native file sharing app and the requested category is apps/skywell.",
+    "categorySlug": "apps/skywell"
+  },
+  {
+    "name": "PluralHost",
+    "sourceUrl": "https://plural.host/",
+    "externalUrl": "https://plural.host/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "social"
+    ],
+    "tagline": "Plural identity on the ATmosphere.",
+    "fullDescription": "PluralHost helps plural systems manage member profiles and front-tracking on AT Protocol, with encrypted private data stored on the user’s own PDS and bidirectional sync with PluralKit.",
+    "rawCategoryHint": "Plural system social app",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "identity",
+    "vertical": "social",
+    "classificationReason": "PluralHost is an end-user AT Protocol application for managing system-member identity and social presence, so it fits app-level social tooling.",
+    "categorySlug": "apps/plural-host"
+  },
+  {
+    "name": "sparklepets",
+    "sourceUrl": "https://sparklepets.garden/",
+    "externalUrl": "https://sparklepets.garden/",
+    "iconUrl": "/generated/listings/sparklepets-icon.svg",
+    "screenshotUrls": [],
+    "appTags": [
+      "games"
+    ],
+    "tagline": "A cute and cozy virtual world on the Atmosphere.",
+    "fullDescription": "Sparklepets is a cute and cozy virtual world powered by the Atmosphere where you adopt a little pal, care for them, and explore together.",
+    "rawCategoryHint": "games",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "games",
+    "vertical": null,
+    "classificationReason": "Sparklepets is a standalone consumer game/virtual-world experience built on the Atmosphere, so it fits best as an app-root listing under apps/sparklepets.",
+    "categorySlug": "apps/sparklepets"
+  },
+  {
+    "name": "Pocketenv",
+    "sourceUrl": "https://pocketenv.io/",
+    "externalUrl": "https://pocketenv.io/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "developer"
+    ],
+    "tagline": "Experiment with AI tools, prompts, and agents in a private sandbox.",
+    "fullDescription": "Pocketenv lets you experiment with AI tools, prompts, and agents in a private sandbox with no setup and no risk, where everything runs in a secure temporary environment that disappears when you're done.",
+    "rawCategoryHint": "Developer tools",
+    "scope": null,
+    "productType": "service",
+    "domain": "developer-infrastructure",
+    "vertical": "ai",
+    "classificationReason": "Pocketenv is a developer-facing sandbox service for safely running AI experiments, prompts, and agents in isolated ephemeral environments.",
+    "categorySlug": "apps/pocketenv"
+  },
+  {
+    "name": "Currents",
+    "sourceUrl": "https://currents.is/explore",
+    "externalUrl": "https://currents.is/explore",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "photo"
+    ],
+    "tagline": "Save inspiration and curate personalized visual feeds.",
+    "fullDescription": "Currents helps you save inspiration from anywhere, organize collections around your taste, and tune your feed to discover more of what you love.",
+    "rawCategoryHint": "Photo",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "discovery",
+    "vertical": null,
+    "classificationReason": "Currents is a consumer app experience focused on collecting and exploring visual inspiration feeds.",
+    "categorySlug": "apps/currents"
+  },
+  {
+    "name": "inspo.land",
+    "sourceUrl": "https://www.inspo.land/",
+    "externalUrl": "https://www.inspo.land/",
+    "iconUrl": "/generated/listings/inspo-land-icon.png",
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "Photo inspiration for your next idea.",
+    "fullDescription": "inspo.land is a photo inspiration app for browsing visual ideas and collecting references for creative projects.",
+    "rawCategoryHint": "photo",
+    "scope": "consumer",
+    "productType": "web-app",
+    "domain": "creative-tools",
+    "vertical": "photography",
+    "classificationReason": "User provided category apps/inspo-land and photo tag, indicating a consumer photo inspiration app.",
+    "categorySlug": "apps/inspo-land"
+  },
+  {
+    "name": "TitleGraph",
+    "sourceUrl": "https://titlegraph.org/",
+    "externalUrl": "https://titlegraph.org/",
+    "iconUrl": "/generated/listings/titlegraph-icon.svg",
+    "screenshotUrls": [
+      "/generated/listings/titlegraph-screenshot.png"
+    ],
+    "appTags": [],
+    "tagline": "The federated catalog standard for streaming television.",
+    "fullDescription": "TitleGraph is an open, decentralized data schema built on the AT Protocol for streaming television catalogs and availability data. It defines lexicons that separate canonical media metadata from delivery and commercial offer data so networks can syndicate VOD, live broadcast, and geo-availability information interoperably across the AT Protocol ecosystem.",
+    "rawCategoryHint": "AT Protocol lexicon standard",
+    "scope": "atproto",
+    "productType": "spec",
+    "domain": "media",
+    "vertical": null,
+    "classificationReason": "TitleGraph publishes reusable AT Protocol lexicons and schema conventions for streaming catalog and delivery metadata, so it fits protocol/lexicon.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "Lexicon Store",
+    "sourceUrl": "https://lexicon.store/",
+    "externalUrl": "https://lexicon.store/",
+    "iconUrl": "/generated/listings/lexicon-store-icon.png",
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "ATProto lexicon schema registry",
+    "fullDescription": "Discover and explore AT Protocol lexicon schemas in a verified registry for Bluesky and ATProto projects.",
+    "rawCategoryHint": "ATProto lexicon schema registry",
+    "scope": "global",
+    "productType": "registry",
+    "domain": "protocol",
+    "vertical": "developer-tools",
+    "classificationReason": "Indexes and serves ATProto lexicon schema definitions for discovery and validation.",
+    "categorySlug": "protocol/lexicon"
+  },
+  {
+    "name": "Chive",
+    "sourceUrl": "https://chive.pub/",
+    "externalUrl": "https://chive.pub/",
+    "iconUrl": "/generated/listings/chive-icon.svg",
+    "screenshotUrls": [],
+    "appTags": [
+      "science"
+    ],
+    "tagline": "Decentralized eprints on ATProto.",
+    "fullDescription": "Chive is an open-alpha decentralized eprint service on ATProto for sharing research with data sovereignty and community governance.",
+    "rawCategoryHint": "science",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "research-publishing",
+    "vertical": "science",
+    "classificationReason": "Chive is an end-user AT Protocol app focused on publishing and discovering decentralized research preprints, matching the requested apps/chive category.",
+    "categorySlug": "apps/chive"
+  },
+  {
+    "name": "Pollen",
+    "sourceUrl": "https://pollen.place/",
+    "externalUrl": "https://pollen.place/",
+    "iconUrl": "/generated/listings/pollen-place-icon.svg",
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "A gentle place for things to spread.",
+    "fullDescription": "Pollen is a decentralized social app in the ATmosphere for sharing GIFs, thoughts, and moments in a calmer, garden-themed feed experience.",
+    "rawCategoryHint": "social",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "community_social",
+    "vertical": "social",
+    "classificationReason": "Pollen is a standalone AT Protocol social app focused on sharing posts and media, so it fits best as an app-root listing at apps/pollen-place.",
+    "categorySlug": "apps/pollen-place"
+  },
+  {
+    "name": "atbbs",
+    "sourceUrl": "https://atboards.xyz/",
+    "externalUrl": "https://atboards.xyz/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "messaging"
+    ],
+    "tagline": "Bulletin boards on the Atmosphere.",
+    "fullDescription": "Build a community from your existing account with tightly curated, fully portable bulletin boards that are open by design.",
+    "rawCategoryHint": "messaging",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "social",
+    "vertical": "messaging",
+    "classificationReason": "atbbs is an AT Protocol application focused on community bulletin-board conversations and messaging-style interaction.",
+    "categorySlug": "apps/atboards"
+  },
+  {
+    "name": "ATStore",
+    "sourceUrl": "https://atstore.fyi/",
+    "externalUrl": "https://atstore.fyi/",
+    "iconUrl": "/generated/listings/atstore-icon.png",
+    "screenshotUrls": [],
+    "appTags": [
+      "reviews"
+    ],
+    "tagline": "Discover apps and protocol tools across the Atmosphere.",
+    "fullDescription": "ATStore is a directory for Atmosphere and Bluesky ecosystem apps, protocol tools, and services, helping users discover products that work with one portable account across the AT Protocol network.",
+    "rawCategoryHint": "App directory",
+    "scope": "atproto",
+    "productType": "directory",
+    "domain": "discovery",
+    "vertical": "ecosystem",
+    "classificationReason": "ATStore is a user-facing discovery directory that catalogs Atmosphere and Bluesky ecosystem apps/tools, so it fits a dedicated apps/atstore directory category.",
+    "categorySlug": "apps/atstore"
   }
 ]

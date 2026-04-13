@@ -29,7 +29,7 @@ import { redirect } from "@tanstack/react-router";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 
-export const Route = createFileRoute("/_header-layout/admin")({
+export const Route = createFileRoute("/_header-layout/admin/")({
   loader: async ({ context }) => {
     try {
       await context.queryClient.ensureQueryData(
@@ -148,6 +148,11 @@ function AdminPage() {
           Unverified listings and pending claims. Handle{" "}
           <code>ADMIN_HANDLE</code> (default hipstersmoothie.com).
         </SmallBody>
+        <Body>
+          <AriaLink href="/admin/listing-product-accounts">
+            Manage product Bluesky accounts
+          </AriaLink>
+        </Body>
 
         <Card>
           <CardHeader>

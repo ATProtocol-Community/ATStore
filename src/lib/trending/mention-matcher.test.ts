@@ -342,6 +342,31 @@ describe('matchPostToListings', () => {
     ).toBe(true)
   })
 
+  it('keeps URL/domain matches for non-root Bluesky listings (apps/bluesky/*)', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'bsky-tool',
+        name: 'bsky.md',
+        slug: 'bsky-md',
+        sourceUrl: 'https://bsky.md',
+        externalUrl: 'https://bsky.md',
+        productAccountHandle: null,
+        categorySlugs: ['apps/bluesky/tool'],
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'this endpoint is handy',
+      urls: ['https://bsky.md/trending'],
+      facetHandles: [],
+    })
+
+    expect(
+      hits.some((h) => h.storeListingId === 'bsky-tool' && h.matchType === 'url'),
+    ).toBe(true)
+  })
+
   it('does not domain-match listings solely because their URL is on github.com', () => {
     const index = buildListingMentionIndex([
       {
@@ -385,6 +410,30 @@ describe('matchPostToListings', () => {
 
     expect(
       hits.some((h) => h.storeListingId === 'gh2' && h.matchType === 'url'),
+    ).toBe(true)
+  })
+
+  it('matches listing by exact github URL with trailing slash', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'gh2-slash',
+        name: 'Repo Exact URL Slash',
+        slug: 'repo-exact-url-slash',
+        sourceUrl: 'https://repo-exact-url-slash.com',
+        externalUrl: 'https://github.com/acme/repo-exact-url-slash',
+        productAccountHandle: null,
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'release notes',
+      urls: ['https://github.com/acme/repo-exact-url-slash/'],
+      facetHandles: [],
+    })
+
+    expect(
+      hits.some((h) => h.storeListingId === 'gh2-slash' && h.matchType === 'url'),
     ).toBe(true)
   })
 
@@ -531,6 +580,32 @@ describe('matchPostToListings', () => {
     expect(
       childPathHits.some((h) => h.storeListingId === 'tangled-sub-2'),
     ).toBe(false)
+  })
+
+  it('matches from bsky.app profile URL to handle-indexed listing', () => {
+    const index = buildListingMentionIndex([
+      {
+        id: 'bsky-profile-hit',
+        name: 'Profile Match',
+        slug: 'profile-match',
+        sourceUrl: 'https://profile-match.dev',
+        externalUrl: null,
+        productAccountHandle: 'profilematch.bsky.social',
+      },
+    ])
+
+    const hits = matchPostToListings({
+      index,
+      text: 'nice launch',
+      urls: ['https://bsky.app/profile/profilematch.bsky.social'],
+      facetHandles: [],
+    })
+
+    expect(
+      hits.some(
+        (h) => h.storeListingId === 'bsky-profile-hit' && h.matchType === 'handle',
+      ),
+    ).toBe(true)
   })
 
   it('keeps highest-confidence hit when multiple signals match', () => {

@@ -16,20 +16,20 @@ import { Route as OgIndexRouteImport } from './routes/og.index'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutHomeRouteImport } from './routes/_header-layout.home'
-import { Route as HeaderLayoutAdminRouteImport } from './routes/_header-layout.admin'
+import { Route as HeaderLayoutAdminIndexRouteImport } from './routes/_header-layout.admin.index'
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
 import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
 import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
 import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
 import { Route as HeaderLayoutProductsCreateRouteImport } from './routes/_header-layout.products.create'
 import { Route as HeaderLayoutProductClaimRouteImport } from './routes/_header-layout.product.claim'
-import { Route as HeaderLayoutDevListingProductAccountsRouteImport } from './routes/_header-layout.dev.listing-product-accounts'
 import { Route as HeaderLayoutDevCategoriesRouteImport } from './routes/_header-layout.dev.categories'
 import { Route as HeaderLayoutDevAppTagsRouteImport } from './routes/_header-layout.dev.app-tags'
 import { Route as HeaderLayoutCategoriesCategoryIdRouteImport } from './routes/_header-layout.categories.$categoryId'
 import { Route as HeaderLayoutAppsTagsRouteImport } from './routes/_header-layout.apps.tags'
 import { Route as HeaderLayoutAppsAllRouteImport } from './routes/_header-layout.apps.all'
 import { Route as HeaderLayoutAppsTagRouteImport } from './routes/_header-layout.apps.$tag'
+import { Route as HeaderLayoutAdminListingProductAccountsRouteImport } from './routes/_header-layout.admin.listing-product-accounts'
 import { Route as HeaderLayoutProductsProductIdIndexRouteImport } from './routes/_header-layout.products.$productId.index'
 import { Route as HeaderLayoutEcosystemsAppIndexRouteImport } from './routes/_header-layout.ecosystems.$app.index'
 import { Route as ApiAuthAtprotoSignupRouteImport } from './routes/api.auth.atproto.signup'
@@ -80,9 +80,9 @@ const HeaderLayoutHomeRoute = HeaderLayoutHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const HeaderLayoutAdminRoute = HeaderLayoutAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const HeaderLayoutAdminIndexRoute = HeaderLayoutAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const HeaderLayoutProtocolTagsRoute =
@@ -121,12 +121,6 @@ const HeaderLayoutProductClaimRoute =
     path: '/product/claim',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
-const HeaderLayoutDevListingProductAccountsRoute =
-  HeaderLayoutDevListingProductAccountsRouteImport.update({
-    id: '/dev/listing-product-accounts',
-    path: '/dev/listing-product-accounts',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
 const HeaderLayoutDevCategoriesRoute =
   HeaderLayoutDevCategoriesRouteImport.update({
     id: '/dev/categories',
@@ -159,6 +153,12 @@ const HeaderLayoutAppsTagRoute = HeaderLayoutAppsTagRouteImport.update({
   path: '/apps/$tag',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
+const HeaderLayoutAdminListingProductAccountsRoute =
+  HeaderLayoutAdminListingProductAccountsRouteImport.update({
+    id: '/admin/listing-product-accounts',
+    path: '/admin/listing-product-accounts',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
 const HeaderLayoutProductsProductIdIndexRoute =
   HeaderLayoutProductsProductIdIndexRouteImport.update({
     id: '/products/$productId/',
@@ -244,24 +244,24 @@ const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/admin': typeof HeaderLayoutAdminRoute
   '/home': typeof HeaderLayoutHomeRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og/': typeof OgIndexRoute
+  '/admin/listing-product-accounts': typeof HeaderLayoutAdminListingProductAccountsRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
-  '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
   '/product/claim': typeof HeaderLayoutProductClaimRoute
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/admin/': typeof HeaderLayoutAdminIndexRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -280,24 +280,24 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/admin': typeof HeaderLayoutAdminRoute
   '/home': typeof HeaderLayoutHomeRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og': typeof OgIndexRoute
+  '/admin/listing-product-accounts': typeof HeaderLayoutAdminListingProductAccountsRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
-  '/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
   '/product/claim': typeof HeaderLayoutProductClaimRoute
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/admin': typeof HeaderLayoutAdminIndexRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -317,24 +317,24 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
   '/login': typeof LoginRoute
-  '/_header-layout/admin': typeof HeaderLayoutAdminRoute
   '/_header-layout/home': typeof HeaderLayoutHomeRoute
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
   '/_header-layout/search': typeof HeaderLayoutSearchRoute
   '/og/': typeof OgIndexRoute
+  '/_header-layout/admin/listing-product-accounts': typeof HeaderLayoutAdminListingProductAccountsRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
   '/_header-layout/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/_header-layout/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/_header-layout/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
   '/_header-layout/dev/categories': typeof HeaderLayoutDevCategoriesRoute
-  '/_header-layout/dev/listing-product-accounts': typeof HeaderLayoutDevListingProductAccountsRoute
   '/_header-layout/product/claim': typeof HeaderLayoutProductClaimRoute
   '/_header-layout/products/create': typeof HeaderLayoutProductsCreateRoute
   '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/_header-layout/admin/': typeof HeaderLayoutAdminIndexRoute
   '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/_header-layout/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/_header-layout/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -355,24 +355,24 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/admin'
     | '/home'
     | '/notifications'
     | '/search'
     | '/og/'
+    | '/admin/listing-product-accounts'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
     | '/categories/$categoryId'
     | '/dev/app-tags'
     | '/dev/categories'
-    | '/dev/listing-product-accounts'
     | '/product/claim'
     | '/products/create'
     | '/profile/$actor'
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
+    | '/admin/'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
     | '/products/$productId/mentions'
@@ -391,24 +391,24 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
-    | '/admin'
     | '/home'
     | '/notifications'
     | '/search'
     | '/og'
+    | '/admin/listing-product-accounts'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
     | '/categories/$categoryId'
     | '/dev/app-tags'
     | '/dev/categories'
-    | '/dev/listing-product-accounts'
     | '/product/claim'
     | '/products/create'
     | '/profile/$actor'
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
+    | '/admin'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
     | '/products/$productId/mentions'
@@ -427,24 +427,24 @@ export interface FileRouteTypes {
     | '/'
     | '/_header-layout'
     | '/login'
-    | '/_header-layout/admin'
     | '/_header-layout/home'
     | '/_header-layout/notifications'
     | '/_header-layout/search'
     | '/og/'
+    | '/_header-layout/admin/listing-product-accounts'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
     | '/_header-layout/apps/tags'
     | '/_header-layout/categories/$categoryId'
     | '/_header-layout/dev/app-tags'
     | '/_header-layout/dev/categories'
-    | '/_header-layout/dev/listing-product-accounts'
     | '/_header-layout/product/claim'
     | '/_header-layout/products/create'
     | '/_header-layout/profile/$actor'
     | '/_header-layout/protocol/$category'
     | '/_header-layout/protocol/listings'
     | '/_header-layout/protocol/tags'
+    | '/_header-layout/admin/'
     | '/_header-layout/ecosystems/$app/all'
     | '/_header-layout/products/$productId/edit'
     | '/_header-layout/products/$productId/mentions'
@@ -524,11 +524,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutHomeRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
-    '/_header-layout/admin': {
-      id: '/_header-layout/admin'
+    '/_header-layout/admin/': {
+      id: '/_header-layout/admin/'
       path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof HeaderLayoutAdminRouteImport
+      fullPath: '/admin/'
+      preLoaderRoute: typeof HeaderLayoutAdminIndexRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/protocol/tags': {
@@ -573,13 +573,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutProductClaimRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
-    '/_header-layout/dev/listing-product-accounts': {
-      id: '/_header-layout/dev/listing-product-accounts'
-      path: '/dev/listing-product-accounts'
-      fullPath: '/dev/listing-product-accounts'
-      preLoaderRoute: typeof HeaderLayoutDevListingProductAccountsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
     '/_header-layout/dev/categories': {
       id: '/_header-layout/dev/categories'
       path: '/dev/categories'
@@ -620,6 +613,13 @@ declare module '@tanstack/react-router' {
       path: '/apps/$tag'
       fullPath: '/apps/$tag'
       preLoaderRoute: typeof HeaderLayoutAppsTagRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/admin/listing-product-accounts': {
+      id: '/_header-layout/admin/listing-product-accounts'
+      path: '/admin/listing-product-accounts'
+      fullPath: '/admin/listing-product-accounts'
+      preLoaderRoute: typeof HeaderLayoutAdminListingProductAccountsRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/products/$productId/': {
@@ -745,23 +745,23 @@ const HeaderLayoutProductsProductIdReviewsRouteWithChildren =
   )
 
 interface HeaderLayoutRouteChildren {
-  HeaderLayoutAdminRoute: typeof HeaderLayoutAdminRoute
   HeaderLayoutHomeRoute: typeof HeaderLayoutHomeRoute
   HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
   HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
+  HeaderLayoutAdminListingProductAccountsRoute: typeof HeaderLayoutAdminListingProductAccountsRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
   HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
   HeaderLayoutCategoriesCategoryIdRoute: typeof HeaderLayoutCategoriesCategoryIdRoute
   HeaderLayoutDevAppTagsRoute: typeof HeaderLayoutDevAppTagsRoute
   HeaderLayoutDevCategoriesRoute: typeof HeaderLayoutDevCategoriesRoute
-  HeaderLayoutDevListingProductAccountsRoute: typeof HeaderLayoutDevListingProductAccountsRoute
   HeaderLayoutProductClaimRoute: typeof HeaderLayoutProductClaimRoute
   HeaderLayoutProductsCreateRoute: typeof HeaderLayoutProductsCreateRoute
   HeaderLayoutProfileActorRoute: typeof HeaderLayoutProfileActorRoute
   HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
   HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
   HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
+  HeaderLayoutAdminIndexRoute: typeof HeaderLayoutAdminIndexRoute
   HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
   HeaderLayoutProductsProductIdEditRoute: typeof HeaderLayoutProductsProductIdEditRoute
   HeaderLayoutProductsProductIdMentionsRoute: typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -771,24 +771,24 @@ interface HeaderLayoutRouteChildren {
 }
 
 const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
-  HeaderLayoutAdminRoute: HeaderLayoutAdminRoute,
   HeaderLayoutHomeRoute: HeaderLayoutHomeRoute,
   HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
   HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
+  HeaderLayoutAdminListingProductAccountsRoute:
+    HeaderLayoutAdminListingProductAccountsRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
   HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
   HeaderLayoutCategoriesCategoryIdRoute: HeaderLayoutCategoriesCategoryIdRoute,
   HeaderLayoutDevAppTagsRoute: HeaderLayoutDevAppTagsRoute,
   HeaderLayoutDevCategoriesRoute: HeaderLayoutDevCategoriesRoute,
-  HeaderLayoutDevListingProductAccountsRoute:
-    HeaderLayoutDevListingProductAccountsRoute,
   HeaderLayoutProductClaimRoute: HeaderLayoutProductClaimRoute,
   HeaderLayoutProductsCreateRoute: HeaderLayoutProductsCreateRoute,
   HeaderLayoutProfileActorRoute: HeaderLayoutProfileActorRoute,
   HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
   HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
   HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,
+  HeaderLayoutAdminIndexRoute: HeaderLayoutAdminIndexRoute,
   HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
   HeaderLayoutProductsProductIdEditRoute:
     HeaderLayoutProductsProductIdEditRoute,

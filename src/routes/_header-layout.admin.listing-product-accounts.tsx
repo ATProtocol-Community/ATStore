@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
+import { createFileRoute, createLink, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { UserHandleAutocomplete } from "../components/user-handle-autocomplete";
@@ -26,6 +26,7 @@ import {
   SmallBody,
 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 import {
   directoryListingApi,
   type ListingMissingProductAccountHandleItem,
@@ -33,11 +34,22 @@ import {
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 export const Route = createFileRoute(
-  "/_header-layout/dev/listing-product-accounts",
+  "/_header-layout/admin/listing-product-accounts",
 )({
   loader: async ({ context }) => {
-    if (!import.meta.env.DEV) {
-      throw notFound();
+    try {
+      await context.queryClient.ensureQueryData(
+        adminApi.getAdminDashboardQueryOptions,
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "Unauthorized") {
+        throw redirect({
+          to: "/login",
+          search: { redirect: "/admin/listing-product-accounts" },
+        });
+      }
+      throw redirect({ to: "/" });
     }
 
     await Promise.all([
@@ -49,7 +61,7 @@ export const Route = createFileRoute(
       ),
     ]);
   },
-  component: DevListingProductAccountsPage,
+  component: AdminListingProductAccountsPage,
 });
 
 const AppLink = createLink(Link);
@@ -59,6 +71,9 @@ const styles = stylex.create({
   page: {
     paddingBottom: verticalSpace["10xl"],
     paddingTop: verticalSpace["6xl"],
+  },
+  section: {
+    maxWidth: "60rem",
   },
   pageContent: {
     gap: gap["6xl"],
@@ -159,7 +174,7 @@ function getInitials(name: string) {
     .join("");
 }
 
-function DevListingProductAccountsPage() {
+function AdminListingProductAccountsPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -255,125 +270,129 @@ function DevListingProductAccountsPage() {
 
   return (
     <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" style={styles.pageContent}>
-        <Flex style={styles.navLinks}>
-          <AppLink to="/dev/app-tags">App tags</AppLink>
-          <AppLink to="/dev/categories">Categories</AppLink>
-          <AppLink to="/home">Home</AppLink>
-        </Flex>
+      <Flex direction="column" gap="6xl" style={styles.section}>
+        <Flex direction="column" style={styles.pageContent}>
+          <Flex style={styles.navLinks}>
+            <AppLink to="/admin">Admin dashboard</AppLink>
+            <AppLink to="/home">Home</AppLink>
+          </Flex>
 
-        <Flex direction="column" style={styles.pageHeader}>
-          <Heading1>Product Bluesky account</Heading1>
-          <Body style={styles.meta}>
-            All pending candidates are listed below. Check each row to publish{" "}
-            <code>productAccountDid</code> for that listing; unchecked rows are
-            rejected. Use the button at the bottom to apply everything at once.
-          </Body>
-        </Flex>
+          <Flex direction="column" style={styles.pageHeader}>
+            <Heading1>Product Bluesky account</Heading1>
+            <Body style={styles.meta}>
+              All pending candidates are listed below. Check each row to publish{" "}
+              <code>productAccountDid</code> for that listing; unchecked rows
+              are rejected. Use the button at the bottom to apply everything at
+              once.
+            </Body>
+          </Flex>
 
-        <Flex direction="column" gap="xl" style={styles.pageHeader}>
-          <Heading2>Missing handle (@unknown on /apps/tags)</Heading2>
-          <Body style={styles.meta}>
-            Listings with no stored Bluesky handle (empty or whitespace only).
-            Enter a handle and this page will resolve the DID for you before
-            saving to Postgres.
-          </Body>
-          {missingHandleFetching && !missingHandleRows?.length ? (
+          <Flex direction="column" gap="xl" style={styles.pageHeader}>
+            <Heading2>Missing handle (@unknown on /apps/tags)</Heading2>
+            <Body style={styles.meta}>
+              Listings with no stored Bluesky handle (empty or whitespace only).
+              Enter a handle and this page will resolve the DID for you before
+              saving to Postgres.
+            </Body>
+            {missingHandleFetching && !missingHandleRows?.length ? (
+              <SmallBody>Loading…</SmallBody>
+            ) : isMissingHandleError ? (
+              <Card style={styles.rowCard}>
+                <Text size="sm" style={styles.errorText}>
+                  {missingHandleError instanceof Error
+                    ? missingHandleError.message
+                    : String(missingHandleError)}
+                </Text>
+              </Card>
+            ) : !missingHandleRows?.length ? (
+              <Card style={styles.rowCard}>
+                <Body>
+                  Every listing has a non-empty handle in the database.
+                </Body>
+              </Card>
+            ) : (
+              <Flex direction="column" style={styles.list}>
+                {missingHandleRows.map((listing) => (
+                  <MissingHandleRow
+                    key={listing.id}
+                    errorMessage={
+                      saveHandleMutation.isError &&
+                      saveHandleMutation.variables?.listingId === listing.id
+                        ? saveHandleMutation.error instanceof Error
+                          ? saveHandleMutation.error.message
+                          : String(saveHandleMutation.error)
+                        : ignoreMissingHandleMutation.isError &&
+                            ignoreMissingHandleMutation.variables?.listingId ===
+                              listing.id
+                          ? ignoreMissingHandleMutation.error instanceof Error
+                            ? ignoreMissingHandleMutation.error.message
+                            : String(ignoreMissingHandleMutation.error)
+                          : undefined
+                    }
+                    isIgnoring={pendingIgnoreId === listing.id}
+                    isSaving={pendingSaveId === listing.id}
+                    listing={listing}
+                    onIgnore={(listingId) => {
+                      ignoreMissingHandleMutation.mutate({ listingId });
+                    }}
+                    onSave={(listingId, payload) => {
+                      saveHandleMutation.mutate({ listingId, ...payload });
+                    }}
+                  />
+                ))}
+              </Flex>
+            )}
+          </Flex>
+
+          {error ? (
+            <Text size="sm" style={styles.errorText}>
+              {error}
+            </Text>
+          ) : null}
+
+          {isFetching && !rows?.length ? (
             <SmallBody>Loading…</SmallBody>
-          ) : isMissingHandleError ? (
+          ) : !rows?.length ? (
             <Card style={styles.rowCard}>
-              <Text size="sm" style={styles.errorText}>
-                {missingHandleError instanceof Error
-                  ? missingHandleError.message
-                  : String(missingHandleError)}
-              </Text>
-            </Card>
-          ) : !missingHandleRows?.length ? (
-            <Card style={styles.rowCard}>
-              <Body>Every listing has a non-empty handle in the database.</Body>
+              <Body>No pending candidates. Run </Body>
+              <code>pnpm discover:product-bsky</code>
+              <Body> to enqueue.</Body>
             </Card>
           ) : (
-            <Flex direction="column" style={styles.list}>
-              {missingHandleRows.map((listing) => (
-                <MissingHandleRow
-                  key={listing.id}
-                  errorMessage={
-                    saveHandleMutation.isError &&
-                    saveHandleMutation.variables?.listingId === listing.id
-                      ? saveHandleMutation.error instanceof Error
-                        ? saveHandleMutation.error.message
-                        : String(saveHandleMutation.error)
-                      : ignoreMissingHandleMutation.isError &&
-                          ignoreMissingHandleMutation.variables?.listingId ===
-                            listing.id
-                        ? ignoreMissingHandleMutation.error instanceof Error
-                          ? ignoreMissingHandleMutation.error.message
-                          : String(ignoreMissingHandleMutation.error)
-                        : undefined
-                  }
-                  isIgnoring={pendingIgnoreId === listing.id}
-                  isSaving={pendingSaveId === listing.id}
-                  listing={listing}
-                  onIgnore={(listingId) => {
-                    ignoreMissingHandleMutation.mutate({ listingId });
-                  }}
-                  onSave={(listingId, payload) => {
-                    saveHandleMutation.mutate({ listingId, ...payload });
-                  }}
-                />
-              ))}
-            </Flex>
+            <>
+              <Flex direction="column" style={styles.list}>
+                {rows.map((item) => (
+                  <CandidateRow
+                    key={item.candidateId}
+                    item={item}
+                    isSelected={selected[item.candidateId] !== false}
+                    onSelectedChange={(value) => {
+                      setSelected((s) => ({
+                        ...s,
+                        [item.candidateId]: value,
+                      }));
+                    }}
+                  />
+                ))}
+              </Flex>
+
+              <Flex direction="column" style={styles.footer}>
+                <SmallBody style={styles.meta}>
+                  Confirms all checked rows on the store PDS; rejects every
+                  unchecked pending candidate (failed confirms stay pending for
+                  a later run).
+                </SmallBody>
+                <Button
+                  isDisabled={busy || !rows.length}
+                  isPending={busy}
+                  onPress={() => void onApplyBatch()}
+                >
+                  Confirm checked &amp; reject others
+                </Button>
+              </Flex>
+            </>
           )}
         </Flex>
-
-        {error ? (
-          <Text size="sm" style={styles.errorText}>
-            {error}
-          </Text>
-        ) : null}
-
-        {isFetching && !rows?.length ? (
-          <SmallBody>Loading…</SmallBody>
-        ) : !rows?.length ? (
-          <Card style={styles.rowCard}>
-            <Body>No pending candidates. Run </Body>
-            <code>pnpm discover:product-bsky</code>
-            <Body> to enqueue.</Body>
-          </Card>
-        ) : (
-          <>
-            <Flex direction="column" style={styles.list}>
-              {rows.map((item) => (
-                <CandidateRow
-                  key={item.candidateId}
-                  item={item}
-                  isSelected={selected[item.candidateId] !== false}
-                  onSelectedChange={(value) => {
-                    setSelected((s) => ({
-                      ...s,
-                      [item.candidateId]: value,
-                    }));
-                  }}
-                />
-              ))}
-            </Flex>
-
-            <Flex direction="column" style={styles.footer}>
-              <SmallBody style={styles.meta}>
-                Confirms all checked rows on the store PDS; rejects every
-                unchecked pending candidate (failed confirms stay pending for a
-                later run).
-              </SmallBody>
-              <Button
-                isDisabled={busy || !rows.length}
-                isPending={busy}
-                onPress={() => void onApplyBatch()}
-              >
-                Confirm checked &amp; reject others
-              </Button>
-            </Flex>
-          </>
-        )}
       </Flex>
     </Page.Root>
   );
