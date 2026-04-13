@@ -7,11 +7,11 @@ import {
 } from "@tanstack/react-router";
 
 import { AppTagHero } from "../components/AppTagHero";
+import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
@@ -38,6 +38,7 @@ import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { ChevronLeft } from "lucide-react";
 import { StarRating } from "#/design-system/star-rating";
+import { HeroImage } from "#/components/HeroImage";
 
 const ButtonLink = createLink(Button);
 const LinkLink = createLink(Link);
@@ -86,15 +87,6 @@ const styles = stylex.create({
   },
   sectionDescription: {
     maxWidth: "44rem",
-  },
-  listingGrid: {
-    display: "grid",
-    gap: gap["lg"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
-    },
   },
   listingLink: {
     display: "block",
@@ -164,8 +156,12 @@ function AppsAllPage() {
 
         {groups.length > 0 ? (
           <Flex direction="column" style={styles.gap}>
-            {groups.map((group) => (
-              <AppTagSection key={group.tag} group={group} />
+            {groups.map((group, index) => (
+              <AppTagSection
+                key={group.tag}
+                group={group}
+                sectionIndex={index}
+              />
             ))}
           </Flex>
         ) : (
@@ -180,7 +176,13 @@ function AppsAllPage() {
   );
 }
 
-function AppTagSection({ group }: { group: DirectoryAppTagGroup }) {
+function AppTagSection({
+  group,
+  sectionIndex,
+}: {
+  group: DirectoryAppTagGroup;
+  sectionIndex: number;
+}) {
   const visibleListings = group.listings.slice(
     0,
     INITIAL_SECTION_LISTING_COUNT,
@@ -216,61 +218,78 @@ function AppTagSection({ group }: { group: DirectoryAppTagGroup }) {
         </ButtonLink>
       </Flex>
 
-      <Grid style={styles.listingGrid}>
-        {visibleListings.map((listing) => (
-          <AppTagListingCard
-            key={`${group.tag}-${listing.id}`}
-            listing={listing}
-          />
-        ))}
-      </Grid>
+      <FeaturedListingGrid
+        items={visibleListings}
+        getKey={(listing) => `${group.tag}-${listing.id}`}
+        hasFeatured={sectionIndex === 0}
+        renderItem={(listing, { featured }) => (
+          <AppTagListingCard listing={listing} featured={featured} />
+        )}
+      />
     </Flex>
   );
 }
 
-function AppTagListingCard({ listing }: { listing: DirectoryListingCard }) {
+function AppTagListingCard({
+  listing,
+  featured = false,
+}: {
+  listing: DirectoryListingCard;
+  featured?: boolean;
+}) {
   return (
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.listingLink)}
     >
-      <Card style={styles.listingCard}>
-        <Flex direction="column" style={styles.listingCardBody}>
-          <Flex gap="2xl" align="center" style={styles.listingHeader}>
-            <Avatar
-              alt={listing.name}
-              fallback={getInitials(listing.name)}
-              size="xl"
-              src={listing.iconUrl || undefined}
-            />
-            <Flex direction="column" gap="xl" style={styles.listingInfo}>
-              <Text size="xl" weight="semibold">
-                {listing.name}
-              </Text>
-              <SmallBody variant="secondary">
-                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-              </SmallBody>
-            </Flex>
-          </Flex>
-          <Body variant="secondary" style={styles.listingTagline}>
-            {listing.tagline}
-          </Body>
-          <div />
-          <Flex justify="end" gap="xl" style={styles.listingFooter}>
-            <Flex align="center" gap="sm">
-              <SmallBody variant="secondary">
-                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-              </SmallBody>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
+      {featured ? (
+        listing.heroImageUrl && (
+          <HeroImage
+            alt={`${listing.name} preview`}
+            glowIntensity={0.8}
+            src={listing.heroImageUrl}
+          />
+        )
+      ) : (
+        <Card style={styles.listingCard}>
+          <Flex direction="column" style={styles.listingCardBody}>
+            <Flex gap="2xl" align="center" style={styles.listingHeader}>
+              <Avatar
+                alt={listing.name}
+                fallback={getInitials(listing.name)}
+                size="xl"
+                src={listing.iconUrl || undefined}
               />
+              <Flex direction="column" gap="xl" style={styles.listingInfo}>
+                <Text size="xl" weight="semibold">
+                  {listing.name}
+                </Text>
+                <SmallBody variant="secondary">
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                </SmallBody>
+              </Flex>
+            </Flex>
+            <Body variant="secondary" style={styles.listingTagline}>
+              {listing.tagline}
+            </Body>
+            <div />
+            <Flex justify="end" gap="xl" style={styles.listingFooter}>
+              <Flex align="center" gap="sm">
+                <SmallBody variant="secondary">
+                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                </SmallBody>
+                <StarRating
+                  rating={listing.rating}
+                  reviewCount={listing.reviewCount}
+                  showReviewCount
+                />
+              </Flex>
             </Flex>
           </Flex>
-        </Flex>
-      </Card>
+        </Card>
+      )}
     </RouterLink>
   );
 }

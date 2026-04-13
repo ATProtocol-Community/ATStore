@@ -15,6 +15,7 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { HeroImage } from "./HeroImage";
 
 const styles = stylex.create({
   listingLink: {
@@ -68,8 +69,10 @@ const styles = stylex.create({
 
 export function EcosystemListingCard({
   listing,
+  featured = false,
 }: {
   listing: DirectoryListingCard;
+  featured?: boolean;
 }) {
   return (
     <RouterLink
@@ -77,48 +80,56 @@ export function EcosystemListingCard({
       params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.listingLink)}
     >
-      <Card style={styles.listingCard}>
-        <Flex direction="column" style={styles.listingCardBody}>
-          <Flex gap="2xl" align="center" style={styles.listingHeader}>
-            <Avatar
-              alt={listing.name}
-              fallback={getInitials(listing.name)}
-              size="xl"
-              src={listing.iconUrl || undefined}
-            />
-            <Flex direction="column" gap="xl" style={styles.listingInfo}>
-              <Text size="xl" weight="semibold">
-                {listing.name}
-              </Text>
+      {featured && listing.heroImageUrl ? (
+        <HeroImage
+          alt={`${listing.name} preview`}
+          glowIntensity={0.8}
+          src={listing.heroImageUrl}
+        />
+      ) : (
+        <Card style={styles.listingCard}>
+          <Flex direction="column" style={styles.listingCardBody}>
+            <Flex gap="2xl" align="center" style={styles.listingHeader}>
+              <Avatar
+                alt={listing.name}
+                fallback={getInitials(listing.name)}
+                size="xl"
+                src={listing.iconUrl || undefined}
+              />
+              <Flex direction="column" gap="xl" style={styles.listingInfo}>
+                <Text size="xl" weight="semibold">
+                  {listing.name}
+                </Text>
+                <Flex align="center" gap="lg" style={styles.ratingRow}>
+                  <SmallBody variant="secondary">
+                    @
+                    {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                  </SmallBody>
+                </Flex>
+              </Flex>
+            </Flex>
+
+            <Body variant="secondary" style={styles.listingTagline}>
+              {listing.tagline}
+            </Body>
+
+            <div />
+
+            <Flex justify="end" gap="xl" style={styles.listingFooter}>
               <Flex align="center" gap="lg" style={styles.ratingRow}>
                 <SmallBody variant="secondary">
-                  @
-                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
                 </SmallBody>
+                <StarRating
+                  rating={listing.rating}
+                  reviewCount={listing.reviewCount}
+                  showReviewCount
+                />
               </Flex>
             </Flex>
           </Flex>
-
-          <Body variant="secondary" style={styles.listingTagline}>
-            {listing.tagline}
-          </Body>
-
-          <div />
-
-          <Flex justify="end" gap="xl" style={styles.listingFooter}>
-            <Flex align="center" gap="lg" style={styles.ratingRow}>
-              <SmallBody variant="secondary">
-                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-              </SmallBody>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
-              />
-            </Flex>
-          </Flex>
-        </Flex>
-      </Card>
+        </Card>
+      )}
     </RouterLink>
   );
 }

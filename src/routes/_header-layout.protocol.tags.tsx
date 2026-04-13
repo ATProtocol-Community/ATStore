@@ -8,14 +8,14 @@ import {
 import { ChevronLeft } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
+import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
+import { HeroImage } from "../components/HeroImage";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
   horizontalSpace,
@@ -77,15 +77,6 @@ const styles = stylex.create({
   },
   sectionDescription: {
     maxWidth: "44rem",
-  },
-  listingGrid: {
-    display: "grid",
-    gap: gap["lg"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
-    },
   },
   listingLink: {
     display: "block",
@@ -151,8 +142,12 @@ function ProtocolTagsPage() {
 
         {groups.length > 0 ? (
           <Flex direction="column" style={styles.pageGap}>
-            {groups.map((group) => (
-              <ProtocolCategorySection key={group.categoryId} group={group} />
+            {groups.map((group, index) => (
+              <ProtocolCategorySection
+                key={group.categoryId}
+                group={group}
+                sectionIndex={index}
+              />
             ))}
           </Flex>
         ) : (
@@ -169,8 +164,10 @@ function ProtocolTagsPage() {
 
 function ProtocolCategorySection({
   group,
+  sectionIndex,
 }: {
   group: DirectoryProtocolCategoryGroup;
+  sectionIndex: number;
 }) {
   const visibleListings = group.listings.slice(
     0,
@@ -208,61 +205,75 @@ function ProtocolCategorySection({
         </Flex>
       </Flex>
 
-      <Grid style={styles.listingGrid}>
-        {visibleListings.map((listing) => (
-          <ProtocolListingCard
-            key={`${group.categoryId}-${listing.id}`}
-            listing={listing}
-          />
-        ))}
-      </Grid>
+      <FeaturedListingGrid
+        hasFeatured={sectionIndex === 0}
+        items={visibleListings}
+        getKey={(listing) => `${group.categoryId}-${listing.id}`}
+        renderItem={(listing, { featured }) => (
+          <ProtocolListingCard listing={listing} featured={featured} />
+        )}
+      />
     </Flex>
   );
 }
 
-function ProtocolListingCard({ listing }: { listing: DirectoryListingCard }) {
+function ProtocolListingCard({
+  listing,
+  featured = false,
+}: {
+  listing: DirectoryListingCard;
+  featured?: boolean;
+}) {
   return (
     <RouterLink
       params={{ productId: getDirectoryListingSlug(listing) }}
       to="/products/$productId"
       {...stylex.props(styles.listingLink)}
     >
-      <Card style={styles.listingCard}>
-        <Flex direction="column" style={styles.listingCardBody}>
-          <Flex align="center" gap="2xl" style={styles.listingHeader}>
-            <Avatar
-              alt={listing.name}
-              fallback={getInitials(listing.name)}
-              size="xl"
-              src={listing.iconUrl || undefined}
-            />
-            <Flex direction="column" gap="xl" style={styles.listingInfo}>
-              <Text size="xl" weight="semibold">
-                {listing.name}
-              </Text>
-              <SmallBody variant="secondary">
-                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-              </SmallBody>
-            </Flex>
-          </Flex>
-          <Body variant="secondary" style={styles.listingTagline}>
-            {listing.tagline}
-          </Body>
-          <div />
-          <Flex gap="xl" justify="end" style={styles.listingFooter}>
-            <Flex align="center" gap="sm">
-              <SmallBody variant="secondary">
-                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-              </SmallBody>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
+      {featured && listing.heroImageUrl ? (
+        <HeroImage
+          alt={`${listing.name} preview`}
+          glowIntensity={0.8}
+          src={listing.heroImageUrl}
+        />
+      ) : (
+        <Card style={styles.listingCard}>
+          <Flex direction="column" style={styles.listingCardBody}>
+            <Flex align="center" gap="2xl" style={styles.listingHeader}>
+              <Avatar
+                alt={listing.name}
+                fallback={getInitials(listing.name)}
+                size="xl"
+                src={listing.iconUrl || undefined}
               />
+              <Flex direction="column" gap="xl" style={styles.listingInfo}>
+                <Text size="xl" weight="semibold">
+                  {listing.name}
+                </Text>
+                <SmallBody variant="secondary">
+                  @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                </SmallBody>
+              </Flex>
+            </Flex>
+            <Body variant="secondary" style={styles.listingTagline}>
+              {listing.tagline}
+            </Body>
+            <div />
+            <Flex gap="xl" justify="end" style={styles.listingFooter}>
+              <Flex align="center" gap="sm">
+                <SmallBody variant="secondary">
+                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                </SmallBody>
+                <StarRating
+                  rating={listing.rating}
+                  reviewCount={listing.reviewCount}
+                  showReviewCount
+                />
+              </Flex>
             </Flex>
           </Flex>
-        </Flex>
-      </Card>
+        </Card>
+      )}
     </RouterLink>
   );
 }

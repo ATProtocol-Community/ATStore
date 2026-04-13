@@ -34,6 +34,7 @@ const styles = stylex.create({
 });
 
 interface FeaturedListingGridProps<T> {
+  hasFeatured?: boolean;
   items: T[];
   getKey: (item: T, index: number) => Key;
   isFeatured?: (item: T, index: number) => boolean;
@@ -48,6 +49,7 @@ interface FeaturedListingGridProps<T> {
 
 export function FeaturedListingGrid<T>({
   items,
+  hasFeatured = false,
   getKey,
   isFeatured = (_, index) => index % 9 === 0,
   renderItem,
@@ -56,7 +58,7 @@ export function FeaturedListingGrid<T>({
   return (
     <Grid style={[styles.grid, style]}>
       {items.map((item, index) => {
-        const featured = isFeatured(item, index);
+        const featured = hasFeatured ? isFeatured(item, index) : false;
 
         return (
           <div

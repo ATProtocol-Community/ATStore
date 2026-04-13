@@ -4,13 +4,10 @@ import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
-import {
-  EcosystemListingCard,
-  ecosystemListingGridStyles,
-} from "../components/EcosystemListingCard";
+import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
+import { EcosystemListingCard } from "../components/EcosystemListingCard";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import {
@@ -191,11 +188,12 @@ function EcosystemIndexPage() {
 
         {categorySections.length > 0 ? (
           <Flex direction="column" style={styles.sectionList}>
-            {categorySections.map((section) => (
+            {categorySections.map((section, index) => (
               <EcosystemCategorySection
                 key={section.category.id}
                 category={section.category}
                 listings={section.listings}
+                sectionIndex={index}
               />
             ))}
           </Flex>
@@ -218,9 +216,11 @@ function EcosystemIndexPage() {
 function EcosystemCategorySection({
   category,
   listings,
+  sectionIndex,
 }: {
   category: DirectoryCategoryTreeNode;
   listings: ReturnType<typeof getListingsForCategoryBranch>;
+  sectionIndex: number;
 }) {
   return (
     <Flex direction="column" style={styles.section}>
@@ -249,16 +249,15 @@ function EcosystemCategorySection({
         </Flex>
       </Flex>
 
-      <Grid style={[ecosystemListingGridStyles.grid, styles.sectionGrid]}>
-        {listings.map((listing) => (
-          <div
-            key={`${category.id}-${listing.id}`}
-            {...stylex.props(ecosystemListingGridStyles.gridItem)}
-          >
-            <EcosystemListingCard listing={listing} />
-          </div>
-        ))}
-      </Grid>
+      <FeaturedListingGrid
+        hasFeatured={sectionIndex === 0}
+        items={listings}
+        getKey={(listing) => `${category.id}-${listing.id}`}
+        style={styles.sectionGrid}
+        renderItem={(listing, { featured }) => (
+          <EcosystemListingCard listing={listing} featured={featured} />
+        )}
+      />
     </Flex>
   );
 }
