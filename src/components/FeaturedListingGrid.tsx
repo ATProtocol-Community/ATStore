@@ -49,7 +49,7 @@ interface FeaturedListingGridProps<T> {
 
 export function FeaturedListingGrid<T>({
   items,
-  hasFeatured = false,
+  hasFeatured = true,
   getKey,
   isFeatured = (_, index) => index % 9 === 0,
   renderItem,
