@@ -157,9 +157,5 @@ function getAppTagAccent(tag: string): DirectoryListingCard["accent"] {
 }
 
 function getSoftAccentSurface(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.softPinkSurface;
-  if (accent === "purple") return styles.softPurpleSurface;
-  if (accent === "green") return styles.softGreenSurface;
-
   return styles.softBlueSurface;
 }

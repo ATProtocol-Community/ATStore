@@ -14,7 +14,7 @@ import {
 } from "../design-system/navbar";
 import { containerBreakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
-import { gap, size } from "../design-system/theme/semantic-spacing.stylex";
+import { gap } from "../design-system/theme/semantic-spacing.stylex";
 
 const NavbarLogoLink = createLink(NavbarLogo);
 const NavbarLinkLink = createLink(NavbarLink);
@@ -52,26 +52,18 @@ export function SiteHeader() {
 
   return (
     <Navbar>
-      <NavbarLogoLink to="/home" style={styles.logoContent}>
+      <NavbarLogoLink to="/" style={styles.logoContent}>
         <AtStoreLogo variant="navbar" />
       </NavbarLogoLink>
       <NavbarNavigation justify="right">
-        <NavbarLinkLink
-          to="/apps/tags"
-          isActive={pathname.startsWith("/apps/")}
-        >
+        <NavbarLinkLink to="/home" isActive={pathname.startsWith("/apps/")}>
           Apps
-        </NavbarLinkLink>
-        <NavbarLinkLink
-          to="/protocol/tags"
-          isActive={pathname.startsWith("/protocol/")}
-        >
-          Protocol Tools
         </NavbarLinkLink>
         <NavbarLinkLink
           to="/search"
           isActive={pathname.startsWith("/search")}
           style={styles.mobileSearchLink}
+          search={{ sort: "popular" }}
         >
           Search
         </NavbarLinkLink>
@@ -79,6 +71,7 @@ export function SiteHeader() {
       <NavbarAction style={styles.navbarAction}>
         <IconButtonLink
           to="/search"
+          search={{ sort: "popular" }}
           aria-label="Search listings"
           variant="secondary"
           style={styles.desktopSearchLink}

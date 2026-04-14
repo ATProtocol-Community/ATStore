@@ -103,6 +103,7 @@ export const Route = createFileRoute("/_header-layout/protocol/$category")({
 });
 
 const LinkLink = createLink(Link);
+const ROOT_PROTOCOL_SUBFOLDER = "__root__";
 
 const styles = stylex.create({
   pageContent: {
@@ -318,6 +319,16 @@ const styles = stylex.create({
       [breakpoints.md]: "repeat(4, minmax(0, 1fr))",
     },
   },
+  subfolderSection: {
+    gap: gap["4xl"],
+  },
+  subfolderHeader: {
+    maxWidth: "44rem",
+  },
+  subfolderEyebrow: {
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  },
 });
 
 function ProtocolCategoryPage() {
@@ -342,6 +353,7 @@ function ProtocolCategoryPage() {
   const description =
     data.description.trim() || getProtocolCategoryDescription(data.categoryId);
   const related = getRelatedProtocolCategories(data, allGroups);
+  const subfolderSections = getProtocolSubfolderSections(data);
 
   return (
     <Page.Root variant="large" style={styles.page}>
@@ -390,16 +402,28 @@ function ProtocolCategoryPage() {
           />
         </Flex>
 
-        <FeaturedListingGrid
-          getKey={(listing) => `${data.categoryId}-${listing.id}`}
-          items={data.listings}
-          renderItem={(listing, { featured }) => (
-            <ProtocolCategoryListingCard
-              featured={featured}
-              listing={listing}
-            />
-          )}
-        />
+        {subfolderSections.length > 0 ? (
+          <Flex direction="column" gap="6xl">
+            {subfolderSections.map((section, sectionIndex) => (
+              <ProtocolSubfolderSection
+                key={section.id}
+                section={section}
+                sectionIndex={sectionIndex}
+              />
+            ))}
+          </Flex>
+        ) : (
+          <FeaturedListingGrid
+            getKey={(listing) => `${data.categoryId}-${listing.id}`}
+            items={data.listings}
+            renderItem={(listing, { featured }) => (
+              <ProtocolCategoryListingCard
+                featured={featured}
+                listing={listing}
+              />
+            )}
+          />
+        )}
 
         {related.length > 0 ? (
           <RelatedProtocolSection groups={related} />
@@ -548,12 +572,123 @@ function getRelatedProtocolCategories(
     .slice(0, 4);
 }
 
+type ProtocolSubfolderSectionData = {
+  id: string;
+  label: string;
+  listings: DirectoryListingCard[];
+};
+
+function ProtocolSubfolderSection({
+  section,
+  sectionIndex,
+}: {
+  section: ProtocolSubfolderSectionData;
+  sectionIndex: number;
+}) {
+  return (
+    <Flex direction="column" style={styles.subfolderSection}>
+      <Flex direction="column" gap="2xl" style={styles.subfolderHeader}>
+        <Text size="sm" style={styles.subfolderEyebrow}>
+          {formatProtocolListingCount(section.listings.length)}
+        </Text>
+        <Text size="2xl" weight="semibold">
+          {section.label}
+        </Text>
+      </Flex>
+
+      <FeaturedListingGrid
+        hasFeatured={sectionIndex === 0}
+        items={section.listings}
+        getKey={(listing) => `${section.id}-${listing.id}`}
+        renderItem={(listing, { featured }) => (
+          <ProtocolCategoryListingCard
+            featured={featured}
+            listing={listing}
+          />
+        )}
+      />
+    </Flex>
+  );
+}
+
+function getProtocolSubfolderSections(
+  category: DirectoryProtocolCategoryGroup,
+): ProtocolSubfolderSectionData[] {
+  const rootPrefix = `${category.categoryId}/`;
+  const sectionMap = new Map<string, ProtocolSubfolderSectionData>();
+  const rootListings: DirectoryListingCard[] = [];
+
+  for (const listing of category.listings) {
+    const subfolders = new Set<string>();
+    for (const categorySlug of listing.categorySlugs) {
+      if (!categorySlug.startsWith(rootPrefix)) {
+        continue;
+      }
+
+      const remainder = categorySlug.slice(rootPrefix.length);
+      const [subfolder] = remainder.split("/");
+      if (subfolder) {
+        subfolders.add(subfolder);
+      }
+    }
+
+    if (subfolders.size === 0) {
+      rootListings.push(listing);
+      continue;
+    }
+
+    for (const subfolder of subfolders) {
+      const existing = sectionMap.get(subfolder);
+      if (existing) {
+        existing.listings.push(listing);
+        continue;
+      }
+
+      sectionMap.set(subfolder, {
+        id: subfolder,
+        label: formatProtocolSubfolderLabel(subfolder),
+        listings: [listing],
+      });
+    }
+  }
+
+  if (sectionMap.size === 0) {
+    return [];
+  }
+
+  const sections = [...sectionMap.values()].sort((left, right) => {
+    if (right.listings.length !== left.listings.length) {
+      return right.listings.length - left.listings.length;
+    }
+
+    return left.label.localeCompare(right.label);
+  });
+
+  if (rootListings.length > 0) {
+    sections.unshift({
+      id: ROOT_PROTOCOL_SUBFOLDER,
+      label: "General",
+      listings: rootListings,
+    });
+  }
+
+  return sections;
+}
+
 function getInitials(name: string) {
   return name
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
+}
+
+function formatProtocolSubfolderLabel(value: string) {
+  return value
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((segment) => segment[0]?.toUpperCase() + segment.slice(1))
+    .join(" ");
 }
 
 function getAccentSurface(accent: DirectoryListingCard["accent"]) {

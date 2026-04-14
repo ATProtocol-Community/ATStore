@@ -1,48 +1,25 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  createLink,
-  Link as RouterLink,
-} from "@tanstack/react-router";
+import { createFileRoute, createLink } from "@tanstack/react-router";
 
+import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
-import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
-import { Avatar } from "../design-system/avatar";
-import { Button } from "../design-system/button";
-import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
+import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
-  horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { Body, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
-import {
-  directoryListingApi,
-  type DirectoryAppTagGroup,
-  type DirectoryListingCard,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
-import {
-  formatAppTagCount,
-  formatAppTagLabel,
-  getAppTagDescription,
-  getAppTagSlug,
-} from "../lib/app-tag-metadata";
+import { Body } from "../design-system/typography";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
-import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { ChevronLeft } from "lucide-react";
-import { StarRating } from "#/design-system/star-rating";
-import { HeroImage } from "#/components/HeroImage";
 
-const ButtonLink = createLink(Button);
 const LinkLink = createLink(Link);
-const INITIAL_SECTION_LISTING_COUNT = 6;
 
 export const Route = createFileRoute("/_header-layout/apps/tags")({
   loader: ({ context }) =>
@@ -60,9 +37,6 @@ export const Route = createFileRoute("/_header-layout/apps/tags")({
 });
 
 const styles = stylex.create({
-  listingTagline: {
-    flexGrow: 1,
-  },
   page: {
     paddingBottom: verticalSpace["10xl"],
     paddingTop: verticalSpace["6xl"],
@@ -74,45 +48,13 @@ const styles = stylex.create({
     letterSpacing: "0.16em",
     textTransform: "uppercase",
   },
-  sectionTitle: {
-    flexGrow: 1,
-  },
-  sectionEyebrow: {
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-  },
-  sectionHeader: {
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  sectionDescription: {
-    maxWidth: "44rem",
-  },
-  listingLink: {
-    display: "block",
-    height: "100%",
-    textDecoration: "none",
-  },
-  listingCard: {
-    height: "100%",
-  },
-  listingCardBody: {
-    gap: gap["4xl"],
-    height: "100%",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
-  listingHeader: {
+  categoriesGrid: {
+    display: "grid",
     gap: gap["2xl"],
-  },
-  listingInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  listingFooter: {
-    alignItems: "center",
+    gridTemplateColumns: {
+      default: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
+    },
   },
   emptyState: {
     gap: gap["lg"],
@@ -155,15 +97,11 @@ function AppsAllPage() {
         </Flex>
 
         {groups.length > 0 ? (
-          <Flex direction="column" style={styles.gap}>
-            {groups.map((group, index) => (
-              <AppTagSection
-                key={group.tag}
-                group={group}
-                sectionIndex={index}
-              />
+          <Grid style={styles.categoriesGrid}>
+            {groups.map((group) => (
+              <AppTagCard key={group.tag} tag={group} />
             ))}
-          </Flex>
+          </Grid>
         ) : (
           <Flex direction="column" style={styles.emptyState}>
             <Body variant="secondary">
@@ -174,130 +112,4 @@ function AppsAllPage() {
       </Flex>
     </Page.Root>
   );
-}
-
-function AppTagSection({
-  group,
-  sectionIndex,
-}: {
-  group: DirectoryAppTagGroup;
-  sectionIndex: number;
-}) {
-  const visibleListings = group.listings.slice(
-    0,
-    INITIAL_SECTION_LISTING_COUNT,
-  );
-
-  return (
-    <Flex direction="column" gap="4xl">
-      <Flex
-        justify="between"
-        align="end"
-        gap="2xl"
-        style={styles.sectionHeader}
-      >
-        <Flex direction="column" gap="2xl" style={styles.sectionTitle}>
-          <Text size="sm" style={styles.sectionEyebrow}>
-            {formatAppTagCount(group.count)}
-          </Text>
-          <Text size="3xl" weight="semibold">
-            {formatAppTagLabel(group.tag)}
-          </Text>
-          <Body variant="secondary" style={styles.sectionDescription}>
-            {getAppTagDescription(group.tag)}
-          </Body>
-        </Flex>
-        <ButtonLink
-          to="/apps/$tag"
-          params={{ tag: getAppTagSlug(group.tag) }}
-          search={{ sort: "popular" }}
-          size="lg"
-          variant="secondary"
-        >
-          View all
-        </ButtonLink>
-      </Flex>
-
-      <FeaturedListingGrid
-        items={visibleListings}
-        getKey={(listing) => `${group.tag}-${listing.id}`}
-        hasFeatured={sectionIndex === 0}
-        renderItem={(listing, { featured }) => (
-          <AppTagListingCard listing={listing} featured={featured} />
-        )}
-      />
-    </Flex>
-  );
-}
-
-function AppTagListingCard({
-  listing,
-  featured = false,
-}: {
-  listing: DirectoryListingCard;
-  featured?: boolean;
-}) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.listingLink)}
-    >
-      {featured ? (
-        listing.heroImageUrl && (
-          <HeroImage
-            alt={`${listing.name} preview`}
-            glowIntensity={0.8}
-            src={listing.heroImageUrl}
-          />
-        )
-      ) : (
-        <Card style={styles.listingCard}>
-          <Flex direction="column" style={styles.listingCardBody}>
-            <Flex gap="2xl" align="center" style={styles.listingHeader}>
-              <Avatar
-                alt={listing.name}
-                fallback={getInitials(listing.name)}
-                size="xl"
-                src={listing.iconUrl || undefined}
-              />
-              <Flex direction="column" gap="xl" style={styles.listingInfo}>
-                <Text size="xl" weight="semibold">
-                  {listing.name}
-                </Text>
-                <SmallBody variant="secondary">
-                  @
-                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-                </SmallBody>
-              </Flex>
-            </Flex>
-            <Body variant="secondary" style={styles.listingTagline}>
-              {listing.tagline}
-            </Body>
-            <div />
-            <Flex justify="end" gap="xl" style={styles.listingFooter}>
-              <Flex align="center" gap="sm">
-                <SmallBody variant="secondary">
-                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-                </SmallBody>
-                <StarRating
-                  rating={listing.rating}
-                  reviewCount={listing.reviewCount}
-                  showReviewCount
-                />
-              </Flex>
-            </Flex>
-          </Flex>
-        </Card>
-      )}
-    </RouterLink>
-  );
-}
-
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
 }

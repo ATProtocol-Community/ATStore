@@ -948,10 +948,21 @@ function isHomePageFeaturedAppRow(row: Pick<DirectoryListingRow, 'categorySlugs'
 }
 
 function isBrowseableProtocolRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
-  return row.categorySlugs.some(
-    (slug) =>
-      slug.startsWith('protocol/') && slug.split('/').length === 2,
-  )
+  return row.categorySlugs.some((slug) => getRootProtocolCategoryId(slug) !== null)
+}
+
+function getRootProtocolCategoryId(slug: string): string | null {
+  const parts = slug.split('/')
+  if (parts[0] !== 'protocol') {
+    return null
+  }
+
+  const rootSegment = parts[1]
+  if (!rootSegment) {
+    return null
+  }
+
+  return `protocol/${rootSegment}`
 }
 
 function buildProtocolCategoryGroups(
@@ -962,11 +973,17 @@ function buildProtocolCategoryGroups(
   const groups = new Map<string, DirectoryListingCard[]>()
 
   for (const row of rows) {
-    const protocolIds = row.categorySlugs.filter(
-      (slug) =>
-        slug.startsWith('protocol/') && slug.split('/').length === 2,
-    )
-    if (protocolIds.length === 0) {
+    const protocolIds = new Set<string>()
+    for (const slug of row.categorySlugs) {
+      const categoryId = getRootProtocolCategoryId(slug)
+      if (!categoryId) {
+        continue
+      }
+
+      protocolIds.add(categoryId)
+    }
+
+    if (protocolIds.size === 0) {
       continue
     }
 
@@ -2027,7 +2044,12 @@ const getAllListings = createServerFn({ method: 'GET' })
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
-      .where(listingPublicWhere(table))
+      .where(
+        listingPublicWhere(
+          table,
+          sql`not (${sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%')})`,
+        ),
+      )
       .orderBy(
         ...(input.sort === 'newest'
           ? [desc(table.createdAt)]

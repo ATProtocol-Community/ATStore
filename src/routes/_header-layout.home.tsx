@@ -10,7 +10,6 @@ import { Link as RouterLink } from "@tanstack/react-router";
 
 import { AppTagCard } from "../components/AppTagCard";
 import { HeroImage } from "../components/HeroImage";
-import { ProtocolCategoryCard } from "../components/ProtocolCategoryCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
@@ -488,7 +487,6 @@ function HomePage() {
     directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
   const promoListing = data.spotlights[0] || data.featured;
-  const protocolListings = [data.protocolFeatured, ...data.protocolSpotlights];
 
   const showClaimBanner =
     claimEligibility.eligible && claimEligibility.listings.length > 0;
@@ -598,61 +596,6 @@ function HomePage() {
             ))}
           </Grid>
         </section>
-
-        <Flex direction="column" gap="5xl" style={styles.protocolHeader}>
-          <Heading1>Dive into the Protocol</Heading1>
-          <Text
-            variant="secondary"
-            size="2xl"
-            leading="sm"
-            style={styles.headerDescription}
-          >
-            The Atmosphere is built on an open Protocol, so you can use it to
-            build your own apps and services.
-          </Text>
-        </Flex>
-
-        <section {...stylex.props(styles.section)}>
-          <FeaturedListingGrid
-            items={protocolListings}
-            getKey={(listing, index) =>
-              index === 0
-                ? `protocol-featured-${listing.id}`
-                : `protocol-spotlight-${listing.id}`
-            }
-            isFeatured={(_, index) => index === 0}
-            renderItem={(listing, { featured }) =>
-              featured ? (
-                <HeroCard
-                  listing={listing}
-                  badgeLabel="Featured Protocol Tool"
-                />
-              ) : (
-                <SpotlightCard listing={listing} />
-              )
-            }
-          />
-        </section>
-
-        <section {...stylex.props(styles.section)}>
-          <SectionHeader
-            eyebrow="Browse Protocol"
-            title="Infrastructure & developer tooling"
-            to="/protocol/tags"
-          />
-          {data.protocolCategories.length > 0 ? (
-            <Grid style={styles.categoriesGrid}>
-              {data.protocolCategories.map((cat) => (
-                <ProtocolCategoryCard key={cat.segment} category={cat} />
-              ))}
-            </Grid>
-          ) : (
-            <Body variant="secondary">
-              Protocol categories will appear here as listings are added to the
-              directory.
-            </Body>
-          )}
-        </section>
       </Flex>
     </Page.Root>
   );
@@ -663,12 +606,6 @@ type SectionHeaderProps =
       eyebrow: string;
       title: string;
       to: "/apps/tags";
-      search?: never;
-    }
-  | {
-      eyebrow: string;
-      title: string;
-      to: "/protocol/tags";
       search?: never;
     }
   | {
@@ -694,13 +631,6 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
     case "/apps/tags":
       action = (
         <AppLink to="/apps/tags">
-          See All <ChevronRight />
-        </AppLink>
-      );
-      break;
-    case "/protocol/tags":
-      action = (
-        <AppLink to="/protocol/tags">
           See All <ChevronRight />
         </AppLink>
       );

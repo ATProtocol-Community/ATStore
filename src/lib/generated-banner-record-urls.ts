@@ -19,6 +19,7 @@ export const GENERATED_BANNER_RECORD_URLS: Record<string, string> = {
   "/generated/app-tag-heroes/community.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/app-tag-heroes/community.png@png",
   "/generated/app-tag-heroes/creative.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/app-tag-heroes/creative.png@png",
   "/generated/app-tag-heroes/creator-tool.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/app-tag-heroes/creator-tool.png@png",
+  "/generated/app-tag-heroes/data-explorer.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/app-tag-heroes/data-explorer.png@png",
   "/generated/app-tag-heroes/design.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/app-tag-heroes/design.png@png",
   "/generated/app-tag-heroes/developer-tool.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/app-tag-heroes/developer-tool.png@png",
   "/generated/app-tag-heroes/developer.png": "https://imgproxy-production-76c2.up.railway.app/insecure/plain/s3://optimized-bucket-dndpsls8/generated/app-tag-heroes/developer.png@png",

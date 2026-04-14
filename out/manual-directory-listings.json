@@ -1771,5 +1771,98 @@
     "vertical": "ecosystem",
     "classificationReason": "ATStore is a user-facing discovery directory that catalogs Atmosphere and Bluesky ecosystem apps/tools, so it fits a dedicated apps/atstore directory category.",
     "categorySlug": "apps/atstore"
+  },
+  {
+    "name": "ATProto Science",
+    "sourceUrl": "https://atproto.science/",
+    "externalUrl": "https://atproto.science/",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [
+      "community"
+    ],
+    "tagline": "Open, researcher-owned infrastructure and community for publishing, sharing, and discussing science on ATProto.",
+    "fullDescription": "ATProto Science is a community-driven initiative helping researchers publish, curate, share, and discuss research using ATProto-powered apps and interoperable decentralized infrastructure.",
+    "rawCategoryHint": "Science community platform",
+    "scope": "atproto",
+    "productType": "community",
+    "domain": "research",
+    "vertical": "science",
+    "classificationReason": "A dedicated ATProto app ecosystem/community hub for scientific collaboration and scholarly communication.",
+    "categorySlug": "apps/atproto-science"
+  },
+  {
+    "name": "atproto.camp",
+    "sourceUrl": "https://atproto.camp/",
+    "externalUrl": "https://atproto.camp/",
+    "iconUrl": "/generated/listing-icons/atproto-camp-icon.jpg",
+    "screenshotUrls": [],
+    "appTags": [
+      "community"
+    ],
+    "tagline": "A directory of ATProtocol user groups.",
+    "fullDescription": "atproto.camp is a gathering point for ATProtocol communities organized by city, region, and shared interests, helping people find local groups and grow the open social web together.",
+    "rawCategoryHint": "Community directory",
+    "scope": "atproto",
+    "productType": "app",
+    "domain": "community",
+    "vertical": "social",
+    "classificationReason": "A web app that indexes and links ATProtocol community groups for discovery.",
+    "categorySlug": "apps/atproto-camp"
+  },
+  {
+    "name": "Cirrus",
+    "sourceUrl": "https://github.com/ascorbic/cirrus",
+    "externalUrl": "https://github.com/ascorbic/cirrus",
+    "iconUrl": "/generated/listing-icons/cirrus-icon.jpg",
+    "screenshotUrls": [
+      "/generated/listings/cirrus-screenshot.jpg"
+    ],
+    "appTags": [],
+    "tagline": "The lightest PDS in the atmosphere.",
+    "fullDescription": "Cirrus is a single-user AT Protocol personal data server that runs on Cloudflare Workers, pairing edge runtime, Durable Objects, and R2 storage so individuals can self-host their identity and data without managing traditional servers.",
+    "rawCategoryHint": "PDS",
+    "scope": "atproto",
+    "productType": "service",
+    "domain": "hosting",
+    "vertical": null,
+    "classificationReason": "Cirrus is a Personal Data Server implementation for AT Protocol that lets users run and control their own account infrastructure, so it belongs in protocol/pds.",
+    "categorySlug": "protocol/pds"
+  },
+  {
+    "name": "Cocoon",
+    "sourceUrl": "https://tangled.org/hailey.at/cocoon",
+    "externalUrl": "https://tangled.org/hailey.at/cocoon",
+    "iconUrl": null,
+    "screenshotUrls": [],
+    "appTags": [],
+    "tagline": "An atproto PDS written in Go",
+    "fullDescription": "Cocoon is a highly experimental, self-hostable AT Protocol PDS implementation in Go, with Docker Compose deployment, SQLite or Postgres support, and optional S3 blob storage/backups.",
+    "rawCategoryHint": "Self-hosted ATProto PDS",
+    "scope": "infrastructure",
+    "productType": "pds-implementation",
+    "domain": "atproto",
+    "vertical": "social",
+    "classificationReason": "Implements a Personal Data Server for the AT Protocol.",
+    "categorySlug": "protocol/pds"
+  },
+  {
+    "name": "adenosine-pds",
+    "sourceUrl": "https://crates.io/crates/adenosine-pds",
+    "externalUrl": "https://gitlab.com/bnewbold/adenosine/-/tree/main/adenosine-pds",
+    "iconUrl": "/generated/listing-icons/adenosine-pds-icon.jpg",
+    "screenshotUrls": [
+      "/generated/listings/adenosine-pds-screenshot.jpg"
+    ],
+    "appTags": [],
+    "tagline": "Simple, enthusiast-grade AT Protocol personal data server in Rust.",
+    "fullDescription": "adenosine-pds is an experimental personal data server implementation for the AT Protocol and Bluesky ecosystem, built in Rust for small-world self-hosting and protocol experimentation. It supports core Lexicon and repo workflows, DID resolution, and server-to-server interactions, but is explicitly positioned as hobby-grade software rather than production hosting.",
+    "rawCategoryHint": "PDS",
+    "scope": "atproto",
+    "productType": "developer_tool",
+    "domain": "developer_infra",
+    "vertical": null,
+    "classificationReason": "adenosine-pds is a self-hostable implementation of an AT Protocol personal data server intended for development and experimentation, so it belongs in the protocol/pds category.",
+    "categorySlug": "protocol/pds"
   }
 ]

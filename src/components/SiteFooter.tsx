@@ -22,13 +22,6 @@ const FOOTER_LINK_GROUPS = [
       { href: "/apps/tags", label: "Categories" },
     ],
   },
-  {
-    title: "Protocol Tools",
-    links: [
-      { href: "/protocol/listings", label: "All Tools" },
-      { href: "/protocol/tags", label: "Categories" },
-    ],
-  },
 ] as const;
 
 export function SiteFooter() {

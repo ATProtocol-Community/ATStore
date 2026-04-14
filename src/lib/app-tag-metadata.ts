@@ -6,7 +6,7 @@ const APP_TAG_DESCRIPTIONS: Record<string, string> = {
   automation:
     "Bots, schedulers, and workflow tools that reduce repetitive work and keep routine Bluesky tasks moving.",
   community:
-    "Tools for managing groups, conversations, events, and member participation across shared Bluesky spaces.",
+    "Communities in the Atmosphere. These range from groups on social networks to shared Personal Data Servers (PDS).",
   "account tool":
     "Utilities for account setup, profile management, migration, and other identity-related maintenance tasks.",
   "creator tool":

@@ -539,7 +539,6 @@ async function runListingImageGeneration(record: InputRecord) {
   const baseArgs = [
     'run',
     'generate:listing-images',
-    '--',
     '--input',
     'out/manual-directory-listings.json',
     '--id',

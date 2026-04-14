@@ -82,6 +82,8 @@ const styles = stylex.create({
     display: "block",
     height: "100%",
     textDecoration: "none",
+    position: "relative",
+    zIndex: 1,
   },
   listingCard: {
     height: "100%",
@@ -251,7 +253,8 @@ function ProtocolListingCard({
                   {listing.name}
                 </Text>
                 <SmallBody variant="secondary">
-                  @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
                 </SmallBody>
               </Flex>
             </Flex>
