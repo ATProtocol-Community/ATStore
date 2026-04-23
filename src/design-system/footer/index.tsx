@@ -75,8 +75,8 @@ const styles = stylex.create({
     display: "grid",
     gridTemplateColumns: {
       default: "repeat(2, 1fr)",
-      ":has(:nth-child(2))": "repeat(3, 1fr)",
-      ":has(:nth-child(3))": "repeat(4, 1fr)",
+      ":has(> :nth-child(3))": "repeat(3, 1fr)",
+      ":has(> :nth-child(4))": "repeat(4, 1fr)",
     },
     rowGap: gap["5xl"],
   },
