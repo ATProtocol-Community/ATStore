@@ -197,75 +197,62 @@ function AdminAdminsPage() {
           </SmallBody>
         </Flex>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Grant admin by handle</CardTitle>
-          </CardHeader>
-          <CardBody></CardBody>
-        </Card>
-
         <Flex direction="column" gap="xl">
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              const trimmed = handleDraft.trim();
-              if (!trimmed || isGranting) return;
-              setStatus(null);
-              grantMutation.mutate(trimmed);
-            }}
-          >
-            <Flex style={styles.grantForm}>
-              <div {...stylex.props(styles.grantField)}>
-                <AutocompleteInput
-                  label="Bluesky handle"
-                  description={
-                    candidateUsers.length > 0
-                      ? `${candidateUsers.length} signed-in user${
-                          candidateUsers.length === 1 ? "" : "s"
-                        } available.`
-                      : "No other signed-in users yet."
-                  }
-                  placeholder="handle.bsky.social"
-                  inputValue={handleDraft}
-                  onInputChange={setHandleDraft}
-                  items={candidateUsers}
-                  onAction={(selectedHandle) => {
-                    setHandleDraft(selectedHandle);
-                  }}
-                >
-                  {(user) => (
-                    <ListBoxItem
-                      key={user.handle}
-                      id={user.handle}
-                      textValue={`${user.handle} ${user.name}`}
-                      prefix={
-                        <Avatar
-                          src={user.image ?? undefined}
-                          alt={user.handle}
-                          fallback={user.handle[0]?.toUpperCase() ?? "?"}
-                          size="sm"
-                        />
-                      }
-                    >
-                      <Flex direction="column" gap="xs">
-                        <span {...stylex.props(styles.suggestionName)}>
-                          {user.handle}
-                        </span>
-                        <SmallBody variant="secondary">{user.name}</SmallBody>
-                      </Flex>
-                    </ListBoxItem>
-                  )}
-                </AutocompleteInput>
-              </div>
-              <Button
-                type="submit"
-                isPending={isGranting}
-                isDisabled={isGranting || handleDraft.trim().length === 0}
+          <Flex style={styles.grantForm}>
+            <div {...stylex.props(styles.grantField)}>
+              <ComboBox
+                aria-label="Bluesky handle"
+                placeholder="handle.bsky.social"
+                items={candidateUsers}
+                inputValue={handleDraft}
+                selectedKey={
+                  candidateUsers.some((u) => u.handle === handleDraft)
+                    ? handleDraft
+                    : null
+                }
+                onInputChange={setHandleDraft}
+                onSelectionChange={(key) => {
+                  setHandleDraft(key === null ? "" : String(key));
+                }}
+                allowsCustomValue
+                allowsEmptyCollection
               >
-                Grant admin
-              </Button>
-            </Flex>
-          </form>
+                {(user) => (
+                  <ComboBoxItem
+                    id={user.handle}
+                    textValue={user.handle}
+                    prefix={
+                      <Avatar
+                        src={user.image ?? undefined}
+                        alt={user.handle}
+                        fallback={user.handle[0]?.toUpperCase() ?? "?"}
+                        size="sm"
+                      />
+                    }
+                  >
+                    <Flex direction="column" gap="xs">
+                      <span {...stylex.props(styles.suggestionName)}>
+                        {user.handle}
+                      </span>
+                      <SmallBody variant="secondary">{user.name}</SmallBody>
+                    </Flex>
+                  </ComboBoxItem>
+                )}
+              </ComboBox>
+            </div>
+            <Button
+              isPending={isGranting}
+              isDisabled={isGranting || handleDraft.trim().length === 0}
+              onPress={() => {
+                const trimmed = handleDraft.trim();
+                if (!trimmed || isGranting) return;
+                setStatus(null);
+                grantMutation.mutate(trimmed);
+              }}
+            >
+              Grant admin
+            </Button>
+          </Flex>
           {status ? (
             <div style={{ marginTop: 12 }}>
               <Text
