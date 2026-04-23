@@ -8,6 +8,7 @@ import { getDirectoryCategoryOption } from './directory-categories'
 import {
   getEcosystemHeroArtPrompt,
   getEcosystemHeroArtSpec,
+  type EcosystemHeroArtPromptContext,
   type EcosystemHeroArtSpec,
 } from './ecosystem-hero-art'
 import { GENERATED_BANNER_RECORD_URLS } from './generated-banner-record-urls'
@@ -221,8 +222,17 @@ export function splitMissing(items: readonly HeroArtItem[]) {
   return { missing, present }
 }
 
+export interface ResolveHeroArtGenerationOptions {
+  /** Optional runtime context for `kind === 'ecosystem'` that personalizes the prompt. */
+  ecosystemContext?: EcosystemHeroArtPromptContext
+}
+
 /** Used by the server generator — returns spec + prompt + asset path for a single item. */
-export function resolveHeroArtGenerationTarget(kind: HeroArtKind, id: string) {
+export function resolveHeroArtGenerationTarget(
+  kind: HeroArtKind,
+  id: string,
+  options?: ResolveHeroArtGenerationOptions,
+) {
   const normalized = id.trim()
   if (!normalized) {
     throw new Error('Missing hero art id')
@@ -247,7 +257,7 @@ export function resolveHeroArtGenerationTarget(kind: HeroArtKind, id: string) {
       kind,
       label: spec.label,
       assetPath: spec.assetPath,
-      prompt: getEcosystemHeroArtPrompt(spec),
+      prompt: getEcosystemHeroArtPrompt(spec, options?.ecosystemContext),
     }
   }
 

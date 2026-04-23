@@ -176,6 +176,13 @@
       "when": 1777500000000,
       "tag": "0024_user_is_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777600000000,
+      "tag": "0025_generated_banner_record_urls",
+      "breakpoints": true
     }
   ]
 }

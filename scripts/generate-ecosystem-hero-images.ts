@@ -4,12 +4,15 @@ import "dotenv/config";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { eq } from "drizzle-orm";
 import { db, dbClient } from "../src/db/index.server";
 import { storeListings } from "../src/db/schema";
 
 import {
+  deriveEcosystemHeroArtContext,
   getEcosystemHeroArtSpec,
   getEcosystemHeroArtPrompt,
+  type EcosystemHeroArtContextListingRow,
 } from "../src/lib/ecosystem-hero-art";
 import { getDirectoryCategoryOption } from "../src/lib/directory-categories";
 
@@ -181,16 +184,26 @@ async function s3ObjectExists(
   }
 }
 
-async function getSpecsFromDatabase() {
-  const rows = await db
-    .select({ categorySlugs: storeListings.categorySlugs })
-    .from(storeListings);
+async function loadContextListingRows(): Promise<EcosystemHeroArtContextListingRow[]> {
+  return db
+    .select({
+      name: storeListings.name,
+      tagline: storeListings.tagline,
+      fullDescription: storeListings.fullDescription,
+      categorySlugs: storeListings.categorySlugs,
+      appTags: storeListings.appTags,
+    })
+    .from(storeListings)
+    .where(eq(storeListings.verificationStatus, "verified"));
+}
 
+function collectEcosystemCategoryIds(
+  rows: readonly EcosystemHeroArtContextListingRow[],
+) {
   const categoryIds = new Set<string>();
-
   for (const row of rows) {
     for (const slug of row.categorySlugs ?? []) {
-      const normalized = slug.trim().toLowerCase();
+      const normalized = (slug ?? "").trim().toLowerCase();
       const parts = normalized.split("/").filter(Boolean);
       if (parts.length < 2 || parts[0] !== "apps") {
         continue;
@@ -198,16 +211,19 @@ async function getSpecsFromDatabase() {
       categoryIds.add(parts.join("/"));
     }
   }
+  return categoryIds;
+}
 
-  const specs = [...categoryIds]
+function getSpecsFromListings(rows: readonly EcosystemHeroArtContextListingRow[]) {
+  const categoryIds = collectEcosystemCategoryIds(rows);
+
+  return [...categoryIds]
     .sort((a, b) => a.localeCompare(b))
     .map((categoryId) => {
       const option = getDirectoryCategoryOption(categoryId);
       return getEcosystemHeroArtSpec(option?.id ?? categoryId);
     })
     .filter((spec) => spec != null);
-
-  return specs;
 }
 
 async function generateImage(prompt: string) {
@@ -276,7 +292,8 @@ async function main() {
     );
   }
 
-  const allSpecs = await getSpecsFromDatabase();
+  const listingRows = await loadContextListingRows();
+  const allSpecs = getSpecsFromListings(listingRows);
   const selectedSpecs = args.categoryId
     ? [getEcosystemHeroArtSpec(args.categoryId)].filter((spec) => spec != null)
     : allSpecs;
@@ -289,7 +306,9 @@ async function main() {
 
   for (const spec of specs) {
     const targetPath = path.resolve(process.cwd(), `public${spec.assetPath}`);
-    const prompt = getEcosystemHeroArtPrompt(spec);
+    const context =
+      deriveEcosystemHeroArtContext(spec.categoryId, listingRows) ?? undefined;
+    const prompt = getEcosystemHeroArtPrompt(spec, context);
     const objectKey = `${s3Lookup?.keyPrefix ?? ""}${spec.assetPath.replace(/^\//, "")}`;
 
     if (!args.force && s3Lookup && (await s3ObjectExists(s3Lookup, objectKey))) {

@@ -5,11 +5,13 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import * as stylex from "@stylexjs/stylex";
 
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { getGeneratedBannerRecordUrlsQueryOptions } from "../integrations/tanstack-query/api-banner-record-urls.functions";
 
 import appCss from "../styles.css?url";
 
@@ -79,9 +81,22 @@ function applyThemeMode(mode: ThemeMode) {
 
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
 
+/**
+ * Safely serializes a JSON object for embedding inside a `<script>` tag.
+ * Escapes `</` so a stray `</script>` inside a value can't close the tag.
+ */
+function safeJsonForScript(value: unknown) {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   beforeLoad: async ({ context }) => {
-    await context.queryClient.ensureQueryData(user.getSessionQueryOptions);
+    await Promise.all([
+      context.queryClient.ensureQueryData(user.getSessionQueryOptions),
+      context.queryClient.ensureQueryData(
+        getGeneratedBannerRecordUrlsQueryOptions,
+      ),
+    ]);
   },
   head: () => ({
     meta: [
@@ -133,10 +148,20 @@ function ThemeModeSync() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
+  const bannerRecordUrls =
+    queryClient.getQueryData<Record<string, string>>(
+      getGeneratedBannerRecordUrlsQueryOptions.queryKey,
+    ) ?? {};
+  const bannerInitScript = `window.__GENERATED_BANNER_RECORD_URLS__=${safeJsonForScript(
+    bannerRecordUrls,
+  )};`;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: bannerInitScript }} />
         <HeadContent />
       </head>
       <body {...stylex.props(primaryColorTheme)}>

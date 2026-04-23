@@ -1,8 +1,18 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
+import type { Database } from '#/db/index.server'
+import type * as DbSchema from '#/db/schema'
+import {
+  deriveEcosystemHeroArtContext,
+  type EcosystemHeroArtPromptContext,
+} from '#/lib/ecosystem-hero-art'
+import {
+  replaceGeneratedBannerRecordUrls,
+  setGeneratedBannerRecordUrl,
+} from '#/lib/generated-banner-record-urls'
 import {
   buildHeroArtInventory,
   HERO_ART_KINDS,
@@ -27,13 +37,16 @@ const getMissingHeroArt = createServerFn({ method: 'GET' })
     const { db, schema } = context
     const table = schema.storeListings
 
-    const rows = await db
-      .select({
-        categorySlugs: table.categorySlugs,
-        appTags: table.appTags,
-      })
-      .from(table)
-      .where(eq(table.verificationStatus, 'verified'))
+    const [rows] = await Promise.all([
+      db
+        .select({
+          categorySlugs: table.categorySlugs,
+          appTags: table.appTags,
+        })
+        .from(table)
+        .where(eq(table.verificationStatus, 'verified')),
+      refreshBannerRecordUrlsCache(db, schema),
+    ])
 
     const categorySlugs = new Set<string>()
     const appTags = new Set<string>()
@@ -63,6 +76,51 @@ const getMissingHeroArt = createServerFn({ method: 'GET' })
     })
   })
 
+async function loadEcosystemHeroArtContext(
+  db: Database,
+  schema: typeof DbSchema,
+  categoryId: string,
+): Promise<EcosystemHeroArtPromptContext | undefined> {
+  try {
+    const rows = await db
+      .select({
+        name: schema.storeListings.name,
+        tagline: schema.storeListings.tagline,
+        fullDescription: schema.storeListings.fullDescription,
+        categorySlugs: schema.storeListings.categorySlugs,
+        appTags: schema.storeListings.appTags,
+      })
+      .from(schema.storeListings)
+      .where(eq(schema.storeListings.verificationStatus, 'verified'))
+
+    return deriveEcosystemHeroArtContext(categoryId, rows) ?? undefined
+  } catch (error) {
+    console.warn(
+      `Couldn't load ecosystem hero context for "${categoryId}"; falling back to static prompt.`,
+      error,
+    )
+    return undefined
+  }
+}
+
+async function refreshBannerRecordUrlsCache(
+  db: Database,
+  schema: typeof DbSchema,
+) {
+  const rows = await db
+    .select({
+      assetPath: schema.generatedBannerRecordUrls.assetPath,
+      mappedUrl: schema.generatedBannerRecordUrls.mappedUrl,
+    })
+    .from(schema.generatedBannerRecordUrls)
+
+  const map: Record<string, string> = {}
+  for (const row of rows) {
+    map[row.assetPath] = row.mappedUrl
+  }
+  replaceGeneratedBannerRecordUrls(map)
+}
+
 const getMissingHeroArtQueryOptions = queryOptions({
   queryKey: ['admin', 'hero-art'],
   queryFn: async () => getMissingHeroArt(),
@@ -85,8 +143,17 @@ export interface GenerateHeroArtResult {
 const generateMissingHeroArtItem = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(generateHeroArtInput)
-  .handler(async ({ data }): Promise<GenerateHeroArtResult> => {
-    const target = resolveHeroArtGenerationTarget(data.kind, data.id)
+  .handler(async ({ data, context }): Promise<GenerateHeroArtResult> => {
+    const { db, schema } = context
+
+    const ecosystemContext =
+      data.kind === 'ecosystem'
+        ? await loadEcosystemHeroArtContext(db, schema, data.id)
+        : undefined
+
+    const target = resolveHeroArtGenerationTarget(data.kind, data.id, {
+      ecosystemContext,
+    })
 
     const { buffer, mimeType } = await generateImageWithGemini(target.prompt)
 
@@ -105,7 +172,7 @@ const generateMissingHeroArtItem = createServerFn({ method: 'POST' })
     const { mappedUrl, persistedWarnings } = uploadResult
 
     const persistedMap = mappedUrl
-      ? await upsertGeneratedBannerRecordUrl(target.assetPath, mappedUrl)
+      ? await upsertGeneratedBannerRecordUrlRow(db, schema, target.assetPath, mappedUrl)
       : { persisted: false, warning: 'Skipped writing banner map — no mapped URL.' }
 
     const warnings = [...persistedWarnings]
@@ -127,6 +194,32 @@ const generateMissingHeroArtItem = createServerFn({ method: 'POST' })
       persistedWarnings: warnings,
     }
   })
+
+async function upsertGeneratedBannerRecordUrlRow(
+  db: Database,
+  schema: typeof DbSchema,
+  assetPath: string,
+  mappedUrl: string,
+): Promise<{ persisted: boolean; warning?: string }> {
+  try {
+    await db
+      .insert(schema.generatedBannerRecordUrls)
+      .values({ assetPath, mappedUrl })
+      .onConflictDoUpdate({
+        target: schema.generatedBannerRecordUrls.assetPath,
+        set: { mappedUrl, updatedAt: sql`now()` },
+      })
+    setGeneratedBannerRecordUrl(assetPath, mappedUrl)
+    return { persisted: true }
+  } catch (error) {
+    return {
+      persisted: false,
+      warning: `Couldn't write generated_banner_record_urls row (${
+        error instanceof Error ? error.message : String(error)
+      }).`,
+    }
+  }
+}
 
 export const adminHeroArtApi = {
   getMissingHeroArt,
@@ -282,65 +375,3 @@ async function writeHeroArtLocally(input: {
   }
 }
 
-async function upsertGeneratedBannerRecordUrl(
-  assetPath: string,
-  mappedUrl: string,
-): Promise<{ persisted: boolean; warning?: string }> {
-  try {
-    const path = await import('node:path')
-    const { readFile, writeFile } = await import('node:fs/promises')
-    const filePath = path.resolve(
-      process.cwd(),
-      'src/lib/generated-banner-record-urls.ts',
-    )
-
-    const current = await readFile(filePath, 'utf-8').catch(() => '')
-    const parsed = parseBannerRecordMap(current)
-    parsed[assetPath] = mappedUrl
-
-    const sorted = Object.fromEntries(
-      Object.entries(parsed).sort(([left], [right]) => left.localeCompare(right)),
-    )
-
-    const next = `/**
- * Auto-generated by \`pnpm upload:generated-banners\`.
- * Maps \`/generated/...\` site asset paths to banner URLs.
- */
-export const GENERATED_BANNER_RECORD_URLS: Record<string, string> = ${JSON.stringify(
-      sorted,
-      null,
-      2,
-    )}
-`
-
-    await writeFile(filePath, next)
-    return { persisted: true }
-  } catch (error) {
-    return {
-      persisted: false,
-      warning: `Couldn't update generated-banner-record-urls.ts (${
-        error instanceof Error ? error.message : String(error)
-      }). Commit changes manually by running \`pnpm upload:generated-banners\`.`,
-    }
-  }
-}
-
-function parseBannerRecordMap(source: string): Record<string, string> {
-  const match = source.match(/GENERATED_BANNER_RECORD_URLS\s*:\s*Record<[^>]+>\s*=\s*(\{[\s\S]*?\n\})/)
-  if (!match) {
-    return {}
-  }
-
-  try {
-    const json = match[1]
-      ?.replace(/,\s*\}/g, '}')
-      .replace(/,\s*\]/g, ']')
-    if (!json) {
-      return {}
-    }
-    const parsed = JSON.parse(json) as Record<string, string>
-    return parsed
-  } catch {
-    return {}
-  }
-}

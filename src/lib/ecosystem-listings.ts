@@ -22,27 +22,16 @@ export function getListingsForCategoryBranch(
 }
 
 /**
- * Picks a hero image for a category branch from listings that belong to that branch
- * (any `categorySlugs` entry equals the branch id or is nested under it).
+ * Picks a hero image for a category branch, preferring the bespoke ecosystem
+ * hero art generated for the branch. When the branch has no generated hero
+ * art we intentionally return `null` so the card/banner renders its gradient
+ * fallback instead of borrowing a random listing's app screenshot.
  */
 export function pickListingImageForCategoryBranch(
   categoryId: string,
-  listings: DirectoryListingCard[],
+  _listings: DirectoryListingCard[],
 ): string | null {
-  const bespokeAssetPath = getEcosystemHeroAssetPathForCategory(categoryId)
-  if (bespokeAssetPath) {
-    return bespokeAssetPath
-  }
-
-  const inBranch = getListingsForCategoryBranch(categoryId, listings)
-
-  const withScreenshot = inBranch.find((listing) => listing.heroImageUrl)
-  if (withScreenshot?.heroImageUrl) {
-    return withScreenshot.heroImageUrl
-  }
-
-  const withIcon = inBranch.find((listing) => listing.iconUrl)
-  return withIcon?.iconUrl ?? null
+  return getEcosystemHeroAssetPathForCategory(categoryId)
 }
 
 export function formatEcosystemListingCount(count: number): string {

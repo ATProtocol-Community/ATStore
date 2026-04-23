@@ -177,9 +177,9 @@ function AdminHeroArtPage() {
           <SmallBody>
             Categories and tags that are used in live listings but don&rsquo;t
             yet have a hero image on the site. Generating regenerates the image
-            via Gemini, uploads it to S3, and updates{" "}
-            <code>src/lib/generated-banner-record-urls.ts</code>. Commit the
-            diff afterwards to keep the generated map in sync for production.
+            via Gemini, uploads it to S3, and upserts the asset &rarr; URL
+            mapping into the <code>generated_banner_record_urls</code> table.
+            Changes go live on the next SSR render &mdash; no commit needed.
           </SmallBody>
           <Flex style={styles.filterRow}>
             <Text size="sm" variant="secondary">
@@ -268,9 +268,14 @@ function HeroArtItemCard({ item }: HeroArtItemCardProps) {
     onSuccess: async (result) => {
       setJustGenerated(result);
       if (result.persistedBannerMap) {
-        await queryClient.invalidateQueries({
-          queryKey: ["admin", "hero-art"],
-        });
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: ["admin", "hero-art"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["banner-record-urls"],
+          }),
+        ]);
       }
     },
   });
@@ -330,7 +335,7 @@ function HeroArtItemCard({ item }: HeroArtItemCardProps) {
           <Flex direction="column" style={styles.warningList}>
             <Text size="sm" variant="secondary">
               {justGenerated.persistedBannerMap
-                ? "Saved to S3 and banner map. Commit the updated generated-banner-record-urls.ts to ship."
+                ? "Saved to S3 and upserted into generated_banner_record_urls. Live on the next SSR render."
                 : "Generated and shown below — not persisted in the banner map."}
             </Text>
             {warnings.map((warning, index) => (
