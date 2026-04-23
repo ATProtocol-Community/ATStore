@@ -176,6 +176,17 @@ export type ListingDetailBlobOverrides = {
   screenshots?: ListingDetailInMemoryImage[]
 }
 
+/**
+ * Already-uploaded blob refs from a prior version of the record (e.g. from `getRecord` against the
+ * owner PDS). When supplied, fields without an explicit override are reused as-is — no re-download
+ * from the CDN, no re-upload to the PDS, no orphan blobs piling up on the user's repo.
+ */
+export type ListingDetailExistingBlobs = {
+  icon?: AtprotoBlob
+  heroImage?: AtprotoBlob
+  screenshots?: AtprotoBlob[]
+}
+
 export type ListingDetailRecordExtras = {
   /** Set when claiming a listing from the store repo onto the product owner PDS. */
   migratedFromAtUri?: string
@@ -183,12 +194,18 @@ export type ListingDetailRecordExtras = {
 
 /**
  * Build a lexicon record with blobs (Kitchen-style uploadBlob) plus the string URLs to store in Postgres for the site.
+ *
+ * Blob resolution order per slot:
+ *   1. `blobOverrides.<slot>` — fresh bytes the caller wants to upload now.
+ *   2. `existingBlobs.<slot>` — reuse the prior record's blob ref (no network I/O).
+ *   3. Download from the row's CDN URL and upload as a new blob (first publish / fallbacks).
  */
 export async function buildListingDetailRecordWithBlobs(
   client: Client,
   row: StoreListing,
   blobOverrides?: ListingDetailBlobOverrides,
   extras?: ListingDetailRecordExtras,
+  existingBlobs?: ListingDetailExistingBlobs,
 ): Promise<{ record: FyiAtstoreListingDetail; dbUrls: ListingDetailDbUrls }> {
   const externalUrl =
     pickUri(row.externalUrl, row.sourceUrl) ?? 'https://bsky.app'
@@ -212,29 +229,47 @@ export async function buildListingDetailRecordWithBlobs(
   const createdAt = row.createdAt.toISOString()
   const updatedAt = row.updatedAt.toISOString()
 
-  const iconBytes = blobOverrides?.icon
-    ? blobOverrides.icon
-    : await resolveUrlToImageBytesOrPlaceholder(iconUrl, PLACEHOLDER_ICON)
-  const heroBytes = blobOverrides?.heroImage
-    ? blobOverrides.heroImage
-    : await resolveUrlToImageBytesOrPlaceholder(heroUrl, PLACEHOLDER_HERO)
-
-  if (!iconBytes.mimeType.startsWith('image/')) {
-    throw new Error(
-      `Icon is not an image: ${iconBytes.mimeType} (${blobOverrides?.icon ? 'in-memory' : iconUrl})`,
+  async function resolveImageSlot(
+    slot: 'icon' | 'heroImage',
+    override: ListingDetailInMemoryImage | undefined,
+    existing: AtprotoBlob | undefined,
+    fallbackUrl: string,
+    placeholderUrl: string,
+  ): Promise<AtprotoBlob> {
+    if (override) {
+      if (!override.mimeType.startsWith('image/')) {
+        throw new Error(
+          `${slot === 'icon' ? 'Icon' : 'Hero'} is not an image: ${override.mimeType} (in-memory)`,
+        )
+      }
+      return uploadImageBlob(client, override.bytes, override.mimeType)
+    }
+    if (existing) return existing
+    const bytes = await resolveUrlToImageBytesOrPlaceholder(
+      fallbackUrl,
+      placeholderUrl,
     )
-  }
-  if (!heroBytes.mimeType.startsWith('image/')) {
-    throw new Error(
-      `Hero is not an image: ${heroBytes.mimeType} (${blobOverrides?.heroImage ? 'in-memory' : heroUrl})`,
-    )
+    if (!bytes.mimeType.startsWith('image/')) {
+      throw new Error(
+        `${slot === 'icon' ? 'Icon' : 'Hero'} is not an image: ${bytes.mimeType} (${fallbackUrl})`,
+      )
+    }
+    return uploadImageBlob(client, bytes.bytes, bytes.mimeType)
   }
 
-  const icon = await uploadImageBlob(client, iconBytes.bytes, iconBytes.mimeType)
-  const heroImage = await uploadImageBlob(
-    client,
-    heroBytes.bytes,
-    heroBytes.mimeType,
+  const icon = await resolveImageSlot(
+    'icon',
+    blobOverrides?.icon,
+    existingBlobs?.icon,
+    iconUrl,
+    PLACEHOLDER_ICON,
+  )
+  const heroImage = await resolveImageSlot(
+    'heroImage',
+    blobOverrides?.heroImage,
+    existingBlobs?.heroImage,
+    heroUrl,
+    PLACEHOLDER_HERO,
   )
 
   const screenshots: AtprotoBlob[] = []
@@ -244,6 +279,10 @@ export async function buildListingDetailRecordWithBlobs(
       screenshots.push(
         await uploadImageBlob(client, screenshot.bytes, screenshot.mimeType),
       )
+    }
+  } else if (existingBlobs?.screenshots !== undefined) {
+    for (const ref of existingBlobs.screenshots.slice(0, 4)) {
+      screenshots.push(ref)
     }
   } else {
     for (const u of screenshotUrls.slice(0, 4)) {

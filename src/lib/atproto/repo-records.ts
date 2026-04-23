@@ -292,6 +292,32 @@ export async function putListingReviewRecord(
   })
 }
 
+/**
+ * Fetch the current `fyi.atstore.listing.detail` value (with intact blob refs) so callers can
+ * reuse blobs on text-only edits instead of re-downloading + re-uploading them. Returns null when
+ * the record doesn't exist or the PDS rejects the lookup.
+ */
+export async function fetchListingDetailRecord(
+  client: Client,
+  repo: string,
+  rkey: string,
+): Promise<{ value: FyiAtstoreListingDetail; cid: string } | null> {
+  const existing = await client.get('com.atproto.repo.getRecord', {
+    params: lexGetRecordParams({
+      repo,
+      collection: COLLECTION.listingDetail,
+      rkey,
+    }),
+  })
+  if (!existing.ok || !existing.data?.cid || !existing.data.value) {
+    return null
+  }
+  return {
+    value: existing.data.value as unknown as FyiAtstoreListingDetail,
+    cid: existing.data.cid,
+  }
+}
+
 /** Replace an existing `fyi.atstore.listing.detail` (same rkey). */
 export async function putListingDetailRecord(
   client: Client,

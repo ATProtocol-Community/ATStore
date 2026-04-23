@@ -5,10 +5,12 @@ import {
   buildListingDetailRecordWithBlobs,
   type ListingDetailBlobOverrides,
   type ListingDetailDbUrls,
+  type ListingDetailExistingBlobs,
 } from '#/lib/atproto/listing-record'
 import { blobLikeToBskyCdnUrl } from '#/lib/atproto/blob-cdn-url'
 import {
   createListingDetailRecord,
+  fetchListingDetailRecord,
   putListingDetailRecord,
 } from '#/lib/atproto/repo-records'
 
@@ -105,11 +107,35 @@ export async function publishOwnedListingDetail(
   }
   const merged = mergeListingRow(row, patch)
   const migrated = row.migratedFromAtUri?.trim()
+
+  /**
+   * Reuse the prior record's blob refs for any slot the caller didn't override. Without this,
+   * every text/links edit re-downloads icon + hero + screenshots from the CDN and re-uploads them
+   * as fresh blobs to the owner's PDS — slow and pollutes the repo with orphan blobs.
+   */
+  let existingBlobs: ListingDetailExistingBlobs | undefined
+  try {
+    const prior = await fetchListingDetailRecord(client, ownerRepoDid, rk)
+    if (prior) {
+      existingBlobs = {
+        icon: prior.value.icon,
+        heroImage: prior.value.heroImage,
+        screenshots: prior.value.screenshots,
+      }
+    }
+  } catch (err) {
+    console.warn(
+      `[publishOwnedListingDetail] unable to fetch prior record (${ownerRepoDid}/${rk}); falling back to re-upload from CDN`,
+      err,
+    )
+  }
+
   const { record, dbUrls } = await buildListingDetailRecordWithBlobs(
     client,
     merged,
     blobOverrides,
     migrated?.startsWith('at://') ? { migratedFromAtUri: migrated } : undefined,
+    existingBlobs,
   )
   record.updatedAt = new Date().toISOString()
   const { uri } = await putListingDetailRecord(client, ownerRepoDid, rk, record)

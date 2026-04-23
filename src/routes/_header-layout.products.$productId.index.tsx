@@ -43,7 +43,7 @@ import { Link } from "../design-system/link";
 import { Lightbox } from "../design-system/lightbox";
 import { Page } from "../design-system/page";
 import { StarRating } from "../design-system/star-rating";
-import { fontSize } from "../design-system/theme/typography.stylex";
+import { fontFamily, fontSize } from "../design-system/theme/typography.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
@@ -69,6 +69,8 @@ import { user } from "../integrations/tanstack-query/api-user.functions";
 import {
   getAppEcosystemRootCategoryId,
   getAppSegmentFromEcosystemRootCategoryId,
+  getDirectoryCategoryOption,
+  type DirectoryCategoryOption,
 } from "../lib/directory-categories";
 import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
@@ -599,11 +601,12 @@ const styles = stylex.create({
     cursor: "pointer",
     display: "inline-flex",
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.mono,
     gap: gap.sm,
-    paddingBottom: verticalSpace.xs,
-    paddingLeft: horizontalSpace.lg,
-    paddingRight: horizontalSpace.lg,
-    paddingTop: verticalSpace.xs,
+    paddingBottom: verticalSpace.sm,
+    paddingLeft: horizontalSpace.xl,
+    paddingRight: horizontalSpace.xl,
+    paddingTop: verticalSpace.sm,
     textDecoration: "none",
   },
 });
@@ -677,6 +680,29 @@ function ListingLinksRow({ links }: { links: ListingLink[] }) {
       })}
     </Flex>
   );
+}
+
+function collectSubproductCategories(
+  categorySlugs: readonly (string | null | undefined)[],
+): DirectoryCategoryOption[] {
+  const seen = new Set<string>();
+  const result: DirectoryCategoryOption[] = [];
+  for (const slug of categorySlugs) {
+    const option = getDirectoryCategoryOption(slug);
+    if (!option) continue;
+    if (option.pathIds[0] !== "apps" || option.pathIds.length < 3) continue;
+    if (seen.has(option.id)) continue;
+    seen.add(option.id);
+    result.push(option);
+  }
+  return result;
+}
+
+function formatSubproductBadgeLabel(option: DirectoryCategoryOption): string {
+  const appLabel = option.pathLabels[1];
+  const subLabel = option.pathLabels[2];
+  if (!appLabel || !subLabel) return option.label;
+  return `${appLabel} ${subLabel.toLowerCase()}`;
 }
 
 function ProductPage() {
@@ -1052,10 +1078,7 @@ function ProductPage() {
           </Text>
         ) : null}
         <HeroSection listing={listing} productId={productId} />
-        {listing.links.length > 0 ? (
-          <ListingLinksRow links={listing.links} />
-        ) : null}
-        <Flex direction="column" gap="5xl">
+        <Flex direction="column" gap="6xl">
           {getDescriptionBlocks(listing.description).map((block, index) => (
             <Body
               key={`${listing.id}-description-${index}`}
@@ -1065,20 +1088,9 @@ function ProductPage() {
             </Body>
           ))}
         </Flex>
-        {type === "Apps" ? (
-          domain ? (
-            <Flex gap="xl">
-              <MetaCard label="App" value={scope} />
-              <MetaCard label="Domain" value={domain} />
-            </Flex>
-          ) : null
-        ) : (
-          <Flex gap="xl">
-            <MetaCard label="Type" value={type || "Unknown"} />
-            <MetaCard label="Domain" value={scope || "Unknown"} />
-          </Flex>
-        )}
-
+        {listing.links.length > 0 ? (
+          <ListingLinksRow links={listing.links} />
+        ) : null}
         {/* screenshots */}
         {listing.screenshots.length > 0 ? (
           <Flex direction="column" gap="3xl" style={styles.screenshotsSection}>
@@ -1486,8 +1498,26 @@ function HeroSection({
   const canFavorite =
     Boolean(session?.user?.did) && Boolean(listing.atUri?.trim());
 
-  const tags = listing.appTags.length > 0 && (
+  const subproductCategories = collectSubproductCategories(
+    listing.categorySlugs,
+  );
+
+  const tags = (listing.appTags.length > 0 ||
+    subproductCategories.length > 0) && (
     <Flex gap="md" style={styles.tagRow}>
+      {subproductCategories.map((option) => (
+        <RouterLink
+          key={option.id}
+          to="/categories/$categoryId"
+          params={{ categoryId: option.id }}
+          search={{ sort: "popular" }}
+          {...stylex.props(styles.tagLink)}
+        >
+          <Badge size="sm" variant="default">
+            {formatSubproductBadgeLabel(option)}
+          </Badge>
+        </RouterLink>
+      ))}
       {listing.appTags.map((tag) => (
         <RouterLink
           key={tag}
@@ -1556,7 +1586,7 @@ function HeroSection({
         />
       )}
 
-      <Flex direction="column" gap="lg">
+      <Flex direction="column" gap="3xl">
         <Flex
           style={styles.mobileOnly}
           justify="between"
