@@ -511,9 +511,7 @@ export function ProductListingForm({
     pendingHeroPreviewUrl || initialValues.heroImageUrl,
   );
   const hasIconImage = Boolean(pendingIconPreviewUrl || initialValues.iconUrl);
-  const hasRequiredScreenshots = screenshotItems.length >= 1;
-  const hasRequiredImages =
-    hasHeroImage && hasIconImage && hasRequiredScreenshots;
+  const hasRequiredImages = hasHeroImage && hasIconImage;
 
   const { dragAndDropHooks } = useDragAndDrop({
     getItems: (keys) =>
@@ -874,14 +872,9 @@ export function ProductListingForm({
                 </Flex>
                 <Flex direction="column" style={styles.imageAsset}>
                   <Flex style={styles.imageAssetHeader}>
-                    <Flex style={styles.requiredLabel}>
-                      <Text size="sm" variant="secondary">
-                        Screenshots (1-4)
-                      </Text>
-                      <Text size="sm" variant="critical">
-                        *
-                      </Text>
-                    </Flex>
+                    <Text size="sm" variant="secondary">
+                      Screenshots (1-4)
+                    </Text>
                   </Flex>
                   {screenshotItems.length < MAX_SCREENSHOT_COUNT ? (
                     <FileDropZone
