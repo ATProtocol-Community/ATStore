@@ -27,6 +27,10 @@ Default to importing and publishing. Use `--no-import` only when the user explic
 - Category slug such as `protocol/pds` or `apps/bluesky/analytics`
 - Tagline
 - Full description
+- ATProto handle for the product account (e.g. `kikbak.tv`, `dinger.tv`, `puzzmo.com`).
+  Always ask if the user did not provide one. If the product clearly has no
+  ATProto/Bluesky account, say so and skip — never invent one. The DID is resolved
+  automatically; you only need the handle.
 - Taxonomy fields when known:
   `rawCategoryHint`, `scope`, `productType`, `domain`, `vertical`, `classificationReason`
 
@@ -76,6 +80,10 @@ Common flags:
 - `--domain`
 - `--vertical`
 - `--classification-reason`
+- `--product-account-handle` (handle for the product's ATProto account, e.g. `kikbak.tv`).
+  Aliases: `--product-handle`, `--handle`. The DID is resolved at publish time and
+  written to both `store_listings.product_account_did` (via Tap) and the
+  `fyi.atstore.listing.detail` record.
 - `--icon-url`
 - `--screenshot-url` (repeatable)
 - `--icon-asset-url`

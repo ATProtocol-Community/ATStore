@@ -28,6 +28,7 @@ type InputRecord = {
   vertical: string | null
   classificationReason: string | null
   categorySlug: string | null
+  productAccountHandle: string | null
 }
 
 type ScriptArgs = {
@@ -53,6 +54,7 @@ type ScriptArgs = {
   vertical: string | null
   classificationReason: string | null
   assetSlug: string | null
+  productAccountHandle: string | null
 }
 
 const MANUAL_LISTINGS_PATH = resolve(process.cwd(), 'out/manual-directory-listings.json')
@@ -83,6 +85,7 @@ function parseArgs(argv: string[]): ScriptArgs {
     vertical: null,
     classificationReason: null,
     assetSlug: null,
+    productAccountHandle: null,
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -179,6 +182,14 @@ function parseArgs(argv: string[]): ScriptArgs {
       out.assetSlug = argv[++i] ?? null
       continue
     }
+    if (
+      arg === '--product-account-handle' ||
+      arg === '--product-handle' ||
+      arg === '--handle'
+    ) {
+      out.productAccountHandle = argv[++i] ?? null
+      continue
+    }
 
     throw new Error(`Unknown argument: ${arg}`)
   }
@@ -206,6 +217,8 @@ Content:
   --domain <value>                 Taxonomy domain, e.g. hosting
   --vertical <value>               Optional vertical
   --classification-reason <text>   Why the category assignment fits
+  --product-account-handle <handle> ATProto handle for the product account, e.g. kikbak.tv
+                                   (DID is resolved at publish time and stored in Postgres + the listing record)
 
 Assets:
   --icon-url <path>                Existing local/public icon path
@@ -253,6 +266,17 @@ function assertNonEmptyString(value: string | null, field: string): string {
 function normalizeNullableString(value: string | null | undefined): string | null {
   const normalized = value?.trim() ?? ''
   return normalized ? normalized : null
+}
+
+function normalizeProductAccountHandle(
+  value: string | null | undefined,
+): string | null {
+  const trimmed = value?.trim() ?? ''
+  if (!trimmed) return null
+  const stripped = trimmed.replace(/^@+/, '').trim()
+  if (!stripped) return null
+  if (stripped.startsWith('did:')) return stripped
+  return stripped.toLowerCase()
 }
 
 function normalizeTags(values: string[]): string[] {
@@ -403,6 +427,7 @@ function buildRecord(args: ScriptArgs, assets: {
     vertical: normalizeNullableString(args.vertical),
     classificationReason: normalizeNullableString(args.classificationReason),
     categorySlug,
+    productAccountHandle: normalizeProductAccountHandle(args.productAccountHandle),
   }
 }
 
@@ -473,6 +498,14 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
   ])
   const now = new Date()
 
+  const handle = record.productAccountHandle
+  const handlePatch = handle
+    ? {
+        productAccountHandle: handle,
+        productAccountHandleIgnoredAt: null as Date | null,
+      }
+    : {}
+
   try {
     await db
       .insert(storeListings)
@@ -488,6 +521,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
         fullDescription: record.fullDescription,
         categorySlugs: record.categorySlug ? [record.categorySlug] : [],
         updatedAt: now,
+        ...handlePatch,
       })
       .onConflictDoUpdate({
         target: storeListings.sourceUrl,
@@ -502,6 +536,7 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
           fullDescription: record.fullDescription,
           categorySlugs: record.categorySlug ? [record.categorySlug] : [],
           updatedAt: now,
+          ...handlePatch,
         },
         where: eq(storeListings.sourceUrl, record.sourceUrl),
       })

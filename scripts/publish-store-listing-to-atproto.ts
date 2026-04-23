@@ -18,6 +18,7 @@ import { eq, ilike } from 'drizzle-orm'
 
 import { db, dbClient } from '../src/db/index.server'
 import { storeListings } from '../src/db/schema'
+import { resolveBlueskyHandleToDid } from '../src/lib/bluesky-public-profile'
 import { publishDirectoryListingDetail } from '../src/lib/atproto/publish-directory-listing'
 
 const UUID_RE =
@@ -107,11 +108,33 @@ async function main() {
   }
 
   const row = rows[0]!
-  const patch = await resolveLocalGeneratedAssetPatch(row.slug)
+  const patch: {
+    iconUrl?: string
+    heroImageUrl?: string
+    productAccountDid?: string
+  } = await resolveLocalGeneratedAssetPatch(row.slug)
   if (patch.iconUrl || patch.heroImageUrl) {
     console.log(
       `Using local generated assets for ${row.slug}: icon=${patch.iconUrl ?? 'unchanged'} hero=${patch.heroImageUrl ?? 'unchanged'}`,
     )
+  }
+
+  const handle = row.productAccountHandle?.trim().replace(/^@+/, '') ?? ''
+  const existingDid = row.productAccountDid?.trim() ?? ''
+  if (handle && !existingDid) {
+    const did = handle.startsWith('did:')
+      ? handle
+      : await resolveBlueskyHandleToDid(handle)
+    if (did) {
+      patch.productAccountDid = did
+      console.log(
+        `Resolved product handle "${handle}" → ${did} (publishing productAccountDid)`,
+      )
+    } else {
+      console.warn(
+        `Could not resolve product handle "${handle}" to a DID; publishing without productAccountDid.`,
+      )
+    }
   }
 
   const { uri } = await publishDirectoryListingDetail(

@@ -126,7 +126,23 @@ function ProductClaimPage() {
     void navigate({ to: "/" });
   }
 
-  if (!eligibility?.eligible || eligibility.listings.length === 0) {
+  if (claimMutation.isSuccess) {
+    return (
+      <Page.Root variant="small" style={styles.page}>
+        <Flex direction="column" style={styles.section}>
+          <Heading1>Claiming your listing</Heading1>
+          <Text size="base" variant="secondary">
+            Your listing has been claimed successfully.
+          </Text>
+        </Flex>
+      </Page.Root>
+    );
+  }
+
+  if (
+    (!eligibility?.eligible || eligibility.listings.length === 0) &&
+    !claimMutation.isPending
+  ) {
     return (
       <Page.Root variant="small" style={styles.page}>
         <Flex direction="column" style={styles.section}>

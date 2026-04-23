@@ -1864,5 +1864,28 @@
     "vertical": null,
     "classificationReason": "adenosine-pds is a self-hostable implementation of an AT Protocol personal data server intended for development and experimentation, so it belongs in the protocol/pds category.",
     "categorySlug": "protocol/pds"
+  },
+  {
+    "name": "kikbak.tv",
+    "sourceUrl": "https://kikbak.tv/",
+    "externalUrl": "https://kikbak.tv/",
+    "iconUrl": "/generated/listings/kikbak-tv-icon.png",
+    "screenshotUrls": [
+      "/generated/listings/kikbak-tv-screenshot.png"
+    ],
+    "appTags": [
+      "video",
+      "audio"
+    ],
+    "tagline": "Top 100 music videos, ranked. Updated hourly.",
+    "fullDescription": "kikbak.tv is an Atmosphere-native chart that ranks the top 100 music videos and refreshes the leaderboard hourly. Browse trending releases by genre and time window, drill into artist profiles, and sign in with your Bluesky account to participate in the chart.",
+    "rawCategoryHint": "Music video charts",
+    "scope": "atproto",
+    "productType": "standalone_app",
+    "domain": "media-discovery",
+    "vertical": "music",
+    "classificationReason": "kikbak.tv is a user-facing Atmosphere app with its own product identity that ranks and surfaces music videos for discovery, so it best fits as an app-root listing at apps/kikbak-tv with a media-discovery domain and music vertical.",
+    "categorySlug": "apps/kikbak-tv",
+    "productAccountHandle": "kikbak.tv"
   }
 ]
