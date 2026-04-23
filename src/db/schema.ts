@@ -1,4 +1,5 @@
 import { relations, sql } from 'drizzle-orm'
+import type { ListingLink } from '#/lib/atproto/listing-record'
 import {
   bigint,
   boolean,
@@ -185,6 +186,14 @@ export const storeListings = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    /**
+     * Mirror of `fyi.atstore.listing.detail#main.properties.links` —
+     * trust/compliance/support/project links shown as chips on the detail page.
+     */
+    links: jsonb('links')
+      .$type<ListingLink[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     atUri: text('at_uri'),
     repoDid: text('repo_did'),
     rkey: text('rkey'),

@@ -14,7 +14,22 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { ChevronLeft, ExternalLink, Heart } from "lucide-react";
+import {
+  BookOpen,
+  ChevronLeft,
+  Code2,
+  ExternalLink,
+  FileText,
+  Heart,
+  HelpCircle,
+  LifeBuoy,
+  Link as LinkIcon,
+  Mail,
+  Newspaper,
+  ScrollText,
+  Shield,
+  Zap,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
@@ -64,6 +79,7 @@ import {
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
+import type { ListingLink } from "#/lib/atproto/listing-record";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { BlueskyIcon } from "#/components/bluesky-icon";
 import { ToggleButton } from "#/design-system/toggle-button";
@@ -564,7 +580,104 @@ const styles = stylex.create({
     objectFit: "contain",
     width: "auto",
   },
+  linksRow: {
+    alignItems: "center",
+    flexWrap: "wrap",
+    rowGap: gap["md"],
+  },
+  linkChip: {
+    alignItems: "center",
+    backgroundColor: {
+      default: uiColor.component1,
+      ":hover": uiColor.component2,
+    },
+    borderColor: uiColor.border1,
+    borderRadius: radius.full,
+    borderStyle: "solid",
+    borderWidth: 1,
+    color: uiColor.text2,
+    cursor: "pointer",
+    display: "inline-flex",
+    fontSize: fontSize.sm,
+    gap: gap.sm,
+    paddingBottom: verticalSpace.xs,
+    paddingLeft: horizontalSpace.lg,
+    paddingRight: horizontalSpace.lg,
+    paddingTop: verticalSpace.xs,
+    textDecoration: "none",
+  },
 });
+
+const LISTING_LINK_ICONS = {
+  privacy: Shield,
+  terms: ScrollText,
+  support: LifeBuoy,
+  contact: Mail,
+  docs: BookOpen,
+  blog: Newspaper,
+  changelog: FileText,
+  source: Code2,
+  status: Zap,
+  other: LinkIcon,
+} as const satisfies Record<string, typeof LinkIcon>;
+
+const LISTING_LINK_DEFAULT_LABELS = {
+  privacy: "Privacy",
+  terms: "Terms",
+  support: "Support",
+  contact: "Contact",
+  docs: "Docs",
+  blog: "Blog",
+  changelog: "Changelog",
+  source: "Source",
+  status: "Status",
+  other: "Link",
+} as const satisfies Record<string, string>;
+
+type KnownListingLinkType = keyof typeof LISTING_LINK_ICONS;
+
+function isKnownListingLinkType(type: string): type is KnownListingLinkType {
+  return type in LISTING_LINK_ICONS;
+}
+
+function getListingLinkLabel(link: ListingLink): string {
+  const fallbackByType = isKnownListingLinkType(link.type)
+    ? LISTING_LINK_DEFAULT_LABELS[link.type]
+    : LISTING_LINK_DEFAULT_LABELS.other;
+
+  const custom = link.label?.trim();
+  if (custom) return custom;
+  return fallbackByType;
+}
+
+function getListingLinkIcon(type: string) {
+  return isKnownListingLinkType(type)
+    ? LISTING_LINK_ICONS[type]
+    : LISTING_LINK_ICONS.other;
+}
+
+function ListingLinksRow({ links }: { links: ListingLink[] }) {
+  if (!links.length) return null;
+  return (
+    <Flex gap="md" style={styles.linksRow} aria-label="Project links">
+      {links.map((link, index) => {
+        const Icon = getListingLinkIcon(link.type);
+        return (
+          <AriaLink
+            key={`${link.type}-${link.url}-${String(index)}`}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            {...stylex.props(styles.linkChip)}
+          >
+            <Icon size={14} />
+            <span>{getListingLinkLabel(link)}</span>
+          </AriaLink>
+        );
+      })}
+    </Flex>
+  );
+}
 
 function ProductPage() {
   const {
@@ -939,6 +1052,9 @@ function ProductPage() {
           </Text>
         ) : null}
         <HeroSection listing={listing} productId={productId} />
+        {listing.links.length > 0 ? (
+          <ListingLinksRow links={listing.links} />
+        ) : null}
         <Flex direction="column" gap="5xl">
           {getDescriptionBlocks(listing.description).map((block, index) => (
             <Body

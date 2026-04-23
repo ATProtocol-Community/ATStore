@@ -121,6 +121,7 @@ function EditProductListingPage() {
           externalUrl: values.externalUrl,
           categorySlug: values.categorySlug,
           productHandle: values.productHandle,
+          links: values.links,
         },
       });
 
@@ -216,6 +217,7 @@ function EditProductListingPage() {
         heroImageUrl: listing.heroImageUrl ?? null,
         iconUrl: listing.iconUrl ?? null,
         screenshotUrls: listing.screenshots ?? [],
+        links: listing.links ?? [],
       }}
       onCancel={() => {
         void navigate({

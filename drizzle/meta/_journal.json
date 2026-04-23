@@ -162,6 +162,13 @@
       "when": 1777300000000,
       "tag": "0022_store_listings_claim_pending_for_did",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1777400000000,
+      "tag": "0023_store_listings_links",
+      "breakpoints": true
     }
   ]
 }

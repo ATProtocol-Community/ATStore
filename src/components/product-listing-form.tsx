@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   ListBox as AriaListBox,
@@ -11,7 +11,14 @@ import {
 
 import { ImageCropperDialog } from "#/components/image-cropper-dialog";
 import { UserHandleAutocomplete } from "#/components/user-handle-autocomplete";
+import {
+  LISTING_LINK_MAX_COUNT,
+  LISTING_LINK_TYPES,
+  type ListingLink,
+  type ListingLinkType,
+} from "#/lib/atproto/listing-record";
 import { Button } from "../design-system/button";
+import { IconButton } from "../design-system/icon-button";
 import { Card, CardBody } from "../design-system/card";
 import { ComboBox, ComboBoxItem } from "../design-system/combobox";
 import {
@@ -62,7 +69,66 @@ type ScreenshotItem = {
   blob: Blob | null;
 };
 
+type LinkRow = {
+  /** Local-only id so React can track the row across reorders/removals. */
+  id: string;
+  type: string;
+  url: string;
+  label: string;
+};
+
 const MAX_SCREENSHOT_COUNT = 4;
+
+const LINK_TYPE_OPTIONS: Array<{ id: ListingLinkType; label: string }> = [
+  { id: "privacy", label: "Privacy policy" },
+  { id: "terms", label: "Terms of service" },
+  { id: "support", label: "Support" },
+  { id: "contact", label: "Contact" },
+  { id: "docs", label: "Documentation" },
+  { id: "blog", label: "Blog" },
+  { id: "changelog", label: "Changelog" },
+  { id: "source", label: "Source code" },
+  { id: "status", label: "Status page" },
+  { id: "other", label: "Other" },
+];
+
+const LINK_TYPE_SET = new Set<string>(LISTING_LINK_TYPES);
+
+function createLinkRowId(): string {
+  return `link-${crypto.randomUUID()}`;
+}
+
+function toLinkRow(link: ListingLink): LinkRow {
+  const type = LINK_TYPE_SET.has(link.type) ? link.type : "other";
+  return {
+    id: createLinkRowId(),
+    type,
+    url: link.url ?? "",
+    label: link.label ?? "",
+  };
+}
+
+/**
+ * Seed the editor with empty policy-link rows when the listing has none yet so owners
+ * are nudged to fill them in. Blank URLs are filtered out in `collectLinksForSubmit`,
+ * so leaving them empty is a no-op on save.
+ */
+const DEFAULT_SEEDED_LINK_TYPES: ListingLinkType[] = ["privacy", "terms"];
+
+function buildInitialLinkRows(
+  initialLinks: ListingLink[] | undefined,
+): LinkRow[] {
+  const existing = (initialLinks ?? [])
+    .slice(0, LISTING_LINK_MAX_COUNT)
+    .map(toLinkRow);
+  if (existing.length > 0) return existing;
+  return DEFAULT_SEEDED_LINK_TYPES.map((type) => ({
+    id: createLinkRowId(),
+    type,
+    url: "",
+    label: "",
+  }));
+}
 
 function reorderScreenshotItems(
   items: ScreenshotItem[],
@@ -340,6 +406,34 @@ const styles = stylex.create({
   stickyFooterActions: {
     justifyContent: "flex-end",
   },
+  linksList: {
+    gap: gap["xl"],
+  },
+  linkRow: {
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: gap["md"],
+  },
+  linkRowTypeField: {
+    minWidth: "12rem",
+  },
+  linkRowUrlField: {
+    flexGrow: 1,
+    flexBasis: "20rem",
+    minWidth: 0,
+  },
+  linkRowLabelField: {
+    flexBasis: "14rem",
+    flexGrow: 1,
+    minWidth: 0,
+  },
+  linkRowRemoveButton: {
+    flexShrink: 0,
+  },
+  linkAddRow: {
+    alignItems: "center",
+    gap: gap["md"],
+  },
 });
 
 export type ProductListingFormSubmitValues = {
@@ -353,6 +447,7 @@ export type ProductListingFormSubmitValues = {
   pendingIconBlob: Blob | null;
   pendingScreenshotBlobs: Blob[];
   retainedScreenshotUrls: string[];
+  links: ListingLink[];
 };
 
 export type ProductListingFormInitialValues = {
@@ -365,6 +460,7 @@ export type ProductListingFormInitialValues = {
   heroImageUrl?: string | null;
   iconUrl?: string | null;
   screenshotUrls?: string[];
+  links?: ListingLink[];
 };
 
 type ProductListingFormProps = {
@@ -507,6 +603,50 @@ export function ProductListingForm({
         blob: null,
       })),
   );
+  const [linkRows, setLinkRows] = useState<LinkRow[]>(() =>
+    buildInitialLinkRows(initialValues.links),
+  );
+
+  function updateLinkRow(id: string, patch: Partial<LinkRow>) {
+    setLinkRows((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
+  }
+
+  function removeLinkRow(id: string) {
+    setLinkRows((rows) => rows.filter((row) => row.id !== id));
+  }
+
+  function addLinkRow() {
+    setLinkRows((rows) => {
+      if (rows.length >= LISTING_LINK_MAX_COUNT) return rows;
+      const used = new Set(rows.map((row) => row.type));
+      /** Never suggest seeded policy slots; `other` is the catch-all fallback. */
+      const nextType =
+        LINK_TYPE_OPTIONS.find(
+          (opt) =>
+            opt.id !== "privacy" && opt.id !== "terms" && !used.has(opt.id),
+        )?.id ?? "other";
+      return [
+        ...rows,
+        { id: createLinkRowId(), type: nextType, url: "", label: "" },
+      ];
+    });
+  }
+
+  function collectLinksForSubmit(): ListingLink[] {
+    const out: ListingLink[] = [];
+    for (const row of linkRows) {
+      const url = row.url.trim();
+      if (!url) continue;
+      const type = row.type.trim() || "other";
+      const label = row.label.trim();
+      const link: ListingLink = { type, url };
+      if (label) link.label = label;
+      out.push(link);
+    }
+    return out;
+  }
   const hasHeroImage = Boolean(
     pendingHeroPreviewUrl || initialValues.heroImageUrl,
   );
@@ -623,6 +763,7 @@ export function ProductListingForm({
             retainedScreenshotUrls: screenshotItems
               .filter((item) => item.blob == null)
               .map((item) => item.previewUrl),
+            links: collectLinksForSubmit(),
           });
         }}
       >
@@ -1045,6 +1186,100 @@ export function ProductListingForm({
                     </Text>
                   ) : null}
                 </Flex>
+              </Flex>
+            </CardBody>
+          </Card>
+
+          <Card style={styles.card} size="lg">
+            <CardBody>
+              <Flex direction="column" gap="4xl">
+                <Flex align="start" justify="between" gap="2xl">
+                  <Flex direction="column" gap="2xl">
+                    <Text weight="semibold" size="lg">
+                      Links
+                    </Text>
+                    <Text size="sm" variant="secondary">
+                      Optional — trust/compliance, support, docs, source code,
+                      and other project links. Up to {LISTING_LINK_MAX_COUNT}.
+                    </Text>
+                  </Flex>
+                  <IconButton
+                    size="lg"
+                    variant="secondary"
+                    isDisabled={
+                      isSubmitting || linkRows.length >= LISTING_LINK_MAX_COUNT
+                    }
+                    onPress={addLinkRow}
+                    label="Add link"
+                  >
+                    <Plus size={14} />
+                  </IconButton>
+                </Flex>
+                {linkRows.length > 0 ? (
+                  <Flex direction="column" style={styles.linksList}>
+                    {linkRows.map((row) => {
+                      const isOther = row.type === "other";
+                      const isAlwaysPresent =
+                        row.type === "privacy" || row.type === "terms";
+
+                      return (
+                        <Flex key={row.id} style={styles.linkRow}>
+                          <Select
+                            aria-label="Link type"
+                            items={LINK_TYPE_OPTIONS}
+                            value={row.type}
+                            onChange={(value) => {
+                              if (typeof value !== "string") return;
+                              updateLinkRow(row.id, {
+                                type: value,
+                                ...(value === "other" ? {} : { label: "" }),
+                              });
+                            }}
+                            style={styles.linkRowTypeField}
+                            isDisabled={isAlwaysPresent}
+                          >
+                            {(item) => (
+                              <SelectItem id={item.id}>{item.label}</SelectItem>
+                            )}
+                          </Select>
+                          <TextField
+                            aria-label="Link URL"
+                            value={row.url}
+                            onChange={(value) => {
+                              updateLinkRow(row.id, { url: value });
+                            }}
+                            placeholder="https://example.com/privacy"
+                            style={styles.linkRowUrlField}
+                          />
+                          {isOther ? (
+                            <TextField
+                              aria-label="Link label"
+                              value={row.label}
+                              onChange={(value) => {
+                                updateLinkRow(row.id, { label: value });
+                              }}
+                              placeholder="Link label"
+                              style={styles.linkRowLabelField}
+                              isRequired
+                            />
+                          ) : null}
+                          <IconButton
+                            size="lg"
+                            variant="tertiary"
+                            label="Remove link"
+                            isDisabled={isSubmitting || isAlwaysPresent}
+                            onPress={() => {
+                              removeLinkRow(row.id);
+                            }}
+                            style={styles.linkRowRemoveButton}
+                          >
+                            <Trash2 />
+                          </IconButton>
+                        </Flex>
+                      );
+                    })}
+                  </Flex>
+                ) : null}
               </Flex>
             </CardBody>
           </Card>

@@ -143,12 +143,14 @@ function TextFieldContent({
 
   return (
     <>
-      <Label style={inputStyles.label}>
-        {label}{" "}
-        {isRequired ? (
-          <span {...stylex.props(inputStyles.required)}>*</span>
-        ) : null}
-      </Label>
+      {label && (
+        <Label style={inputStyles.label}>
+          {label}{" "}
+          {isRequired ? (
+            <span {...stylex.props(inputStyles.required)}>*</span>
+          ) : null}
+        </Label>
+      )}
 
       {labelVariant === "horizontal" ? (
         <Flex direction="column" gap="md">

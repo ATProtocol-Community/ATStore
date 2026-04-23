@@ -16,7 +16,14 @@ import {
 import { parseAtUriParts } from '#/lib/atproto/at-uri'
 import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
 import { COLLECTION } from '#/lib/atproto/nsids'
-import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
+import {
+  LISTING_LINK_LABEL_MAX_LENGTH,
+  LISTING_LINK_MAX_COUNT,
+  LISTING_LINK_URL_MAX_LENGTH,
+  normalizeListingLinks,
+  type FyiAtstoreListingDetail,
+  type ListingLink,
+} from '#/lib/atproto/listing-record'
 
 /**
  * `isBlob()` requires `$type: "blob"`, exactly four keys, etc. Tap / repo JSON often omits
@@ -86,6 +93,20 @@ const categorySlugLexicon = z
     return out.length > 0 ? out : ['misc']
   })
 
+const listingLinkLexicon = z.object({
+  type: z.string().trim().max(128).optional().default('other'),
+  url: z.string().trim().min(1).max(LISTING_LINK_URL_MAX_LENGTH),
+  label: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((s) => {
+      if (s == null) return undefined
+      const t = String(s).trim()
+      if (!t) return undefined
+      return t.slice(0, LISTING_LINK_LABEL_MAX_LENGTH)
+    }),
+})
+
 const listingBodySchema = z.object({
   slug: z.string().min(1),
   name: z.string(),
@@ -119,6 +140,7 @@ const listingBodySchema = z.object({
     .refine((s) => !s || s.startsWith('at://'), {
       message: 'migratedFromAtUri must be an at:// URI',
     }),
+  links: z.array(listingLinkLexicon).max(LISTING_LINK_MAX_COUNT).optional(),
 })
 
 export type ListingDetailParseResult =
@@ -221,6 +243,16 @@ export function tryParseListingDetailRecord(
   if (d.productAccountDid) rec.productAccountDid = d.productAccountDid
   const migrated = d.migratedFromAtUri?.trim()
   if (migrated) rec.migratedFromAtUri = migrated
+  if (d.links?.length) {
+    const normalized = normalizeListingLinks(
+      d.links.map((link): ListingLink => ({
+        type: link.type,
+        url: link.url,
+        ...(link.label ? { label: link.label } : {}),
+      })),
+    )
+    if (normalized.length > 0) rec.links = normalized
+  }
   return { ok: true, record: rec }
 }
 
@@ -382,6 +414,7 @@ export async function upsertDirectoryListingFromTap(input: {
   }
 
   const migratedFromAtUri = record.migratedFromAtUri?.trim() ?? null
+  const links = normalizeListingLinks(record.links ?? null)
 
   await db
     .insert(schema.storeListings)
@@ -402,6 +435,7 @@ export async function upsertDirectoryListingFromTap(input: {
       sourceAccountDid: did,
       verificationStatus,
       appTags,
+      links,
       productAccountDid: productDid,
       productAccountHandle,
       migratedFromAtUri,
@@ -426,6 +460,7 @@ export async function upsertDirectoryListingFromTap(input: {
         sourceAccountDid: did,
         verificationStatus,
         appTags,
+        links,
         productAccountDid: productDid,
         productAccountHandle,
         migratedFromAtUri,

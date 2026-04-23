@@ -168,12 +168,14 @@ function SelectContent<T extends object>({
 
   return (
     <>
-      <Label style={inputStyles.label}>
-        {label}{" "}
-        {isRequired ? (
-          <span {...stylex.props(inputStyles.required)}>*</span>
-        ) : null}
-      </Label>
+      {label && (
+        <Label style={inputStyles.label}>
+          {label}{" "}
+          {isRequired ? (
+            <span {...stylex.props(inputStyles.required)}>*</span>
+          ) : null}
+        </Label>
+      )}
       <Button {...stylex.props(inputStyles.wrapper)}>
         {prefix != null && (
           <div {...stylex.props(inputStyles.addon)}>{prefix}</div>

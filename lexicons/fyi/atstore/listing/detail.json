@@ -119,7 +119,49 @@
             "format": "at-uri",
             "maxLength": 8192,
             "description": "When this listing.detail record supersedes a prior record in another repo (e.g. moved from the AT Store publisher to a product owner PDS), the at:// URI of that prior fyi.atstore.listing.detail record."
+          },
+          "links": {
+            "type": "array",
+            "maxLength": 12,
+            "description": "Relevant links for the app, including trust/compliance, support, and project resources.",
+            "items": {
+              "type": "ref",
+              "ref": "#link"
+            }
           }
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": ["type", "url"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "knownValues": [
+            "privacy",
+            "terms",
+            "support",
+            "contact",
+            "docs",
+            "blog",
+            "changelog",
+            "source",
+            "status",
+            "other"
+          ],
+          "description": "The kind of link."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "The destination URL."
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 100,
+          "maxGraphemes": 50,
+          "description": "Optional human-readable label, especially useful when type is 'other'."
         }
       }
     }

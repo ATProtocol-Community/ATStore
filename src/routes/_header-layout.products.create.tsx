@@ -139,6 +139,7 @@ function CreateProductListingPage() {
           externalUrl: values.externalUrl,
           categorySlug: values.categorySlug,
           productHandle: values.productHandle,
+          links: values.links,
           ...(heroImage ? { heroImage } : {}),
           ...(iconImage ? { iconImage } : {}),
           ...(screenshotImages ? { screenshotImages } : {}),
@@ -226,6 +227,7 @@ function CreateProductListingPage() {
           heroImageUrl: null,
           iconUrl: null,
           screenshotUrls: [],
+          links: [],
         }}
         onCancel={() => {
           void navigate({ to: "/home" });

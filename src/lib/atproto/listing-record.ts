@@ -33,6 +33,33 @@ function normalizeListingCategorySlugs(row: StoreListing): string[] {
 }
 const PLACEHOLDER_HERO = 'https://placehold.co/1200x630/png'
 
+/**
+ * `knownValues` from `fyi.atstore.listing.detail#link.type`. Lexicon allows any string
+ * for forward-compat; UI surfaces only render known kinds as labelled chips.
+ */
+export const LISTING_LINK_TYPES = [
+  'privacy',
+  'terms',
+  'support',
+  'contact',
+  'docs',
+  'blog',
+  'changelog',
+  'source',
+  'status',
+  'other',
+] as const
+
+export type ListingLinkType = (typeof LISTING_LINK_TYPES)[number]
+
+export type ListingLink = {
+  /** `knownValues` from the lexicon; unknown strings are allowed (`other` in UI). */
+  type: string
+  url: string
+  /** Optional user-facing label; useful especially when `type === 'other'`. */
+  label?: string
+}
+
 export type FyiAtstoreListingDetail = {
   $type: 'fyi.atstore.listing.detail'
   slug: string
@@ -52,6 +79,44 @@ export type FyiAtstoreListingDetail = {
   productAccountDid?: string
   /** Prior `fyi.atstore.listing.detail` record URI when this record supersedes one from another repo. */
   migratedFromAtUri?: string
+  /** Trust / compliance / support / project links (`knownValues` + free-form `other`). */
+  links?: ListingLink[]
+}
+
+/** Max length checks mirror `detail.json`: `links` ≤ 12 entries, label ≤ 100 chars. */
+export const LISTING_LINK_MAX_COUNT = 12
+export const LISTING_LINK_LABEL_MAX_LENGTH = 100
+export const LISTING_LINK_URL_MAX_LENGTH = 2048
+
+export function normalizeListingLinks(
+  raw: readonly ListingLink[] | null | undefined,
+): ListingLink[] {
+  if (!raw?.length) return []
+  const out: ListingLink[] = []
+  const seen = new Set<string>()
+  for (const entry of raw) {
+    if (!entry) continue
+    const url = entry.url?.trim()
+    if (!url || url.length > LISTING_LINK_URL_MAX_LENGTH) continue
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') continue
+    } catch {
+      continue
+    }
+    const type = entry.type?.trim() || 'other'
+    const label = entry.label?.trim()
+    const key = `${type}\u0000${url.toLowerCase()}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const link: ListingLink = { type, url }
+    if (label) {
+      link.label = label.slice(0, LISTING_LINK_LABEL_MAX_LENGTH)
+    }
+    out.push(link)
+    if (out.length >= LISTING_LINK_MAX_COUNT) break
+  }
+  return out
 }
 
 function isHttpsUri(s: string | null | undefined): s is string {
@@ -218,6 +283,9 @@ export async function buildListingDetailRecordWithBlobs(
   if (migrated?.startsWith('at://')) {
     record.migratedFromAtUri = migrated
   }
+
+  const links = normalizeListingLinks(row.links ?? null)
+  if (links.length > 0) record.links = links
 
   return {
     record,

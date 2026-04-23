@@ -50,7 +50,14 @@ import type { StoreListing } from '#/db/schema'
 import * as dbSchema from '#/db/schema'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import { parseAtUriParts } from '#/lib/atproto/at-uri'
-import { buildListingDetailRecordWithBlobs } from '#/lib/atproto/listing-record'
+import {
+  LISTING_LINK_LABEL_MAX_LENGTH,
+  LISTING_LINK_MAX_COUNT,
+  LISTING_LINK_URL_MAX_LENGTH,
+  buildListingDetailRecordWithBlobs,
+  normalizeListingLinks,
+  type ListingLink,
+} from '#/lib/atproto/listing-record'
 import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
 import {
   createAtstorePublishClient,
@@ -212,6 +219,8 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   appTags: string[]
   createdAt: string | null
   updatedAt: string | null
+  /** Trust/compliance/support/project links (see `fyi.atstore.listing.detail#link`). */
+  links: ListingLink[]
 }
 
 export interface DirectoryListingReview {
@@ -752,6 +761,7 @@ type DirectoryListingDetailRow = DirectoryListingRow & {
   vertical: string | null
   classificationReason: string | null
   appTags: string[]
+  links: ListingLink[] | null
   createdAt: Date
   updatedAt: Date
 }
@@ -806,6 +816,7 @@ function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail
     appTags: normalizeAppTags(row.appTags ?? []),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    links: normalizeListingLinks(row.links ?? null),
   }
 }
 
@@ -2102,6 +2113,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         averageRating: table.averageRating,
         ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
+        links: table.links,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
       })
@@ -2146,6 +2158,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         averageRating: table.averageRating,
         ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
+        links: table.links,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
       })
@@ -3782,6 +3795,17 @@ function normalizeEditableListingCategorySlug(value: string): string {
   return ids.join('/')
 }
 
+const listingLinkInputSchema = z.object({
+  type: z.string().trim().min(1).max(128),
+  url: z.string().trim().min(1).max(LISTING_LINK_URL_MAX_LENGTH),
+  label: z
+    .string()
+    .trim()
+    .max(LISTING_LINK_LABEL_MAX_LENGTH)
+    .optional()
+    .transform((s) => (s && s.length > 0 ? s : undefined)),
+})
+
 const updateOwnedProductListingInput = z.object({
   listingId: z.string().uuid(),
   name: z.string().trim().min(1).max(640),
@@ -3790,6 +3814,11 @@ const updateOwnedProductListingInput = z.object({
   externalUrl: listingExternalUrlSchema,
   categorySlug: z.string().trim().min(1).max(256),
   productHandle: z.string().max(300),
+  links: z
+    .array(listingLinkInputSchema)
+    .max(LISTING_LINK_MAX_COUNT)
+    .optional()
+    .default([]),
 })
 
 const createOwnedProductListingInput = z.object({
@@ -3821,6 +3850,11 @@ const createOwnedProductListingInput = z.object({
     .min(1)
     .max(4)
     .optional(),
+  links: z
+    .array(listingLinkInputSchema)
+    .max(LISTING_LINK_MAX_COUNT)
+    .optional()
+    .default([]),
 })
 
 const getProductListingEditAccessInput = z.object({
@@ -3910,6 +3944,8 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
       }
     }
 
+    const links = normalizeListingLinks(data.links as ListingLink[])
+
     const patch: Partial<StoreListing> = {
       name,
       tagline: taglineClean,
@@ -3917,6 +3953,7 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
       externalUrl,
       categorySlugs: [categorySlug],
       productAccountDid: session.did,
+      links,
     }
 
     const { uri } = await publishOwnedListingDetail(
@@ -3939,6 +3976,7 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
         productAccountDid: session.did,
         productAccountHandle,
         atUri: uri,
+        links,
         updatedAt: now,
       })
       .where(eq(t.id, full.id))
@@ -3976,6 +4014,7 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
     }
 
     const now = new Date()
+    const links = normalizeListingLinks(data.links as ListingLink[])
     const draftRow: StoreListing = {
       id: crypto.randomUUID(),
       sourceUrl: externalUrl,
@@ -3988,6 +4027,7 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       fullDescription: descClean,
       categorySlugs: [categorySlug],
       appTags: [],
+      links,
       atUri: null,
       repoDid: session.did,
       rkey: null,
