@@ -10,6 +10,7 @@ import { redirect } from '@tanstack/react-router'
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 
+import { SUPER_ADMIN_DID } from '#/lib/super-admin'
 import { getSafePostLoginRedirect } from '#/utils/auth-redirect'
 
 export type AtprotoSessionContext = {
@@ -143,5 +144,20 @@ export const adminFnMiddleware = createMiddleware({ type: 'function' }).server(
       throw new Error('Forbidden')
     }
     return await next({ context: { adminSession: ctx } })
+  },
+)
+
+/** Server functions: only the hard-coded super admin DID (hipstersmoothie.com). */
+export const superAdminFnMiddleware = createMiddleware({ type: 'function' }).server(
+  async ({ next }) => {
+    const request = getRequest()
+    const ctx = await getAtprotoSessionForRequest(request)
+    if (!ctx) {
+      throw new Error('Unauthorized')
+    }
+    if (ctx.did !== SUPER_ADMIN_DID) {
+      throw new Error('Forbidden')
+    }
+    return await next({ context: { superAdminSession: ctx } })
   },
 )

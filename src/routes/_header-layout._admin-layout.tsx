@@ -5,6 +5,8 @@ import {
   redirect,
 } from "@tanstack/react-router";
 
+import { useSuspenseQuery } from "@tanstack/react-query";
+
 import {
   Sidebar,
   SidebarItem,
@@ -14,6 +16,7 @@ import {
 import { SidebarLayout } from "../design-system/sidebar-layout";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 import { user as userApi } from "../integrations/tanstack-query/api-user.functions";
+import { isSuperAdminDid } from "../lib/super-admin";
 
 export const Route = createFileRoute("/_header-layout/_admin-layout")({
   beforeLoad: async ({ context, location }) => {
@@ -49,6 +52,9 @@ function SidebarItemIgnoreStyleAndClassName({
 const SidebarLink = createLink(SidebarItemIgnoreStyleAndClassName);
 
 function RouteComponent() {
+  const { data: session } = useSuspenseQuery(userApi.getSessionQueryOptions);
+  const isSuperAdmin = isSuperAdminDid(session?.user?.did ?? null);
+
   return (
     <SidebarLayout.Root>
       <SidebarLayout.NavigationSidebar>
@@ -98,6 +104,16 @@ function RouteComponent() {
               Add Listing
             </SidebarLink>
           </SidebarSection>
+          {isSuperAdmin ? (
+            <SidebarSection title="Super admin">
+              <SidebarLink
+                to="/admin/admins"
+                activeProps={{ isActive: true }}
+              >
+                Admins
+              </SidebarLink>
+            </SidebarSection>
+          ) : null}
         </Sidebar>
       </SidebarLayout.NavigationSidebar>
       <SidebarLayout.Page>

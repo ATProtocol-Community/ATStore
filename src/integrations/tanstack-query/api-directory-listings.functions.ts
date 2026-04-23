@@ -4907,6 +4907,13 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
       }
     }
 
+    /**
+     * Only include keys we actually want to override. Setting a key to `undefined`
+     * here still overwrites `row.<key>` via `{ ...row, ...patch }` in
+     * `mergeListingRow`, which previously nuked `screenshotUrls` on text-only saves
+     * and caused `row.screenshotUrls.filter(...)` to throw in
+     * `buildListingDetailRecordWithBlobs`.
+     */
     const patch: Partial<StoreListing> = {
       name,
       tagline: taglineClean,
@@ -4915,11 +4922,12 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
       categorySlugs: [categorySlug],
       links,
       appTags,
-      productAccountDid: productAccountDid ?? undefined,
-      screenshotUrls:
-        screenshotsChanged && newScreenshots.length === 0
-          ? retainedExistingScreenshotUrls
-          : undefined,
+    }
+    if (productAccountDid) {
+      patch.productAccountDid = productAccountDid
+    }
+    if (screenshotsChanged && newScreenshots.length === 0) {
+      patch.screenshotUrls = retainedExistingScreenshotUrls
     }
 
     const { uri } = await publishDirectoryListingDetail(full, patch, blobOverrides)

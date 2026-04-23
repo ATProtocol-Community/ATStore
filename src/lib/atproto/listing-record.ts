@@ -220,7 +220,7 @@ export async function buildListingDetailRecordWithBlobs(
       row.screenshotUrls?.[1],
     ) ?? PLACEHOLDER_HERO
   const heroKey = heroUrl.trim()
-  const screenshotUrls = row.screenshotUrls
+  const screenshotUrls = (row.screenshotUrls ?? [])
     .filter((u) => isHttpsUri(u) || isPublicImagePath(u))
     .filter((u) => u.trim() !== heroKey)
 

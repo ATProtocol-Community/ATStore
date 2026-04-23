@@ -46,6 +46,7 @@ import { Route as HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport } from '.
 import { Route as HeaderLayoutAdminLayoutAdminManagedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.managed-listings'
 import { Route as HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport } from './routes/_header-layout._admin-layout.admin.listing-product-accounts'
 import { Route as HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport } from './routes/_header-layout._admin-layout.admin.home-page-hero'
+import { Route as HeaderLayoutAdminLayoutAdminAdminsRouteImport } from './routes/_header-layout._admin-layout.admin.admins'
 import { Route as HeaderLayoutAdminLayoutAdminAddListingRouteImport } from './routes/_header-layout._admin-layout.admin.add-listing'
 import { Route as HeaderLayoutProductsProductIdReviewsIndexRouteImport } from './routes/_header-layout.products.$productId.reviews.index'
 import { Route as HeaderLayoutProductsProductIdReviewsWriteRouteImport } from './routes/_header-layout.products.$productId.reviews.write'
@@ -257,6 +258,12 @@ const HeaderLayoutAdminLayoutAdminHomePageHeroRoute =
     path: '/admin/home-page-hero',
     getParentRoute: () => HeaderLayoutAdminLayoutRoute,
   } as any)
+const HeaderLayoutAdminLayoutAdminAdminsRoute =
+  HeaderLayoutAdminLayoutAdminAdminsRouteImport.update({
+    id: '/admin/admins',
+    path: '/admin/admins',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
 const HeaderLayoutAdminLayoutAdminAddListingRoute =
   HeaderLayoutAdminLayoutAdminAddListingRouteImport.update({
     id: '/admin/add-listing',
@@ -302,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
+  '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
@@ -343,6 +351,7 @@ export interface FileRoutesByTo {
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
+  '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
@@ -386,6 +395,7 @@ export interface FileRoutesById {
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/_header-layout/_admin-layout/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
+  '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/_header-layout/_admin-layout/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   '/_header-layout/_admin-layout/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/_header-layout/_admin-layout/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/protocol/listings'
     | '/protocol/tags'
     | '/admin/add-listing'
+    | '/admin/admins'
     | '/admin/home-page-hero'
     | '/admin/listing-product-accounts'
     | '/admin/managed-listings'
@@ -470,6 +481,7 @@ export interface FileRouteTypes {
     | '/protocol/listings'
     | '/protocol/tags'
     | '/admin/add-listing'
+    | '/admin/admins'
     | '/admin/home-page-hero'
     | '/admin/listing-product-accounts'
     | '/admin/managed-listings'
@@ -512,6 +524,7 @@ export interface FileRouteTypes {
     | '/_header-layout/protocol/listings'
     | '/_header-layout/protocol/tags'
     | '/_header-layout/_admin-layout/admin/add-listing'
+    | '/_header-layout/_admin-layout/admin/admins'
     | '/_header-layout/_admin-layout/admin/home-page-hero'
     | '/_header-layout/_admin-layout/admin/listing-product-accounts'
     | '/_header-layout/_admin-layout/admin/managed-listings'
@@ -807,6 +820,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport
       parentRoute: typeof HeaderLayoutAdminLayoutRoute
     }
+    '/_header-layout/_admin-layout/admin/admins': {
+      id: '/_header-layout/_admin-layout/admin/admins'
+      path: '/admin/admins'
+      fullPath: '/admin/admins'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminAdminsRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
     '/_header-layout/_admin-layout/admin/add-listing': {
       id: '/_header-layout/_admin-layout/admin/add-listing'
       path: '/admin/add-listing'
@@ -840,6 +860,7 @@ declare module '@tanstack/react-router' {
 
 interface HeaderLayoutAdminLayoutRouteChildren {
   HeaderLayoutAdminLayoutAdminAddListingRoute: typeof HeaderLayoutAdminLayoutAdminAddListingRoute
+  HeaderLayoutAdminLayoutAdminAdminsRoute: typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   HeaderLayoutAdminLayoutAdminHomePageHeroRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   HeaderLayoutAdminLayoutAdminListingProductAccountsRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   HeaderLayoutAdminLayoutAdminManagedListingsRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
@@ -852,6 +873,8 @@ const HeaderLayoutAdminLayoutRouteChildren: HeaderLayoutAdminLayoutRouteChildren
   {
     HeaderLayoutAdminLayoutAdminAddListingRoute:
       HeaderLayoutAdminLayoutAdminAddListingRoute,
+    HeaderLayoutAdminLayoutAdminAdminsRoute:
+      HeaderLayoutAdminLayoutAdminAdminsRoute,
     HeaderLayoutAdminLayoutAdminHomePageHeroRoute:
       HeaderLayoutAdminLayoutAdminHomePageHeroRoute,
     HeaderLayoutAdminLayoutAdminListingProductAccountsRoute:
