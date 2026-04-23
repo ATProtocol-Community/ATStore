@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 import Cookies from "universal-cookie";
 
 import { AvatarButton } from "../design-system/avatar";
@@ -73,6 +73,8 @@ export function NavbarAuth() {
     },
   });
 
+  console.log(session);
+
   if (session?.user) {
     const initial = session.user.name?.charAt(0).toUpperCase() ?? "U";
     return (
@@ -128,6 +130,16 @@ export function NavbarAuth() {
         >
           Submit a product
         </MenuItem>
+        {session.user.isAdmin ? (
+          <MenuItem
+            onPress={() => {
+              void navigate({ to: "/admin" });
+            }}
+            suffix={<Shield />}
+          >
+            Admin
+          </MenuItem>
+        ) : null}
         <MenuSeparator />
         <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
           Log out

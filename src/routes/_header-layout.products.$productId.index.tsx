@@ -21,7 +21,6 @@ import {
   ExternalLink,
   FileText,
   Heart,
-  HelpCircle,
   LifeBuoy,
   Link as LinkIcon,
   Mail,
@@ -30,7 +29,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
 import { Avatar } from "../design-system/avatar";
@@ -75,7 +74,6 @@ import {
 import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
-import { normalizeAppTags, tagsEqual } from "../lib/app-tags";
 import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
@@ -85,7 +83,6 @@ import type { ListingLink } from "#/lib/atproto/listing-record";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { BlueskyIcon } from "#/components/bluesky-icon";
 import { ToggleButton } from "#/design-system/toggle-button";
-import { TextField } from "#/design-system/text-field";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -461,89 +458,6 @@ const styles = stylex.create({
   relatedFooter: {
     alignItems: "center",
   },
-  devToolbar: {
-    bottom: verticalSpace["4xl"],
-    boxShadow: shadow.md,
-    position: "fixed",
-    right: horizontalSpace["4xl"],
-    width: "min(28rem, calc(100% - 2rem))",
-    zIndex: 1,
-  },
-  devToolbarBody: {
-    gap: gap["lg"],
-    paddingBottom: verticalSpace["lg"],
-    paddingLeft: horizontalSpace["lg"],
-    paddingRight: horizontalSpace["lg"],
-    paddingTop: verticalSpace["lg"],
-  },
-  devToolbarButtons: {
-    gap: gap["lg"],
-  },
-  devToolbarFieldGroup: {
-    borderTopStyle: "solid",
-    borderTopWidth: 1,
-    borderTopColor: uiColor.border2,
-    gap: gap["lg"],
-    paddingTop: verticalSpace["lg"],
-  },
-  devToolbarHelp: {
-    color: uiColor.text2,
-  },
-  devToolbarStatus: {
-    minHeight: "1.25rem",
-  },
-  imageReviewPanel: {
-    bottom: verticalSpace["4xl"],
-    boxShadow: shadow.lg,
-    left: horizontalSpace["4xl"],
-    maxHeight: "min(70vh, 520px)",
-    maxWidth: "min(40rem, calc(100% - 8rem))",
-    overflow: "auto",
-    position: "fixed",
-    width: "min(40rem, calc(100% - 8rem))",
-    zIndex: 25,
-  },
-  imageReviewCardBody: {
-    gap: gap["2xl"],
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
-  imageReviewHeading: {
-    color: uiColor.text2,
-  },
-  imageReviewFigure: {
-    alignItems: "center",
-    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
-    borderRadius: radius["2xl"],
-    display: "flex",
-    justifyContent: "center",
-    margin: 0,
-    maxHeight: "min(42vh, 360px)",
-    overflow: "hidden",
-    padding: horizontalSpace["2xl"],
-  },
-  imageReviewHeroImg: {
-    borderRadius: radius["xl"],
-    display: "block",
-    height: "auto",
-    maxHeight: "min(40vh, 340px)",
-    maxWidth: "100%",
-    objectFit: "contain",
-  },
-  imageReviewIconImg: {
-    borderRadius: radius["2xl"],
-    display: "block",
-    height: "auto",
-    maxHeight: 192,
-    maxWidth: 192,
-    objectFit: "contain",
-  },
-  imageReviewActions: {
-    gap: gap["2xl"],
-    justifyContent: "flex-end",
-  },
   screenshotsSection: {
     paddingTop: verticalSpace["4xl"],
   },
@@ -721,16 +635,6 @@ function ProductPage() {
     editAccess,
   } = Route.useLoaderData();
 
-  const queryClient = useQueryClient();
-
-  const detailQueryOptions =
-    directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
-  const relatedQueryOptions =
-    directoryListingApi.getRelatedDirectoryListingsQueryOptions({
-      id: productId,
-      limit: 3,
-    });
-
   if (!listing) {
     throw notFound();
   }
@@ -757,287 +661,9 @@ function ProductPage() {
   const canGoBack = useCanGoBack();
   const navigate = useNavigate();
   const router = useRouter();
-  const [pendingGeneration, setPendingGeneration] = useState<
-    null | "hero" | "icon" | "tagline" | "description"
-  >(null);
-  const [pendingImageCommit, setPendingImageCommit] = useState(false);
-  const [imageReviewDraft, setImageReviewDraft] = useState<null | {
-    kind: "hero" | "icon";
-    mimeType: string;
-    imageBase64: string;
-    /** Icon preview only: discovered on site vs Gemini */
-    previewSource?: "site_asset" | "model";
-  }>(null);
-  const [toolbarStatus, setToolbarStatus] = useState<{
-    tone: "neutral" | "critical";
-    text: string;
-  } | null>(null);
   const [isScreenshotLightboxOpen, setIsScreenshotLightboxOpen] =
     useState(false);
   const [screenshotLightboxIndex, setScreenshotLightboxIndex] = useState(0);
-  const [pendingListingMetadataSave, setPendingListingMetadataSave] = useState<
-    null | "category" | "tags"
-  >(null);
-  const [devCategorySlugDraft, setDevCategorySlugDraft] = useState(
-    listing.categorySlug ?? "",
-  );
-  const [devAppTagsDraft, setDevAppTagsDraft] = useState(
-    listing.appTags.join(", "),
-  );
-
-  const listingId = listing.id;
-  const normalizedDevAppTagsDraft = normalizeAppTags(
-    devAppTagsDraft
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean),
-  );
-  const nextCategorySlug = devCategorySlugDraft.trim() || null;
-  const categoryDirty = nextCategorySlug !== listing.categorySlug;
-  const tagsDirty = !tagsEqual(normalizedDevAppTagsDraft, listing.appTags);
-
-  useEffect(() => {
-    setDevCategorySlugDraft(listing.categorySlug ?? "");
-  }, [listing.categorySlug]);
-
-  useEffect(() => {
-    setDevAppTagsDraft(listing.appTags.join(", "));
-  }, [listing.appTags]);
-
-  function dismissImageReview() {
-    setImageReviewDraft(null);
-    setToolbarStatus(null);
-  }
-
-  async function commitImageReview() {
-    if (!imageReviewDraft) {
-      return;
-    }
-    setPendingImageCommit(true);
-    setToolbarStatus(null);
-    try {
-      const { kind, mimeType, imageBase64 } = imageReviewDraft;
-      if (kind === "hero") {
-        await directoryListingApi.commitDirectoryListingHeroImage({
-          data: {
-            id: listingId,
-            mimeType,
-            imageBase64,
-          },
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text: "Published the new hero image to the listing record.",
-        });
-      } else {
-        await directoryListingApi.commitDirectoryListingIcon({
-          data: {
-            id: listingId,
-            mimeType,
-            imageBase64,
-          },
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text: "Published the new icon to the listing record.",
-        });
-      }
-      setImageReviewDraft(null);
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: detailQueryOptions.queryKey,
-          exact: true,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: relatedQueryOptions.queryKey,
-          exact: true,
-        }),
-        router.invalidate(),
-      ]);
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text: error instanceof Error ? error.message : "Publish failed.",
-      });
-    } finally {
-      setPendingImageCommit(false);
-    }
-  }
-
-  async function runGeneration(
-    action: "hero" | "icon" | "tagline" | "description",
-  ) {
-    setPendingGeneration(action);
-    setToolbarStatus(null);
-
-    try {
-      if (action === "hero") {
-        const preview =
-          await directoryListingApi.previewDirectoryListingHeroImage({
-            data: {
-              id: listingId,
-            },
-          });
-        setImageReviewDraft({
-          kind: "hero",
-          mimeType: preview.mimeType,
-          imageBase64: preview.imageBase64,
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text: "Review the hero preview below, then accept or discard.",
-        });
-      } else if (action === "icon") {
-        const preview = await directoryListingApi.previewDirectoryListingIcon({
-          data: {
-            id: listingId,
-          },
-        });
-        setImageReviewDraft({
-          kind: "icon",
-          mimeType: preview.mimeType,
-          imageBase64: preview.imageBase64,
-          previewSource: preview.previewSource,
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text:
-            preview.previewSource === "site_asset"
-              ? "Preview from site favicon/logo, refined with Gemini. Accept or discard."
-              : "Review the generated icon below, then accept or discard.",
-        });
-      } else if (action === "tagline") {
-        const result =
-          await directoryListingApi.regenerateDirectoryListingTagline({
-            data: {
-              id: listingId,
-            },
-          });
-        setToolbarStatus({
-          tone: "neutral",
-          text:
-            result.source === "website"
-              ? "Generated a new tagline from homepage copy."
-              : "Generated a new tagline from homepage context.",
-        });
-      } else {
-        const result =
-          await directoryListingApi.regenerateDirectoryListingDescription({
-            data: {
-              id: listingId,
-            },
-          });
-        setToolbarStatus({
-          tone: "neutral",
-          text:
-            result.source === "website"
-              ? "Generated a new description from homepage copy."
-              : "Generated a new description from homepage context.",
-        });
-      }
-
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: detailQueryOptions.queryKey,
-          exact: true,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: relatedQueryOptions.queryKey,
-          exact: true,
-        }),
-        router.invalidate(),
-      ]);
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text: error instanceof Error ? error.message : "Generation failed.",
-      });
-    } finally {
-      setPendingGeneration(null);
-    }
-  }
-
-  async function saveDevCategory() {
-    if (pendingListingMetadataSave || !categoryDirty) {
-      return;
-    }
-    setPendingListingMetadataSave("category");
-    setToolbarStatus(null);
-    try {
-      await directoryListingApi.updateDirectoryListingCategoryAssignment({
-        data: {
-          id: listingId,
-          categorySlug: nextCategorySlug,
-        },
-      });
-      setToolbarStatus({
-        tone: "neutral",
-        text: nextCategorySlug
-          ? `Saved category: ${nextCategorySlug}`
-          : "Cleared category assignment (defaults to misc on publish).",
-      });
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: detailQueryOptions.queryKey,
-          exact: true,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: relatedQueryOptions.queryKey,
-          exact: true,
-        }),
-        router.invalidate(),
-      ]);
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text:
-          error instanceof Error ? error.message : "Category update failed.",
-      });
-    } finally {
-      setPendingListingMetadataSave(null);
-    }
-  }
-
-  async function saveDevAppTags() {
-    if (pendingListingMetadataSave || !tagsDirty) {
-      return;
-    }
-    setPendingListingMetadataSave("tags");
-    setToolbarStatus(null);
-    try {
-      await directoryListingApi.updateDirectoryListingAppTags({
-        data: {
-          id: listingId,
-          appTags: normalizedDevAppTagsDraft,
-        },
-      });
-      setToolbarStatus({
-        tone: "neutral",
-        text:
-          normalizedDevAppTagsDraft.length > 0
-            ? `Saved tags: ${normalizedDevAppTagsDraft.join(", ")}`
-            : "Cleared all app tags.",
-      });
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: detailQueryOptions.queryKey,
-          exact: true,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: relatedQueryOptions.queryKey,
-          exact: true,
-        }),
-        router.invalidate(),
-      ]);
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text: error instanceof Error ? error.message : "Tag update failed.",
-      });
-    } finally {
-      setPendingListingMetadataSave(null);
-    }
-  }
 
   return (
     <Page.Root variant="small" style={styles.page}>
@@ -1252,169 +878,6 @@ function ProductPage() {
           />
         ) : null}
       </Flex>
-      {import.meta.env.DEV && imageReviewDraft ? (
-        <Card style={styles.imageReviewPanel}>
-          <Flex direction="column" style={styles.imageReviewCardBody}>
-            <Text size="sm" weight="semibold" style={styles.imageReviewHeading}>
-              {imageReviewDraft.kind === "hero"
-                ? "Review new hero image"
-                : "Review new icon"}
-            </Text>
-            {imageReviewDraft.kind === "icon" &&
-            imageReviewDraft.previewSource ? (
-              <Text size="sm" variant="secondary">
-                {imageReviewDraft.previewSource === "site_asset"
-                  ? "Sourced from site favicon or logo asset, then refined with Gemini."
-                  : "Generated from a homepage screenshot."}
-              </Text>
-            ) : null}
-            <figure {...stylex.props(styles.imageReviewFigure)}>
-              <img
-                alt={
-                  imageReviewDraft.kind === "hero"
-                    ? "Generated hero preview"
-                    : "Generated icon preview"
-                }
-                src={`data:${imageReviewDraft.mimeType};base64,${imageReviewDraft.imageBase64}`}
-                {...stylex.props(
-                  imageReviewDraft.kind === "hero"
-                    ? styles.imageReviewHeroImg
-                    : styles.imageReviewIconImg,
-                )}
-              />
-            </figure>
-            <Flex style={styles.imageReviewActions}>
-              <Button
-                variant="secondary"
-                isDisabled={pendingImageCommit}
-                onPress={dismissImageReview}
-              >
-                Discard
-              </Button>
-              <Button
-                isPending={pendingImageCommit}
-                isDisabled={pendingImageCommit}
-                onPress={() => void commitImageReview()}
-              >
-                Publish to listing
-              </Button>
-            </Flex>
-          </Flex>
-        </Card>
-      ) : null}
-      {import.meta.env.DEV ? (
-        <Card style={styles.devToolbar}>
-          <Flex direction="column" style={styles.devToolbarBody}>
-            <Text size="sm" weight="semibold">
-              Dev tools
-            </Text>
-            <Flex direction="column" style={styles.devToolbarButtons}>
-              <Button
-                variant="secondary"
-                isPending={pendingGeneration === "icon"}
-                isDisabled={
-                  pendingGeneration !== null || imageReviewDraft !== null
-                }
-                onPress={() => void runGeneration("icon")}
-              >
-                Generate icon
-              </Button>
-              <Button
-                variant="secondary"
-                isPending={pendingGeneration === "hero"}
-                isDisabled={
-                  pendingGeneration !== null || imageReviewDraft !== null
-                }
-                onPress={() => void runGeneration("hero")}
-              >
-                Generate hero image
-              </Button>
-              <Button
-                variant="secondary"
-                isPending={pendingGeneration === "tagline"}
-                isDisabled={pendingGeneration !== null}
-                onPress={() => void runGeneration("tagline")}
-              >
-                Generate tagline
-              </Button>
-              <Button
-                variant="secondary"
-                isPending={pendingGeneration === "description"}
-                isDisabled={pendingGeneration !== null}
-                onPress={() => void runGeneration("description")}
-              >
-                Generate description
-              </Button>
-            </Flex>
-            <Flex direction="column" style={styles.devToolbarFieldGroup}>
-              <Text size="sm" weight="semibold">
-                Category
-              </Text>
-              <TextField
-                label="Category slug"
-                value={devCategorySlugDraft}
-                onChange={setDevCategorySlugDraft}
-                placeholder="apps/bluesky/clients"
-              />
-              <Button
-                variant="secondary"
-                isPending={pendingListingMetadataSave === "category"}
-                isDisabled={
-                  pendingGeneration !== null ||
-                  imageReviewDraft !== null ||
-                  pendingListingMetadataSave !== null ||
-                  !categoryDirty
-                }
-                onPress={() => void saveDevCategory()}
-              >
-                Save category
-              </Button>
-              <SmallBody style={styles.devToolbarHelp}>
-                Current: {listing.categorySlug ?? "none"}
-              </SmallBody>
-            </Flex>
-            <Flex direction="column" style={styles.devToolbarFieldGroup}>
-              <Text size="sm" weight="semibold">
-                App tags
-              </Text>
-              <TextField
-                label="Comma-separated tags"
-                value={devAppTagsDraft}
-                onChange={setDevAppTagsDraft}
-                placeholder="social, developer-tool"
-              />
-              <Button
-                variant="secondary"
-                isPending={pendingListingMetadataSave === "tags"}
-                isDisabled={
-                  pendingGeneration !== null ||
-                  imageReviewDraft !== null ||
-                  pendingListingMetadataSave !== null ||
-                  !tagsDirty
-                }
-                onPress={() => void saveDevAppTags()}
-              >
-                Save tags
-              </Button>
-              <SmallBody style={styles.devToolbarHelp}>
-                Current:{" "}
-                {listing.appTags.length > 0
-                  ? listing.appTags.join(", ")
-                  : "none"}
-              </SmallBody>
-            </Flex>
-            <Text
-              size="sm"
-              variant={
-                toolbarStatus?.tone === "critical" ? "critical" : "secondary"
-              }
-              style={styles.devToolbarStatus}
-            >
-              {toolbarStatus?.text ?? " "}
-            </Text>
-          </Flex>
-        </Card>
-      ) : null}
     </Page.Root>
   );
 }

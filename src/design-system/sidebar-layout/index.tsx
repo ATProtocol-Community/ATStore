@@ -42,7 +42,6 @@ const styles = stylex.create({
   },
   sidebar: {
     overflow: "auto",
-    overscrollBehavior: "contain",
     boxSizing: "border-box",
     display: {
       default: "none",

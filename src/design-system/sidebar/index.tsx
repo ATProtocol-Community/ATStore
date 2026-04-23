@@ -97,6 +97,7 @@ const styles = stylex.create({
     color: uiColor.text2,
     display: "flex",
     fontSize: fontSize["sm"],
+    fontFamily: fontFamily["sans"],
     transitionDuration: animationDuration.fast,
     transitionProperty: {
       default: "background-color",

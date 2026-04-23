@@ -43,7 +43,10 @@ import {
 import {
   buildDirectoryListingSlug,
 } from '../../lib/directory-listing-slugs'
-import { getAtprotoSessionForRequest } from '#/middleware/auth'
+import {
+  adminFnMiddleware,
+  getAtprotoSessionForRequest,
+} from '#/middleware/auth'
 import { dbMiddleware } from './db-middleware'
 import type { Database } from '#/db/index.server'
 import type { StoreListing } from '#/db/schema'
@@ -3082,11 +3085,9 @@ const getDirectoryListingAppTagAssignmentsQueryOptions = queryOptions({
 })
 
 const updateDirectoryListingAppTags = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(updateDirectoryListingAppTagsInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const nextTags = normalizeAppTags(data.appTags)
     const full = await getFullDirectoryListing(context, data.id)
     const cs = primaryCategorySlug(full.categorySlugs)
@@ -3109,11 +3110,9 @@ const updateDirectoryListingAppTags = createServerFn({ method: 'POST' })
   })
 
 const updateDirectoryListingCategoryAssignment = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(updateDirectoryListingCategoryAssignmentInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const nextCategorySlug = data.categorySlug?.trim() || null
     const full = await getFullDirectoryListing(context, data.id)
     const effective = nextCategorySlug ?? 'misc'
@@ -3148,11 +3147,9 @@ const deleteDirectoryListing = createServerFn({ method: 'POST' })
   })
 
 const previewDirectoryListingHeroImage = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const listing = await getDirectoryListingGenerationCandidate(context, data.id)
     const pageUrl = getListingGenerationUrl(listing)
 
@@ -3175,11 +3172,9 @@ const previewDirectoryListingHeroImage = createServerFn({ method: 'POST' })
   })
 
 const commitDirectoryListingHeroImage = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(commitGeneratedListingImageInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const full = await getFullDirectoryListing(context, data.id)
     const raw = Buffer.from(data.imageBase64, 'base64')
     const { uri } = await publishDirectoryListingDetail(full, undefined, {
@@ -3196,11 +3191,9 @@ const commitDirectoryListingHeroImage = createServerFn({ method: 'POST' })
   })
 
 const previewDirectoryListingIcon = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const listing = await getDirectoryListingGenerationCandidate(context, data.id)
     const pageUrl = getListingGenerationUrl(listing)
 
@@ -3254,11 +3247,9 @@ const previewDirectoryListingIcon = createServerFn({ method: 'POST' })
   })
 
 const commitDirectoryListingIcon = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(commitGeneratedListingImageInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const full = await getFullDirectoryListing(context, data.id)
     const raw = Buffer.from(data.imageBase64, 'base64')
     const { uri } = await publishDirectoryListingDetail(full, undefined, {
@@ -3275,11 +3266,9 @@ const commitDirectoryListingIcon = createServerFn({ method: 'POST' })
   })
 
 const regenerateDirectoryListingTagline = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const listing = await getDirectoryListingGenerationCandidate(context, data.id)
     const nextTagline = await generateListingTextField({
       field: 'tagline',
@@ -3297,11 +3286,9 @@ const regenerateDirectoryListingTagline = createServerFn({ method: 'POST' })
   })
 
 const regenerateDirectoryListingDescription = createServerFn({ method: 'POST' })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-
     const listing = await getDirectoryListingGenerationCandidate(context, data.id)
     const nextDescription = await generateListingTextField({
       field: 'description',
@@ -3428,13 +3415,23 @@ export type ListingMissingProductAccountHandleItem = {
   iconUrl: string | null
   externalUrl: string | null
   productAccountDid: string | null
+  productAccountHandleIgnoredAt: string | null
 }
+
+const getListingsMissingProductAccountHandleInput = z.object({
+  includeIgnored: z.boolean().optional().default(false),
+})
 
 const getListingsMissingProductAccountHandle = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
-  .handler(async ({ context }) => {
+  .inputValidator(getListingsMissingProductAccountHandleInput)
+  .handler(async ({ data, context }) => {
     assertDevelopmentOnly()
     const t = context.schema.storeListings
+    const conditions = [sql`coalesce(trim(${t.productAccountHandle}), '') = ''`]
+    if (!data.includeIgnored) {
+      conditions.push(sql`${t.productAccountHandleIgnoredAt} is null`)
+    }
     const rows = await context.db
       .select({
         id: t.id,
@@ -3443,26 +3440,35 @@ const getListingsMissingProductAccountHandle = createServerFn({ method: 'GET' })
         iconUrl: t.iconUrl,
         externalUrl: t.externalUrl,
         productAccountDid: t.productAccountDid,
+        productAccountHandleIgnoredAt: t.productAccountHandleIgnoredAt,
       })
       .from(t)
-      .where(
-        and(
-          sql`coalesce(trim(${t.productAccountHandle}), '') = ''`,
-          sql`${t.productAccountHandleIgnoredAt} is null`,
-        ),
-      )
+      .where(and(...conditions))
       .orderBy(asc(t.name))
 
     return rows.map((row) => ({
       ...row,
       iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      productAccountHandleIgnoredAt:
+        row.productAccountHandleIgnoredAt?.toISOString() ?? null,
     })) satisfies ListingMissingProductAccountHandleItem[]
   })
 
-const getListingsMissingProductAccountHandleQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'dev', 'listingsMissingProductAccountHandle'],
-  queryFn: async () => getListingsMissingProductAccountHandle(),
-})
+function getListingsMissingProductAccountHandleQueryOptions(
+  input: z.input<typeof getListingsMissingProductAccountHandleInput> = {},
+) {
+  const normalizedInput = getListingsMissingProductAccountHandleInput.parse(input)
+  return queryOptions({
+    queryKey: [
+      'storeListings',
+      'dev',
+      'listingsMissingProductAccountHandle',
+      normalizedInput,
+    ],
+    queryFn: async () =>
+      getListingsMissingProductAccountHandle({ data: normalizedInput }),
+  })
+}
 
 function normalizeManualProductAccountHandle(raw: string): string {
   const s = raw.trim().replace(/^@+/, '')
@@ -3573,6 +3579,39 @@ const ignoreMissingProductAccountHandleDev = createServerFn({ method: 'POST' })
       .update(t)
       .set({
         productAccountHandleIgnoredAt: now,
+        updatedAt: now,
+      })
+      .where(eq(t.id, data.listingId))
+
+    return { ok: true as const }
+  })
+
+const unignoreMissingProductAccountHandleDevInput = z.object({
+  listingId: z.string().uuid(),
+})
+
+const unignoreMissingProductAccountHandleDev = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(unignoreMissingProductAccountHandleDevInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly()
+    const t = context.schema.storeListings
+
+    const [found] = await context.db
+      .select({ id: t.id })
+      .from(t)
+      .where(eq(t.id, data.listingId))
+      .limit(1)
+
+    if (!found) {
+      throw new Error('Listing not found.')
+    }
+
+    const now = new Date()
+    await context.db
+      .update(t)
+      .set({
+        productAccountHandleIgnoredAt: null,
         updatedAt: now,
       })
       .where(eq(t.id, data.listingId))
@@ -4546,6 +4585,296 @@ function getProfileOwnedProductListingsQueryOptions(did: string) {
   })
 }
 
+export type StoreManagedListingSummary = {
+  id: string
+  slug: string
+  name: string
+  iconUrl: string | null
+  externalUrl: string | null
+  categorySlug: string | null
+  verificationStatus: string
+  productAccountHandle: string | null
+  updatedAt: string | null
+}
+
+/**
+ * Admin-only: lists every `store_listings` row still published on the store
+ * account (i.e. `repo_did = atstoreDid`). These are the listings an admin can
+ * freely edit via `updateStoreManagedListing` and the regenerate/preview tooling.
+ */
+const getStoreManagedListings = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .handler(async ({ context }) => {
+    const atstoreDid = await getAtstoreRepoDid()
+    const t = context.schema.storeListings
+    const rows = await context.db
+      .select({
+        id: t.id,
+        slug: t.slug,
+        name: t.name,
+        iconUrl: t.iconUrl,
+        externalUrl: t.externalUrl,
+        categorySlugs: t.categorySlugs,
+        verificationStatus: t.verificationStatus,
+        productAccountHandle: t.productAccountHandle,
+        updatedAt: t.updatedAt,
+      })
+      .from(t)
+      .where(eq(t.repoDid, atstoreDid))
+      .orderBy(asc(t.name))
+
+    return rows.map((row): StoreManagedListingSummary => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      externalUrl: row.externalUrl,
+      categorySlug: primaryCategorySlug(row.categorySlugs ?? []),
+      verificationStatus: row.verificationStatus,
+      productAccountHandle: row.productAccountHandle,
+      updatedAt: row.updatedAt?.toISOString() ?? null,
+    }))
+  })
+
+const getStoreManagedListingsQueryOptions = queryOptions({
+  queryKey: ['storeListings', 'storeManagedListings'] as const,
+  queryFn: async () => getStoreManagedListings(),
+})
+
+const updateStoreManagedListingInput = z.object({
+  listingId: z.string().uuid(),
+  name: z.string().trim().min(1).max(640),
+  tagline: z.string().max(2000),
+  fullDescription: z.string().max(20000),
+  externalUrl: listingExternalUrlSchema,
+  categorySlug: z.string().trim().min(1).max(256),
+  productHandle: z.string().max(300),
+  links: z
+    .array(listingLinkInputSchema)
+    .max(LISTING_LINK_MAX_COUNT)
+    .optional()
+    .default([]),
+  heroImage: z
+    .object({
+      mimeType: z.string().min(3).max(128),
+      imageBase64: z.string().min(1),
+    })
+    .optional(),
+  iconImage: z
+    .object({
+      mimeType: z.string().min(3).max(128),
+      imageBase64: z.string().min(1),
+    })
+    .optional(),
+  retainedExistingScreenshotUrls: z
+    .array(z.string().min(1))
+    .max(4)
+    .optional()
+    .default([]),
+  screenshotImages: z
+    .array(
+      z.object({
+        mimeType: z.string().min(3).max(128),
+        imageBase64: z.string().min(1),
+      }),
+    )
+    .max(4)
+    .optional()
+    .default([]),
+})
+
+async function assertStoreManagedListing(
+  context: { db: Database; schema: typeof dbSchema },
+  listingId: string,
+): Promise<StoreListing> {
+  const full = await getFullDirectoryListing(context, listingId)
+  const atstoreDid = await getAtstoreRepoDid()
+  if (full.repoDid?.trim() !== atstoreDid) {
+    throw new Error(
+      'This listing is not published from the store account and cannot be edited here.',
+    )
+  }
+  return full
+}
+
+/**
+ * Admin-only bulk edit for store-PDS listings. Mirrors `updateOwnedProductListing` +
+ * image/screenshot helpers but publishes via the store account and bypasses the
+ * session-based ownership checks. Only works for listings whose `repo_did`
+ * matches the store DID.
+ */
+const updateStoreManagedListing = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .inputValidator(updateStoreManagedListingInput)
+  .handler(async ({ data, context }) => {
+    const full = await assertStoreManagedListing(context, data.listingId)
+
+    const name = data.name.trim().slice(0, 640)
+    const taglineClean = sanitizeListingTagline(data.tagline)
+    const descClean = sanitizeListingDescription(data.fullDescription)
+    const externalUrl = data.externalUrl.trim()
+    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
+    const productHandleInput = data.productHandle.trim()
+
+    let productAccountHandle: string | null = null
+    let productAccountDid: string | null = full.productAccountDid ?? null
+    if (productHandleInput.length > 0) {
+      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      if (!resolvedDid) {
+        throw new Error('Could not resolve that handle to a DID.')
+      }
+      productAccountDid = resolvedDid
+    }
+
+    const links = normalizeListingLinks(data.links as ListingLink[])
+
+    let blobOverrides:
+      | {
+          heroImage?: { bytes: Uint8Array; mimeType: string }
+          icon?: { bytes: Uint8Array; mimeType: string }
+          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>
+        }
+      | undefined
+
+    if (data.heroImage) {
+      const heroMime = data.heroImage.mimeType.trim().toLowerCase()
+      if (!heroMime.startsWith('image/')) {
+        throw new Error('Hero image must be an image.')
+      }
+      const heroRaw = Buffer.from(data.heroImage.imageBase64, 'base64')
+      if (heroRaw.length === 0 || heroRaw.length > 12_000_000) {
+        throw new Error('Hero image must be at most 12 MB.')
+      }
+      blobOverrides = blobOverrides ?? {}
+      blobOverrides.heroImage = {
+        bytes: Uint8Array.from(heroRaw),
+        mimeType: heroMime,
+      }
+    }
+
+    if (data.iconImage) {
+      const iconMime = data.iconImage.mimeType.trim().toLowerCase()
+      if (!iconMime.startsWith('image/')) {
+        throw new Error('Icon image must be an image.')
+      }
+      const iconRaw = Buffer.from(data.iconImage.imageBase64, 'base64')
+      if (iconRaw.length === 0 || iconRaw.length > 2_000_000) {
+        throw new Error('Icon image must be at most 2 MB.')
+      }
+      blobOverrides = blobOverrides ?? {}
+      blobOverrides.icon = {
+        bytes: Uint8Array.from(iconRaw),
+        mimeType: iconMime,
+      }
+    }
+
+    const retainedExistingScreenshotUrls = (
+      data.retainedExistingScreenshotUrls ?? []
+    )
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0)
+      .slice(0, 4)
+    const newScreenshots = (data.screenshotImages ?? []).map(
+      (screenshot, index) => {
+        const mime = screenshot.mimeType.trim().toLowerCase()
+        if (!mime.startsWith('image/')) {
+          throw new Error(`Screenshot ${index + 1} must be an image.`)
+        }
+        const raw = Buffer.from(screenshot.imageBase64, 'base64')
+        if (raw.length === 0 || raw.length > 12_000_000) {
+          throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
+        }
+        return { bytes: Uint8Array.from(raw), mimeType: mime }
+      },
+    )
+
+    const existingScreenshotUrls = full.screenshotUrls ?? []
+    const screenshotsChanged =
+      newScreenshots.length > 0 ||
+      retainedExistingScreenshotUrls.length !== existingScreenshotUrls.length ||
+      retainedExistingScreenshotUrls.some(
+        (url, index) => url !== existingScreenshotUrls[index],
+      )
+
+    if (screenshotsChanged) {
+      const retainedAsBlobs =
+        retainedExistingScreenshotUrls.length > 0 && newScreenshots.length > 0
+          ? await Promise.all(
+              retainedExistingScreenshotUrls.map(async (url, index) => {
+                let resolved
+                try {
+                  resolved = await resolveUrlToImageBytes(url)
+                } catch {
+                  throw new Error(
+                    `Could not keep existing screenshot ${index + 1}; please re-upload it.`,
+                  )
+                }
+                if (
+                  !resolved.mimeType.startsWith('image/') ||
+                  resolved.bytes.length === 0 ||
+                  resolved.bytes.length > 12_000_000
+                ) {
+                  throw new Error(
+                    `Existing screenshot ${index + 1} is invalid; please re-upload it.`,
+                  )
+                }
+                return resolved
+              }),
+            )
+          : []
+
+      /**
+       * When the caller uploaded new screenshots, re-pack the full ordered list (retained
+       * first, new next) as blob overrides; otherwise we just trim the existing list by
+       * passing through `screenshotUrls` in the patch below.
+       */
+      if (newScreenshots.length > 0) {
+        blobOverrides = blobOverrides ?? {}
+        blobOverrides.screenshots = [...retainedAsBlobs, ...newScreenshots].slice(
+          0,
+          4,
+        )
+      }
+    }
+
+    const patch: Partial<StoreListing> = {
+      name,
+      tagline: taglineClean,
+      fullDescription: descClean,
+      externalUrl,
+      categorySlugs: [categorySlug],
+      links,
+      productAccountDid: productAccountDid ?? undefined,
+      screenshotUrls:
+        screenshotsChanged && newScreenshots.length === 0
+          ? retainedExistingScreenshotUrls
+          : undefined,
+    }
+
+    const { uri } = await publishDirectoryListingDetail(full, patch, blobOverrides)
+
+    const now = new Date()
+    const t = context.schema.storeListings
+    await context.db
+      .update(t)
+      .set({
+        name,
+        tagline: taglineClean,
+        fullDescription: descClean,
+        externalUrl,
+        categorySlugs: [categorySlug],
+        productAccountDid,
+        productAccountHandle,
+        atUri: uri,
+        links,
+        updatedAt: now,
+      })
+      .where(eq(t.id, full.id))
+
+    return { slug: full.slug }
+  })
+
 export const directoryListingApi = {
   getHomePageData,
   getHomePageQueryOptions,
@@ -4613,6 +4942,7 @@ export const directoryListingApi = {
   getListingsMissingProductAccountHandleQueryOptions,
   setProductAccountHandleDev,
   ignoreMissingProductAccountHandleDev,
+  unignoreMissingProductAccountHandleDev,
   applyProductAccountCandidatesBatch,
   confirmProductAccountCandidate,
   rejectProductAccountCandidate,
@@ -4626,4 +4956,7 @@ export const directoryListingApi = {
   claimProductListingToPds,
   getProfileOwnedProductListings,
   getProfileOwnedProductListingsQueryOptions,
+  getStoreManagedListings,
+  getStoreManagedListingsQueryOptions,
+  updateStoreManagedListing,
 }

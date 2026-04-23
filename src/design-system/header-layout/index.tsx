@@ -37,6 +37,7 @@ const styles = stylex.create({
     flexShrink: 0,
   },
   page: {
+    containerType: "inline-size",
     boxSizing: "border-box",
     flexGrow: 1,
     marginLeft: "auto",

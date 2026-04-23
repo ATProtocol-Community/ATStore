@@ -16,7 +16,7 @@ import { Route as OgIndexRouteImport } from './routes/og.index'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutHomeRouteImport } from './routes/_header-layout.home'
-import { Route as HeaderLayoutAdminIndexRouteImport } from './routes/_header-layout.admin.index'
+import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
 import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
 import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
@@ -29,9 +29,9 @@ import { Route as HeaderLayoutCategoriesCategoryIdRouteImport } from './routes/_
 import { Route as HeaderLayoutAppsTagsRouteImport } from './routes/_header-layout.apps.tags'
 import { Route as HeaderLayoutAppsAllRouteImport } from './routes/_header-layout.apps.all'
 import { Route as HeaderLayoutAppsTagRouteImport } from './routes/_header-layout.apps.$tag'
-import { Route as HeaderLayoutAdminListingProductAccountsRouteImport } from './routes/_header-layout.admin.listing-product-accounts'
 import { Route as HeaderLayoutProductsProductIdIndexRouteImport } from './routes/_header-layout.products.$productId.index'
 import { Route as HeaderLayoutEcosystemsAppIndexRouteImport } from './routes/_header-layout.ecosystems.$app.index'
+import { Route as HeaderLayoutAdminLayoutAdminIndexRouteImport } from './routes/_header-layout._admin-layout.admin.index'
 import { Route as ApiAuthAtprotoSignupRouteImport } from './routes/api.auth.atproto.signup'
 import { Route as ApiAuthAtprotoMetadataDotjsonRouteImport } from './routes/api.auth.atproto.metadata[.]json'
 import { Route as ApiAuthAtprotoJwksDotjsonRouteImport } from './routes/api.auth.atproto.jwks[.]json'
@@ -41,6 +41,11 @@ import { Route as HeaderLayoutProductsProductIdReviewsRouteImport } from './rout
 import { Route as HeaderLayoutProductsProductIdMentionsRouteImport } from './routes/_header-layout.products.$productId.mentions'
 import { Route as HeaderLayoutProductsProductIdEditRouteImport } from './routes/_header-layout.products.$productId.edit'
 import { Route as HeaderLayoutEcosystemsAppAllRouteImport } from './routes/_header-layout.ecosystems.$app.all'
+import { Route as HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.unverified-listings'
+import { Route as HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport } from './routes/_header-layout._admin-layout.admin.pending-claims'
+import { Route as HeaderLayoutAdminLayoutAdminManagedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.managed-listings'
+import { Route as HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport } from './routes/_header-layout._admin-layout.admin.listing-product-accounts'
+import { Route as HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport } from './routes/_header-layout._admin-layout.admin.home-page-hero'
 import { Route as HeaderLayoutProductsProductIdReviewsIndexRouteImport } from './routes/_header-layout.products.$productId.reviews.index'
 import { Route as HeaderLayoutProductsProductIdReviewsWriteRouteImport } from './routes/_header-layout.products.$productId.reviews.write'
 import { Route as HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport } from './routes/_header-layout.products.$productId.reviews.$reviewId.edit'
@@ -80,9 +85,8 @@ const HeaderLayoutHomeRoute = HeaderLayoutHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const HeaderLayoutAdminIndexRoute = HeaderLayoutAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
+const HeaderLayoutAdminLayoutRoute = HeaderLayoutAdminLayoutRouteImport.update({
+  id: '/_admin-layout',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const HeaderLayoutProtocolTagsRoute =
@@ -153,12 +157,6 @@ const HeaderLayoutAppsTagRoute = HeaderLayoutAppsTagRouteImport.update({
   path: '/apps/$tag',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const HeaderLayoutAdminListingProductAccountsRoute =
-  HeaderLayoutAdminListingProductAccountsRouteImport.update({
-    id: '/admin/listing-product-accounts',
-    path: '/admin/listing-product-accounts',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
 const HeaderLayoutProductsProductIdIndexRoute =
   HeaderLayoutProductsProductIdIndexRouteImport.update({
     id: '/products/$productId/',
@@ -170,6 +168,12 @@ const HeaderLayoutEcosystemsAppIndexRoute =
     id: '/ecosystems/$app/',
     path: '/ecosystems/$app/',
     getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutAdminLayoutAdminIndexRoute =
+  HeaderLayoutAdminLayoutAdminIndexRouteImport.update({
+    id: '/admin/',
+    path: '/admin/',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
   } as any)
 const ApiAuthAtprotoSignupRoute = ApiAuthAtprotoSignupRouteImport.update({
   id: '/api/auth/atproto/signup',
@@ -222,6 +226,36 @@ const HeaderLayoutEcosystemsAppAllRoute =
     path: '/ecosystems/$app/all',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
+const HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute =
+  HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport.update({
+    id: '/admin/unverified-listings',
+    path: '/admin/unverified-listings',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
+const HeaderLayoutAdminLayoutAdminPendingClaimsRoute =
+  HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport.update({
+    id: '/admin/pending-claims',
+    path: '/admin/pending-claims',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
+const HeaderLayoutAdminLayoutAdminManagedListingsRoute =
+  HeaderLayoutAdminLayoutAdminManagedListingsRouteImport.update({
+    id: '/admin/managed-listings',
+    path: '/admin/managed-listings',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
+const HeaderLayoutAdminLayoutAdminListingProductAccountsRoute =
+  HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport.update({
+    id: '/admin/listing-product-accounts',
+    path: '/admin/listing-product-accounts',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
+const HeaderLayoutAdminLayoutAdminHomePageHeroRoute =
+  HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport.update({
+    id: '/admin/home-page-hero',
+    path: '/admin/home-page-hero',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
 const HeaderLayoutProductsProductIdReviewsIndexRoute =
   HeaderLayoutProductsProductIdReviewsIndexRouteImport.update({
     id: '/',
@@ -248,7 +282,6 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og/': typeof OgIndexRoute
-  '/admin/listing-product-accounts': typeof HeaderLayoutAdminListingProductAccountsRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
@@ -261,7 +294,11 @@ export interface FileRoutesByFullPath {
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
-  '/admin/': typeof HeaderLayoutAdminIndexRoute
+  '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -271,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
   '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
+  '/admin/': typeof HeaderLayoutAdminLayoutAdminIndexRoute
   '/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
   '/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
   '/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
@@ -284,7 +322,6 @@ export interface FileRoutesByTo {
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og': typeof OgIndexRoute
-  '/admin/listing-product-accounts': typeof HeaderLayoutAdminListingProductAccountsRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
@@ -297,7 +334,11 @@ export interface FileRoutesByTo {
   '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
-  '/admin': typeof HeaderLayoutAdminIndexRoute
+  '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -306,6 +347,7 @@ export interface FileRoutesByTo {
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
   '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
+  '/admin': typeof HeaderLayoutAdminLayoutAdminIndexRoute
   '/ecosystems/$app': typeof HeaderLayoutEcosystemsAppIndexRoute
   '/products/$productId': typeof HeaderLayoutProductsProductIdIndexRoute
   '/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
@@ -317,11 +359,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
   '/_header-layout/home': typeof HeaderLayoutHomeRoute
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
   '/_header-layout/search': typeof HeaderLayoutSearchRoute
   '/og/': typeof OgIndexRoute
-  '/_header-layout/admin/listing-product-accounts': typeof HeaderLayoutAdminListingProductAccountsRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
   '/_header-layout/apps/tags': typeof HeaderLayoutAppsTagsRoute
@@ -334,7 +376,11 @@ export interface FileRoutesById {
   '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
   '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
   '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
-  '/_header-layout/admin/': typeof HeaderLayoutAdminIndexRoute
+  '/_header-layout/_admin-layout/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  '/_header-layout/_admin-layout/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  '/_header-layout/_admin-layout/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/_header-layout/_admin-layout/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/_header-layout/_admin-layout/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/_header-layout/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
   '/_header-layout/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -344,6 +390,7 @@ export interface FileRoutesById {
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
   '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
+  '/_header-layout/_admin-layout/admin/': typeof HeaderLayoutAdminLayoutAdminIndexRoute
   '/_header-layout/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
   '/_header-layout/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
   '/_header-layout/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
@@ -359,7 +406,6 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/search'
     | '/og/'
-    | '/admin/listing-product-accounts'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
@@ -372,7 +418,11 @@ export interface FileRouteTypes {
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
-    | '/admin/'
+    | '/admin/home-page-hero'
+    | '/admin/listing-product-accounts'
+    | '/admin/managed-listings'
+    | '/admin/pending-claims'
+    | '/admin/unverified-listings'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
     | '/products/$productId/mentions'
@@ -382,6 +432,7 @@ export interface FileRouteTypes {
     | '/api/auth/atproto/jwks.json'
     | '/api/auth/atproto/metadata.json'
     | '/api/auth/atproto/signup'
+    | '/admin/'
     | '/ecosystems/$app/'
     | '/products/$productId/'
     | '/products/$productId/reviews/write'
@@ -395,7 +446,6 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/search'
     | '/og'
-    | '/admin/listing-product-accounts'
     | '/apps/$tag'
     | '/apps/all'
     | '/apps/tags'
@@ -408,7 +458,11 @@ export interface FileRouteTypes {
     | '/protocol/$category'
     | '/protocol/listings'
     | '/protocol/tags'
-    | '/admin'
+    | '/admin/home-page-hero'
+    | '/admin/listing-product-accounts'
+    | '/admin/managed-listings'
+    | '/admin/pending-claims'
+    | '/admin/unverified-listings'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
     | '/products/$productId/mentions'
@@ -417,6 +471,7 @@ export interface FileRouteTypes {
     | '/api/auth/atproto/jwks.json'
     | '/api/auth/atproto/metadata.json'
     | '/api/auth/atproto/signup'
+    | '/admin'
     | '/ecosystems/$app'
     | '/products/$productId'
     | '/products/$productId/reviews/write'
@@ -427,11 +482,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_header-layout'
     | '/login'
+    | '/_header-layout/_admin-layout'
     | '/_header-layout/home'
     | '/_header-layout/notifications'
     | '/_header-layout/search'
     | '/og/'
-    | '/_header-layout/admin/listing-product-accounts'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
     | '/_header-layout/apps/tags'
@@ -444,7 +499,11 @@ export interface FileRouteTypes {
     | '/_header-layout/protocol/$category'
     | '/_header-layout/protocol/listings'
     | '/_header-layout/protocol/tags'
-    | '/_header-layout/admin/'
+    | '/_header-layout/_admin-layout/admin/home-page-hero'
+    | '/_header-layout/_admin-layout/admin/listing-product-accounts'
+    | '/_header-layout/_admin-layout/admin/managed-listings'
+    | '/_header-layout/_admin-layout/admin/pending-claims'
+    | '/_header-layout/_admin-layout/admin/unverified-listings'
     | '/_header-layout/ecosystems/$app/all'
     | '/_header-layout/products/$productId/edit'
     | '/_header-layout/products/$productId/mentions'
@@ -454,6 +513,7 @@ export interface FileRouteTypes {
     | '/api/auth/atproto/jwks.json'
     | '/api/auth/atproto/metadata.json'
     | '/api/auth/atproto/signup'
+    | '/_header-layout/_admin-layout/admin/'
     | '/_header-layout/ecosystems/$app/'
     | '/_header-layout/products/$productId/'
     | '/_header-layout/products/$productId/reviews/write'
@@ -524,11 +584,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutHomeRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
-    '/_header-layout/admin/': {
-      id: '/_header-layout/admin/'
-      path: '/admin'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof HeaderLayoutAdminIndexRouteImport
+    '/_header-layout/_admin-layout': {
+      id: '/_header-layout/_admin-layout'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/protocol/tags': {
@@ -615,13 +675,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutAppsTagRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
-    '/_header-layout/admin/listing-product-accounts': {
-      id: '/_header-layout/admin/listing-product-accounts'
-      path: '/admin/listing-product-accounts'
-      fullPath: '/admin/listing-product-accounts'
-      preLoaderRoute: typeof HeaderLayoutAdminListingProductAccountsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
     '/_header-layout/products/$productId/': {
       id: '/_header-layout/products/$productId/'
       path: '/products/$productId'
@@ -635,6 +688,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ecosystems/$app/'
       preLoaderRoute: typeof HeaderLayoutEcosystemsAppIndexRouteImport
       parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/_admin-layout/admin/': {
+      id: '/_header-layout/_admin-layout/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminIndexRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
     }
     '/api/auth/atproto/signup': {
       id: '/api/auth/atproto/signup'
@@ -699,6 +759,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutEcosystemsAppAllRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
+    '/_header-layout/_admin-layout/admin/unverified-listings': {
+      id: '/_header-layout/_admin-layout/admin/unverified-listings'
+      path: '/admin/unverified-listings'
+      fullPath: '/admin/unverified-listings'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
+    '/_header-layout/_admin-layout/admin/pending-claims': {
+      id: '/_header-layout/_admin-layout/admin/pending-claims'
+      path: '/admin/pending-claims'
+      fullPath: '/admin/pending-claims'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
+    '/_header-layout/_admin-layout/admin/managed-listings': {
+      id: '/_header-layout/_admin-layout/admin/managed-listings'
+      path: '/admin/managed-listings'
+      fullPath: '/admin/managed-listings'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
+    '/_header-layout/_admin-layout/admin/listing-product-accounts': {
+      id: '/_header-layout/_admin-layout/admin/listing-product-accounts'
+      path: '/admin/listing-product-accounts'
+      fullPath: '/admin/listing-product-accounts'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
+    '/_header-layout/_admin-layout/admin/home-page-hero': {
+      id: '/_header-layout/_admin-layout/admin/home-page-hero'
+      path: '/admin/home-page-hero'
+      fullPath: '/admin/home-page-hero'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
     '/_header-layout/products/$productId/reviews/': {
       id: '/_header-layout/products/$productId/reviews/'
       path: '/'
@@ -723,6 +818,36 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface HeaderLayoutAdminLayoutRouteChildren {
+  HeaderLayoutAdminLayoutAdminHomePageHeroRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  HeaderLayoutAdminLayoutAdminListingProductAccountsRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  HeaderLayoutAdminLayoutAdminManagedListingsRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  HeaderLayoutAdminLayoutAdminPendingClaimsRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute: typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
+  HeaderLayoutAdminLayoutAdminIndexRoute: typeof HeaderLayoutAdminLayoutAdminIndexRoute
+}
+
+const HeaderLayoutAdminLayoutRouteChildren: HeaderLayoutAdminLayoutRouteChildren =
+  {
+    HeaderLayoutAdminLayoutAdminHomePageHeroRoute:
+      HeaderLayoutAdminLayoutAdminHomePageHeroRoute,
+    HeaderLayoutAdminLayoutAdminListingProductAccountsRoute:
+      HeaderLayoutAdminLayoutAdminListingProductAccountsRoute,
+    HeaderLayoutAdminLayoutAdminManagedListingsRoute:
+      HeaderLayoutAdminLayoutAdminManagedListingsRoute,
+    HeaderLayoutAdminLayoutAdminPendingClaimsRoute:
+      HeaderLayoutAdminLayoutAdminPendingClaimsRoute,
+    HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute:
+      HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute,
+    HeaderLayoutAdminLayoutAdminIndexRoute:
+      HeaderLayoutAdminLayoutAdminIndexRoute,
+  }
+
+const HeaderLayoutAdminLayoutRouteWithChildren =
+  HeaderLayoutAdminLayoutRoute._addFileChildren(
+    HeaderLayoutAdminLayoutRouteChildren,
+  )
+
 interface HeaderLayoutProductsProductIdReviewsRouteChildren {
   HeaderLayoutProductsProductIdReviewsWriteRoute: typeof HeaderLayoutProductsProductIdReviewsWriteRoute
   HeaderLayoutProductsProductIdReviewsIndexRoute: typeof HeaderLayoutProductsProductIdReviewsIndexRoute
@@ -745,10 +870,10 @@ const HeaderLayoutProductsProductIdReviewsRouteWithChildren =
   )
 
 interface HeaderLayoutRouteChildren {
+  HeaderLayoutAdminLayoutRoute: typeof HeaderLayoutAdminLayoutRouteWithChildren
   HeaderLayoutHomeRoute: typeof HeaderLayoutHomeRoute
   HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
   HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
-  HeaderLayoutAdminListingProductAccountsRoute: typeof HeaderLayoutAdminListingProductAccountsRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
   HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
@@ -761,7 +886,6 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
   HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
   HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
-  HeaderLayoutAdminIndexRoute: typeof HeaderLayoutAdminIndexRoute
   HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
   HeaderLayoutProductsProductIdEditRoute: typeof HeaderLayoutProductsProductIdEditRoute
   HeaderLayoutProductsProductIdMentionsRoute: typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -771,11 +895,10 @@ interface HeaderLayoutRouteChildren {
 }
 
 const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
+  HeaderLayoutAdminLayoutRoute: HeaderLayoutAdminLayoutRouteWithChildren,
   HeaderLayoutHomeRoute: HeaderLayoutHomeRoute,
   HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
   HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
-  HeaderLayoutAdminListingProductAccountsRoute:
-    HeaderLayoutAdminListingProductAccountsRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
   HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
@@ -788,7 +911,6 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
   HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
   HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,
-  HeaderLayoutAdminIndexRoute: HeaderLayoutAdminIndexRoute,
   HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
   HeaderLayoutProductsProductIdEditRoute:
     HeaderLayoutProductsProductIdEditRoute,

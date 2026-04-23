@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, createLink, redirect } from "@tanstack/react-router";
+import { createFileRoute, createLink } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { UserHandleAutocomplete } from "../components/user-handle-autocomplete";
@@ -11,13 +11,14 @@ import { Checkbox } from "../design-system/checkbox";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
+import { Switch } from "../design-system/switch";
 import { criticalColor, uiColor } from "../design-system/theme/color.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import {
   Body,
@@ -26,7 +27,6 @@ import {
   SmallBody,
 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 import {
   directoryListingApi,
   type ListingMissingProductAccountHandleItem,
@@ -34,37 +34,21 @@ import {
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 export const Route = createFileRoute(
-  "/_header-layout/admin/listing-product-accounts",
+  "/_header-layout/_admin-layout/admin/listing-product-accounts",
 )({
   loader: async ({ context }) => {
-    try {
-      await context.queryClient.ensureQueryData(
-        adminApi.getAdminDashboardQueryOptions,
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg === "Unauthorized") {
-        throw redirect({
-          to: "/login",
-          search: { redirect: "/admin/listing-product-accounts" },
-        });
-      }
-      throw redirect({ to: "/" });
-    }
-
     await Promise.all([
       context.queryClient.prefetchQuery(
         directoryListingApi.getPendingProductAccountCandidatesQueryOptions,
       ),
       context.queryClient.prefetchQuery(
-        directoryListingApi.getListingsMissingProductAccountHandleQueryOptions,
+        directoryListingApi.getListingsMissingProductAccountHandleQueryOptions(),
       ),
     ]);
   },
   component: AdminListingProductAccountsPage,
 });
 
-const AppLink = createLink(Link);
 const ProductLink = createLink(Link);
 
 const styles = stylex.create({
@@ -81,10 +65,6 @@ const styles = stylex.create({
   pageHeader: {
     gap: gap["4xl"],
     maxWidth: "56rem",
-  },
-  navLinks: {
-    flexWrap: "wrap",
-    gap: gap.xl,
   },
   list: {
     gap: gap["2xl"],
@@ -141,6 +121,15 @@ const styles = stylex.create({
     paddingTop: verticalSpace["3xl"],
     width: "100%",
   },
+  toggleRow: {
+    gap: gap.lg,
+  },
+  ignoredCard: {
+    opacity: 0.7,
+  },
+  ignoredBadge: {
+    color: uiColor.text2,
+  },
 });
 
 function profileUrl(didOrHandle: string) {
@@ -179,6 +168,7 @@ function AdminListingProductAccountsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [showIgnored, setShowIgnored] = useState(false);
 
   const { data: rows, isFetching } = useQuery({
     ...directoryListingApi.getPendingProductAccountCandidatesQueryOptions,
@@ -190,18 +180,22 @@ function AdminListingProductAccountsPage() {
     isError: isMissingHandleError,
     error: missingHandleError,
   } = useQuery({
-    ...directoryListingApi.getListingsMissingProductAccountHandleQueryOptions,
+    ...directoryListingApi.getListingsMissingProductAccountHandleQueryOptions({
+      includeIgnored: showIgnored,
+    }),
   });
+
+  const invalidateMissingHandleQueries = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["storeListings", "dev", "listingsMissingProductAccountHandle"],
+    });
+  };
 
   const saveHandleMutation = useMutation({
     mutationFn: (vars: { listingId: string; handle?: string }) =>
       directoryListingApi.setProductAccountHandleDev({ data: vars }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey:
-          directoryListingApi.getListingsMissingProductAccountHandleQueryOptions
-            .queryKey,
-      });
+      await invalidateMissingHandleQueries();
       await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
     },
   });
@@ -209,11 +203,17 @@ function AdminListingProductAccountsPage() {
     mutationFn: (vars: { listingId: string }) =>
       directoryListingApi.ignoreMissingProductAccountHandleDev({ data: vars }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey:
-          directoryListingApi.getListingsMissingProductAccountHandleQueryOptions
-            .queryKey,
-      });
+      await invalidateMissingHandleQueries();
+      await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
+    },
+  });
+  const unignoreMissingHandleMutation = useMutation({
+    mutationFn: (vars: { listingId: string }) =>
+      directoryListingApi.unignoreMissingProductAccountHandleDev({
+        data: vars,
+      }),
+    onSuccess: async () => {
+      await invalidateMissingHandleQueries();
       await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
     },
   });
@@ -267,33 +267,37 @@ function AdminListingProductAccountsPage() {
     ignoreMissingHandleMutation.variables
       ? ignoreMissingHandleMutation.variables.listingId
       : null;
+  const pendingUnignoreId =
+    unignoreMissingHandleMutation.isPending &&
+    unignoreMissingHandleMutation.variables
+      ? unignoreMissingHandleMutation.variables.listingId
+      : null;
+
+  const ignoredCount =
+    missingHandleRows?.filter((r) => r.productAccountHandleIgnoredAt).length ??
+    0;
 
   return (
     <Page.Root variant="large" style={styles.page}>
       <Flex direction="column" gap="6xl" style={styles.section}>
         <Flex direction="column" style={styles.pageContent}>
-          <Flex style={styles.navLinks}>
-            <AppLink to="/admin">Admin dashboard</AppLink>
-            <AppLink to="/home">Home</AppLink>
-          </Flex>
-
           <Flex direction="column" style={styles.pageHeader}>
             <Heading1>Product Bluesky account</Heading1>
-            <Body style={styles.meta}>
-              All pending candidates are listed below. Check each row to publish{" "}
-              <code>productAccountDid</code> for that listing; unchecked rows
-              are rejected. Use the button at the bottom to apply everything at
-              once.
-            </Body>
           </Flex>
 
           <Flex direction="column" gap="xl" style={styles.pageHeader}>
-            <Heading2>Missing handle (@unknown on /apps/tags)</Heading2>
+            <Heading2>Missing handle for any listing</Heading2>
             <Body style={styles.meta}>
               Listings with no stored Bluesky handle (empty or whitespace only).
               Enter a handle and this page will resolve the DID for you before
               saving to Postgres.
             </Body>
+            <Flex align="center" style={styles.toggleRow}>
+              <Switch isSelected={showIgnored} onChange={setShowIgnored}>
+                Show ignored listings
+                {showIgnored && ignoredCount > 0 ? ` (${ignoredCount})` : null}
+              </Switch>
+            </Flex>
             {missingHandleFetching && !missingHandleRows?.length ? (
               <SmallBody>Loading…</SmallBody>
             ) : isMissingHandleError ? (
@@ -307,39 +311,53 @@ function AdminListingProductAccountsPage() {
             ) : !missingHandleRows?.length ? (
               <Card style={styles.rowCard}>
                 <Body>
-                  Every listing has a non-empty handle in the database.
+                  {showIgnored
+                    ? "No listings are missing a handle."
+                    : "Every listing has a non-empty handle, or the remaining ones are ignored."}
                 </Body>
               </Card>
             ) : (
               <Flex direction="column" style={styles.list}>
-                {missingHandleRows.map((listing) => (
-                  <MissingHandleRow
-                    key={listing.id}
-                    errorMessage={
-                      saveHandleMutation.isError &&
-                      saveHandleMutation.variables?.listingId === listing.id
-                        ? saveHandleMutation.error instanceof Error
-                          ? saveHandleMutation.error.message
-                          : String(saveHandleMutation.error)
-                        : ignoreMissingHandleMutation.isError &&
-                            ignoreMissingHandleMutation.variables?.listingId ===
-                              listing.id
-                          ? ignoreMissingHandleMutation.error instanceof Error
-                            ? ignoreMissingHandleMutation.error.message
-                            : String(ignoreMissingHandleMutation.error)
+                {missingHandleRows.map((listing) => {
+                  const rowError =
+                    saveHandleMutation.isError &&
+                    saveHandleMutation.variables?.listingId === listing.id
+                      ? saveHandleMutation.error
+                      : ignoreMissingHandleMutation.isError &&
+                          ignoreMissingHandleMutation.variables?.listingId ===
+                            listing.id
+                        ? ignoreMissingHandleMutation.error
+                        : unignoreMissingHandleMutation.isError &&
+                            unignoreMissingHandleMutation.variables
+                              ?.listingId === listing.id
+                          ? unignoreMissingHandleMutation.error
+                          : undefined;
+                  return (
+                    <MissingHandleRow
+                      key={listing.id}
+                      errorMessage={
+                        rowError
+                          ? rowError instanceof Error
+                            ? rowError.message
+                            : String(rowError)
                           : undefined
-                    }
-                    isIgnoring={pendingIgnoreId === listing.id}
-                    isSaving={pendingSaveId === listing.id}
-                    listing={listing}
-                    onIgnore={(listingId) => {
-                      ignoreMissingHandleMutation.mutate({ listingId });
-                    }}
-                    onSave={(listingId, payload) => {
-                      saveHandleMutation.mutate({ listingId, ...payload });
-                    }}
-                  />
-                ))}
+                      }
+                      isIgnoring={pendingIgnoreId === listing.id}
+                      isSaving={pendingSaveId === listing.id}
+                      isUnignoring={pendingUnignoreId === listing.id}
+                      listing={listing}
+                      onIgnore={(listingId) => {
+                        ignoreMissingHandleMutation.mutate({ listingId });
+                      }}
+                      onSave={(listingId, payload) => {
+                        saveHandleMutation.mutate({ listingId, ...payload });
+                      }}
+                      onUnignore={(listingId) => {
+                        unignoreMissingHandleMutation.mutate({ listingId });
+                      }}
+                    />
+                  );
+                })}
               </Flex>
             )}
           </Flex>
@@ -349,49 +367,6 @@ function AdminListingProductAccountsPage() {
               {error}
             </Text>
           ) : null}
-
-          {isFetching && !rows?.length ? (
-            <SmallBody>Loading…</SmallBody>
-          ) : !rows?.length ? (
-            <Card style={styles.rowCard}>
-              <Body>No pending candidates. Run </Body>
-              <code>pnpm discover:product-bsky</code>
-              <Body> to enqueue.</Body>
-            </Card>
-          ) : (
-            <>
-              <Flex direction="column" style={styles.list}>
-                {rows.map((item) => (
-                  <CandidateRow
-                    key={item.candidateId}
-                    item={item}
-                    isSelected={selected[item.candidateId] !== false}
-                    onSelectedChange={(value) => {
-                      setSelected((s) => ({
-                        ...s,
-                        [item.candidateId]: value,
-                      }));
-                    }}
-                  />
-                ))}
-              </Flex>
-
-              <Flex direction="column" style={styles.footer}>
-                <SmallBody style={styles.meta}>
-                  Confirms all checked rows on the store PDS; rejects every
-                  unchecked pending candidate (failed confirms stay pending for
-                  a later run).
-                </SmallBody>
-                <Button
-                  isDisabled={busy || !rows.length}
-                  isPending={busy}
-                  onPress={() => void onApplyBatch()}
-                >
-                  Confirm checked &amp; reject others
-                </Button>
-              </Flex>
-            </>
-          )}
         </Flex>
       </Flex>
     </Page.Root>
@@ -402,23 +377,28 @@ function MissingHandleRow({
   listing,
   onSave,
   onIgnore,
+  onUnignore,
   isSaving,
   isIgnoring,
+  isUnignoring,
   errorMessage,
 }: {
   listing: ListingMissingProductAccountHandleItem;
   onSave: (listingId: string, payload: { handle?: string }) => void;
   onIgnore: (listingId: string) => void;
+  onUnignore: (listingId: string) => void;
   isSaving: boolean;
   isIgnoring: boolean;
+  isUnignoring: boolean;
   errorMessage?: string;
 }) {
   const [handleValue, setHandleValue] = useState("");
   const canSave = Boolean(handleValue.trim());
   const attemptDomainHandle = guessDomainHandleFromUrl(listing.externalUrl);
+  const isIgnored = Boolean(listing.productAccountHandleIgnoredAt);
 
   return (
-    <Card style={styles.rowCard}>
+    <Card style={[styles.rowCard, isIgnored && styles.ignoredCard]}>
       <Flex align="start" gap="xl" style={styles.rowInner} wrap>
         <Avatar
           alt={listing.name}
@@ -427,9 +407,14 @@ function MissingHandleRow({
           src={listing.iconUrl ?? undefined}
         />
         <Flex direction="column" gap="sm" style={styles.rowMain}>
-          <Text size="lg" weight="semibold">
-            {listing.name}
-          </Text>
+          <Flex align="center" gap="md" wrap>
+            <Text size="lg" weight="semibold">
+              {listing.name}
+            </Text>
+            {isIgnored ? (
+              <SmallBody style={styles.ignoredBadge}>· Ignored</SmallBody>
+            ) : null}
+          </Flex>
           <SmallBody style={styles.meta}>
             <ProductLink
               params={{ productId: listing.slug }}
@@ -480,6 +465,7 @@ function MissingHandleRow({
                 !attemptDomainHandle ||
                 isSaving ||
                 isIgnoring ||
+                isUnignoring ||
                 handleValue.trim() === attemptDomainHandle
               }
               onPress={() => {
@@ -492,7 +478,7 @@ function MissingHandleRow({
               Use attempt
             </Button>
             <Button
-              isDisabled={!canSave || isSaving}
+              isDisabled={!canSave || isSaving || isUnignoring}
               isPending={isSaving}
               onPress={() =>
                 onSave(listing.id, {
@@ -502,14 +488,25 @@ function MissingHandleRow({
             >
               Save handle
             </Button>
-            <Button
-              isDisabled={isSaving || isIgnoring}
-              isPending={isIgnoring}
-              onPress={() => onIgnore(listing.id)}
-              variant="secondary"
-            >
-              Ignore listing
-            </Button>
+            {isIgnored ? (
+              <Button
+                isDisabled={isSaving || isUnignoring}
+                isPending={isUnignoring}
+                onPress={() => onUnignore(listing.id)}
+                variant="secondary"
+              >
+                Un-ignore
+              </Button>
+            ) : (
+              <Button
+                isDisabled={isSaving || isIgnoring}
+                isPending={isIgnoring}
+                onPress={() => onIgnore(listing.id)}
+                variant="secondary"
+              >
+                Ignore listing
+              </Button>
+            )}
           </Flex>
           {errorMessage ? (
             <Text size="sm" style={styles.errorText}>

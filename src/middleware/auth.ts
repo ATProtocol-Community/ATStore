@@ -10,15 +10,22 @@ import { redirect } from '@tanstack/react-router'
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 
-import { fetchBlueskyHandleForDid } from '#/lib/bluesky-public-profile'
-import { isAdminHandle } from '#/lib/admin'
 import { getSafePostLoginRedirect } from '#/utils/auth-redirect'
 
 export type AtprotoSessionContext = {
   did: string
   atprotoSession: unknown
   client: Client
-  session: { user: { id: string; name: string; email: string | null; did: string | null; image: string | null } }
+  session: {
+    user: {
+      id: string
+      name: string
+      email: string | null
+      did: string | null
+      image: string | null
+      isAdmin: boolean
+    }
+  }
 }
 
 /** Session + ATProto `Client` when cookies and OAuth session are valid. */
@@ -96,20 +103,19 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
   return await next({ context })
 })
 
-/** Like `authMiddleware`, but only allows the configured admin Bluesky handle. */
+/** Route middleware: only allow users flagged as admin in the `user` table. */
 export const adminRouteMiddleware = createMiddleware().server(async ({ next }) => {
   const request = getRequest()
   const context = await getAtprotoSessionForRequest(request)
 
-  if (!context?.session.user.did) {
+  if (!context) {
     throw redirect({
       to: '/login',
       search: { redirect: getSafePostLoginRedirect(request) },
     })
   }
 
-  const handle = await fetchBlueskyHandleForDid(context.session.user.did)
-  if (!isAdminHandle(handle)) {
+  if (!context.session.user.isAdmin) {
     throw redirect({ to: '/' })
   }
 
@@ -125,16 +131,15 @@ export const maybeAuthMiddleware = createMiddleware({ type: 'function' }).server
   },
 )
 
-/** Server functions: require Bluesky handle in `ADMIN_HANDLE` (default hipstersmoothie.com). */
+/** Server functions: require an admin-flagged user row. */
 export const adminFnMiddleware = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     const request = getRequest()
     const ctx = await getAtprotoSessionForRequest(request)
-    if (!ctx?.session.user.did) {
+    if (!ctx) {
       throw new Error('Unauthorized')
     }
-    const handle = await fetchBlueskyHandleForDid(ctx.session.user.did)
-    if (!isAdminHandle(handle)) {
+    if (!ctx.session.user.isAdmin) {
       throw new Error('Forbidden')
     }
     return await next({ context: { adminSession: ctx } })
