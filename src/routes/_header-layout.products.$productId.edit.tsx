@@ -122,6 +122,7 @@ function EditProductListingPage() {
           categorySlug: values.categorySlug,
           productHandle: values.productHandle,
           links: values.links,
+          appTags: values.appTags,
         },
       });
 
@@ -218,6 +219,7 @@ function EditProductListingPage() {
         iconUrl: listing.iconUrl ?? null,
         screenshotUrls: listing.screenshots ?? [],
         links: listing.links ?? [],
+        appTags: listing.appTags ?? [],
       }}
       onCancel={() => {
         void navigate({

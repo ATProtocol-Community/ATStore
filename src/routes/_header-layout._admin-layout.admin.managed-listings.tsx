@@ -99,9 +99,7 @@ const styles = stylex.create({
   devToolsHelp: {
     color: uiColor.text2,
   },
-  devToolsStatus: {
-    minHeight: "1.25rem",
-  },
+
   imageReviewCard: {
     boxShadow: shadow.lg,
   },
@@ -247,7 +245,7 @@ function AdminManagedListingsPage() {
                   style={styles.pickerAvatar}
                   fallback={selectedSummary.name.slice(0, 2).toUpperCase()}
                 />
-                <Flex direction="column">
+                <Flex direction="column" gap="xl">
                   <Text weight="semibold">{selectedSummary.name}</Text>
                   <SmallBody variant="secondary">
                     /products/{selectedSummary.slug} ·{" "}
@@ -558,6 +556,7 @@ function ManagedListingEditor({
           categorySlug: values.categorySlug,
           productHandle: values.productHandle,
           links: values.links,
+          appTags: values.appTags,
           heroImage,
           iconImage,
           retainedExistingScreenshotUrls: values.retainedScreenshotUrls,
@@ -598,7 +597,7 @@ function ManagedListingEditor({
 
   return (
     <Flex direction="column" gap="5xl">
-      <Card style={styles.devToolsCard}>
+      <Card>
         <Flex direction="column" style={styles.devToolsBody}>
           <Text size="lg" weight="semibold">
             Dev tools
@@ -646,72 +645,16 @@ function ManagedListingEditor({
             </Button>
           </Flex>
 
-          <Flex direction="column" style={styles.devToolsFieldGroup}>
-            <Text size="sm" weight="semibold">
-              Quick-save category
-            </Text>
-            <TextField
-              label="Category slug"
-              value={devCategorySlugDraft}
-              onChange={setDevCategorySlugDraft}
-              placeholder="apps/bluesky/clients"
-            />
-            <Button
-              variant="secondary"
-              isPending={pendingMetadataSave === "category"}
-              isDisabled={
-                pendingGeneration !== null ||
-                imageReviewDraft !== null ||
-                pendingMetadataSave !== null ||
-                !categoryDirty
+          {toolbarStatus && (
+            <Text
+              size="sm"
+              variant={
+                toolbarStatus?.tone === "critical" ? "critical" : "secondary"
               }
-              onPress={() => void saveDevCategory()}
             >
-              Save category
-            </Button>
-            <SmallBody style={styles.devToolsHelp}>
-              Current: {listing.categorySlug ?? "none"}
-            </SmallBody>
-          </Flex>
-
-          <Flex direction="column" style={styles.devToolsFieldGroup}>
-            <Text size="sm" weight="semibold">
-              Quick-save app tags
+              {toolbarStatus?.text ?? " "}
             </Text>
-            <TextField
-              label="Comma-separated tags"
-              value={devAppTagsDraft}
-              onChange={setDevAppTagsDraft}
-              placeholder="social, developer-tool"
-            />
-            <Button
-              variant="secondary"
-              isPending={pendingMetadataSave === "tags"}
-              isDisabled={
-                pendingGeneration !== null ||
-                imageReviewDraft !== null ||
-                pendingMetadataSave !== null ||
-                !tagsDirty
-              }
-              onPress={() => void saveDevAppTags()}
-            >
-              Save tags
-            </Button>
-            <SmallBody style={styles.devToolsHelp}>
-              Current:{" "}
-              {listing.appTags.length > 0 ? listing.appTags.join(", ") : "none"}
-            </SmallBody>
-          </Flex>
-
-          <Text
-            size="sm"
-            variant={
-              toolbarStatus?.tone === "critical" ? "critical" : "secondary"
-            }
-            style={styles.devToolsStatus}
-          >
-            {toolbarStatus?.text ?? " "}
-          </Text>
+          )}
         </Flex>
       </Card>
 
@@ -786,6 +729,7 @@ function ManagedListingEditor({
           iconUrl: listing.iconUrl ?? null,
           screenshotUrls: listing.screenshots ?? [],
           links: listing.links ?? [],
+          appTags: listing.appTags ?? [],
         }}
         onCancel={onClear}
         onSubmit={(values) => saveMutation.mutate(values)}

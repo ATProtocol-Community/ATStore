@@ -6,13 +6,19 @@ import {
   Link as RouterLink,
   useRouter,
 } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, SearchX } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Card } from "../design-system/card";
+import {
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateImage,
+  EmptyStateTitle,
+} from "../design-system/empty-state";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
@@ -165,8 +171,7 @@ const styles = stylex.create({
     flexShrink: 0,
   },
   emptyState: {
-    gap: gap["lg"],
-    maxWidth: "40rem",
+    padding: verticalSpace["10xl"],
   },
 });
 
@@ -276,14 +281,15 @@ function SearchPage() {
               ))}
             </Grid>
           ) : (
-            <Flex direction="column" style={styles.emptyState}>
-              <Text size="2xl" weight="semibold">
-                No listings matched your search
-              </Text>
-              <Body variant="secondary">
+            <EmptyState size="lg" style={styles.emptyState}>
+              <EmptyStateImage>
+                <SearchX size={64} strokeWidth={2} />
+              </EmptyStateImage>
+              <EmptyStateTitle>No listings matched your search</EmptyStateTitle>
+              <EmptyStateDescription>
                 Try a different keyword to search across the full directory.
-              </Body>
-            </Flex>
+              </EmptyStateDescription>
+            </EmptyState>
           )}
         </Flex>
       </Flex>

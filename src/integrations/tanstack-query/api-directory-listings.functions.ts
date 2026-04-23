@@ -1857,6 +1857,49 @@ const getAppsByTagQueryOptions = queryOptions({
   queryFn: async () => getAppsByTag(),
 })
 
+/**
+ * Distinct app tags currently assigned to top-level `apps/<slug>` listings,
+ * sorted by popularity then alphabetically. Powers the tag picker in the
+ * listing editor so users choose from tags other top-level app listings
+ * already use (rather than a hard-coded canonical set).
+ *
+ * Sub-app rows (e.g. `apps/bluesky/client`) are intentionally excluded — the
+ * lexicon/form invariant is that app tags only apply to top-level apps, so
+ * any tags lingering on sub-app rows are stale data and must not leak into
+ * the picker.
+ */
+const getAllDirectoryListingAppTags = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const table = context.schema.storeListings
+    const rows = await context.db
+      .select({ appTags: table.appTags, categorySlugs: table.categorySlugs })
+      .from(table)
+
+    const counts = new Map<string, number>()
+    for (const row of rows) {
+      const hasTopLevelAppCategory = (row.categorySlugs ?? []).some(
+        isEditableAppCategorySlug,
+      )
+      if (!hasTopLevelAppCategory) continue
+      for (const tag of normalizeAppTags(row.appTags ?? [])) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1)
+      }
+    }
+
+    return [...counts.entries()]
+      .map(([tag, count]): DirectoryAppTagSummary => ({ tag, count }))
+      .sort((left, right) => {
+        if (right.count !== left.count) return right.count - left.count
+        return left.tag.localeCompare(right.tag)
+      })
+  })
+
+const getAllDirectoryListingAppTagsQueryOptions = queryOptions({
+  queryKey: ['storeListings', 'allAppTags'] as const,
+  queryFn: async () => getAllDirectoryListingAppTags(),
+})
+
 const getAllAppsInput = z.object({
   sort: listingSortInput,
 })
@@ -3818,6 +3861,16 @@ const listingExternalUrlSchema = z
     }
   }, 'Enter a valid http(s) URL')
 
+/**
+ * App tags only apply to top-level app listings (`apps/<slug>`). App-tool
+ * sub-branches and protocol listings must not carry tags — mirrors the invariant
+ * enforced by `updateDirectoryListingAppTags`.
+ */
+function isEditableAppCategorySlug(categorySlug: string): boolean {
+  const parts = categorySlug.split('/').filter(Boolean)
+  return parts.length === 2 && parts[0] === 'apps'
+}
+
 function normalizeEditableListingCategorySlug(value: string): string {
   const raw = value.trim().replace(/^app\//i, 'apps/')
   const option = getDirectoryCategoryOption(raw)
@@ -3858,6 +3911,7 @@ const updateOwnedProductListingInput = z.object({
     .max(LISTING_LINK_MAX_COUNT)
     .optional()
     .default([]),
+  appTags: z.array(z.string()).max(64).optional().default([]),
 })
 
 const createOwnedProductListingInput = z.object({
@@ -3985,6 +4039,15 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
 
     const links = normalizeListingLinks(data.links as ListingLink[])
 
+    /**
+     * Only `apps/<slug>` listings surface app tags; clear them otherwise so we don't
+     * carry stale editorial tags across a category change (mirrors the invariant
+     * enforced by `updateDirectoryListingAppTags`).
+     */
+    const appTags = isEditableAppCategorySlug(categorySlug)
+      ? normalizeAppTags(data.appTags ?? [])
+      : []
+
     const patch: Partial<StoreListing> = {
       name,
       tagline: taglineClean,
@@ -3993,6 +4056,7 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
       categorySlugs: [categorySlug],
       productAccountDid: session.did,
       links,
+      appTags,
     }
 
     const { uri } = await publishOwnedListingDetail(
@@ -4016,6 +4080,7 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
         productAccountHandle,
         atUri: uri,
         links,
+        appTags,
         updatedAt: now,
       })
       .where(eq(t.id, full.id))
@@ -4654,6 +4719,7 @@ const updateStoreManagedListingInput = z.object({
     .max(LISTING_LINK_MAX_COUNT)
     .optional()
     .default([]),
+  appTags: z.array(z.string()).max(64).optional().default([]),
   heroImage: z
     .object({
       mimeType: z.string().min(3).max(128),
@@ -4728,6 +4794,9 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
     }
 
     const links = normalizeListingLinks(data.links as ListingLink[])
+    const appTags = isEditableAppCategorySlug(categorySlug)
+      ? normalizeAppTags(data.appTags ?? [])
+      : []
 
     let blobOverrides:
       | {
@@ -4845,6 +4914,7 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
       externalUrl,
       categorySlugs: [categorySlug],
       links,
+      appTags,
       productAccountDid: productAccountDid ?? undefined,
       screenshotUrls:
         screenshotsChanged && newScreenshots.length === 0
@@ -4868,6 +4938,7 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
         productAccountHandle,
         atUri: uri,
         links,
+        appTags,
         updatedAt: now,
       })
       .where(eq(t.id, full.id))
@@ -4996,6 +5067,7 @@ const createStoreManagedListingInput = z.object({
     .max(LISTING_LINK_MAX_COUNT)
     .optional()
     .default([]),
+  appTags: z.array(z.string()).max(64).optional().default([]),
   heroImage: z
     .object({
       mimeType: z.string().min(3).max(128),
@@ -5052,6 +5124,9 @@ const createStoreManagedListing = createServerFn({ method: 'POST' })
 
     const now = new Date()
     const links = normalizeListingLinks(data.links as ListingLink[])
+    const appTags = isEditableAppCategorySlug(categorySlug)
+      ? normalizeAppTags(data.appTags ?? [])
+      : []
     const draftRow: StoreListing = {
       id: crypto.randomUUID(),
       sourceUrl: externalUrl,
@@ -5063,7 +5138,7 @@ const createStoreManagedListing = createServerFn({ method: 'POST' })
       tagline: taglineClean,
       fullDescription: descClean,
       categorySlugs: [categorySlug],
-      appTags: [],
+      appTags,
       links,
       atUri: null,
       repoDid,
@@ -5170,6 +5245,8 @@ export const directoryListingApi = {
   getAllAppsQueryOptions,
   getAppsByTag,
   getAppsByTagQueryOptions,
+  getAllDirectoryListingAppTags,
+  getAllDirectoryListingAppTagsQueryOptions,
   getAppsByTagPage,
   getAppsByTagPageQueryOptions,
   getProtocolCategories,

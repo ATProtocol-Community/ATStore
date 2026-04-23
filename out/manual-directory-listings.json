@@ -1362,11 +1362,7 @@
     "externalUrl": "https://bsky.md/",
     "iconUrl": null,
     "screenshotUrls": [],
-    "appTags": [
-      "bluesky",
-      "markdown",
-      "api"
-    ],
+    "appTags": [],
     "tagline": "Fetch public Bluesky profiles, posts, feeds, and search results as clean Markdown via simple HTTP endpoints.",
     "fullDescription": "bsky.md turns public Bluesky data into clean Markdown without authentication or API keys. It provides endpoints for profiles, posts, threads, feeds, likes, followers, following, search, links, and trending topics, making it useful for developers, automation, and coding agents.",
     "rawCategoryHint": "Bluesky tool",

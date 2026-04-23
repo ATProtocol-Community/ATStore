@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
-import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
@@ -17,6 +17,8 @@ import {
   type ListingLink,
   type ListingLinkType,
 } from "#/lib/atproto/listing-record";
+import { formatAppTagLabel } from "#/lib/app-tag-metadata";
+import { normalizeAppTags } from "#/lib/app-tags";
 import { Button } from "../design-system/button";
 import { IconButton } from "../design-system/icon-button";
 import { Card, CardBody } from "../design-system/card";
@@ -31,6 +33,7 @@ import { Page } from "../design-system/page";
 import { Select, SelectItem } from "../design-system/select";
 import { TextArea } from "../design-system/text-area";
 import { TextField } from "../design-system/text-field";
+import { ToggleButton } from "../design-system/toggle-button";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
@@ -41,9 +44,10 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { fontSize, fontWeight } from "../design-system/theme/typography.stylex";
-import { Heading1 } from "../design-system/typography";
+import { Heading1, ListItem, UnorderedList } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { Separator } from "../design-system/separator";
 
 type CategoryTreeNode = {
   id: string;
@@ -78,6 +82,24 @@ type LinkRow = {
 };
 
 const MAX_SCREENSHOT_COUNT = 4;
+
+type GenerationStatus = { tone: "neutral" | "critical"; text: string };
+
+type ImageReviewDraft = {
+  kind: "hero" | "icon";
+  mimeType: string;
+  imageBase64: string;
+  previewSource?: "site_asset" | "model";
+};
+
+function base64ToBlob(imageBase64: string, mimeType: string): Blob {
+  const binary = atob(imageBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
 
 const LINK_TYPE_OPTIONS: Array<{ id: ListingLinkType; label: string }> = [
   { id: "privacy", label: "Privacy policy" },
@@ -260,6 +282,9 @@ function toKebabCaseSegment(value: string): string {
 }
 
 const styles = stylex.create({
+  list: {
+    gap: 0,
+  },
   emptyStateMessage: {
     color: uiColor.text1,
     fontSize: fontSize.sm,
@@ -434,6 +459,56 @@ const styles = stylex.create({
     alignItems: "center",
     gap: gap["md"],
   },
+  appTagsRow: {
+    flexWrap: "wrap",
+    gap: gap["sm"],
+  },
+  imageAssetHeaderActions: {
+    alignItems: "center",
+    gap: gap.md,
+    flexWrap: "wrap",
+  },
+  generationStatusRow: {
+    minHeight: "1.25rem",
+  },
+  imageReviewCard: {
+    boxShadow: shadow.md,
+    width: "100%",
+  },
+  imageReviewBody: {
+    gap: gap["2xl"],
+  },
+  imageReviewFigure: {
+    alignItems: "center",
+    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
+    borderRadius: radius["2xl"],
+    display: "flex",
+    justifyContent: "center",
+    margin: 0,
+    maxHeight: "min(42vh, 360px)",
+    overflow: "hidden",
+    padding: horizontalSpace["2xl"],
+  },
+  imageReviewHeroImg: {
+    borderRadius: radius.xl,
+    display: "block",
+    height: "auto",
+    maxHeight: "min(40vh, 340px)",
+    maxWidth: "100%",
+    objectFit: "contain",
+  },
+  imageReviewIconImg: {
+    borderRadius: radius["2xl"],
+    display: "block",
+    height: "auto",
+    maxHeight: 192,
+    maxWidth: 192,
+    objectFit: "contain",
+  },
+  imageReviewActions: {
+    gap: gap["2xl"],
+    justifyContent: "flex-end",
+  },
 });
 
 export type ProductListingFormSubmitValues = {
@@ -448,11 +523,11 @@ export type ProductListingFormSubmitValues = {
   pendingScreenshotBlobs: Blob[];
   retainedScreenshotUrls: string[];
   links: ListingLink[];
-};
-
-export type ProductListingFormControl = {
-  setPendingHero: (blob: Blob) => void;
-  setPendingIcon: (blob: Blob) => void;
+  /**
+   * Editorial app tags for `apps/<slug>` listings. Empty for app-tool / protocol
+   * categories since the lexicon only uses tags on top-level apps.
+   */
+  appTags: string[];
 };
 
 export type ProductListingFormInitialValues = {
@@ -466,6 +541,7 @@ export type ProductListingFormInitialValues = {
   iconUrl?: string | null;
   screenshotUrls?: string[];
   links?: ListingLink[];
+  appTags?: string[];
 };
 
 type ProductListingFormProps = {
@@ -478,7 +554,12 @@ type ProductListingFormProps = {
   onCancel: () => void;
   errorMessage?: string | null;
   successMessage?: string | null;
-  controlRef?: React.Ref<ProductListingFormControl>;
+  /**
+   * When true, exposes admin-only tools inline in the form — currently the
+   * "Generate hero / icon from URL" helpers that seed hero and icon images
+   * from the product's homepage using the current `name` and `externalUrl`.
+   */
+  isAdmin?: boolean;
 };
 
 export function ProductListingForm({
@@ -491,10 +572,13 @@ export function ProductListingForm({
   onCancel,
   errorMessage,
   successMessage,
-  controlRef,
+  isAdmin = false,
 }: ProductListingFormProps) {
   const { data: categoryTree } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryTreeQueryOptions,
+  );
+  const { data: allAppTagSummaries } = useSuspenseQuery(
+    directoryListingApi.getAllDirectoryListingAppTagsQueryOptions,
   );
 
   const [name, setName] = useState(initialValues.name);
@@ -614,6 +698,51 @@ export function ProductListingForm({
     buildInitialLinkRows(initialValues.links),
   );
 
+  const initialNormalizedAppTags = normalizeAppTags(
+    initialValues.appTags ?? [],
+  );
+  const [selectedAppTags, setSelectedAppTags] = useState<Set<string>>(
+    () => new Set(initialNormalizedAppTags),
+  );
+
+  /**
+   * Union of tags seen on other listings (from the DB) and tags already on this
+   * listing, so a listing never appears to have dropped a tag just because no
+   * other row uses it yet.
+   */
+  const availableAppTags = (() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const summary of allAppTagSummaries) {
+      if (seen.has(summary.tag)) continue;
+      seen.add(summary.tag);
+      ordered.push(summary.tag);
+    }
+    for (const tag of initialNormalizedAppTags) {
+      if (seen.has(tag)) continue;
+      seen.add(tag);
+      ordered.push(tag);
+    }
+    return ordered;
+  })();
+
+  function toggleAppTag(tag: string) {
+    setSelectedAppTags((current) => {
+      const next = new Set(current);
+      if (next.has(tag)) {
+        next.delete(tag);
+      } else {
+        next.add(tag);
+      }
+      return next;
+    });
+  }
+
+  function collectAppTagsForSubmit(): string[] {
+    if (categoryKind !== "app") return [];
+    return normalizeAppTags([...selectedAppTags]);
+  }
+
   function updateLinkRow(id: string, patch: Partial<LinkRow>) {
     setLinkRows((rows) =>
       rows.map((row) => (row.id === id ? { ...row, ...patch } : row)),
@@ -688,28 +817,107 @@ export function ProductListingForm({
     };
   }, [pendingIconPreviewUrl]);
 
-  useImperativeHandle(
-    controlRef,
-    () => ({
-      setPendingHero: (blob: Blob) => {
-        const nextPreviewUrl = URL.createObjectURL(blob);
-        setPendingHeroPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return nextPreviewUrl;
+  const [pendingGeneration, setPendingGeneration] = useState<
+    null | "hero" | "icon"
+  >(null);
+  const [imageReviewDraft, setImageReviewDraft] =
+    useState<null | ImageReviewDraft>(null);
+  const [generationStatus, setGenerationStatus] =
+    useState<GenerationStatus | null>(null);
+
+  async function runGeneration(kind: "hero" | "icon") {
+    const trimmedName = name.trim();
+    const trimmedUrl = externalUrl.trim();
+    if (!trimmedName || !trimmedUrl) {
+      setGenerationStatus({
+        tone: "critical",
+        text: "Fill in Name and Primary URL before generating images.",
+      });
+      return;
+    }
+
+    setPendingGeneration(kind);
+    setGenerationStatus(null);
+    try {
+      if (kind === "hero") {
+        const preview = await directoryListingApi.previewListingHeroImageByUrl({
+          data: { name: trimmedName, externalUrl: trimmedUrl },
         });
-        pendingHeroBlobRef.current = blob;
-      },
-      setPendingIcon: (blob: Blob) => {
-        const nextPreviewUrl = URL.createObjectURL(blob);
-        setPendingIconPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return nextPreviewUrl;
+        setImageReviewDraft({
+          kind: "hero",
+          mimeType: preview.mimeType,
+          imageBase64: preview.imageBase64,
         });
-        pendingIconBlobRef.current = blob;
-      },
-    }),
-    [controlRef],
-  );
+        setGenerationStatus({
+          tone: "neutral",
+          text: "Review the hero preview below, then accept or discard.",
+        });
+      } else {
+        const preview = await directoryListingApi.previewListingIconByUrl({
+          data: { name: trimmedName, externalUrl: trimmedUrl },
+        });
+        setImageReviewDraft({
+          kind: "icon",
+          mimeType: preview.mimeType,
+          imageBase64: preview.imageBase64,
+          previewSource: preview.previewSource,
+        });
+        setGenerationStatus({
+          tone: "neutral",
+          text:
+            preview.previewSource === "site_asset"
+              ? "Preview from site favicon/logo, refined with Gemini. Accept or discard."
+              : "Review the generated icon below, then accept or discard.",
+        });
+      }
+    } catch (error) {
+      setGenerationStatus({
+        tone: "critical",
+        text: error instanceof Error ? error.message : "Generation failed.",
+      });
+    } finally {
+      setPendingGeneration(null);
+    }
+  }
+
+  function acceptImageReview() {
+    if (!imageReviewDraft) return;
+    const blob = base64ToBlob(
+      imageReviewDraft.imageBase64,
+      imageReviewDraft.mimeType,
+    );
+    const nextPreviewUrl = URL.createObjectURL(blob);
+    if (imageReviewDraft.kind === "hero") {
+      setPendingHeroPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return nextPreviewUrl;
+      });
+      pendingHeroBlobRef.current = blob;
+      setGenerationStatus({
+        tone: "neutral",
+        text: "Hero image staged. Submit the form to publish.",
+      });
+    } else {
+      setPendingIconPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return nextPreviewUrl;
+      });
+      pendingIconBlobRef.current = blob;
+      setGenerationStatus({
+        tone: "neutral",
+        text: "Icon staged. Submit the form to publish.",
+      });
+    }
+    setImageReviewDraft(null);
+  }
+
+  function discardImageReview() {
+    setImageReviewDraft(null);
+    setGenerationStatus(null);
+  }
+
+  const isGenerateDisabled =
+    pendingGeneration !== null || imageReviewDraft !== null || isSubmitting;
 
   useEffect(() => {
     pendingScreenshotBlobsRef.current = screenshotItems
@@ -794,6 +1002,7 @@ export function ProductListingForm({
               .filter((item) => item.blob == null)
               .map((item) => item.previewUrl),
             links: collectLinksForSubmit(),
+            appTags: collectAppTagsForSubmit(),
           });
         }}
       >
@@ -807,156 +1016,51 @@ export function ProductListingForm({
             <CardBody>
               <Flex direction="column" gap="4xl">
                 <Text weight="semibold" size="lg">
-                  Categorization
+                  Details
                 </Text>
-                <Flex wrap align="center" gap="xl">
-                  <Select
-                    label="Type"
-                    items={[
-                      { id: "app", label: "App" },
-                      { id: "app-tool", label: "App Tool" },
-                      { id: "protocol", label: "Protocol Tool" },
-                    ]}
-                    placeholder="Select type"
-                    value={categoryKind}
-                    onChange={(value) => {
-                      if (
-                        value === "app" ||
-                        value === "app-tool" ||
-                        value === "protocol"
-                      ) {
-                        setCategoryKind(value);
-                      }
-                    }}
+                <Flex direction="column" style={styles.form}>
+                  <TextField
+                    label="Name"
+                    value={name}
+                    onChange={setName}
                     isRequired
-                    style={styles.grow}
-                  >
-                    {(item) => <SelectItem>{item.label}</SelectItem>}
-                  </Select>
-                  {categoryKind === "app" || categoryKind === "app-tool" ? (
-                    <>
-                      {categoryKind === "app" ? (
-                        <TextField
-                          style={styles.grow}
-                          label="App Slug"
-                          value={appName}
-                          onChange={setAppName}
-                          placeholder="bluesky"
-                          isRequired
-                        />
-                      ) : (
-                        <Select
-                          style={styles.grow}
-                          label="App"
-                          items={appSlugOptions}
-                          placeholder="Select app"
-                          value={selectedAppSlugOption}
-                          onChange={(value) => {
-                            if (typeof value !== "string") return;
-                            setAppName(value);
-                          }}
-                          isRequired
-                        >
-                          {(item) => <SelectItem>{item.label}</SelectItem>}
-                        </Select>
-                      )}
-                      {categoryKind === "app-tool" ? (
-                        <ComboBox
-                          allowsCustomValue
-                          allowsEmptyCollection
-                          style={styles.grow}
-                          label="Category"
-                          items={appCategoryOptions}
-                          renderEmptyState={() => (
-                            <div {...stylex.props(styles.emptyStateMessage)}>
-                              {appSlugKey
-                                ? "No defined categories for this app yet."
-                                : "Type an app slug to see known categories."}
-                            </div>
-                          )}
-                          inputValue={appCategoryLabel}
-                          value={selectedAppCategoryOption}
-                          onInputChange={(value) => {
-                            setAppCategoryLabel(value);
-                            setAppCategorySlug(toKebabCaseSegment(value));
-                          }}
-                          onChange={(key) => {
-                            if (key === null) return;
-                            const nextSlug = String(key);
-                            const nextLabel =
-                              appCategoryOptions.find(
-                                (option) => option.id === nextSlug,
-                              )?.label ?? nextSlug;
-                            setAppCategorySlug(nextSlug);
-                            setAppCategoryLabel(nextLabel);
-                          }}
-                          placeholder="clients"
-                          isRequired
-                        >
-                          {(item) => (
-                            <ComboBoxItem id={item.id}>
-                              {item.label}
-                            </ComboBoxItem>
-                          )}
-                        </ComboBox>
-                      ) : null}
-                    </>
-                  ) : (
-                    <ComboBox
-                      allowsCustomValue
-                      style={styles.grow}
-                      label="Category"
-                      items={protocolCategoryOptions}
-                      inputValue={protocolCategory}
-                      selectedKey={selectedProtocolCategoryOption}
-                      onInputChange={setProtocolCategory}
-                      onSelectionChange={(key) => {
-                        if (key === null) return;
-                        setProtocolCategory(String(key));
-                      }}
-                      placeholder="PDS"
-                      isRequired
-                    >
-                      {(item) => (
-                        <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
-                      )}
-                    </ComboBox>
-                  )}
+                  />
+                  <UserHandleAutocomplete
+                    label="Product handle"
+                    value={productHandle}
+                    onValueChange={setProductHandle}
+                    placeholder="your.handle.com"
+                    size="lg"
+                  />
+                  <TextField
+                    label="Tagline"
+                    value={tagline}
+                    onChange={setTagline}
+                    isRequired
+                  />
+                  <TextField
+                    label="Primary URL"
+                    value={externalUrl}
+                    onChange={setExternalUrl}
+                    isRequired
+                  />
+                  <TextArea
+                    label="Description"
+                    value={fullDescription}
+                    onChange={setFullDescription}
+                    rows={10}
+                  />
+                  {errorMessage ? (
+                    <Text size="sm" variant="critical">
+                      {errorMessage}
+                    </Text>
+                  ) : null}
+                  {successMessage ? (
+                    <Text size="sm" variant="secondary">
+                      {successMessage}
+                    </Text>
+                  ) : null}
                 </Flex>
-                {categoryKind === "app-tool" ? (
-                  <Flex direction="column" gap="xl">
-                    <Text size="sm" variant="secondary">
-                      Saved as{" "}
-                      <code>
-                        apps/{appName || "<app>"}/
-                        {appCategorySlug || "<category>"}
-                      </code>
-                    </Text>
-                    {isCustomAppCategory ? (
-                      <Text size="sm" variant="critical">
-                        New category detected. Please try to stick to defined
-                        categories when possible.
-                      </Text>
-                    ) : null}
-                  </Flex>
-                ) : categoryKind === "app" ? (
-                  <Text size="sm" variant="secondary">
-                    Saved as <code>apps/{appName || "<app>"}</code>
-                  </Text>
-                ) : (
-                  <Flex direction="column" gap="xl">
-                    <Text size="sm" variant="secondary">
-                      Saved in group{" "}
-                      <code>protocol/{protocolCategory || "<category>"}</code>
-                    </Text>
-                    {isCustomProtocolCategory ? (
-                      <Text size="sm" variant="critical">
-                        New category detected. Please try to stick to defined
-                        categories when possible.
-                      </Text>
-                    ) : null}
-                  </Flex>
-                )}
               </Flex>
             </CardBody>
           </Card>
@@ -977,6 +1081,19 @@ export function ProductListingForm({
                         *
                       </Text>
                     </Flex>
+                    {isAdmin ? (
+                      <Flex style={styles.imageAssetHeaderActions}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          isPending={pendingGeneration === "hero"}
+                          isDisabled={isGenerateDisabled}
+                          onPress={() => void runGeneration("hero")}
+                        >
+                          Generate hero image
+                        </Button>
+                      </Flex>
+                    ) : null}
                   </Flex>
                   <FileDropZone
                     acceptedFileTypes={["image/*"]}
@@ -1014,6 +1131,19 @@ export function ProductListingForm({
                         *
                       </Text>
                     </Flex>
+                    {isAdmin ? (
+                      <Flex style={styles.imageAssetHeaderActions}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          isPending={pendingGeneration === "icon"}
+                          isDisabled={isGenerateDisabled}
+                          onPress={() => void runGeneration("icon")}
+                        >
+                          Generate icon
+                        </Button>
+                      </Flex>
+                    ) : null}
                   </Flex>
                   <FileDropZone
                     acceptedFileTypes={["image/*"]}
@@ -1126,9 +1256,74 @@ export function ProductListingForm({
                     </AriaListBox>
                   ) : null}
                 </Flex>
+                {isAdmin && generationStatus ? (
+                  <Text
+                    size="sm"
+                    variant={
+                      generationStatus.tone === "critical"
+                        ? "critical"
+                        : "secondary"
+                    }
+                    style={styles.generationStatusRow}
+                  >
+                    {generationStatus.text}
+                  </Text>
+                ) : null}
               </Flex>
             </CardBody>
           </Card>
+
+          {isAdmin && imageReviewDraft ? (
+            <Card style={styles.imageReviewCard} size="lg">
+              <CardBody>
+                <Flex direction="column" style={styles.imageReviewBody}>
+                  <Text size="lg" weight="semibold">
+                    {imageReviewDraft.kind === "hero"
+                      ? "Review new hero image"
+                      : "Review new icon"}
+                  </Text>
+                  {imageReviewDraft.kind === "icon" &&
+                  imageReviewDraft.previewSource ? (
+                    <Text size="sm" variant="secondary">
+                      {imageReviewDraft.previewSource === "site_asset"
+                        ? "Sourced from site favicon or logo asset, then refined with Gemini."
+                        : "Generated from a homepage screenshot."}
+                    </Text>
+                  ) : null}
+                  <figure {...stylex.props(styles.imageReviewFigure)}>
+                    <img
+                      alt={
+                        imageReviewDraft.kind === "hero"
+                          ? "Generated hero preview"
+                          : "Generated icon preview"
+                      }
+                      src={`data:${imageReviewDraft.mimeType};base64,${imageReviewDraft.imageBase64}`}
+                      {...stylex.props(
+                        imageReviewDraft.kind === "hero"
+                          ? styles.imageReviewHeroImg
+                          : styles.imageReviewIconImg,
+                      )}
+                    />
+                  </figure>
+                  <Flex style={styles.imageReviewActions}>
+                    <Button
+                      variant="secondary"
+                      isDisabled={isSubmitting}
+                      onPress={discardImageReview}
+                    >
+                      Discard
+                    </Button>
+                    <Button
+                      isDisabled={isSubmitting}
+                      onPress={acceptImageReview}
+                    >
+                      Use this image
+                    </Button>
+                  </Flex>
+                </Flex>
+              </CardBody>
+            </Card>
+          ) : null}
 
           {cropSourceBlob && cropKind ? (
             <ImageCropperDialog
@@ -1166,59 +1361,6 @@ export function ProductListingForm({
               }}
             />
           ) : null}
-
-          <Card style={styles.card} size="lg">
-            <CardBody>
-              <Flex direction="column" gap="4xl">
-                <Text weight="semibold" size="lg">
-                  Listing Details
-                </Text>
-                <Flex direction="column" style={styles.form}>
-                  <TextField
-                    label="Name"
-                    value={name}
-                    onChange={setName}
-                    isRequired
-                  />
-                  <UserHandleAutocomplete
-                    label="Product handle"
-                    value={productHandle}
-                    onValueChange={setProductHandle}
-                    placeholder="your.handle.com"
-                    size="lg"
-                  />
-                  <TextField
-                    label="Tagline"
-                    value={tagline}
-                    onChange={setTagline}
-                    isRequired
-                  />
-                  <TextField
-                    label="Primary URL"
-                    value={externalUrl}
-                    onChange={setExternalUrl}
-                    isRequired
-                  />
-                  <TextArea
-                    label="Description"
-                    value={fullDescription}
-                    onChange={setFullDescription}
-                    rows={10}
-                  />
-                  {errorMessage ? (
-                    <Text size="sm" variant="critical">
-                      {errorMessage}
-                    </Text>
-                  ) : null}
-                  {successMessage ? (
-                    <Text size="sm" variant="secondary">
-                      {successMessage}
-                    </Text>
-                  ) : null}
-                </Flex>
-              </Flex>
-            </CardBody>
-          </Card>
 
           <Card style={styles.card} size="lg">
             <CardBody>
@@ -1310,6 +1452,213 @@ export function ProductListingForm({
                     })}
                   </Flex>
                 ) : null}
+              </Flex>
+            </CardBody>
+          </Card>
+
+          <Card style={styles.card} size="lg">
+            <CardBody>
+              <Flex direction="column" gap="4xl">
+                <Text weight="semibold" size="lg">
+                  Categorization
+                </Text>
+                <Flex direction="column" gap="2xl">
+                  <Text size="sm" variant="secondary">
+                    Select the type of product you are listing.
+                  </Text>
+                  <UnorderedList style={styles.list}>
+                    <ListItem>
+                      <Text size="sm" variant="secondary">
+                        <Text weight="semibold" variant="primary">
+                          App
+                        </Text>
+                        : A standalone app that is used by users.
+                      </Text>
+                    </ListItem>
+                    <ListItem>
+                      <Text size="sm" variant="secondary">
+                        <Text weight="semibold" variant="primary">
+                          App Tool
+                        </Text>
+                        : A tool built on top of an app.
+                      </Text>
+                    </ListItem>
+                  </UnorderedList>
+                </Flex>
+                <Separator />
+                <Flex wrap align="center" gap="xl">
+                  <Select
+                    label="Type"
+                    items={[
+                      { id: "app", label: "App" },
+                      { id: "app-tool", label: "App Tool" },
+                    ]}
+                    placeholder="Select type"
+                    value={categoryKind}
+                    onChange={(value) => {
+                      if (
+                        value === "app" ||
+                        value === "app-tool" ||
+                        value === "protocol"
+                      ) {
+                        setCategoryKind(value);
+                      }
+                    }}
+                    isRequired
+                    style={styles.grow}
+                  >
+                    {(item) => <SelectItem>{item.label}</SelectItem>}
+                  </Select>
+                  {categoryKind === "app" || categoryKind === "app-tool" ? (
+                    <>
+                      {categoryKind === "app" ? (
+                        <TextField
+                          style={styles.grow}
+                          label="App Slug"
+                          value={appName}
+                          onChange={setAppName}
+                          placeholder="bluesky"
+                          isRequired
+                        />
+                      ) : (
+                        <Select
+                          style={styles.grow}
+                          label="App"
+                          items={appSlugOptions}
+                          placeholder="Select app"
+                          value={selectedAppSlugOption}
+                          onChange={(value) => {
+                            if (typeof value !== "string") return;
+                            setAppName(value);
+                          }}
+                          isRequired
+                        >
+                          {(item) => <SelectItem>{item.label}</SelectItem>}
+                        </Select>
+                      )}
+                      {categoryKind === "app-tool" ? (
+                        <ComboBox
+                          allowsCustomValue
+                          allowsEmptyCollection
+                          style={styles.grow}
+                          label="Category"
+                          items={appCategoryOptions}
+                          renderEmptyState={() => (
+                            <div {...stylex.props(styles.emptyStateMessage)}>
+                              {appSlugKey
+                                ? "No defined categories for this app yet."
+                                : "Type an app slug to see known categories."}
+                            </div>
+                          )}
+                          inputValue={appCategoryLabel}
+                          value={selectedAppCategoryOption}
+                          onInputChange={(value) => {
+                            setAppCategoryLabel(value);
+                            setAppCategorySlug(toKebabCaseSegment(value));
+                          }}
+                          onChange={(key) => {
+                            if (key === null) return;
+                            const nextSlug = String(key);
+                            const nextLabel =
+                              appCategoryOptions.find(
+                                (option) => option.id === nextSlug,
+                              )?.label ?? nextSlug;
+                            setAppCategorySlug(nextSlug);
+                            setAppCategoryLabel(nextLabel);
+                          }}
+                          placeholder="clients"
+                          isRequired
+                        >
+                          {(item) => (
+                            <ComboBoxItem id={item.id}>
+                              {item.label}
+                            </ComboBoxItem>
+                          )}
+                        </ComboBox>
+                      ) : null}
+                    </>
+                  ) : (
+                    <ComboBox
+                      allowsCustomValue
+                      style={styles.grow}
+                      label="Category"
+                      items={protocolCategoryOptions}
+                      inputValue={protocolCategory}
+                      selectedKey={selectedProtocolCategoryOption}
+                      onInputChange={setProtocolCategory}
+                      onSelectionChange={(key) => {
+                        if (key === null) return;
+                        setProtocolCategory(String(key));
+                      }}
+                      placeholder="PDS"
+                      isRequired
+                    >
+                      {(item) => (
+                        <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
+                      )}
+                    </ComboBox>
+                  )}
+                </Flex>
+                {categoryKind === "app-tool" ? (
+                  isCustomAppCategory ? (
+                    <Text size="sm" variant="critical">
+                      New category detected. Please try to stick to defined
+                      categories when possible.
+                    </Text>
+                  ) : null
+                ) : categoryKind === "app" ? (
+                  <Flex direction="column" gap="4xl">
+                    <Flex direction="column" gap="3xl">
+                      <Flex direction="column" gap="xl">
+                        <Text weight="semibold" size="sm">
+                          Tags
+                        </Text>
+                        <Text size="sm" variant="secondary">
+                          What does you app do?
+                        </Text>
+                      </Flex>
+                      {availableAppTags.length > 0 ? (
+                        <Flex style={styles.appTagsRow}>
+                          {availableAppTags.map((tag) => {
+                            const isSelected = selectedAppTags.has(tag);
+                            return (
+                              <ToggleButton
+                                key={tag}
+                                size="sm"
+                                variant={isSelected ? "primary" : "secondary"}
+                                isSelected={isSelected}
+                                isDisabled={isSubmitting}
+                                onChange={() => {
+                                  toggleAppTag(tag);
+                                }}
+                              >
+                                {formatAppTagLabel(tag)}
+                              </ToggleButton>
+                            );
+                          })}
+                        </Flex>
+                      ) : (
+                        <Text size="sm" variant="secondary">
+                          No app tags in use yet — an admin can seed the first
+                          tags from the dev tools panel.
+                        </Text>
+                      )}
+                    </Flex>
+                  </Flex>
+                ) : (
+                  <Flex direction="column" gap="xl">
+                    <Text size="sm" variant="secondary">
+                      Saved in group{" "}
+                      <code>protocol/{protocolCategory || "<category>"}</code>
+                    </Text>
+                    {isCustomProtocolCategory ? (
+                      <Text size="sm" variant="critical">
+                        New category detected. Please try to stick to defined
+                        categories when possible.
+                      </Text>
+                    ) : null}
+                  </Flex>
+                )}
               </Flex>
             </CardBody>
           </Card>

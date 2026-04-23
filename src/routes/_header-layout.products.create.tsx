@@ -214,7 +214,7 @@ function CreateProductListingPage() {
     <>
       <ProductListingForm
         title="Create listing"
-        description="Publish a new listing record to your PDS. Ingestion will create an unverified directory entry shortly after."
+        description="Submit a new listing to the at-store directory. We'll review it and add it to the directory if it's a good fit!"
         submitLabel="Publish"
         isSubmitting={publishMutation.isPending}
         initialValues={{

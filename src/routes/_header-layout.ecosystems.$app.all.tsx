@@ -6,7 +6,7 @@ import {
   notFound,
   useRouter,
 } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, SearchX } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppTagHero } from "../components/AppTagHero";
@@ -36,6 +36,12 @@ import {
   pickListingImageForCategoryBranch,
 } from "../lib/ecosystem-listings";
 import { buildRouteOgMeta } from "../lib/og-meta";
+import {
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateImage,
+  EmptyStateTitle,
+} from "../design-system/empty-state";
 
 const AppLink = createLink(Link);
 const sortOptions = [
@@ -123,8 +129,7 @@ const styles = stylex.create({
     minWidth: "12rem",
   },
   emptyState: {
-    gap: gap["lg"],
-    maxWidth: "40rem",
+    padding: verticalSpace["10xl"],
   },
   searchFieldRow: {
     flexGrow: 1,
@@ -260,15 +265,16 @@ function EcosystemAllPage() {
               ))}
             </Grid>
           ) : (
-            <Flex direction="column" style={styles.emptyState}>
-              <Text size="2xl" weight="semibold">
-                No listings matched your search
-              </Text>
-              <Body variant="secondary">
+            <EmptyState size="lg" style={styles.emptyState}>
+              <EmptyStateImage>
+                <SearchX size={64} strokeWidth={2} />
+              </EmptyStateImage>
+              <EmptyStateTitle>No listings matched your search</EmptyStateTitle>
+              <EmptyStateDescription>
                 Try a different keyword or browse categories from the ecosystem
                 home page.
-              </Body>
-            </Flex>
+              </EmptyStateDescription>
+            </EmptyState>
           )}
         </Flex>
       </Flex>
