@@ -92,6 +92,11 @@ function AdminOverviewPage() {
             title="Add listing"
             to="/admin/add-listing"
           />
+          <SummaryCard
+            description="Find categories and tags that are missing hero art and generate the missing banners."
+            title="Hero art"
+            to="/admin/hero-art"
+          />
         </div>
       </Flex>
     </Page.Root>

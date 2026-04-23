@@ -103,13 +103,13 @@ function RouteComponent() {
             >
               Add Listing
             </SidebarLink>
+            <SidebarLink to="/admin/hero-art" activeProps={{ isActive: true }}>
+              Hero Art
+            </SidebarLink>
           </SidebarSection>
           {isSuperAdmin ? (
             <SidebarSection title="Super admin">
-              <SidebarLink
-                to="/admin/admins"
-                activeProps={{ isActive: true }}
-              >
+              <SidebarLink to="/admin/admins" activeProps={{ isActive: true }}>
                 Admins
               </SidebarLink>
             </SidebarSection>
