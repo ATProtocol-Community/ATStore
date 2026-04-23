@@ -44,9 +44,17 @@ const searchSchema = z.object({
   loginSuccess: z.union([z.string(), z.boolean()]).optional(),
   handle: z.string().optional(),
   avatar: z.string().optional(),
+  error: z.string().optional(),
 });
 
 const styles = stylex.create({
+  dialogDescription: {
+    paddingTop: verticalSpace["3xl"],
+    paddingBottom: verticalSpace["3xl"],
+  },
+  buttonContainer: {
+    width: "100%",
+  },
   main: {
     backgroundColor: primaryColor.bgSubtle,
     display: "flex",
@@ -55,7 +63,9 @@ const styles = stylex.create({
     minHeight: "100vh",
   },
   container: {
-    padding: sizeSpace["10xl"],
+    boxSizing: "border-box",
+    padding: sizeSpace["4xl"],
+    justifyContent: "center",
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
@@ -147,6 +157,7 @@ function AuthPage() {
     loginSuccess,
     handle: handleParam,
     avatar: avatarParam,
+    error,
   } = Route.useSearch();
   const { savedHandles: initialSavedHandles, redirects } =
     Route.useLoaderData();
@@ -176,16 +187,13 @@ function AuthPage() {
 
   const loginMutation = useMutation({
     mutationFn: async (selectedHandle: string) => {
-      const authorizeUrl = new URL(
-        "/api/auth/atproto/authorize",
-        globalThis.location.origin,
-      );
-      authorizeUrl.searchParams.set("handle", selectedHandle);
-      if (redirectTo) {
-        authorizeUrl.searchParams.set("redirect", redirectTo);
-      }
-
-      globalThis.location.href = authorizeUrl.toString();
+      await navigate({
+        to: "/api/auth/atproto/authorize",
+        search: {
+          handle: selectedHandle,
+          redirect: redirectTo,
+        },
+      });
     },
   });
 
@@ -217,6 +225,12 @@ function AuthPage() {
             >
               <AtStoreLogo variant="hero" />
             </Flex>
+
+            {error === "oauth_failed" ? (
+              <Text size="sm" variant="critical">
+                Sign-in failed. Try again.
+              </Text>
+            ) : null}
 
             {view === "saved-handles" && (
               <>
@@ -280,12 +294,12 @@ function AuthPage() {
                         size="md"
                       >
                         <DialogHeader>How login works</DialogHeader>
-                        <DialogDescription>
+                        <DialogDescription style={styles.dialogDescription}>
                           Sign in with your AT Protocol account.
                         </DialogDescription>
                         <DialogBody>
-                          <Flex direction="column" gap="5xl">
-                            <Flex direction="column" gap="md">
+                          <Flex direction="column" gap="6xl">
+                            <Flex direction="column" gap="2xl">
                               <Text size="sm" weight="semibold">
                                 What is a handle?
                               </Text>
@@ -297,7 +311,7 @@ function AuthPage() {
                               </Body>
                             </Flex>
 
-                            <Flex direction="column" gap="md">
+                            <Flex direction="column" gap="2xl">
                               <Text size="sm" weight="semibold">
                                 Authentication
                               </Text>
@@ -309,7 +323,7 @@ function AuthPage() {
                               </Body>
                             </Flex>
 
-                            <Flex direction="column" gap="md">
+                            <Flex direction="column" gap="2xl">
                               <Text size="sm" weight="semibold">
                                 Privacy
                               </Text>
@@ -321,7 +335,7 @@ function AuthPage() {
                               </Body>
                             </Flex>
 
-                            <Flex direction="column" gap="md">
+                            <Flex direction="column" gap="2xl">
                               <Text size="sm" weight="semibold">
                                 Need an account?
                               </Text>
@@ -351,21 +365,25 @@ function AuthPage() {
                     setHandle(value);
                   }}
                   onSelect={(selectedHandle) => {
-                    setInputValue(selectedHandle);
-                    setHandle(selectedHandle);
-                    loginMutation.mutate(selectedHandle);
+                    const trimmed = selectedHandle.trim().replace(/^@/, "");
+                    if (trimmed === "") return;
+                    setInputValue(trimmed);
+                    setHandle(trimmed);
+                    loginMutation.mutate(trimmed);
                   }}
                 />
               </Flex>
             )}
 
-            <Flex direction="column" gap="md">
+            <Flex direction="column" gap="md" style={styles.buttonContainer}>
               {view === "saved-handles" && (
                 <Button
                   size="lg"
+                  type="button"
                   variant="outline"
                   onPress={() => setView("login")}
                   isPending={handleSignup.isPending}
+                  isDisabled={loginMutation.isPending}
                   style={styles.signupButton}
                 >
                   Switch account
@@ -374,10 +392,14 @@ function AuthPage() {
               {view === "login" && (
                 <Button
                   size="lg"
-                  type="submit"
-                  isDisabled={!handle.trim()}
+                  type="button"
+                  isDisabled={!handle.trim() || loginMutation.isPending}
                   isPending={loginMutation.isPending}
-                  onPress={() => loginMutation.mutate(handle.trim())}
+                  onPress={() => {
+                    const trimmed = handle.trim().replace(/^@/, "");
+                    if (trimmed === "") return;
+                    loginMutation.mutate(trimmed);
+                  }}
                   style={styles.loginButton}
                 >
                   Log in
@@ -385,9 +407,11 @@ function AuthPage() {
               )}
               <Button
                 size="lg"
+                type="button"
                 variant="outline"
                 onPress={() => handleSignup.mutate()}
                 isPending={handleSignup.isPending}
+                isDisabled={loginMutation.isPending}
                 style={styles.signupButton}
               >
                 Create account
