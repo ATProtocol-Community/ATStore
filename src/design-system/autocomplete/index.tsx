@@ -33,6 +33,11 @@ const styles = stylex.create({
     paddingTop: verticalSpace["xs"],
     top: "100%",
     width: "100%",
+    zIndex: 1000,
+  },
+  popoverContent: {
+    maxHeight: "30vh",
+    overflow: "auto",
   },
 });
 
@@ -162,7 +167,9 @@ export function AutocompleteInput<T extends object>({
 
           {isOpen && (
             <div {...stylex.props(styles.popover)}>
-              <div {...stylex.props(popoverStyles.wrapper)}>
+              <div
+                {...stylex.props(popoverStyles.wrapper, styles.popoverContent)}
+              >
                 <ListBox
                   items={items}
                   selectionMode="none"

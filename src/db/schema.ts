@@ -476,6 +476,10 @@ export const listingClaims = pgTable(
       .notNull()
       .references(() => storeListings.id, { onDelete: 'cascade' }),
     claimantDid: text('claimant_did').notNull(),
+    /** Proof of ownership / context for admins (manual claim path). */
+    message: text('message').notNull().default(''),
+    /** Bluesky handle snapshot at submit time (for admin display). */
+    claimantHandle: text('claimant_handle'),
     status: text('status').notNull().default('pending'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -483,12 +487,20 @@ export const listingClaims = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decidedByDid: text('decided_by_did'),
+    decisionNotes: text('decision_notes'),
   },
   (table) => ({
     listingIdx: index('listing_claims_store_listing_id_idx').on(
       table.storeListingId,
     ),
     statusIdx: index('listing_claims_status_idx').on(table.status),
+    listingClaimantPendingUnique: uniqueIndex(
+      'listing_claims_store_listing_claimant_pending_uidx',
+    )
+      .on(table.storeListingId, table.claimantDid)
+      .where(sql`${table.status} = 'pending'`),
   }),
 )
 

@@ -73,8 +73,6 @@ export function NavbarAuth() {
     },
   });
 
-  console.log(session);
-
   if (session?.user) {
     const initial = session.user.name?.charAt(0).toUpperCase() ?? "U";
     return (
@@ -128,7 +126,14 @@ export function NavbarAuth() {
             void navigate({ to: "/products/create" });
           }}
         >
-          Submit a product
+          Submit a listing
+        </MenuItem>
+        <MenuItem
+          onPress={() => {
+            void navigate({ to: "/product/claim" });
+          }}
+        >
+          Claim a listing
         </MenuItem>
         {session.user.isAdmin ? (
           <MenuItem

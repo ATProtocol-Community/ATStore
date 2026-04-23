@@ -1,9 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
+import { getRequest } from '@tanstack/react-start/server'
 import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { adminFnMiddleware } from '#/middleware/auth'
+import { fetchBlueskyHandleForDid } from '#/lib/bluesky-public-profile'
+import { adminFnMiddleware, getAtprotoSessionForRequest } from '#/middleware/auth'
 import { protocolRecordImageUrlOrNull } from '#/lib/atproto/protocol-record-image-url'
 
 import { dbMiddleware } from './db-middleware'
@@ -70,10 +72,18 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
           id: claims.id,
           storeListingId: claims.storeListingId,
           claimantDid: claims.claimantDid,
+          claimantHandle: claims.claimantHandle,
+          message: claims.message,
           status: claims.status,
           createdAt: claims.createdAt,
+          listingName: listings.name,
+          listingSlug: listings.slug,
+          listingIconUrl: listings.iconUrl,
+          listingExternalUrl: listings.externalUrl,
+          listingProductAccountHandle: listings.productAccountHandle,
         })
         .from(claims)
+        .innerJoin(listings, eq(claims.storeListingId, listings.id))
         .where(eq(claims.status, 'pending'))
         .orderBy(desc(claims.createdAt)),
       db
@@ -94,7 +104,10 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
         iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
         heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
       })),
-      pendingClaims,
+      pendingClaims: pendingClaims.map((row) => ({
+        ...row,
+        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+      })),
       homePageHeroListings,
     }
   })
@@ -136,22 +149,45 @@ const setClaimStatus = createServerFn({ method: 'POST' })
     if (!claim) {
       throw new Error('Claim not found')
     }
-
-    await db
-      .update(claimTable)
-      .set({ status: data.status, updatedAt: new Date() })
-      .where(eq(claimTable.id, data.claimId))
-
-    if (data.status === 'approved') {
-      await db
-        .update(listingTable)
-        .set({
-          claimedByDid: claim.claimantDid,
-          claimedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(listingTable.id, claim.storeListingId))
+    if (claim.status !== 'pending') {
+      throw new Error('This claim has already been processed')
     }
+
+    const adminCtx = await getAtprotoSessionForRequest(getRequest())
+    const deciderDid = adminCtx?.did
+    if (!deciderDid) {
+      throw new Error('Unauthorized')
+    }
+
+    const now = new Date()
+    const resolvedHandle =
+      claim.claimantHandle?.trim() ||
+      (await fetchBlueskyHandleForDid(claim.claimantDid))
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(claimTable)
+        .set({
+          status: data.status,
+          updatedAt: now,
+          decidedAt: now,
+          decidedByDid: deciderDid,
+        })
+        .where(eq(claimTable.id, data.claimId))
+
+      if (data.status === 'approved') {
+        await tx
+          .update(listingTable)
+          .set({
+            claimedByDid: claim.claimantDid,
+            claimedAt: now,
+            productAccountDid: claim.claimantDid,
+            productAccountHandle: resolvedHandle ?? null,
+            updatedAt: now,
+          })
+          .where(eq(listingTable.id, claim.storeListingId))
+      }
+    })
 
     return { ok: true as const }
   })

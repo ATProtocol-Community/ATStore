@@ -83,6 +83,7 @@ import {
   rasterizeBrandIconForGeminiInput,
 } from '#/lib/site-brand-icon'
 import {
+  fetchBlueskyHandleForDid,
   fetchBlueskyPublicProfileFields,
   resolveBlueskyHandleToDid,
 } from '#/lib/bluesky-public-profile'
@@ -543,6 +544,10 @@ const CATEGORY_ACCENTS: CategoryAccent[] = ['blue', 'pink', 'purple', 'green']
 const listDirectoryListingsInput = z.object({
   limit: z.number().int().min(1).max(24).default(12),
   query: z.string().trim().min(1).optional(),
+  /**
+   * When true, only listings with no `product_account_handle` (e.g. manual claim picker).
+   */
+  withoutProductAccountHandleOnly: z.boolean().optional().default(false),
 })
 
 const listingSortInput = z
@@ -2920,29 +2925,35 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
     const search = data.query?.trim()
     const listingSelect = getListingSelect(table)
 
+    const searchClause = search
+      ? or(
+          ilike(table.name, `%${search}%`),
+          ilike(table.tagline, `%${search}%`),
+          ilike(table.fullDescription, `%${search}%`),
+          ilike(
+            sql<string>`array_to_string(${table.categorySlugs}, ' ')`,
+            `%${search}%`,
+          ),
+          ilike(
+            sql<string>`array_to_string(${table.appTags}, ' ')`,
+            `%${search}%`,
+          ),
+        )
+      : undefined
+
+    const noProductHandleClause = data.withoutProductAccountHandleOnly
+      ? sql`coalesce(trim(${table.productAccountHandle}), '') = ''`
+      : undefined
+
+    const filterExtra =
+      searchClause && noProductHandleClause
+        ? and(searchClause, noProductHandleClause)
+        : (searchClause ?? noProductHandleClause)
+
     const rows = await context.db
       .select(listingSelect)
       .from(table)
-      .where(
-        listingPublicWhere(
-          table,
-          search
-            ? or(
-                ilike(table.name, `%${search}%`),
-                ilike(table.tagline, `%${search}%`),
-                ilike(table.fullDescription, `%${search}%`),
-                ilike(
-                  sql<string>`array_to_string(${table.categorySlugs}, ' ')`,
-                  `%${search}%`,
-                ),
-                ilike(
-                  sql<string>`array_to_string(${table.appTags}, ' ')`,
-                  `%${search}%`,
-                ),
-              )
-            : undefined,
-        ),
-      )
+      .where(listingPublicWhere(table, filterExtra))
       .orderBy(...orderByPopularListingSort(table))
       .limit(data.limit)
 
@@ -3844,6 +3855,129 @@ function getProductClaimEligibilityQueryOptions() {
   return queryOptions({
     queryKey: ['storeListings', 'productClaimEligibility'] as const,
     queryFn: async () => getProductClaimEligibility(),
+  })
+}
+
+const submitProductListingClaimInput = z.object({
+  listingId: z.string().uuid(),
+  message: z
+    .string()
+    .trim()
+    .min(
+      20,
+      'Please add more detail so we can verify your request (at least 20 characters).',
+    )
+    .max(8000),
+})
+
+const submitProductListingClaim = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(submitProductListingClaimInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to request a listing claim.')
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+    if (full.verificationStatus !== 'verified') {
+      throw new Error('Only verified listings can be claimed.')
+    }
+    if (isBrowseableProtocolRow({ categorySlugs: full.categorySlugs ?? [] })) {
+      throw new Error('Protocol listings cannot be claimed through this flow.')
+    }
+
+    const atstoreDid = await getAtstoreRepoDid()
+    if (full.repoDid?.trim() !== atstoreDid) {
+      throw new Error(
+        'This listing is not on the store account anymore, so it cannot be claimed here.',
+      )
+    }
+    if (!full.atUri?.trim() || !full.rkey?.trim()) {
+      throw new Error('This listing is missing ATProto coordinates.')
+    }
+
+    if (full.productAccountDid?.trim() === session.did) {
+      throw new Error(
+        'This listing is already associated with your account. Use the claim option above.',
+      )
+    }
+
+    if (full.productAccountHandle?.trim()) {
+      throw new Error(
+        'This listing already has a Bluesky product account. Log in with that handle and use the claim option above.',
+      )
+    }
+
+    const claimTable = context.schema.listingClaims
+    const [existingPending] = await context.db
+      .select({ id: claimTable.id })
+      .from(claimTable)
+      .where(
+        and(
+          eq(claimTable.storeListingId, data.listingId),
+          eq(claimTable.claimantDid, session.did),
+          eq(claimTable.status, 'pending'),
+        ),
+      )
+      .limit(1)
+
+    if (existingPending) {
+      throw new Error('You already have a pending claim for this listing.')
+    }
+
+    const claimantHandle = await fetchBlueskyHandleForDid(session.did)
+
+    await context.db.insert(claimTable).values({
+      storeListingId: data.listingId,
+      claimantDid: session.did,
+      message: data.message,
+      claimantHandle: claimantHandle ?? null,
+      status: 'pending',
+      updatedAt: new Date(),
+    })
+
+    return { ok: true as const }
+  })
+
+const getUserProductListingClaimRequests = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return []
+    }
+
+    const c = context.schema.listingClaims
+    const l = context.schema.storeListings
+
+    const rows = await context.db
+      .select({
+        id: c.id,
+        storeListingId: c.storeListingId,
+        listingName: l.name,
+        listingSlug: l.slug,
+        listingIconUrl: l.iconUrl,
+        status: c.status,
+        message: c.message,
+        createdAt: c.createdAt,
+        decidedAt: c.decidedAt,
+      })
+      .from(c)
+      .innerJoin(l, eq(c.storeListingId, l.id))
+      .where(eq(c.claimantDid, session.did))
+      .orderBy(desc(c.createdAt))
+
+    return rows.map((row) => ({
+      ...row,
+      listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+    }))
+  })
+
+function getUserProductListingClaimRequestsQueryOptions() {
+  return queryOptions({
+    queryKey: ['storeListings', 'userProductListingClaims'] as const,
+    queryFn: async () => getUserProductListingClaimRequests(),
   })
 }
 
@@ -5315,6 +5449,9 @@ export const directoryListingApi = {
   rejectProductAccountCandidate,
   getProductClaimEligibility,
   getProductClaimEligibilityQueryOptions,
+  submitProductListingClaim,
+  getUserProductListingClaimRequests,
+  getUserProductListingClaimRequestsQueryOptions,
   getProductListingEditAccessQueryOptions,
   createOwnedProductListing,
   updateOwnedProductListing,

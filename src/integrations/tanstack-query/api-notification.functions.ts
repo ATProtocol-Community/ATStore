@@ -1,14 +1,19 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { and, desc, eq, ne } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNotNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 
+import { protocolRecordImageUrlOrNull } from '#/lib/atproto/protocol-record-image-url'
 import { fetchBlueskyHandleForDid } from '#/lib/bluesky-public-profile'
 import { getAtprotoSessionForRequest } from '#/middleware/auth'
 import { dbMiddleware } from './db-middleware'
 
-export type ProductNotificationType = 'listing_liked' | 'listing_reviewed'
+export type ProductNotificationType =
+  | 'listing_liked'
+  | 'listing_reviewed'
+  | 'claim_approved'
+  | 'claim_rejected'
 
 export interface ProductNotification {
   id: string
@@ -17,6 +22,7 @@ export interface ProductNotification {
   listingId: string
   listingName: string
   listingSlug: string | null
+  listingIconUrl: string | null
   actorDid: string
   actorHandle: string | null
   actorDisplayName: string | null
@@ -41,8 +47,9 @@ const getProductNotifications = createServerFn({ method: 'GET' })
     const list = context.schema.storeListings
     const rev = context.schema.storeListingReviews
     const fav = context.schema.storeListingFavorites
+    const claims = context.schema.listingClaims
 
-    const [reviewRows, favoriteRows] = await Promise.all([
+    const [reviewRows, favoriteRows, claimRows] = await Promise.all([
       context.db
         .select({
           id: rev.id,
@@ -87,6 +94,27 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         )
         .orderBy(desc(fav.favoriteCreatedAt))
         .limit(data.limit),
+      context.db
+        .select({
+          id: claims.id,
+          decidedAt: claims.decidedAt,
+          status: claims.status,
+          listingId: list.id,
+          listingName: list.name,
+          listingSlug: list.slug,
+          listingIconUrl: list.iconUrl,
+        })
+        .from(claims)
+        .innerJoin(list, eq(claims.storeListingId, list.id))
+        .where(
+          and(
+            eq(claims.claimantDid, session.did),
+            inArray(claims.status, ['approved', 'rejected']),
+            isNotNull(claims.decidedAt),
+          ),
+        )
+        .orderBy(desc(claims.decidedAt))
+        .limit(data.limit),
     ])
 
     const actorDids = Array.from(
@@ -108,6 +136,7 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         listingId: row.listingId,
         listingName: row.listingName,
         listingSlug: row.listingSlug,
+        listingIconUrl: null,
         actorDid: row.actorDid,
         actorHandle: actorHandleByDid.get(row.actorDid) ?? null,
         actorDisplayName: row.actorDisplayName?.trim() || null,
@@ -122,8 +151,27 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         listingId: row.listingId,
         listingName: row.listingName,
         listingSlug: row.listingSlug,
+        listingIconUrl: null,
         actorDid: row.actorDid,
         actorHandle: actorHandleByDid.get(row.actorDid) ?? null,
+        actorDisplayName: null,
+        actorAvatarUrl: null,
+        reviewRating: null,
+        reviewText: null,
+      })),
+      ...claimRows.map((row) => ({
+        id: `claim:${row.id}`,
+        type:
+          row.status === 'approved'
+            ? ('claim_approved' as const)
+            : ('claim_rejected' as const),
+        createdAt: row.decidedAt!.toISOString(),
+        listingId: row.listingId,
+        listingName: row.listingName,
+        listingSlug: row.listingSlug,
+        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+        actorDid: session.did,
+        actorHandle: null,
         actorDisplayName: null,
         actorAvatarUrl: null,
         reviewRating: null,

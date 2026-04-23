@@ -1,7 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, createLink, redirect } from "@tanstack/react-router";
-import { Bell, Check, Heart, Star } from "lucide-react";
+import {
+  createFileRoute,
+  createLink,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
+import { Ban, Bell, Check, CircleCheck, Heart, Star } from "lucide-react";
 
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -69,6 +74,16 @@ const styles = stylex.create({
     color: criticalColor.text1,
     borderColor: criticalColor.border1,
   },
+  claimApprovedIcon: {
+    backgroundColor: primaryColor.component1,
+    color: primaryColor.text1,
+    borderColor: primaryColor.border1,
+  },
+  claimRejectedIcon: {
+    backgroundColor: uiColor.bgSubtle,
+    color: uiColor.text1,
+    borderColor: uiColor.border1,
+  },
   contentColumn: {
     flex: 1,
     minWidth: 0,
@@ -132,6 +147,7 @@ export const Route = createFileRoute("/_header-layout/notifications")({
 });
 
 function NotificationsPage() {
+  const navigate = useNavigate();
   const { data: session } = useQuery(user.getSessionQueryOptions);
   const { data: notifications = [] } = useQuery(
     notificationApi.getProductNotificationsQueryOptions({ limit: 50 }),
@@ -174,13 +190,15 @@ function NotificationsPage() {
 
       {notifications.length === 0 ? (
         <Text variant="secondary">
-          No notifications yet. Likes and reviews on your products will show up
-          here.
+          No notifications yet. Likes, reviews, and listing claim decisions will
+          show up here.
         </Text>
       ) : (
         <div {...stylex.props(styles.notificationsList)}>
           {notifications.map((item) => {
             const isLike = item.type === "listing_liked";
+            const isClaimApproved = item.type === "claim_approved";
+            const isClaimRejected = item.type === "claim_rejected";
             const actor =
               item.actorHandle || item.actorDisplayName || "Someone";
             const productId = getDirectoryListingSlug({
@@ -192,10 +210,24 @@ function NotificationsPage() {
                 <div
                   {...stylex.props(
                     styles.icon,
-                    isLike ? styles.likedIcon : styles.reviewedIcon,
+                    isLike
+                      ? styles.likedIcon
+                      : isClaimApproved
+                        ? styles.claimApprovedIcon
+                        : isClaimRejected
+                          ? styles.claimRejectedIcon
+                          : styles.reviewedIcon,
                   )}
                 >
-                  {isLike ? <Heart size={22} /> : <Star size={22} />}
+                  {isLike ? (
+                    <Heart size={22} />
+                  ) : isClaimApproved ? (
+                    <CircleCheck size={22} />
+                  ) : isClaimRejected ? (
+                    <Ban size={22} />
+                  ) : (
+                    <Star size={22} />
+                  )}
                 </div>
                 <Flex direction="column" gap="xl" style={styles.contentColumn}>
                   <Flex
@@ -205,15 +237,27 @@ function NotificationsPage() {
                     style={styles.headerRow}
                   >
                     <Text size="xl" weight="semibold">
-                      {isLike
-                        ? `${actor} liked ${item.listingName}`
-                        : `${actor} reviewed ${item.listingName}`}
+                      {isClaimApproved
+                        ? `Your claim for ${item.listingName} was approved`
+                        : isClaimRejected
+                          ? `Your claim for ${item.listingName} was declined`
+                          : isLike
+                            ? `${actor} liked ${item.listingName}`
+                            : `${actor} reviewed ${item.listingName}`}
                     </Text>
                     <Text size="sm" variant="secondary">
                       {formatRelativeTime(item.createdAt)}
                     </Text>
                   </Flex>
-                  {!isLike && item.reviewRating != null ? (
+                  {isClaimApproved ? (
+                    <Text size="sm" variant="secondary" style={styles.cardBody}>
+                      Go to Claim listing to move this product to your PDS.
+                    </Text>
+                  ) : null}
+                  {!isLike &&
+                  !isClaimApproved &&
+                  !isClaimRejected &&
+                  item.reviewRating != null ? (
                     <Text size="sm" variant="secondary" style={styles.cardBody}>
                       {`${item.reviewRating} star${item.reviewRating === 1 ? "" : "s"}${
                         item.reviewText ? ` - ${item.reviewText}` : ""
@@ -221,13 +265,35 @@ function NotificationsPage() {
                     </Text>
                   ) : null}
                   <div {...stylex.props(styles.cardActions)}>
-                    <ButtonLink
-                      to="/products/$productId"
-                      params={{ productId }}
-                      size="sm"
-                    >
-                      Open product
-                    </ButtonLink>
+                    {isClaimApproved ? (
+                      <Button
+                        size="sm"
+                        onPress={() =>
+                          void navigate({
+                            to: "/product/claim",
+                            hash: "instant-claim",
+                          })
+                        }
+                      >
+                        Claim your listing
+                      </Button>
+                    ) : isClaimRejected ? (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onPress={() => void navigate({ to: "/product/claim" })}
+                      >
+                        View claim page
+                      </Button>
+                    ) : (
+                      <ButtonLink
+                        to="/products/$productId"
+                        params={{ productId }}
+                        size="sm"
+                      >
+                        Open product
+                      </ButtonLink>
+                    )}
                   </div>
                 </Flex>
               </div>

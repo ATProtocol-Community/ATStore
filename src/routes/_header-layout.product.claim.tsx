@@ -1,24 +1,33 @@
 import * as stylex from "@stylexjs/stylex";
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useDeferredValue, useState } from "react";
 
+import { AutocompleteInput } from "../design-system/autocomplete";
+import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
 import { Card, CardBody, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
+import { ListBoxItem } from "../design-system/listbox";
 import { Page } from "../design-system/page";
+import { TextArea } from "../design-system/text-area";
 import {
   gap,
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { Heading1 } from "../design-system/typography";
+import { Heading1, Heading2, Heading3 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import {
+  directoryListingApi,
+  type DirectoryListingCard,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { SKIP_PRODUCT_CLAIM_COOKIE } from "../lib/product-claim-eligibility";
@@ -43,6 +52,12 @@ const styles = stylex.create({
     maxWidth: "36rem",
     width: "100%",
   },
+  wideCard: {
+    boxShadow: shadow.sm,
+    maxWidth: "42rem",
+    width: "100%",
+    overflow: "visible",
+  },
   preview: {
     gap: gap.xl,
   },
@@ -56,6 +71,12 @@ const styles = stylex.create({
   description: {
     maxWidth: "40rem",
     textAlign: "center",
+  },
+  eligibleStack: {
+    marginTop: verticalSpace["3xl"],
+  },
+  explainerTop: {
+    marginTop: verticalSpace.xl,
   },
 });
 
@@ -72,6 +93,9 @@ export const Route = createFileRoute("/_header-layout/product/claim")({
     }
     const eligibility = await context.queryClient.ensureQueryData(
       directoryListingApi.getProductClaimEligibilityQueryOptions(),
+    );
+    await context.queryClient.ensureQueryData(
+      directoryListingApi.getUserProductListingClaimRequestsQueryOptions(),
     );
 
     const previewListing = eligibility?.listings?.[0];
@@ -97,9 +121,42 @@ export const Route = createFileRoute("/_header-layout/product/claim")({
 function ProductClaimPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: session } = useQuery(user.getSessionQueryOptions);
+  const { data: userProfile } = useQuery({
+    ...user.getUserProfileQueryOptions,
+    enabled: session?.user != null,
+  });
   const { data: eligibility } = useSuspenseQuery(
     directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
+  const { data: claimRequests = [] } = useSuspenseQuery(
+    directoryListingApi.getUserProductListingClaimRequestsQueryOptions(),
+  );
+
+  const displayHandle =
+    userProfile?.blueskyHandle?.replace(/^@+/, "").trim() || null;
+  const displayActor =
+    displayHandle != null && displayHandle !== ""
+      ? `@${displayHandle}`
+      : (session?.user?.did ?? "your account");
+
+  const [listingQuery, setListingQuery] = useState("");
+  const [selectedListing, setSelectedListing] =
+    useState<DirectoryListingCard | null>(null);
+  const [proofMessage, setProofMessage] = useState("");
+  const deferredSearch = useDeferredValue(listingQuery.trim());
+  const canSearch = listingQuery.trim().length >= 2;
+
+  const { data: listingSuggestions = [] } = useQuery({
+    ...directoryListingApi.getListDirectoryListingsQueryOptions({
+      query:
+        canSearch && deferredSearch.length >= 2 ? deferredSearch : undefined,
+      limit: 12,
+      withoutProductAccountHandleOnly: true,
+    }),
+    enabled: canSearch && deferredSearch.length >= 2,
+  });
+
   const claimMutation = useMutation({
     mutationFn: async (input: { listingId: string }) => {
       return directoryListingApi.claimProductListingToPds({
@@ -116,6 +173,23 @@ function ProductClaimPage() {
       void navigate({
         to: "/products/$productId",
         params: { productId: result.slug },
+      });
+    },
+  });
+
+  const submitManualClaimMutation = useMutation({
+    mutationFn: async (input: { listingId: string; message: string }) => {
+      return directoryListingApi.submitProductListingClaim({ data: input });
+    },
+    onSuccess: async () => {
+      setProofMessage("");
+      setSelectedListing(null);
+      setListingQuery("");
+      await queryClient.invalidateQueries({
+        queryKey: ["storeListings", "userProductListingClaims"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["notifications"],
       });
     },
   });
@@ -139,45 +213,20 @@ function ProductClaimPage() {
     );
   }
 
-  if (
-    (!eligibility?.eligible || eligibility.listings.length === 0) &&
-    !claimMutation.isPending
-  ) {
-    return (
-      <Page.Root variant="small" style={styles.page}>
-        <Flex direction="column" style={styles.section}>
-          <Heading1>Nothing to claim</Heading1>
-          <Text size="base" variant="secondary">
-            You do not have any store listings to move to your PDS right now.
-          </Text>
-          <Button
-            variant="secondary"
-            onPress={() => void navigate({ to: "/" })}
-          >
-            Home
-          </Button>
-        </Flex>
-      </Page.Root>
-    );
-  }
+  const hasEligible = eligibility.listings.length > 0;
 
-  return (
-    <Page.Root variant="small" style={styles.page}>
-      <Flex direction="column" align="center" gap="6xl" style={styles.section}>
-        <Heading1>Claim your listing</Heading1>
-        <Text
-          size="lg"
-          leading="base"
-          variant="secondary"
-          style={styles.description}
-        >
-          It looks like you own a product listing in the store.
-          <br />
-          You can claim it and gain the ability to update it!
+  let content: React.ReactNode = null;
+
+  if (hasEligible) {
+    content = (
+      <Flex direction="column" gap="4xl" style={styles.eligibleStack}>
+        <Text size="base">
+          We found listing(s) whose official product account matches you. Accept
+          to publish the record to your PDS.
         </Text>
         {eligibility.listings.map((listing) => (
-          <>
-            <Card key={listing.id} style={styles.card} size="lg">
+          <Flex key={listing.id} direction="column" align="center" gap="xl">
+            <Card style={styles.card} size="lg">
               {listing.heroImageUrl && (
                 <CardImage
                   aspectRatio={16 / 9}
@@ -236,8 +285,199 @@ function ProductClaimPage() {
                 Accept
               </Button>
             </Flex>
-          </>
+          </Flex>
         ))}
+      </Flex>
+    );
+  } else {
+    content = (
+      <>
+        <Text
+          size="lg"
+          leading="base"
+          variant="secondary"
+          style={styles.description}
+        >
+          If the listing&apos;s official Bluesky account is yours, sign in with
+          that handle for an instant match. Otherwise, request a manual review
+          below.
+        </Text>
+
+        <Card style={styles.wideCard} size="lg">
+          <CardBody>
+            <Flex direction="column" gap="4xl">
+              <Heading3>Request a manual claim</Heading3>
+              <Text size="sm" variant="secondary">
+                For listings without a handle you control, choose the product
+                and explain how we can verify you represent it (links to your
+                site, socials, prior posts, etc.). A moderator will review your
+                request.
+              </Text>
+
+              <AutocompleteInput<DirectoryListingCard>
+                label="Find your product"
+                placeholder="Start typing a product name…"
+                size="lg"
+                inputValue={listingQuery}
+                onInputChange={(v) => {
+                  submitManualClaimMutation.reset();
+                  setListingQuery(v);
+                  setSelectedListing(null);
+                }}
+                items={listingSuggestions}
+                onAction={(id) => {
+                  const picked = listingSuggestions.find((l) => l.id === id);
+                  if (picked) {
+                    setSelectedListing(picked);
+                    setListingQuery(picked.name);
+                  }
+                }}
+                renderEmptyState={() =>
+                  canSearch ? "No products found." : "Type at least 2 letters."
+                }
+              >
+                {(item) => (
+                  <ListBoxItem key={item.id} id={item.id} textValue={item.name}>
+                    <Flex direction="column" gap="xl">
+                      <Text size="base" weight="semibold">
+                        {item.name}
+                      </Text>
+                      {item.tagline ? (
+                        <Text size="sm" variant="secondary">
+                          {item.tagline}
+                        </Text>
+                      ) : null}
+                    </Flex>
+                  </ListBoxItem>
+                )}
+              </AutocompleteInput>
+
+              <TextArea
+                label="Proof of ownership"
+                description="Be specific — generic messages may be rejected."
+                size="lg"
+                value={proofMessage}
+                onChange={(v) => {
+                  submitManualClaimMutation.reset();
+                  setProofMessage(v);
+                }}
+                placeholder="e.g. I run this project; here is our domain and my Bluesky post announcing it…"
+              />
+
+              {submitManualClaimMutation.isError ? (
+                <Text size="sm" variant="critical">
+                  {submitManualClaimMutation.error instanceof Error
+                    ? submitManualClaimMutation.error.message
+                    : "Could not submit request."}
+                </Text>
+              ) : null}
+              {submitManualClaimMutation.isSuccess ? (
+                <Text size="sm" variant="secondary">
+                  Request submitted. We&apos;ll notify you when it&apos;s
+                  reviewed.
+                </Text>
+              ) : null}
+
+              <Button
+                variant="primary"
+                size="lg"
+                isPending={submitManualClaimMutation.isPending}
+                isDisabled={!selectedListing || proofMessage.trim().length < 20}
+                onPress={() => {
+                  if (!selectedListing) return;
+                  submitManualClaimMutation.mutate({
+                    listingId: selectedListing.id,
+                    message: proofMessage.trim(),
+                  });
+                }}
+              >
+                Submit claim request
+              </Button>
+            </Flex>
+          </CardBody>
+        </Card>
+
+        {claimRequests.length > 0 ? (
+          <Flex direction="column" gap="4xl" style={styles.wideCard}>
+            <Heading3>Your requests</Heading3>
+            <Flex direction="column" gap="lg">
+              {claimRequests.map((req) => (
+                <Card key={req.id} size="md">
+                  <CardBody>
+                    <Flex
+                      direction="row"
+                      align="center"
+                      justify="between"
+                      gap="xl"
+                      wrap
+                    >
+                      <Flex direction="column" gap="2xl">
+                        <Text size="lg" weight="semibold">
+                          {req.listingName}
+                        </Text>
+                        <Text size="sm" variant="secondary">
+                          Submitted{" "}
+                          {new Date(req.createdAt).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </Text>
+                        {req.decidedAt ? (
+                          <Text size="sm" variant="secondary">
+                            Updated{" "}
+                            {new Date(req.decidedAt).toLocaleString(undefined, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </Text>
+                        ) : null}
+                      </Flex>
+                      <Flex direction="column" gap="md" align="end">
+                        <Badge
+                          size="sm"
+                          variant={
+                            req.status === "approved"
+                              ? "success"
+                              : req.status === "rejected"
+                                ? "critical"
+                                : "warning"
+                          }
+                        >
+                          {req.status}
+                        </Badge>
+                        {req.status === "approved" ? (
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onPress={() => {
+                              void queryClient.invalidateQueries({
+                                queryKey: [
+                                  "storeListings",
+                                  "productClaimEligibility",
+                                ],
+                              });
+                            }}
+                          >
+                            Refresh eligible listings
+                          </Button>
+                        ) : null}
+                      </Flex>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              ))}
+            </Flex>
+          </Flex>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <Page.Root variant="small" style={styles.page}>
+      <Flex direction="column" align="center" gap="6xl" style={styles.section}>
+        <Heading1>Claim your listing</Heading1>
+        {content}
       </Flex>
     </Page.Root>
   );
