@@ -91,6 +91,12 @@ function RouteComponent() {
             >
               Managed Listings
             </SidebarLink>
+            <SidebarLink
+              to="/admin/add-listing"
+              activeProps={{ isActive: true }}
+            >
+              Add Listing
+            </SidebarLink>
           </SidebarSection>
         </Sidebar>
       </SidebarLayout.NavigationSidebar>

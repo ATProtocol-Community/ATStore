@@ -202,8 +202,7 @@ function AdminManagedListingsPage() {
           <Heading1>Managed listings</Heading1>
           <Body variant="secondary">
             Pick any listing still published from the store account and edit it
-            in place, including the same generate/preview tooling that used to
-            float on each product page.
+            in place.
           </Body>
           <SmallBody variant="secondary">
             {managedListings.length} listing

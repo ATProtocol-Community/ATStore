@@ -4875,6 +4875,288 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
     return { slug: full.slug }
   })
 
+const previewListingImageByUrlInput = z.object({
+  name: z.string().trim().min(1).max(640),
+  externalUrl: listingExternalUrlSchema,
+  tagline: z.string().trim().max(2000).optional(),
+  fullDescription: z.string().trim().max(20000).optional(),
+})
+
+function buildGenerationCandidateFromUrl(
+  input: z.infer<typeof previewListingImageByUrlInput>,
+): DirectoryListingGenerationCandidate {
+  return {
+    id: 'draft',
+    name: input.name.trim(),
+    sourceUrl: input.externalUrl.trim(),
+    externalUrl: input.externalUrl.trim(),
+    screenshotUrls: [],
+    tagline: input.tagline?.trim() || null,
+    fullDescription: input.fullDescription?.trim() || null,
+    rawCategoryHint: null,
+    scope: null,
+    productType: null,
+    domain: null,
+  }
+}
+
+/**
+ * Admin-only: generate a hero image preview from a URL + name, without requiring an
+ * existing listing row. Used by the admin "add listing" flow before the record
+ * has been published to the store PDS.
+ */
+const previewListingHeroImageByUrl = createServerFn({ method: 'POST' })
+  .middleware([adminFnMiddleware])
+  .inputValidator(previewListingImageByUrlInput)
+  .handler(async ({ data }) => {
+    const listing = buildGenerationCandidateFromUrl(data)
+    const pageUrl = getListingGenerationUrl(listing)
+    if (!pageUrl) {
+      throw new Error('externalUrl is required')
+    }
+
+    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl)
+    const generatedImage = await generateImageFromScreenshot({
+      screenshot,
+      prompt: buildMarketingPrompt(listing, pageUrl),
+    })
+
+    return {
+      mimeType: generatedImage.mimeType,
+      imageBase64: generatedImage.buffer.toString('base64'),
+    }
+  })
+
+/**
+ * Admin-only: generate an icon preview from a URL + name, without requiring an
+ * existing listing row. Mirrors `previewDirectoryListingIcon` but accepts raw
+ * inputs so it can run inside the admin "add listing" flow.
+ */
+const previewListingIconByUrl = createServerFn({ method: 'POST' })
+  .middleware([adminFnMiddleware])
+  .inputValidator(previewListingImageByUrlInput)
+  .handler(async ({ data }) => {
+    const listing = buildGenerationCandidateFromUrl(data)
+    const pageUrl = getListingGenerationUrl(listing)
+    if (!pageUrl) {
+      throw new Error('externalUrl is required')
+    }
+
+    const discovered = await discoverSiteBrandIconAsset(pageUrl)
+    if (discovered) {
+      try {
+        const pngIn = await rasterizeBrandIconForGeminiInput(
+          discovered.bytes,
+          discovered.contentType,
+        )
+        const polished = await geminiFlashGenerateImageFromPromptAndImage({
+          prompt: buildIconPolishFromSiteAssetPrompt({
+            name: listing.name,
+            pageUrl,
+            tagline: listing.tagline,
+            productType: listing.productType,
+            domain: listing.domain,
+            scope: listing.scope,
+          }),
+          imageBytes: pngIn,
+          imageMimeType: 'image/png',
+        })
+        return {
+          mimeType: polished.mimeType,
+          imageBase64: polished.buffer.toString('base64'),
+          previewSource: 'site_asset' as const,
+        }
+      } catch {
+        /* fall through to screenshot-based generation */
+      }
+    }
+
+    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl)
+    const generatedImage = await generateImageFromScreenshot({
+      screenshot,
+      prompt: buildIconPrompt(listing, pageUrl),
+    })
+
+    return {
+      mimeType: generatedImage.mimeType,
+      imageBase64: generatedImage.buffer.toString('base64'),
+      previewSource: 'model' as const,
+    }
+  })
+
+const createStoreManagedListingInput = z.object({
+  name: z.string().trim().min(1).max(640),
+  tagline: z.string().max(2000),
+  fullDescription: z.string().max(20000),
+  externalUrl: listingExternalUrlSchema,
+  categorySlug: z.string().trim().min(1).max(256),
+  productHandle: z.string().max(300),
+  links: z
+    .array(listingLinkInputSchema)
+    .max(LISTING_LINK_MAX_COUNT)
+    .optional()
+    .default([]),
+  heroImage: z
+    .object({
+      mimeType: z.string().min(3).max(128),
+      imageBase64: z.string().min(1),
+    })
+    .optional(),
+  iconImage: z
+    .object({
+      mimeType: z.string().min(3).max(128),
+      imageBase64: z.string().min(1),
+    })
+    .optional(),
+  screenshotImages: z
+    .array(
+      z.object({
+        mimeType: z.string().min(3).max(128),
+        imageBase64: z.string().min(1),
+      }),
+    )
+    .max(4)
+    .optional()
+    .default([]),
+})
+
+/**
+ * Admin-only: create a brand-new `fyi.atstore.listing.detail` record on the
+ * store PDS. The row in Postgres is created by Tap ingest when the record
+ * lands; this server fn only publishes to the PDS and returns the slug/uri.
+ */
+const createStoreManagedListing = createServerFn({ method: 'POST' })
+  .middleware([adminFnMiddleware])
+  .inputValidator(createStoreManagedListingInput)
+  .handler(async ({ data }) => {
+    const { client, repoDid } = await createAtstorePublishClient()
+
+    const name = data.name.trim().slice(0, 640)
+    const taglineClean = sanitizeListingTagline(data.tagline)
+    const descClean = sanitizeListingDescription(data.fullDescription)
+    const externalUrl = data.externalUrl.trim()
+    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
+    const slug = buildDraftOwnedListingSlug(name)
+    const productHandleInput = data.productHandle.trim()
+
+    let productAccountHandle: string | null = null
+    let productAccountDid: string | null = null
+    if (productHandleInput.length > 0) {
+      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      if (!resolvedDid) {
+        throw new Error('Could not resolve that handle to a DID.')
+      }
+      productAccountDid = resolvedDid
+    }
+
+    const now = new Date()
+    const links = normalizeListingLinks(data.links as ListingLink[])
+    const draftRow: StoreListing = {
+      id: crypto.randomUUID(),
+      sourceUrl: externalUrl,
+      name,
+      slug,
+      externalUrl,
+      iconUrl: null,
+      screenshotUrls: [],
+      tagline: taglineClean,
+      fullDescription: descClean,
+      categorySlugs: [categorySlug],
+      appTags: [],
+      links,
+      atUri: null,
+      repoDid,
+      rkey: null,
+      heroImageUrl: null,
+      verificationStatus: 'unverified',
+      sourceAccountDid: repoDid,
+      claimedByDid: null,
+      claimedAt: null,
+      productAccountDid,
+      productAccountHandle,
+      productAccountHandleIgnoredAt: null,
+      migratedFromAtUri: null,
+      claimPendingForDid: null,
+      reviewCount: 0,
+      averageRating: null,
+      favoriteCount: 0,
+      mentionCount24h: 0,
+      mentionCount7d: 0,
+      trendingScore: null,
+      trendingUpdatedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    let blobOverrides:
+      | {
+          heroImage?: { bytes: Uint8Array; mimeType: string }
+          icon?: { bytes: Uint8Array; mimeType: string }
+          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>
+        }
+      | undefined
+
+    if (data.heroImage) {
+      const heroMime = data.heroImage.mimeType.trim().toLowerCase()
+      if (!heroMime.startsWith('image/')) {
+        throw new Error('Hero image must be an image.')
+      }
+      const heroRaw = Buffer.from(data.heroImage.imageBase64, 'base64')
+      if (heroRaw.length === 0 || heroRaw.length > 12_000_000) {
+        throw new Error('Hero image must be at most 12 MB.')
+      }
+      blobOverrides = blobOverrides ?? {}
+      blobOverrides.heroImage = {
+        bytes: Uint8Array.from(heroRaw),
+        mimeType: heroMime,
+      }
+    }
+
+    if (data.iconImage) {
+      const iconMime = data.iconImage.mimeType.trim().toLowerCase()
+      if (!iconMime.startsWith('image/')) {
+        throw new Error('Icon image must be an image.')
+      }
+      const iconRaw = Buffer.from(data.iconImage.imageBase64, 'base64')
+      if (iconRaw.length === 0 || iconRaw.length > 2_000_000) {
+        throw new Error('Icon image must be at most 2 MB.')
+      }
+      blobOverrides = blobOverrides ?? {}
+      blobOverrides.icon = {
+        bytes: Uint8Array.from(iconRaw),
+        mimeType: iconMime,
+      }
+    }
+
+    if (data.screenshotImages && data.screenshotImages.length > 0) {
+      blobOverrides = blobOverrides ?? {}
+      blobOverrides.screenshots = data.screenshotImages.map((screenshot, index) => {
+        const mime = screenshot.mimeType.trim().toLowerCase()
+        if (!mime.startsWith('image/')) {
+          throw new Error(`Screenshot ${index + 1} must be an image.`)
+        }
+        const raw = Buffer.from(screenshot.imageBase64, 'base64')
+        if (raw.length === 0 || raw.length > 12_000_000) {
+          throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
+        }
+        return { bytes: Uint8Array.from(raw), mimeType: mime }
+      })
+    }
+
+    const { record } = await buildListingDetailRecordWithBlobs(
+      client,
+      draftRow,
+      blobOverrides,
+    )
+    const createdAt = now.toISOString()
+    record.createdAt = createdAt
+    record.updatedAt = createdAt
+
+    const { uri } = await createListingDetailRecord(client, repoDid, record)
+    return { uri, slug }
+  })
+
 export const directoryListingApi = {
   getHomePageData,
   getHomePageQueryOptions,
@@ -4959,4 +5241,7 @@ export const directoryListingApi = {
   getStoreManagedListings,
   getStoreManagedListingsQueryOptions,
   updateStoreManagedListing,
+  previewListingHeroImageByUrl,
+  previewListingIconByUrl,
+  createStoreManagedListing,
 }

@@ -87,6 +87,11 @@ function AdminOverviewPage() {
             title="Managed listings"
             to="/admin/managed-listings"
           />
+          <SummaryCard
+            description="Publish a brand-new listing to the store PDS, with hero/icon generators built in."
+            title="Add listing"
+            to="/admin/add-listing"
+          />
         </div>
       </Flex>
     </Page.Root>

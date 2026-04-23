@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
@@ -450,6 +450,11 @@ export type ProductListingFormSubmitValues = {
   links: ListingLink[];
 };
 
+export type ProductListingFormControl = {
+  setPendingHero: (blob: Blob) => void;
+  setPendingIcon: (blob: Blob) => void;
+};
+
 export type ProductListingFormInitialValues = {
   name: string;
   tagline: string;
@@ -473,6 +478,7 @@ type ProductListingFormProps = {
   onCancel: () => void;
   errorMessage?: string | null;
   successMessage?: string | null;
+  controlRef?: React.Ref<ProductListingFormControl>;
 };
 
 export function ProductListingForm({
@@ -485,6 +491,7 @@ export function ProductListingForm({
   onCancel,
   errorMessage,
   successMessage,
+  controlRef,
 }: ProductListingFormProps) {
   const { data: categoryTree } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryTreeQueryOptions,
@@ -680,6 +687,29 @@ export function ProductListingForm({
       }
     };
   }, [pendingIconPreviewUrl]);
+
+  useImperativeHandle(
+    controlRef,
+    () => ({
+      setPendingHero: (blob: Blob) => {
+        const nextPreviewUrl = URL.createObjectURL(blob);
+        setPendingHeroPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return nextPreviewUrl;
+        });
+        pendingHeroBlobRef.current = blob;
+      },
+      setPendingIcon: (blob: Blob) => {
+        const nextPreviewUrl = URL.createObjectURL(blob);
+        setPendingIconPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return nextPreviewUrl;
+        });
+        pendingIconBlobRef.current = blob;
+      },
+    }),
+    [controlRef],
+  );
 
   useEffect(() => {
     pendingScreenshotBlobsRef.current = screenshotItems
