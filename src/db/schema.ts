@@ -209,9 +209,12 @@ export const storeListings = pgTable(
      */
     migratedFromAtUri: text('migrated_from_at_uri'),
     /**
-     * Mirror of `fyi.atstore.listing.detail.claimKey` from Tap (AT Store repo only). Nulled on successful claim (one-time).
+     * DID expected to publish the post-claim record. Set when the user starts a claim (server fn);
+     * Tap ingest verifies any incoming listing record's repo DID against this value (combined with
+     * `migratedFromAtUri` lineage) before marking `verified`. Cleared on successful verification or
+     * rollback.
      */
-    claimKey: text('claim_key'),
+    claimPendingForDid: text('claim_pending_for_did'),
     /** Denormalized from `store_listing_reviews` (Tap ingest). */
     reviewCount: integer('review_count').notNull().default(0),
     /** Null when `reviewCount` is 0; else mean of star ratings (1–5). */

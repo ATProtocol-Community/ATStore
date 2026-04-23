@@ -109,12 +109,7 @@ export async function publishOwnedListingDetail(
     client,
     merged,
     blobOverrides,
-    {
-      omitClaimKey: true,
-      ...(migrated?.startsWith('at://')
-        ? { migratedFromAtUri: migrated }
-        : {}),
-    },
+    migrated?.startsWith('at://') ? { migratedFromAtUri: migrated } : undefined,
   )
   record.updatedAt = new Date().toISOString()
   const { uri } = await putListingDetailRecord(client, ownerRepoDid, rk, record)

@@ -149,11 +149,6 @@ export const lexicons = [
               "format": "at-uri",
               "maxLength": 8192,
               "description": "When this listing.detail record supersedes a prior record in another repo (e.g. moved from the AT Store publisher to a product owner PDS), the at:// URI of that prior fyi.atstore.listing.detail record."
-            },
-            "claimKey": {
-              "type": "string",
-              "maxLength": 256,
-              "description": "Claim token carried on the store-published record; directory ingest mirrors it to Postgres. The post-claim copy on the product owner PDS omits this field."
             }
           }
         }

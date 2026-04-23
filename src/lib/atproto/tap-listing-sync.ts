@@ -3,7 +3,6 @@ import {
   isLegacyBlob,
   type Blob as AtprotoBlob,
 } from '@atcute/lexicons/interfaces'
-import { timingSafeEqual } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -18,13 +17,6 @@ import { parseAtUriParts } from '#/lib/atproto/at-uri'
 import { fetchBlueskyPublicProfileFields } from '#/lib/bluesky-public-profile'
 import { COLLECTION } from '#/lib/atproto/nsids'
 import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
-
-function timingSafeEqualUtf8(a: string, b: string): boolean {
-  const ba = Buffer.from(a, 'utf8')
-  const bb = Buffer.from(b, 'utf8')
-  if (ba.length !== bb.length) return false
-  return timingSafeEqual(ba, bb)
-}
 
 /**
  * `isBlob()` requires `$type: "blob"`, exactly four keys, etc. Tap / repo JSON often omits
@@ -126,14 +118,6 @@ const listingBodySchema = z.object({
     .optional()
     .refine((s) => !s || s.startsWith('at://'), {
       message: 'migratedFromAtUri must be an at:// URI',
-    }),
-  claimKey: z
-    .string()
-    .max(256)
-    .optional()
-    .transform((s) => {
-      const t = s?.trim() ?? ''
-      return t.length > 0 ? t : undefined
     }),
 })
 
@@ -237,7 +221,6 @@ export function tryParseListingDetailRecord(
   if (d.productAccountDid) rec.productAccountDid = d.productAccountDid
   const migrated = d.migratedFromAtUri?.trim()
   if (migrated) rec.migratedFromAtUri = migrated
-  if (d.claimKey) rec.claimKey = d.claimKey
   return { ok: true, record: rec }
 }
 
@@ -253,33 +236,71 @@ function atUriFor(did: string, rkey: string) {
 }
 
 /**
- * Verified when: trusted store publisher; or claim lineage from the store repo; or the ingested `claimKey`
- * matches the directory row already stored for this slug (same token on the network as in Postgres).
+ * Verified when: trusted store publisher; ingest is a no-op confirmation of an already-verified row
+ * (handler-side claim has already updated the row to this exact `repoDid`+`rkey`); or the incoming
+ * record satisfies the combined claim handshake — `claimPendingForDid` set on the existing row matches
+ * the ingest repo DID **and** `migratedFromAtUri` points at the row's prior `at://<atstoreDid>/...rkey`.
+ *
+ * Lineage alone is intentionally insufficient: anyone can write `migratedFromAtUri` referencing a
+ * known store record. The DID handshake bounds verification to the user who initiated the claim.
  */
 function resolveListingVerificationStatus(input: {
   trustedPublisher: boolean
   record: FyiAtstoreListingDetail
-  incomingClaimKey: string | null
-  existingClaimKey: string | null
+  ingestRepoDid: string
+  ingestRkey: string
+  existingClaimPendingForDid: string | null
+  existingPriorAtUri: string | null
+  existingRepoDid: string | null
+  existingRkey: string | null
+  existingVerificationStatus: string | null
   atstoreDid: string | null
 }): 'verified' | 'unverified' {
   if (input.trustedPublisher) return 'verified'
-  const migrated = input.record.migratedFromAtUri?.trim()
-  if (migrated && input.atstoreDid) {
-    try {
-      const prior = parseAtUriParts(migrated)
-      if (prior.collection !== COLLECTION.listingDetail) return 'unverified'
-      if (prior.repo.trim() === input.atstoreDid.trim()) return 'verified'
-    } catch {
-      /* fall through */
-    }
-  }
-  const inc = input.incomingClaimKey
-  const ex = input.existingClaimKey
-  if (inc && ex && timingSafeEqualUtf8(inc, ex)) {
+
+  const repoDid = input.ingestRepoDid.trim()
+
+  /**
+   * Idempotent confirmation: the claim server fn already wrote this exact (repoDid, rkey) onto the
+   * row and marked it `verified`. Tap is just replaying the firehose event afterwards.
+   */
+  if (
+    input.existingVerificationStatus === 'verified' &&
+    input.existingRepoDid?.trim() === repoDid &&
+    input.existingRkey?.trim() === input.ingestRkey.trim()
+  ) {
     return 'verified'
   }
-  return 'unverified'
+
+  const pendingDid = input.existingClaimPendingForDid?.trim() ?? null
+  if (!pendingDid || pendingDid !== repoDid) return 'unverified'
+
+  const migrated = input.record.migratedFromAtUri?.trim()
+  if (!migrated || !input.atstoreDid) return 'unverified'
+
+  let prior: { repo: string; collection: string; rkey: string }
+  try {
+    prior = parseAtUriParts(migrated)
+  } catch {
+    return 'unverified'
+  }
+  if (prior.collection !== COLLECTION.listingDetail) return 'unverified'
+  if (prior.repo.trim() !== input.atstoreDid.trim()) return 'unverified'
+
+  /**
+   * Lineage must point at *this row's* prior store record (when we know it), not just any store
+   * record under the atstore DID. Without this, an attacker who knew any store rkey could forge a
+   * lineage URI; the DID-pending check would still gate them, but pinning the rkey is cheap defense
+   * in depth.
+   */
+  if (
+    input.existingPriorAtUri &&
+    input.existingPriorAtUri.trim() !== migrated
+  ) {
+    return 'unverified'
+  }
+
+  return 'verified'
 }
 
 /**
@@ -296,27 +317,45 @@ export async function upsertDirectoryListingFromTap(input: {
   const { db, did, rkey, record, trustedPublisher } = input
   const atUri = atUriFor(did, rkey)
   const sourceUrl = record.externalUrl.trim()
-  const incomingClaimKey = record.claimKey?.trim() ?? null
   const atstoreDidRaw = process.env.ATSTORE_REPO_DID?.trim() ?? null
   const atstoreDid = atstoreDidRaw?.startsWith('did:') ? atstoreDidRaw : null
-  /** Only the store repo may persist `claim_key`; owner-repo ingests clear it so it cannot return after claim. */
-  const claimKeyPersisted =
-    atstoreDid && did.trim() === atstoreDid.trim() ? incomingClaimKey : null
 
   const [existingRow] = await db
-    .select({ claimKey: schema.storeListings.claimKey })
+    .select({
+      claimPendingForDid: schema.storeListings.claimPendingForDid,
+      migratedFromAtUri: schema.storeListings.migratedFromAtUri,
+      repoDid: schema.storeListings.repoDid,
+      rkey: schema.storeListings.rkey,
+      verificationStatus: schema.storeListings.verificationStatus,
+    })
     .from(schema.storeListings)
     .where(eq(schema.storeListings.slug, record.slug))
     .limit(1)
-  const existingClaimKey = existingRow?.claimKey?.trim() ?? null
+  const existingClaimPendingForDid =
+    existingRow?.claimPendingForDid?.trim() ?? null
+  const existingPriorAtUri = existingRow?.migratedFromAtUri?.trim() ?? null
+  const existingRepoDid = existingRow?.repoDid ?? null
+  const existingRkey = existingRow?.rkey ?? null
+  const existingVerificationStatus = existingRow?.verificationStatus ?? null
 
   const verificationStatus = resolveListingVerificationStatus({
     trustedPublisher,
     record,
-    incomingClaimKey,
-    existingClaimKey,
+    ingestRepoDid: did,
+    ingestRkey: rkey,
+    existingClaimPendingForDid,
+    existingPriorAtUri,
+    existingRepoDid,
+    existingRkey,
+    existingVerificationStatus,
     atstoreDid,
   })
+
+  /** Successful claim handshake — clear the pending marker so it cannot be reused. */
+  const claimPendingForDidNext =
+    verificationStatus === 'verified' && existingClaimPendingForDid
+      ? null
+      : (existingClaimPendingForDid ?? null)
   const now = new Date()
   const appTags = record.appTags ?? []
   const categorySlugs = record.categorySlug
@@ -366,7 +405,7 @@ export async function upsertDirectoryListingFromTap(input: {
       productAccountDid: productDid,
       productAccountHandle,
       migratedFromAtUri,
-      claimKey: claimKeyPersisted,
+      claimPendingForDid: claimPendingForDidNext,
       updatedAt: now,
     })
     .onConflictDoUpdate({
@@ -390,7 +429,7 @@ export async function upsertDirectoryListingFromTap(input: {
         productAccountDid: productDid,
         productAccountHandle,
         migratedFromAtUri,
-        claimKey: claimKeyPersisted,
+        claimPendingForDid: claimPendingForDidNext,
         updatedAt: now,
       },
     })

@@ -1042,7 +1042,7 @@ function buildHomePageTagSummaries(
   throw new Error('No app tag summaries found')
 }
 
-/** Public listing card projection — never include `claim_key` (server-only secret). */
+/** Public listing card projection — never include `claim_pending_for_did` (server-only). */
 function getListingSelect(table: typeof dbSchema.storeListings) {
   return {
     id: table.id,
@@ -2081,7 +2081,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data, context }) => {
     const table = context.schema.storeListings
-    /** Explicit columns only — never `claim_key`. */
+    /** Explicit columns only — never `claim_pending_for_did`. */
     const [row] = await context.db
       .select({
         id: table.id,
@@ -2125,7 +2125,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data, context }) => {
     const table = context.schema.storeListings
-    /** Explicit columns only — never `claim_key`. */
+    /** Explicit columns only — never `claim_pending_for_did`. */
     const [row] = await context.db
       .select({
         id: table.id,
@@ -4000,7 +4000,7 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       productAccountHandle,
       productAccountHandleIgnoredAt: null,
       migratedFromAtUri: null,
-      claimKey: null,
+      claimPendingForDid: null,
       reviewCount: 0,
       averageRating: null,
       favoriteCount: 0,
@@ -4072,7 +4072,6 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       session.client,
       draftRow,
       blobOverrides,
-      { omitClaimKey: true },
     )
     const createdAt = now.toISOString()
     record.createdAt = createdAt
@@ -4404,13 +4403,19 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
     const claimStartedAt = new Date()
 
     /**
-     * Set lineage *before* PDS writes. Otherwise Tap can apply the store-repo delete first;
-     * `markListingRemovedFromTap` would not see `migratedFromAtUri` yet and would delete the row.
+     * Set lineage + pending claimant DID *before* PDS writes:
+     * - lineage so a racing Tap delete for the store-repo tombstone hits the
+     *   `migratedFromAtUri` skip in `markListingRemovedFromTap`.
+     * - `claimPendingForDid` so any Tap ingest of the new owner-PDS record
+     *   passes the combined-lineage+DID handshake in `tap-listing-sync.ts`
+     *   even if the firehose event arrives before our handler-side
+     *   `verified` update below lands.
      */
     await context.db
       .update(t)
       .set({
         migratedFromAtUri: canonicalOldAtUri,
+        claimPendingForDid: session.did,
         updatedAt: claimStartedAt,
       })
       .where(eq(t.id, full.id))
@@ -4422,7 +4427,6 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
         undefined,
         {
           migratedFromAtUri: canonicalOldAtUri,
-          omitClaimKey: true,
         },
       )
       record.updatedAt = new Date().toISOString()
@@ -4443,8 +4447,8 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
           rkey: newRkey,
           migratedFromAtUri: canonicalOldAtUri,
           verificationStatus: 'verified',
-          /** Single-use: remove so Tap / claim cannot reuse the same token. */
-          claimKey: null,
+          /** Handshake satisfied — clear so the marker cannot gate a future re-publish. */
+          claimPendingForDid: null,
           updatedAt: now,
         })
         .where(eq(t.id, full.id))
@@ -4455,6 +4459,7 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
         .update(t)
         .set({
           migratedFromAtUri: null,
+          claimPendingForDid: null,
           updatedAt: new Date(),
         })
         .where(eq(t.id, full.id))
