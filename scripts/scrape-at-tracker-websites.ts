@@ -107,15 +107,22 @@ function normalizeHost(value: string | null | undefined): string | null {
   }
 }
 
-async function loadListedHostsFromDb(): Promise<Set<string>> {
+type ListedIndex = {
+  hosts: Set<string>
+  slugs: Set<string>
+}
+
+async function loadListedIndexFromDb(): Promise<ListedIndex> {
   const rows = await db
     .select({
       sourceUrl: storeListings.sourceUrl,
       externalUrl: storeListings.externalUrl,
+      slug: storeListings.slug,
     })
     .from(storeListings)
 
   const hosts = new Set<string>()
+  const slugs = new Set<string>()
   for (const row of rows) {
     const externalHost = normalizeHost(row.externalUrl)
     if (externalHost) {
@@ -126,9 +133,19 @@ async function loadListedHostsFromDb(): Promise<Set<string>> {
     if (sourceHost) {
       hosts.add(sourceHost)
     }
+
+    if (row.slug) {
+      slugs.add(row.slug.toLowerCase())
+    }
   }
 
-  return hosts
+  return { hosts, slugs }
+}
+
+function getDomainLeaf(domain: string): string | null {
+  const parts = domain.split(".").filter((part) => part.length > 0)
+  if (parts.length === 0) return null
+  return parts[parts.length - 1]?.toLowerCase() ?? null
 }
 
 async function main() {
@@ -163,12 +180,18 @@ async function main() {
     }
   }
 
-  const listedHosts = args.includeListed ? new Set<string>() : await loadListedHostsFromDb()
+  const listedIndex = args.includeListed
+    ? { hosts: new Set<string>(), slugs: new Set<string>() }
+    : await loadListedIndexFromDb()
 
   const filteredEntries = [...domainToWebsite.entries()].filter(([domain, websiteUrl]) => {
     if (args.includeListed) return true
     const websiteHost = normalizeHost(websiteUrl)
-    return !listedHosts.has(domain) && !(websiteHost && listedHosts.has(websiteHost))
+    if (listedIndex.hosts.has(domain)) return false
+    if (websiteHost && listedIndex.hosts.has(websiteHost)) return false
+    const leaf = getDomainLeaf(domain)
+    if (leaf && listedIndex.slugs.has(leaf)) return false
+    return true
   })
 
   const lines = filteredEntries
