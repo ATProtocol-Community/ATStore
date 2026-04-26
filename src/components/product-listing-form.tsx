@@ -102,8 +102,6 @@ function base64ToBlob(imageBase64: string, mimeType: string): Blob {
 }
 
 const LINK_TYPE_OPTIONS: Array<{ id: ListingLinkType; label: string }> = [
-  { id: "privacy", label: "Privacy policy" },
-  { id: "terms", label: "Terms of service" },
   { id: "support", label: "Support" },
   { id: "contact", label: "Contact" },
   { id: "docs", label: "Documentation" },
@@ -437,13 +435,13 @@ const styles = stylex.create({
   linksList: {
     gap: gap["xl"],
   },
-  linkRow: {
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: gap["md"],
-  },
   linkRowTypeField: {
     minWidth: "12rem",
+  },
+  linkRowTypeFieldPrivacyTermsText: {
+    boxSizing: "border-box",
+    paddingLeft: `calc(${horizontalSpace.md} + 1px)`,
+    paddingRight: `calc(${horizontalSpace.md} + 1px)`,
   },
   linkRowUrlField: {
     flexGrow: 1,
@@ -456,6 +454,11 @@ const styles = stylex.create({
     minWidth: 0,
   },
   linkRowRemoveButton: {
+    flexShrink: 0,
+  },
+  linkRowRemoveButtonPlaceholder: {
+    width: size["4xl"],
+    height: size["4xl"],
     flexShrink: 0,
   },
   linkAddRow: {
@@ -1400,7 +1403,7 @@ export function ProductListingForm({
 
           <Card style={styles.card} size="lg">
             <CardBody>
-              <Flex direction="column" gap="4xl">
+              <Flex direction="column" gap="5xl">
                 <Flex align="start" justify="between" gap="2xl">
                   <Flex direction="column" gap="2xl">
                     <Text weight="semibold" size="lg">
@@ -1431,34 +1434,42 @@ export function ProductListingForm({
                         row.type === "privacy" || row.type === "terms";
 
                       return (
-                        <Flex key={row.id} style={styles.linkRow}>
-                          <Select
-                            aria-label="Link type"
-                            items={LINK_TYPE_OPTIONS}
-                            value={row.type}
-                            onChange={(value) => {
-                              if (typeof value !== "string") return;
-                              updateLinkRow(row.id, {
-                                type: value,
-                                ...(value === "other" ? {} : { label: "" }),
-                              });
-                            }}
-                            style={styles.linkRowTypeField}
-                            isDisabled={isAlwaysPresent}
-                          >
-                            {(item) => (
-                              <SelectItem id={item.id}>{item.label}</SelectItem>
-                            )}
-                          </Select>
-                          <TextField
-                            aria-label="Link URL"
-                            value={row.url}
-                            onChange={(value) => {
-                              updateLinkRow(row.id, { url: value });
-                            }}
-                            placeholder="https://example.com/privacy"
-                            style={styles.linkRowUrlField}
-                          />
+                        <Flex key={row.id} align="center" wrap gap="4xl">
+                          {row.type === "privacy" || row.type === "terms" ? (
+                            <Text
+                              size="base"
+                              style={[
+                                styles.linkRowTypeField,
+                                styles.linkRowTypeFieldPrivacyTermsText,
+                              ]}
+                            >
+                              {row.type === "privacy"
+                                ? "Privacy policy"
+                                : "Terms of service"}
+                            </Text>
+                          ) : (
+                            <Select
+                              aria-label="Link type"
+                              variant="tertiary"
+                              items={LINK_TYPE_OPTIONS}
+                              value={row.type}
+                              onChange={(value) => {
+                                if (typeof value !== "string") return;
+                                updateLinkRow(row.id, {
+                                  type: value,
+                                  ...(value === "other" ? {} : { label: "" }),
+                                });
+                              }}
+                              style={styles.linkRowTypeField}
+                              isDisabled={isAlwaysPresent}
+                            >
+                              {(item) => (
+                                <SelectItem id={item.id}>
+                                  {item.label}
+                                </SelectItem>
+                              )}
+                            </Select>
+                          )}
                           {isOther ? (
                             <TextField
                               aria-label="Link label"
@@ -1471,18 +1482,32 @@ export function ProductListingForm({
                               isRequired
                             />
                           ) : null}
-                          <IconButton
-                            size="lg"
-                            variant="tertiary"
-                            label="Remove link"
-                            isDisabled={isSubmitting || isAlwaysPresent}
-                            onPress={() => {
-                              removeLinkRow(row.id);
+                          <TextField
+                            aria-label="Link URL"
+                            value={row.url}
+                            onChange={(value) => {
+                              updateLinkRow(row.id, { url: value });
                             }}
-                            style={styles.linkRowRemoveButton}
-                          >
-                            <Trash2 />
-                          </IconButton>
+                            placeholder="https://example.com/privacy"
+                            style={styles.linkRowUrlField}
+                            suffix={
+                              row.type !== "privacy" &&
+                              row.type !== "terms" && (
+                                <IconButton
+                                  size="md"
+                                  variant="tertiary"
+                                  label="Remove link"
+                                  isDisabled={isSubmitting || isAlwaysPresent}
+                                  onPress={() => {
+                                    removeLinkRow(row.id);
+                                  }}
+                                  style={styles.linkRowRemoveButton}
+                                >
+                                  <Trash2 />
+                                </IconButton>
+                              )
+                            }
+                          />
                         </Flex>
                       );
                     })}
