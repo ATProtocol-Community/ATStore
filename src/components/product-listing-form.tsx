@@ -18,7 +18,7 @@ import {
   type ListingLinkType,
 } from "#/lib/atproto/listing-record";
 import { formatAppTagLabel } from "#/lib/app-tag-metadata";
-import { normalizeAppTags } from "#/lib/app-tags";
+import { normalizeAppTag, normalizeAppTags } from "#/lib/app-tags";
 import { Button } from "../design-system/button";
 import { IconButton } from "../design-system/icon-button";
 import { Card, CardBody } from "../design-system/card";
@@ -469,6 +469,14 @@ const styles = stylex.create({
     flexWrap: "wrap",
     gap: gap["sm"],
   },
+  customTagRow: {
+    flexWrap: "wrap",
+  },
+  customTagInput: {
+    flexGrow: 1,
+    flexBasis: "16rem",
+    minWidth: 0,
+  },
   imageAssetHeaderActions: {
     alignItems: "center",
     gap: gap.md,
@@ -710,11 +718,12 @@ export function ProductListingForm({
   const [selectedAppTags, setSelectedAppTags] = useState<Set<string>>(
     () => new Set(initialNormalizedAppTags),
   );
+  const [customTagInput, setCustomTagInput] = useState("");
 
   /**
-   * Union of tags seen on other listings (from the DB) and tags already on this
-   * listing, so a listing never appears to have dropped a tag just because no
-   * other row uses it yet.
+   * Union of tags seen on other listings (from the DB), tags already on this
+   * listing, and any custom tags the user has just selected so they are
+   * immediately visible as toggle buttons after being added.
    */
   const availableAppTags = (() => {
     const seen = new Set<string>();
@@ -725,6 +734,11 @@ export function ProductListingForm({
       ordered.push(summary.tag);
     }
     for (const tag of initialNormalizedAppTags) {
+      if (seen.has(tag)) continue;
+      seen.add(tag);
+      ordered.push(tag);
+    }
+    for (const tag of selectedAppTags) {
       if (seen.has(tag)) continue;
       seen.add(tag);
       ordered.push(tag);
@@ -743,6 +757,20 @@ export function ProductListingForm({
       return next;
     });
   }
+
+  function addCustomAppTag() {
+    const normalized = normalizeAppTag(customTagInput);
+    if (!normalized) return;
+    setSelectedAppTags((current) => {
+      if (current.has(normalized)) return current;
+      const next = new Set(current);
+      next.add(normalized);
+      return next;
+    });
+    setCustomTagInput("");
+  }
+
+  const hasValidAppTags = categoryKind !== "app" || selectedAppTags.size > 0;
 
   function collectAppTagsForSubmit(): string[] {
     if (categoryKind !== "app") return [];
@@ -1547,179 +1575,215 @@ export function ProductListingForm({
                   </UnorderedList>
                 </Flex>
                 <Separator />
-                <Flex wrap align="center" gap="xl">
-                  <Select
-                    label="Type"
-                    items={[
-                      { id: "app", label: "App" },
-                      { id: "app-tool", label: "App Tool" },
-                    ]}
-                    placeholder="Select type"
-                    value={categoryKind}
-                    onChange={(value) => {
-                      if (
-                        value === "app" ||
-                        value === "app-tool" ||
-                        value === "protocol"
-                      ) {
-                        setCategoryKind(value);
-                      }
-                    }}
-                    isRequired
-                    style={styles.grow}
-                  >
-                    {(item) => <SelectItem>{item.label}</SelectItem>}
-                  </Select>
-                  {categoryKind === "app" || categoryKind === "app-tool" ? (
-                    <>
-                      {categoryKind === "app" ? (
-                        <TextField
-                          style={styles.grow}
-                          label="App Slug"
-                          value={appName}
-                          onChange={setAppName}
-                          placeholder="bluesky"
-                          isRequired
-                        />
-                      ) : (
-                        <Select
-                          style={styles.grow}
-                          label="App"
-                          items={appSlugOptions}
-                          placeholder="Select app"
-                          value={selectedAppSlugOption}
-                          onChange={(value) => {
-                            if (typeof value !== "string") return;
-                            setAppName(value);
-                          }}
-                          isRequired
-                        >
-                          {(item) => <SelectItem>{item.label}</SelectItem>}
-                        </Select>
-                      )}
-                      {categoryKind === "app-tool" ? (
-                        <ComboBox
-                          allowsCustomValue
-                          allowsEmptyCollection
-                          style={styles.grow}
-                          label="Category"
-                          items={appCategoryOptions}
-                          renderEmptyState={() => (
-                            <div {...stylex.props(styles.emptyStateMessage)}>
-                              {appSlugKey
-                                ? "No defined categories for this app yet."
-                                : "Type an app slug to see known categories."}
-                            </div>
-                          )}
-                          inputValue={appCategoryLabel}
-                          value={selectedAppCategoryOption}
-                          onInputChange={(value) => {
-                            setAppCategoryLabel(value);
-                            setAppCategorySlug(toKebabCaseSegment(value));
-                          }}
-                          onChange={(key) => {
-                            if (key === null) return;
-                            const nextSlug = String(key);
-                            const nextLabel =
-                              appCategoryOptions.find(
-                                (option) => option.id === nextSlug,
-                              )?.label ?? nextSlug;
-                            setAppCategorySlug(nextSlug);
-                            setAppCategoryLabel(nextLabel);
-                          }}
-                          placeholder="clients"
-                          isRequired
-                        >
-                          {(item) => (
-                            <ComboBoxItem id={item.id}>
-                              {item.label}
-                            </ComboBoxItem>
-                          )}
-                        </ComboBox>
-                      ) : null}
-                    </>
-                  ) : (
-                    <ComboBox
-                      allowsCustomValue
-                      style={styles.grow}
-                      label="Category"
-                      items={protocolCategoryOptions}
-                      inputValue={protocolCategory}
-                      selectedKey={selectedProtocolCategoryOption}
-                      onInputChange={setProtocolCategory}
-                      onSelectionChange={(key) => {
-                        if (key === null) return;
-                        setProtocolCategory(String(key));
+                <Flex direction="column" gap="6xl">
+                  <Flex wrap align="center" gap="xl">
+                    <Select
+                      label="Type"
+                      items={[
+                        { id: "app", label: "App" },
+                        { id: "app-tool", label: "App Tool" },
+                      ]}
+                      placeholder="Select type"
+                      value={categoryKind}
+                      onChange={(value) => {
+                        if (
+                          value === "app" ||
+                          value === "app-tool" ||
+                          value === "protocol"
+                        ) {
+                          setCategoryKind(value);
+                        }
                       }}
-                      placeholder="PDS"
                       isRequired
+                      style={styles.grow}
                     >
-                      {(item) => (
-                        <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
-                      )}
-                    </ComboBox>
-                  )}
-                </Flex>
-                {categoryKind === "app-tool" ? (
-                  isCustomAppCategory ? (
-                    <Text size="sm" variant="critical">
-                      New category detected. Please try to stick to defined
-                      categories when possible.
-                    </Text>
-                  ) : null
-                ) : categoryKind === "app" ? (
-                  <Flex direction="column" gap="4xl">
-                    <Flex direction="column" gap="3xl">
-                      <Flex direction="column" gap="xl">
-                        <Text weight="semibold" size="sm">
-                          Tags
-                        </Text>
-                        <Text size="sm" variant="secondary">
-                          What does you app do?
-                        </Text>
-                      </Flex>
-                      {availableAppTags.length > 0 ? (
-                        <Flex style={styles.appTagsRow}>
-                          {availableAppTags.map((tag) => {
-                            const isSelected = selectedAppTags.has(tag);
-                            return (
-                              <ToggleButton
-                                key={tag}
-                                size="sm"
-                                variant={isSelected ? "primary" : "secondary"}
-                                isSelected={isSelected}
-                                isDisabled={isSubmitting}
-                                onChange={() => {
-                                  toggleAppTag(tag);
-                                }}
-                              >
-                                {formatAppTagLabel(tag)}
-                              </ToggleButton>
-                            );
-                          })}
-                        </Flex>
-                      ) : (
-                        <Text size="sm" variant="secondary">
-                          No app tags in use yet — an admin can seed the first
-                          tags from the dev tools panel.
-                        </Text>
-                      )}
-                    </Flex>
+                      {(item) => <SelectItem>{item.label}</SelectItem>}
+                    </Select>
+                    {categoryKind === "app" || categoryKind === "app-tool" ? (
+                      <>
+                        {categoryKind === "app" ? (
+                          <TextField
+                            style={styles.grow}
+                            label="App Slug"
+                            value={appName}
+                            onChange={setAppName}
+                            placeholder="bluesky"
+                            isRequired
+                          />
+                        ) : (
+                          <Select
+                            style={styles.grow}
+                            label="App"
+                            items={appSlugOptions}
+                            placeholder="Select app"
+                            value={selectedAppSlugOption}
+                            onChange={(value) => {
+                              if (typeof value !== "string") return;
+                              setAppName(value);
+                            }}
+                            isRequired
+                          >
+                            {(item) => <SelectItem>{item.label}</SelectItem>}
+                          </Select>
+                        )}
+                        {categoryKind === "app-tool" ? (
+                          <ComboBox
+                            allowsCustomValue
+                            allowsEmptyCollection
+                            style={styles.grow}
+                            label="Category"
+                            items={appCategoryOptions}
+                            renderEmptyState={() => (
+                              <div {...stylex.props(styles.emptyStateMessage)}>
+                                {appSlugKey
+                                  ? "No defined categories for this app yet."
+                                  : "Type an app slug to see known categories."}
+                              </div>
+                            )}
+                            inputValue={appCategoryLabel}
+                            value={selectedAppCategoryOption}
+                            onInputChange={(value) => {
+                              setAppCategoryLabel(value);
+                              setAppCategorySlug(toKebabCaseSegment(value));
+                            }}
+                            onChange={(key) => {
+                              if (key === null) return;
+                              const nextSlug = String(key);
+                              const nextLabel =
+                                appCategoryOptions.find(
+                                  (option) => option.id === nextSlug,
+                                )?.label ?? nextSlug;
+                              setAppCategorySlug(nextSlug);
+                              setAppCategoryLabel(nextLabel);
+                            }}
+                            placeholder="clients"
+                            isRequired
+                          >
+                            {(item) => (
+                              <ComboBoxItem id={item.id}>
+                                {item.label}
+                              </ComboBoxItem>
+                            )}
+                          </ComboBox>
+                        ) : null}
+                      </>
+                    ) : (
+                      <ComboBox
+                        allowsCustomValue
+                        style={styles.grow}
+                        label="Category"
+                        items={protocolCategoryOptions}
+                        inputValue={protocolCategory}
+                        selectedKey={selectedProtocolCategoryOption}
+                        onInputChange={setProtocolCategory}
+                        onSelectionChange={(key) => {
+                          if (key === null) return;
+                          setProtocolCategory(String(key));
+                        }}
+                        placeholder="PDS"
+                        isRequired
+                      >
+                        {(item) => (
+                          <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
+                        )}
+                      </ComboBox>
+                    )}
                   </Flex>
-                ) : (
-                  <Flex direction="column" gap="xl">
-                    <Text size="sm" variant="secondary">
-                      Saved in group{" "}
-                      <code>protocol/{protocolCategory || "<category>"}</code>
-                    </Text>
-                    {isCustomProtocolCategory ? (
+                  {categoryKind === "app-tool" ? (
+                    isCustomAppCategory ? (
                       <Text size="sm" variant="critical">
                         New category detected. Please try to stick to defined
                         categories when possible.
                       </Text>
-                    ) : null}
-                  </Flex>
-                )}
+                    ) : null
+                  ) : categoryKind === "app" ? (
+                    <Flex direction="column" gap="5xl">
+                      <Flex direction="column" gap="4xl">
+                        <Flex direction="column" gap="4xl">
+                          <Flex style={styles.requiredLabel}>
+                            <Text weight="semibold" size="sm">
+                              Tags
+                            </Text>
+                            <Text size="sm" variant="critical">
+                              *
+                            </Text>
+                          </Flex>
+                          <Text size="sm" variant="secondary">
+                            What does your app do? Pick at least one tag, or add
+                            your own.
+                          </Text>
+                        </Flex>
+                        {availableAppTags.length > 0 ? (
+                          <Flex style={styles.appTagsRow}>
+                            {availableAppTags.map((tag) => {
+                              const isSelected = selectedAppTags.has(tag);
+                              return (
+                                <ToggleButton
+                                  key={tag}
+                                  size="sm"
+                                  variant={isSelected ? "primary" : "secondary"}
+                                  isSelected={isSelected}
+                                  isDisabled={isSubmitting}
+                                  onChange={() => {
+                                    toggleAppTag(tag);
+                                  }}
+                                >
+                                  {formatAppTagLabel(tag)}
+                                </ToggleButton>
+                              );
+                            })}
+                          </Flex>
+                        ) : null}
+                        <Flex align="end" gap="md" style={styles.customTagRow}>
+                          <TextField
+                            aria-label="Add custom tag"
+                            value={customTagInput}
+                            onChange={setCustomTagInput}
+                            placeholder="e.g. labeler, feed generator"
+                            style={styles.customTagInput}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                addCustomAppTag();
+                              }
+                            }}
+                          />
+                          <IconButton
+                            size="lg"
+                            variant="secondary"
+                            label="Add custom tag"
+                            isDisabled={
+                              isSubmitting ||
+                              normalizeAppTag(customTagInput) === null
+                            }
+                            onPress={addCustomAppTag}
+                          >
+                            <Plus size={14} />
+                          </IconButton>
+                        </Flex>
+                        {!hasValidAppTags ? (
+                          <Text size="sm" variant="critical">
+                            Pick at least one tag. You can add your own tags,
+                            but prefer using the predefined tags when possible.
+                          </Text>
+                        ) : null}
+                      </Flex>
+                    </Flex>
+                  ) : (
+                    <Flex direction="column" gap="xl">
+                      <Text size="sm" variant="secondary">
+                        Saved in group{" "}
+                        <code>protocol/{protocolCategory || "<category>"}</code>
+                      </Text>
+                      {isCustomProtocolCategory ? (
+                        <Text size="sm" variant="critical">
+                          New category detected. Please try to stick to defined
+                          categories when possible.
+                        </Text>
+                      ) : null}
+                    </Flex>
+                  )}
+                </Flex>
               </Flex>
             </CardBody>
           </Card>
@@ -1738,7 +1802,11 @@ export function ProductListingForm({
               size="lg"
               variant="primary"
               isPending={isSubmitting}
-              isDisabled={!hasValidCategoryInputs || !hasRequiredImages}
+              isDisabled={
+                !hasValidCategoryInputs ||
+                !hasRequiredImages ||
+                !hasValidAppTags
+              }
               type="submit"
             >
               {submitLabel}

@@ -64,8 +64,12 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
           categorySlugs: listings.categorySlugs,
           externalUrl: listings.externalUrl,
           tagline: listings.tagline,
+          fullDescription: listings.fullDescription,
+          appTags: listings.appTags,
           iconUrl: listings.iconUrl,
           heroImageUrl: listings.heroImageUrl,
+          screenshotUrls: listings.screenshotUrls,
+          productAccountHandle: listings.productAccountHandle,
           verificationStatus: listings.verificationStatus,
           atUri: listings.atUri,
           updatedAt: listings.updatedAt,
@@ -109,6 +113,9 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
         ...row,
         iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
         heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
+        screenshotUrls: (row.screenshotUrls ?? [])
+          .map((url) => protocolRecordImageUrlOrNull(url))
+          .filter((url): url is string => url != null),
       })),
       pendingClaims: pendingClaims.map((row) => ({
         ...row,

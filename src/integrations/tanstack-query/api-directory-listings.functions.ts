@@ -4082,6 +4082,7 @@ const createOwnedProductListingInput = z.object({
     .max(LISTING_LINK_MAX_COUNT)
     .optional()
     .default([]),
+  appTags: z.array(z.string()).max(64).optional().default([]),
 })
 
 const getProductListingEditAccessInput = z.object({
@@ -4253,6 +4254,14 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
 
     const now = new Date()
     const links = normalizeListingLinks(data.links as ListingLink[])
+    /**
+     * Only `apps/<slug>` listings carry app tags in the lexicon; other category kinds
+     * drop them so we don't pin editorial tags onto protocol/app-tool records (mirrors
+     * the invariant in `updateOwnedProductListing`).
+     */
+    const appTags = isEditableAppCategorySlug(categorySlug)
+      ? normalizeAppTags(data.appTags ?? [])
+      : []
     const draftRow: StoreListing = {
       id: crypto.randomUUID(),
       sourceUrl: externalUrl,
@@ -4264,7 +4273,7 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       tagline: taglineClean,
       fullDescription: descClean,
       categorySlugs: [categorySlug],
-      appTags: [],
+      appTags,
       links,
       atUri: null,
       repoDid: session.did,

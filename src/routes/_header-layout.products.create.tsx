@@ -140,6 +140,7 @@ function CreateProductListingPage() {
           categorySlug: values.categorySlug,
           productHandle: values.productHandle,
           links: values.links,
+          appTags: values.appTags,
           ...(heroImage ? { heroImage } : {}),
           ...(iconImage ? { iconImage } : {}),
           ...(screenshotImages ? { screenshotImages } : {}),

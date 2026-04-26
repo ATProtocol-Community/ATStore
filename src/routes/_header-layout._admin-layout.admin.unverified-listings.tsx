@@ -5,6 +5,8 @@ import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
+import { formatAppTagLabel } from "#/lib/app-tag-metadata";
+import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
 import {
   Card,
@@ -65,6 +67,28 @@ const styles = stylex.create({
   },
   listStack: {
     gap: gap.xl,
+  },
+  description: {
+    whiteSpace: "pre-wrap",
+  },
+  appTagsRow: {
+    flexWrap: "wrap",
+    gap: gap.sm,
+  },
+  screenshotsScroller: {
+    display: "flex",
+    flexDirection: "row",
+    gap: gap.md,
+    overflowX: "auto",
+    paddingBottom: verticalSpace.xs,
+  },
+  screenshotImage: {
+    borderRadius: "8px",
+    flexShrink: 0,
+    height: "auto",
+    maxHeight: "240px",
+    objectFit: "contain",
+    width: "auto",
   },
 });
 
@@ -129,21 +153,67 @@ function UnverifiedListingsPage() {
                                   ? `${row.categorySlugs[0]}`
                                   : ""}
                               </Text>
-                              {row.externalUrl ? (
-                                <AriaLink
-                                  href={row.externalUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  {...stylex.props(styles.productLink)}
-                                >
-                                  <Text size="sm" variant="secondary">
-                                    View product
-                                  </Text>
-                                  <ExternalLink size={14} />
-                                </AriaLink>
-                              ) : null}
+                              <Flex wrap gap="xl">
+                                {row.externalUrl ? (
+                                  <AriaLink
+                                    href={row.externalUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    {...stylex.props(styles.productLink)}
+                                  >
+                                    <Text size="sm" variant="secondary">
+                                      View product
+                                    </Text>
+                                    <ExternalLink size={14} />
+                                  </AriaLink>
+                                ) : null}
+                                {row.productAccountHandle ? (
+                                  <AriaLink
+                                    href={`https://bsky.app/profile/${row.productAccountHandle}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    {...stylex.props(styles.productLink)}
+                                  >
+                                    <Text size="sm" variant="secondary">
+                                      @{row.productAccountHandle}
+                                    </Text>
+                                    <ExternalLink size={14} />
+                                  </AriaLink>
+                                ) : null}
+                              </Flex>
                             </Flex>
                           </Flex>
+                          {row.fullDescription ? (
+                            <Text
+                              size="sm"
+                              variant="secondary"
+                              style={styles.description}
+                            >
+                              {row.fullDescription}
+                            </Text>
+                          ) : null}
+                          {row.appTags && row.appTags.length > 0 ? (
+                            <Flex style={styles.appTagsRow}>
+                              {row.appTags.map((tag) => (
+                                <Badge key={tag} size="sm">
+                                  {formatAppTagLabel(tag)}
+                                </Badge>
+                              ))}
+                            </Flex>
+                          ) : null}
+                          {row.screenshotUrls &&
+                          row.screenshotUrls.length > 0 ? (
+                            <div {...stylex.props(styles.screenshotsScroller)}>
+                              {row.screenshotUrls.map((url) => (
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt=""
+                                  {...stylex.props(styles.screenshotImage)}
+                                />
+                              ))}
+                            </div>
+                          ) : null}
                         </Flex>
                         <Flex gap="md">
                           <Button
