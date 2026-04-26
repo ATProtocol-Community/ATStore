@@ -1,13 +1,14 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut, Monitor, Moon, Shield, Sun } from "lucide-react";
 import Cookies from "universal-cookie";
 
 import { AvatarButton } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
+import { IconButton } from "../design-system/icon-button";
 import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
 import { NavbarAction } from "../design-system/navbar";
 import { criticalColor } from "../design-system/theme/color.stylex";
@@ -19,6 +20,9 @@ import {
 import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
 import { user } from "#/integrations/tanstack-query/api-user.functions";
 import { useNotificationReadState } from "#/lib/notification-read-state";
+import { useTheme } from "#/lib/ThemeContext";
+
+import { ThemeMenu, ThemeSubMenu } from "./ThemeMenu";
 
 const ButtonLink = createLink(Button);
 
@@ -146,6 +150,8 @@ export function NavbarAuth() {
           </MenuItem>
         ) : null}
         <MenuSeparator />
+        <ThemeSubMenu />
+        <MenuSeparator />
         <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
           Log out
         </MenuItem>
@@ -154,8 +160,26 @@ export function NavbarAuth() {
   }
 
   return (
-    <ButtonLink to="/login" variant="secondary" size="md">
-      Log in
-    </ButtonLink>
+    <Flex align="center" gap="sm">
+      <GuestThemeMenu />
+      <ButtonLink to="/login" variant="secondary" size="md">
+        Log in
+      </ButtonLink>
+    </Flex>
+  );
+}
+
+function GuestThemeMenu() {
+  const { mode } = useTheme();
+  const Icon = mode === "dark" ? Moon : mode === "light" ? Sun : Monitor;
+
+  return (
+    <ThemeMenu
+      trigger={
+        <IconButton variant="secondary" size="md" aria-label="Change theme">
+          <Icon />
+        </IconButton>
+      }
+    />
   );
 }

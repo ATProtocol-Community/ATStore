@@ -39,6 +39,8 @@ export const user = pgTable('user', {
   did: text('did').unique(),
   image: text('image'),
   isAdmin: boolean('is_admin').default(false).notNull(),
+  /** User's preferred color scheme: `'light' | 'dark' | null` (null = follow system). */
+  themeMode: text('theme_mode'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),

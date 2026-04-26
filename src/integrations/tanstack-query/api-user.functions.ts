@@ -2,8 +2,9 @@ import type { Did } from '@atcute/lexicons'
 
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
+import { getCookie, getRequest, setCookie } from '@tanstack/react-start/server'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 import {
   restoreAtprotoSession,
@@ -12,6 +13,16 @@ import {
 import {
   fetchBlueskyHandleForDid,
 } from '#/lib/bluesky-public-profile'
+import {
+  DEFAULT_THEME_MODE,
+  THEME_COOKIE,
+  THEME_COOKIE_MAX_AGE_SECONDS,
+  THEME_MODES,
+  dbValueToThemeMode,
+  parseThemeMode,
+  themeModeToDbValue,
+  type ThemeMode,
+} from '#/lib/theme'
 import { maybeAuthMiddleware } from '#/middleware/auth'
 
 import { dbMiddleware } from './db-middleware'
@@ -120,6 +131,60 @@ const getUserProfileQueryOptions = queryOptions({
   },
 })
 
+/**
+ * Resolves the current theme preference for SSR/hydration.
+ *
+ * - Signed-in: returns `user.themeMode` from the DB (mapping `null` → `system`).
+ *   If the cookie is out of date, we don't trust it; the DB is the source of truth.
+ * - Guests: returns whatever's in the `at-store-theme` cookie (defaulting to `system`).
+ *
+ * Always safe to call (does not require auth).
+ */
+const getThemePreference = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware, maybeAuthMiddleware])
+  .handler(async ({ context }): Promise<{ mode: ThemeMode }> => {
+    if (context?.session?.user) {
+      const row = await context.db.query.user.findFirst({
+        where: eq(context.schema.user.id, context.session.user.id),
+        columns: { themeMode: true },
+      })
+      return { mode: dbValueToThemeMode(row?.themeMode ?? null) }
+    }
+
+    return { mode: parseThemeMode(getCookie(THEME_COOKIE)) }
+  })
+
+const getThemePreferenceQueryOptions = queryOptions({
+  queryKey: ['themePreference'] as const,
+  queryFn: () => getThemePreference(),
+  staleTime: Number.POSITIVE_INFINITY,
+})
+
+/**
+ * Persists a theme preference. Writes the cookie unconditionally so SSR works
+ * for guests and the next response carries an up-to-date preference. Signed-in
+ * users also get their `user.themeMode` column updated.
+ */
+const setThemePreference = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware, maybeAuthMiddleware])
+  .inputValidator(z.object({ mode: z.enum(THEME_MODES) }))
+  .handler(async ({ data, context }): Promise<{ mode: ThemeMode }> => {
+    setCookie(THEME_COOKIE, data.mode, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: THEME_COOKIE_MAX_AGE_SECONDS,
+    })
+
+    if (context?.session?.user) {
+      await context.db
+        .update(context.schema.user)
+        .set({ themeMode: themeModeToDbValue(data.mode) })
+        .where(eq(context.schema.user.id, context.session.user.id))
+    }
+
+    return { mode: data.mode }
+  })
+
 const signOut = createServerFn({ method: 'POST' }).handler(async () => {
   const request = getRequest()
   const cookies = parseCookies(request.headers.get('cookie'))
@@ -141,5 +206,8 @@ export const user = {
   getSessionQueryOptions,
   getUserProfile,
   getUserProfileQueryOptions,
+  getThemePreference,
+  getThemePreferenceQueryOptions,
+  setThemePreference,
   signOut,
 }

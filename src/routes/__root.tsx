@@ -5,8 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as stylex from "@stylexjs/stylex";
 
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
@@ -18,6 +17,7 @@ import appCss from "../styles.css?url";
 import type { QueryClient } from "@tanstack/react-query";
 import { primaryColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
+import { DEFAULT_THEME_MODE } from "../lib/theme";
 
 const primaryColorTheme = stylex.createTheme(primaryColor, {
   bg: blue.bg,
@@ -43,43 +43,20 @@ interface MyRouterContext {
   queryClient: QueryClient;
 }
 
-type ThemeMode = "light" | "dark" | "auto";
-
-function getStoredThemeMode(): ThemeMode {
-  if (typeof window === "undefined") {
-    return "auto";
-  }
-
-  const stored = window.localStorage.getItem("theme");
-  if (stored === "light" || stored === "dark" || stored === "auto") {
-    return stored;
-  }
-
-  return "auto";
+/**
+ * Color-scheme rules for the three theme modes. Combined with the design
+ * system's `light-dark()` color tokens this is the only thing the page needs
+ * to render with the correct palette — no JS required at first paint, so SSR
+ * never flashes the wrong scheme.
+ */
+const COLOR_SCHEME_CSS = `
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+html[data-theme="system"] { color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] { color-scheme: dark; }
 }
-
-function applyThemeMode(mode: ThemeMode) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const resolved = mode === "auto" ? (prefersDark ? "dark" : "light") : mode;
-  const root = document.documentElement;
-
-  root.classList.remove("light", "dark");
-  root.classList.add(resolved);
-
-  if (mode === "auto") {
-    root.removeAttribute("data-theme");
-  } else {
-    root.setAttribute("data-theme", mode);
-  }
-
-  root.style.colorScheme = resolved;
-}
-
-const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
+`.trim();
 
 /**
  * Safely serializes a JSON object for embedding inside a `<script>` tag.
@@ -96,6 +73,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       context.queryClient.ensureQueryData(
         getGeneratedBannerRecordUrlsQueryOptions,
       ),
+      context.queryClient.ensureQueryData(user.getThemePreferenceQueryOptions),
     ]);
   },
   head: () => ({
@@ -127,26 +105,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   shellComponent: RootDocument,
 });
 
-function ThemeModeSync() {
-  useEffect(() => {
-    const syncTheme = () => {
-      applyThemeMode(getStoredThemeMode());
-    };
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    syncTheme();
-    media.addEventListener("change", syncTheme);
-    window.addEventListener("storage", syncTheme);
-
-    return () => {
-      media.removeEventListener("change", syncTheme);
-      window.removeEventListener("storage", syncTheme);
-    };
-  }, []);
-
-  return null;
-}
-
 function RootDocument({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const bannerRecordUrls =
@@ -157,15 +115,23 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     bannerRecordUrls,
   )};`;
 
+  // Read theme from the prefilled query cache (populated by `beforeLoad`).
+  // Subscribing via `useQuery` lets the menu's mutation re-render <html>.
+  const { data: themePreference } = useQuery({
+    ...user.getThemePreferenceQueryOptions,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  const themeMode = themePreference?.mode ?? DEFAULT_THEME_MODE;
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-theme={themeMode} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <style dangerouslySetInnerHTML={{ __html: COLOR_SCHEME_CSS }} />
         <script dangerouslySetInnerHTML={{ __html: bannerInitScript }} />
         <HeadContent />
       </head>
       <body {...stylex.props(primaryColorTheme)}>
-        <ThemeModeSync />
         {children}
         <TanStackDevtools
           config={{
