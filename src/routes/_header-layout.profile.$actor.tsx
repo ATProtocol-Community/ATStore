@@ -155,7 +155,7 @@ export const Route = createFileRoute("/_header-layout/profile/$actor")({
 
     return {
       did: resolvedDid,
-      ogTitle: `${mainTitle} profile`,
+      ogTitle: `${mainTitle} profile | at-store`,
       ogDescription:
         handleDisplay != null
           ? `Read reviews and discover products published by ${handleDisplay}.`

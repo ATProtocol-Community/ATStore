@@ -31,6 +31,7 @@ import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 import { Route as ProductReviewsRoute } from "./_header-layout.products.$productId.reviews";
 
 export const Route = createFileRoute(
@@ -64,11 +65,18 @@ export const Route = createFileRoute(
     return {
       review,
       ogTitle: `Edit your review of ${listing.name} | at-store`,
+      ogDescription:
+        listing.tagline || `Update your review of ${listing.name} on at-store.`,
+      ogImage: listing.heroImageUrl || null,
     };
   },
-  head: ({ loaderData }) => ({
-    meta: [{ title: loaderData?.ogTitle ?? "Edit review | at-store" }],
-  }),
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Edit review | at-store",
+      description:
+        loaderData?.ogDescription ?? "Update your review on at-store.",
+      image: loaderData?.ogImage,
+    }),
   component: ProductReviewEditPage,
 });
 

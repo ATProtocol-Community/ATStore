@@ -36,6 +36,7 @@ import {
 import { Body, InlineCode } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { auth } from "#/integrations/tanstack-query/api-auth.functions";
+import { buildRouteOgMeta } from "#/lib/og-meta";
 import { unauthMiddleware } from "#/middleware/auth";
 import { getSavedHandles, saveHandle } from "#/utils/saved-handles";
 
@@ -148,7 +149,12 @@ export const Route = createFileRoute("/login")({
     };
   },
   component: AuthPage,
-  head: () => ({ meta: [{ title: "Sign in | at-store" }] }),
+  head: () =>
+    buildRouteOgMeta({
+      title: "Sign in | at-store",
+      description:
+        "Sign in to at-store with your AT Protocol identity to review apps, claim listings, and manage your store.",
+    }),
 });
 
 function AuthPage() {

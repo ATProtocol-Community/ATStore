@@ -20,6 +20,7 @@ import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
+import { buildRouteOgMeta } from "../lib/og-meta";
 
 async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -96,11 +97,18 @@ export const Route = createFileRoute(
       productId: listing.id,
       productSlug,
       ogTitle: `Edit ${listing.name} | at-store`,
+      ogDescription:
+        listing.tagline ||
+        `Update the listing for ${listing.name} on at-store.`,
+      ogImage: listing.heroImageUrl || null,
     };
   },
-  head: ({ loaderData }) => ({
-    meta: [{ title: loaderData?.ogTitle ?? "Edit listing | at-store" }],
-  }),
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "Edit listing | at-store",
+      description: loaderData?.ogDescription ?? "Update your at-store listing.",
+      image: loaderData?.ogImage,
+    }),
   component: EditProductListingPage,
 });
 
