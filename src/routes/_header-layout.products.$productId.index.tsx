@@ -694,15 +694,17 @@ function ProductPage() {
             >
               Edit listing
             </AppLink>
+          ) : editAccess?.needsClaim || !editAccess?.canEdit ? (
+            <ButtonLink
+              to="/product/claim"
+              search={{ listing: listing.id }}
+              variant="secondary"
+              size="sm"
+            >
+              Claim listing
+            </ButtonLink>
           ) : null}
         </Flex>
-        {editAccess?.needsClaim ? (
-          <Text size="sm" variant="secondary">
-            This listing is still published from the store account.{" "}
-            <AppLink to="/product/claim">Claim it</AppLink> to edit from your
-            PDS.
-          </Text>
-        ) : null}
         <HeroSection listing={listing} productId={productId} />
         <Flex direction="column" gap="6xl">
           {getDescriptionBlocks(listing.description).map((block, index) => (

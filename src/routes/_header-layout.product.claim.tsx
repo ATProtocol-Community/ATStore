@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useDeferredValue, useState } from "react";
+import { z } from "zod";
 
 import { AutocompleteInput } from "../design-system/autocomplete";
 import { Badge } from "../design-system/badge";
@@ -22,15 +23,20 @@ import {
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { Heading1, Heading2, Heading3 } from "../design-system/typography";
+import { Heading1, Heading3 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import {
   directoryListingApi,
   type DirectoryListingCard,
+  type DirectoryListingDetail,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { SKIP_PRODUCT_CLAIM_COOKIE } from "../lib/product-claim-eligibility";
+
+const searchSchema = z.object({
+  listing: z.string().uuid().optional(),
+});
 
 const styles = stylex.create({
   page: {
@@ -75,22 +81,13 @@ const styles = stylex.create({
   eligibleStack: {
     marginTop: verticalSpace["3xl"],
   },
-  explainerTop: {
-    marginTop: verticalSpace.xl,
-  },
 });
 
 export const Route = createFileRoute("/_header-layout/product/claim")({
-  loader: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      user.getSessionQueryOptions,
-    );
-    if (!session?.user?.did) {
-      throw redirect({
-        to: "/login",
-        search: { redirect: "/product/claim" },
-      });
-    }
+  validateSearch: searchSchema,
+  loaderDeps: ({ search }) => ({ listing: search.listing }),
+  loader: async ({ context, deps }) => {
+    const listingId = deps.listing;
     const eligibility = await context.queryClient.ensureQueryData(
       directoryListingApi.getProductClaimEligibilityQueryOptions(),
     );
@@ -98,7 +95,13 @@ export const Route = createFileRoute("/_header-layout/product/claim")({
       directoryListingApi.getUserProductListingClaimRequestsQueryOptions(),
     );
 
-    const previewListing = eligibility?.listings?.[0];
+    const focusListing = listingId
+      ? await context.queryClient.ensureQueryData(
+          directoryListingApi.getDirectoryListingDetailQueryOptions(listingId),
+        )
+      : null;
+
+    const previewListing = focusListing ?? eligibility?.listings?.[0];
 
     return {
       ogTitle: "Claim your listing | at-store",
@@ -121,6 +124,7 @@ export const Route = createFileRoute("/_header-layout/product/claim")({
 function ProductClaimPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { listing: focusListingId } = Route.useSearch();
   const { data: session } = useQuery(user.getSessionQueryOptions);
   const { data: userProfile } = useQuery({
     ...user.getUserProfileQueryOptions,
@@ -132,6 +136,12 @@ function ProductClaimPage() {
   const { data: claimRequests = [] } = useSuspenseQuery(
     directoryListingApi.getUserProductListingClaimRequestsQueryOptions(),
   );
+  const { data: focusListing = null } = useQuery({
+    ...directoryListingApi.getDirectoryListingDetailQueryOptions(
+      focusListingId ?? "",
+    ),
+    enabled: focusListingId != null,
+  });
 
   const displayHandle =
     userProfile?.blueskyHandle?.replace(/^@+/, "").trim() || null;
@@ -214,10 +224,24 @@ function ProductClaimPage() {
   }
 
   const hasEligible = eligibility.listings.length > 0;
+  const focusListingMatchesSession = Boolean(
+    focusListing?.productAccountDid &&
+    session?.user?.did &&
+    focusListing.productAccountDid === session.user.did,
+  );
+  const showFocusListingCta =
+    focusListing != null && !focusListingMatchesSession;
 
   let content: React.ReactNode = null;
 
-  if (hasEligible) {
+  if (showFocusListingCta) {
+    content = (
+      <FocusListingClaimCta
+        listing={focusListing}
+        currentActor={displayActor}
+      />
+    );
+  } else if (hasEligible) {
     content = (
       <Flex direction="column" gap="4xl" style={styles.eligibleStack}>
         <Text size="base">
@@ -475,10 +499,104 @@ function ProductClaimPage() {
 
   return (
     <Page.Root variant="small" style={styles.page}>
-      <Flex direction="column" align="center" gap="6xl" style={styles.section}>
+      <Flex direction="column" align="center" gap="4xl" style={styles.section}>
         <Heading1>Claim your listing</Heading1>
         {content}
       </Flex>
     </Page.Root>
+  );
+}
+
+function FocusListingClaimCta({
+  listing,
+  currentActor,
+}: {
+  listing: DirectoryListingDetail;
+  currentActor: string;
+}) {
+  const navigate = useNavigate();
+  const requiredHandle =
+    listing.productAccountHandle?.replace(/^@+/, "").trim() || null;
+  const redirectTarget = `/product/claim`;
+
+  const startOAuth = useMutation({
+    mutationFn: async () => {
+      if (requiredHandle) {
+        await navigate({
+          to: "/api/auth/atproto/authorize",
+          search: { handle: requiredHandle, redirect: redirectTarget },
+        });
+        return;
+      }
+      await navigate({
+        to: "/login",
+        search: { redirect: redirectTarget },
+      });
+    },
+  });
+
+  return (
+    <Flex direction="column" gap="4xl" style={styles.eligibleStack}>
+      <Text
+        size="lg"
+        variant="secondary"
+        leading="base"
+        style={styles.description}
+      >
+        {requiredHandle ? (
+          <>
+            You&apos;re signed in as {currentActor}. To claim this listing, sign
+            in with the official product handle{" "}
+            <strong>@{requiredHandle}</strong>.
+          </>
+        ) : (
+          <>
+            You&apos;re signed in as {currentActor}. This listing isn&apos;t
+            linked to a Bluesky handle yet — sign in with the right account or
+            request a manual claim.
+          </>
+        )}
+      </Text>
+      <Flex direction="column" align="center" gap="xl">
+        <Card style={styles.card} size="lg">
+          {listing.heroImageUrl && (
+            <CardImage aspectRatio={16 / 9} src={listing.heroImageUrl} alt="" />
+          )}
+          <CardBody>
+            <Flex direction="column" style={styles.preview}>
+              <Flex gap="xl" align="center">
+                {listing.iconUrl ? (
+                  <img
+                    src={listing.iconUrl}
+                    alt=""
+                    {...stylex.props(styles.previewIcon)}
+                  />
+                ) : null}
+                <Flex direction="column" gap="xl">
+                  <Text size="2xl" weight="bold">
+                    {listing.name}
+                  </Text>
+                  {listing.tagline ? (
+                    <Text size="base" variant="secondary">
+                      {listing.tagline}
+                    </Text>
+                  ) : null}
+                </Flex>
+              </Flex>
+            </Flex>
+          </CardBody>
+        </Card>
+        <Flex gap="md" wrap>
+          <Button
+            variant="primary"
+            size="lg"
+            isPending={startOAuth.isPending}
+            onPress={() => startOAuth.mutate()}
+          >
+            {requiredHandle ? `Login as @${requiredHandle}` : "Sign in"}
+          </Button>
+        </Flex>
+      </Flex>
+    </Flex>
   );
 }

@@ -1082,7 +1082,7 @@ function RouteComponent() {
             <h2 {...stylex.props(styles.sectionHeading)}>Apps for your Apps</h2>
             <p {...stylex.props(styles.appBrowserDescription)}>
               Since you own your Atmosphere account, anyone can build new apps
-              with you data. Ditch the walled gardens and build your own.
+              with your data. Ditch the walled gardens and build your own.
             </p>
             <p {...stylex.props(styles.appBrowserDescription)}>
               Below you can explore apps and tools that work with Bluesky.
