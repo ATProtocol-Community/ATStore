@@ -416,44 +416,20 @@ export async function upsertDirectoryListingFromTap(input: {
   const migratedFromAtUri = record.migratedFromAtUri?.trim() ?? null
   const links = normalizeListingLinks(record.links ?? null)
 
-  await db
-    .insert(schema.storeListings)
-    .values({
-      sourceUrl,
-      name: record.name,
-      slug: record.slug,
-      externalUrl: record.externalUrl,
-      iconUrl,
-      screenshotUrls,
-      tagline: record.tagline,
-      fullDescription: record.description,
-      categorySlugs,
-      heroImageUrl,
-      atUri,
-      repoDid: did,
-      rkey,
-      sourceAccountDid: did,
-      verificationStatus,
-      appTags,
-      links,
-      productAccountDid: productDid,
-      productAccountHandle,
-      migratedFromAtUri,
-      claimPendingForDid: claimPendingForDidNext,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: schema.storeListings.slug,
-      set: {
+  try {
+    await db
+      .insert(schema.storeListings)
+      .values({
         sourceUrl,
         name: record.name,
+        slug: record.slug,
         externalUrl: record.externalUrl,
         iconUrl,
-        heroImageUrl,
         screenshotUrls,
         tagline: record.tagline,
-        fullDescription: record.description ?? null,
+        fullDescription: record.description,
         categorySlugs,
+        heroImageUrl,
         atUri,
         repoDid: did,
         rkey,
@@ -466,8 +442,78 @@ export async function upsertDirectoryListingFromTap(input: {
         migratedFromAtUri,
         claimPendingForDid: claimPendingForDidNext,
         updatedAt: now,
-      },
-    })
+      })
+      .onConflictDoUpdate({
+        target: schema.storeListings.slug,
+        set: {
+          sourceUrl,
+          name: record.name,
+          externalUrl: record.externalUrl,
+          iconUrl,
+          heroImageUrl,
+          screenshotUrls,
+          tagline: record.tagline,
+          fullDescription: record.description ?? null,
+          categorySlugs,
+          atUri,
+          repoDid: did,
+          rkey,
+          sourceAccountDid: did,
+          verificationStatus,
+          appTags,
+          links,
+          productAccountDid: productDid,
+          productAccountHandle,
+          migratedFromAtUri,
+          claimPendingForDid: claimPendingForDidNext,
+          updatedAt: now,
+        },
+      })
+  } catch (err) {
+    /**
+     * Unique constraint on `source_url` only. The upsert resolves slug collisions, but two
+     * different PDS users can publish listings with the same `externalUrl` and different slugs
+     * (e.g. both pointing at `https://example.com`). The first row wins ownership of the URL;
+     * the second insert hits `store_listings_source_url_idx` and Postgres returns 23505.
+     *
+     * Skip the offending event with a warning instead of throwing — otherwise tap-consumer
+     * crashes its WebSocket loop on every duplicate-URL record it sees.
+     */
+    if (isSourceUrlUniqueViolation(err)) {
+      const [conflictRow] = await db
+        .select({
+          atUri: schema.storeListings.atUri,
+          slug: schema.storeListings.slug,
+          repoDid: schema.storeListings.repoDid,
+        })
+        .from(schema.storeListings)
+        .where(eq(schema.storeListings.sourceUrl, sourceUrl))
+        .limit(1)
+      console.warn(
+        `[tap-ingest] skip listing ${atUri} slug=${record.slug} — sourceUrl=${sourceUrl} already owned by ${conflictRow?.atUri ?? '(unknown row)'} slug=${conflictRow?.slug ?? '?'} repoDid=${conflictRow?.repoDid ?? '?'}`,
+      )
+      return
+    }
+    throw err
+  }
+}
+
+/**
+ * Detect a Postgres `unique_violation` (SQLSTATE 23505) on `store_listings_source_url_idx`.
+ * Drizzle wraps driver errors in `DrizzleQueryError`, so the Postgres error lives on `.cause`.
+ */
+function isSourceUrlUniqueViolation(err: unknown): boolean {
+  const seen = new Set<unknown>()
+  let cur: unknown = err
+  while (cur && typeof cur === 'object' && !seen.has(cur)) {
+    seen.add(cur)
+    const e = cur as { code?: unknown; constraint_name?: unknown; cause?: unknown }
+    if (e.code === '23505' && e.constraint_name === 'store_listings_source_url_idx') {
+      return true
+    }
+    cur = e.cause
+  }
+  return false
 }
 
 /**
