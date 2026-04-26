@@ -98,6 +98,7 @@ function SearchFieldContent({
             inputStyles.input,
             !isEmpty && styles.clearButtonPadding,
           )}
+          data-focus-always-visible
         />
         <SuffixIcon
           suffix={suffix}

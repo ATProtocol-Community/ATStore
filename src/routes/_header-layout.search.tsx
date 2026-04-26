@@ -43,6 +43,9 @@ import { getDirectoryCategoryOption } from "../lib/directory-categories";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
+import { blue } from "../design-system/theme/colors/blue.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { useFocusRing } from "react-aria";
 
 const LinkLink = createLink(Link);
 
@@ -138,6 +141,10 @@ const styles = stylex.create({
     gap: gap["4xl"],
     minHeight: 0,
     textDecoration: "none",
+    outline: "none",
+  },
+  listingCardFocus: {
+    borderColor: blue.border3,
   },
   content: {
     display: "flex",
@@ -313,13 +320,18 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
       ? categorySegments.slice(1).join("/")
       : null;
 
+  const { focusProps, isFocusVisible } = useFocusRing({});
+
   return (
     <RouterLink
       {...stylex.props(styles.listingLink)}
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
+      {...focusProps}
     >
-      <Card style={[styles.listingCard]}>
+      <Card
+        style={[styles.listingCard, isFocusVisible && styles.listingCardFocus]}
+      >
         <Flex direction="column" style={styles.listingCardBody}>
           <div {...stylex.props(styles.content)}>
             <Flex gap="2xl" align="center" style={styles.listingHeader}>

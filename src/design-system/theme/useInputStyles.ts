@@ -126,7 +126,7 @@ const styles = stylex.create({
       default: uiColor.border1,
       ":is([data-hovered]:not(:has(:is([data-invalid]))))":
         uiColor.border2,
-      ":is([data-focus-visible],:has( [data-focused][data-focus-always-visible]))": blue.border3,
+      ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))": blue.border3,
     },
     borderStyle: "solid",
     borderWidth: 1,
@@ -194,8 +194,8 @@ const styles = stylex.create({
       default: uiColor.border1,
       ":is([data-hovered]:not(:has(:is([data-invalid]))))":
         uiColor.border2,
-      ":focus": uiColor.border3,
-    },
+        ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))": blue.border3,
+      },
     borderStyle: "solid",
     borderWidth: 1,
     backgroundColor: {
@@ -254,6 +254,7 @@ const styles = stylex.create({
         uiColor.component2,
       ":is([data-pressed=true]):not(:disabled)": uiColor.component3,
       ":disabled": "transparent",
+      ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))": blue.border3,
     },
     borderStyle: "solid",
     borderWidth: 1,

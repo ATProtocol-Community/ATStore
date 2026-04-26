@@ -19,6 +19,14 @@ import { primaryColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { DEFAULT_THEME_MODE } from "../lib/theme";
 
+const styles = stylex.create({
+  body: {
+    ":is(*) *": {
+      outlineColor: blue.border3,
+    },
+  },
+});
+
 const primaryColorTheme = stylex.createTheme(primaryColor, {
   bg: blue.bg,
   bgSubtle: blue.bgSubtle,
@@ -131,7 +139,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: bannerInitScript }} />
         <HeadContent />
       </head>
-      <body {...stylex.props(primaryColorTheme)}>
+      <body {...stylex.props(primaryColorTheme, styles.body)}>
         {children}
         <TanStackDevtools
           config={{
