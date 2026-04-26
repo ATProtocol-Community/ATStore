@@ -72,6 +72,16 @@ function AdminOverviewPage() {
             to="/admin/pending-claims"
           />
           <SummaryCard
+            description="Listings recently claimed by their owners on Bluesky."
+            title="Recently claimed"
+            to="/admin/recently-claimed"
+          />
+          <SummaryCard
+            description="All product reviews across the directory, newest first."
+            title="Reviews"
+            to="/admin/reviews"
+          />
+          <SummaryCard
             count={heroCount}
             description="Apps featured on the homepage hero."
             title="Home page hero"

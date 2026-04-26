@@ -42,6 +42,8 @@ import { Route as HeaderLayoutProductsProductIdMentionsRouteImport } from './rou
 import { Route as HeaderLayoutProductsProductIdEditRouteImport } from './routes/_header-layout.products.$productId.edit'
 import { Route as HeaderLayoutEcosystemsAppAllRouteImport } from './routes/_header-layout.ecosystems.$app.all'
 import { Route as HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.unverified-listings'
+import { Route as HeaderLayoutAdminLayoutAdminReviewsRouteImport } from './routes/_header-layout._admin-layout.admin.reviews'
+import { Route as HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport } from './routes/_header-layout._admin-layout.admin.recently-claimed'
 import { Route as HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport } from './routes/_header-layout._admin-layout.admin.pending-claims'
 import { Route as HeaderLayoutAdminLayoutAdminManagedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.managed-listings'
 import { Route as HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport } from './routes/_header-layout._admin-layout.admin.listing-product-accounts'
@@ -235,6 +237,18 @@ const HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute =
     path: '/admin/unverified-listings',
     getParentRoute: () => HeaderLayoutAdminLayoutRoute,
   } as any)
+const HeaderLayoutAdminLayoutAdminReviewsRoute =
+  HeaderLayoutAdminLayoutAdminReviewsRouteImport.update({
+    id: '/admin/reviews',
+    path: '/admin/reviews',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
+const HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute =
+  HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport.update({
+    id: '/admin/recently-claimed',
+    path: '/admin/recently-claimed',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
 const HeaderLayoutAdminLayoutAdminPendingClaimsRoute =
   HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport.update({
     id: '/admin/pending-claims',
@@ -322,6 +336,8 @@ export interface FileRoutesByFullPath {
   '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  '/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
   '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
@@ -365,6 +381,8 @@ export interface FileRoutesByTo {
   '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  '/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
   '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
@@ -410,6 +428,8 @@ export interface FileRoutesById {
   '/_header-layout/_admin-layout/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/_header-layout/_admin-layout/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   '/_header-layout/_admin-layout/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/_header-layout/_admin-layout/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  '/_header-layout/_admin-layout/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
   '/_header-layout/_admin-layout/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/_header-layout/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
@@ -455,6 +475,8 @@ export interface FileRouteTypes {
     | '/admin/listing-product-accounts'
     | '/admin/managed-listings'
     | '/admin/pending-claims'
+    | '/admin/recently-claimed'
+    | '/admin/reviews'
     | '/admin/unverified-listings'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
@@ -498,6 +520,8 @@ export interface FileRouteTypes {
     | '/admin/listing-product-accounts'
     | '/admin/managed-listings'
     | '/admin/pending-claims'
+    | '/admin/recently-claimed'
+    | '/admin/reviews'
     | '/admin/unverified-listings'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
@@ -542,6 +566,8 @@ export interface FileRouteTypes {
     | '/_header-layout/_admin-layout/admin/listing-product-accounts'
     | '/_header-layout/_admin-layout/admin/managed-listings'
     | '/_header-layout/_admin-layout/admin/pending-claims'
+    | '/_header-layout/_admin-layout/admin/recently-claimed'
+    | '/_header-layout/_admin-layout/admin/reviews'
     | '/_header-layout/_admin-layout/admin/unverified-listings'
     | '/_header-layout/ecosystems/$app/all'
     | '/_header-layout/products/$productId/edit'
@@ -805,6 +831,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport
       parentRoute: typeof HeaderLayoutAdminLayoutRoute
     }
+    '/_header-layout/_admin-layout/admin/reviews': {
+      id: '/_header-layout/_admin-layout/admin/reviews'
+      path: '/admin/reviews'
+      fullPath: '/admin/reviews'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminReviewsRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
+    '/_header-layout/_admin-layout/admin/recently-claimed': {
+      id: '/_header-layout/_admin-layout/admin/recently-claimed'
+      path: '/admin/recently-claimed'
+      fullPath: '/admin/recently-claimed'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
     '/_header-layout/_admin-layout/admin/pending-claims': {
       id: '/_header-layout/_admin-layout/admin/pending-claims'
       path: '/admin/pending-claims'
@@ -886,6 +926,8 @@ interface HeaderLayoutAdminLayoutRouteChildren {
   HeaderLayoutAdminLayoutAdminListingProductAccountsRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   HeaderLayoutAdminLayoutAdminManagedListingsRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   HeaderLayoutAdminLayoutAdminPendingClaimsRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute: typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  HeaderLayoutAdminLayoutAdminReviewsRoute: typeof HeaderLayoutAdminLayoutAdminReviewsRoute
   HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute: typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   HeaderLayoutAdminLayoutAdminIndexRoute: typeof HeaderLayoutAdminLayoutAdminIndexRoute
 }
@@ -906,6 +948,10 @@ const HeaderLayoutAdminLayoutRouteChildren: HeaderLayoutAdminLayoutRouteChildren
       HeaderLayoutAdminLayoutAdminManagedListingsRoute,
     HeaderLayoutAdminLayoutAdminPendingClaimsRoute:
       HeaderLayoutAdminLayoutAdminPendingClaimsRoute,
+    HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute:
+      HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute,
+    HeaderLayoutAdminLayoutAdminReviewsRoute:
+      HeaderLayoutAdminLayoutAdminReviewsRoute,
     HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute:
       HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute,
     HeaderLayoutAdminLayoutAdminIndexRoute:

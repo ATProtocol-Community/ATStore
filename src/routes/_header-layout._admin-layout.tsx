@@ -80,6 +80,15 @@ function RouteComponent() {
               Pending Claims
             </SidebarLink>
             <SidebarLink
+              to="/admin/recently-claimed"
+              activeProps={{ isActive: true }}
+            >
+              Recently Claimed
+            </SidebarLink>
+            <SidebarLink to="/admin/reviews" activeProps={{ isActive: true }}>
+              Reviews
+            </SidebarLink>
+            <SidebarLink
               to="/admin/listing-product-accounts"
               activeProps={{ isActive: true }}
             >

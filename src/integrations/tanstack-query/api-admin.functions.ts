@@ -1,16 +1,22 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { and, asc, desc, eq, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, ne, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { fetchBlueskyHandleForDid } from '#/lib/bluesky-public-profile'
+import {
+  fetchBlueskyHandleForDid,
+  fetchBlueskyPublicProfileFields,
+} from '#/lib/bluesky-public-profile'
 import { adminFnMiddleware, getAtprotoSessionForRequest } from '#/middleware/auth'
 import { protocolRecordImageUrlOrNull } from '#/lib/atproto/protocol-record-image-url'
+import { getAtstoreRepoDid } from '#/lib/atproto/publish-directory-listing'
 
 import { dbMiddleware } from './db-middleware'
 
 const HOME_HERO_SLOT_COUNT = 3
+const RECENT_REVIEWS_LIMIT = 200
+const RECENTLY_CLAIMED_LISTINGS_LIMIT = 200
 
 const setListingVerificationInput = z.object({
   listingId: z.string().uuid(),
@@ -237,10 +243,166 @@ const setHomePageHeroListings = createServerFn({ method: 'POST' })
     return { ok: true as const }
   })
 
+const getRecentReviews = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .handler(async ({ context }) => {
+    const { db, schema } = context
+    const reviews = schema.storeListingReviews
+    const listings = schema.storeListings
+
+    const rows = await db
+      .select({
+        id: reviews.id,
+        rating: reviews.rating,
+        text: reviews.text,
+        reviewCreatedAt: reviews.reviewCreatedAt,
+        atUri: reviews.atUri,
+        authorDid: reviews.authorDid,
+        authorDisplayName: reviews.authorDisplayName,
+        authorAvatarUrl: reviews.authorAvatarUrl,
+        listingId: listings.id,
+        listingName: listings.name,
+        listingSlug: listings.slug,
+        listingIconUrl: listings.iconUrl,
+      })
+      .from(reviews)
+      .innerJoin(listings, eq(reviews.storeListingId, listings.id))
+      .orderBy(desc(reviews.reviewCreatedAt))
+      .limit(RECENT_REVIEWS_LIMIT)
+
+    const uniqueDids = Array.from(new Set(rows.map((r) => r.authorDid)))
+    const profileEntries = await Promise.all(
+      uniqueDids.map(
+        async (did) =>
+          [did, await fetchBlueskyPublicProfileFields(did)] as const,
+      ),
+    )
+    const profileByDid = new Map(profileEntries)
+
+    return rows.map((row) => {
+      const profile = profileByDid.get(row.authorDid) ?? null
+      const displayName =
+        row.authorDisplayName?.trim() ||
+        profile?.displayName?.trim() ||
+        profile?.handle ||
+        null
+      const avatarUrl =
+        row.authorAvatarUrl?.trim() || profile?.avatarUrl || null
+      const handle = profile?.handle ?? null
+      return {
+        ...row,
+        reviewCreatedAt: row.reviewCreatedAt.toISOString(),
+        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+        authorDisplayName: displayName,
+        authorAvatarUrl: avatarUrl,
+        authorHandle: handle,
+      }
+    })
+  })
+
+const getRecentReviewsQueryOptions = queryOptions({
+  queryKey: ['admin', 'recent-reviews'],
+  queryFn: async () => getRecentReviews(),
+})
+
+const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .handler(async ({ context }) => {
+    const { db, schema } = context
+    const listings = schema.storeListings
+
+    /**
+     * "Claimed" covers two paths:
+     * - Manual admin approval (`setClaimStatus`) — sets `claimedAt` + `claimedByDid`.
+     * - PDS migration handshake (`claimProductListingToPds`) — sets `migratedFromAtUri`
+     *   and re-points `repoDid` to the user. Does not touch `claimedAt` / `claimedByDid`.
+     *
+     * Restrict the migration branch to verified rows whose `repoDid` is no longer the
+     * store account so we don't surface spoofed `migratedFromAtUri` values from
+     * unverified records.
+     */
+    const atstoreDid = await getAtstoreRepoDid()
+
+    const effectiveClaimedAt = sql<Date>`COALESCE(${listings.claimedAt}, ${listings.updatedAt})`
+
+    const rows = await db
+      .select({
+        id: listings.id,
+        name: listings.name,
+        slug: listings.slug,
+        tagline: listings.tagline,
+        iconUrl: listings.iconUrl,
+        externalUrl: listings.externalUrl,
+        categorySlugs: listings.categorySlugs,
+        claimedAt: listings.claimedAt,
+        claimedByDid: listings.claimedByDid,
+        productAccountHandle: listings.productAccountHandle,
+        productAccountDid: listings.productAccountDid,
+        repoDid: listings.repoDid,
+        migratedFromAtUri: listings.migratedFromAtUri,
+        verificationStatus: listings.verificationStatus,
+        updatedAt: listings.updatedAt,
+        effectiveClaimedAt,
+      })
+      .from(listings)
+      .where(
+        or(
+          and(
+            isNotNull(listings.claimedAt),
+            isNotNull(listings.claimedByDid),
+          ),
+          and(
+            isNotNull(listings.migratedFromAtUri),
+            isNotNull(listings.repoDid),
+            ne(listings.repoDid, atstoreDid),
+            eq(listings.verificationStatus, 'verified'),
+          ),
+        ),
+      )
+      .orderBy(desc(effectiveClaimedAt))
+      .limit(RECENTLY_CLAIMED_LISTINGS_LIMIT)
+
+    return rows.map((row) => {
+      const isMigration =
+        row.claimedAt == null &&
+        row.migratedFromAtUri != null &&
+        row.repoDid != null &&
+        row.repoDid !== atstoreDid
+      const claimedByDid = row.claimedByDid ?? (isMigration ? row.repoDid : null)
+      const claimedAtDate =
+        row.claimedAt ?? (isMigration ? row.updatedAt : null)
+      return {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        tagline: row.tagline,
+        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+        externalUrl: row.externalUrl,
+        categorySlugs: row.categorySlugs,
+        productAccountHandle: row.productAccountHandle,
+        productAccountDid: row.productAccountDid,
+        claimedByDid,
+        claimedAt: claimedAtDate ? claimedAtDate.toISOString() : null,
+        claimSource: (isMigration ? 'pds-migration' : 'admin-approval') as
+          | 'pds-migration'
+          | 'admin-approval',
+      }
+    })
+  })
+
+const getRecentlyClaimedListingsQueryOptions = queryOptions({
+  queryKey: ['admin', 'recently-claimed-listings'],
+  queryFn: async () => getRecentlyClaimedListings(),
+})
+
 export const adminApi = {
   getAdminDashboard,
   getAdminDashboardQueryOptions,
   setListingVerification,
   setClaimStatus,
   setHomePageHeroListings,
+  getRecentReviews,
+  getRecentReviewsQueryOptions,
+  getRecentlyClaimedListings,
+  getRecentlyClaimedListingsQueryOptions,
 }
