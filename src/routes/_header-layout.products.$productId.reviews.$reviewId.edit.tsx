@@ -61,8 +61,14 @@ export const Route = createFileRoute(
       throw notFound();
     }
 
-    return { review };
+    return {
+      review,
+      ogTitle: `Edit your review of ${listing.name} | at-store`,
+    };
   },
+  head: ({ loaderData }) => ({
+    meta: [{ title: loaderData?.ogTitle ?? "Edit review | at-store" }],
+  }),
   component: ProductReviewEditPage,
 });
 

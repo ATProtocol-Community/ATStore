@@ -92,8 +92,15 @@ export const Route = createFileRoute(
       });
     }
 
-    return { productId: listing.id, productSlug };
+    return {
+      productId: listing.id,
+      productSlug,
+      ogTitle: `Edit ${listing.name} | at-store`,
+    };
   },
+  head: ({ loaderData }) => ({
+    meta: [{ title: loaderData?.ogTitle ?? "Edit listing | at-store" }],
+  }),
   component: EditProductListingPage,
 });
 

@@ -148,7 +148,7 @@ export const Route = createFileRoute("/login")({
     };
   },
   component: AuthPage,
-  head: () => ({ meta: [{ title: "Sign in" }] }),
+  head: () => ({ meta: [{ title: "Sign in | at-store" }] }),
 });
 
 function AuthPage() {

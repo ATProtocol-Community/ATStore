@@ -37,6 +37,9 @@ export const Route = createFileRoute("/_header-layout/dev/app-tags")({
       directoryListingApi.getDirectoryListingAppTagAssignmentsQueryOptions,
     );
   },
+  head: () => ({
+    meta: [{ title: "App tag categorization (dev) | at-store" }],
+  }),
   component: DevAppTagsPage,
 });
 

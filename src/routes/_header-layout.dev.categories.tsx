@@ -50,6 +50,9 @@ export const Route = createFileRoute("/_header-layout/dev/categories")({
       directoryListingApi.getDirectoryListingCategoryAssignmentsQueryOptions,
     );
   },
+  head: () => ({
+    meta: [{ title: "Recategorize listings (dev) | at-store" }],
+  }),
   component: DevCategoriesPage,
 });
 
