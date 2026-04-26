@@ -97,6 +97,21 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         title: "at-store",
       },
     ],
+    scripts:
+      process.env.NODE_ENV === "production"
+        ? [
+            {
+              src: "https://plausible.io/js/pa-vYxpm8_Go6WhakPdNXp_6.js",
+              async: true,
+            },
+            {
+              children: `
+          window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+          plausible.init()
+        `,
+            },
+          ]
+        : [],
     links: [
       {
         rel: "stylesheet",
