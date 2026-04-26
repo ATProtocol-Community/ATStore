@@ -184,7 +184,6 @@ function ProductReviewWritePage() {
                 size="lg"
                 variant="secondary"
                 isPending={submitReview.isPending}
-                onPress={() => submitReview.mutate()}
                 type="submit"
               >
                 Publish review
