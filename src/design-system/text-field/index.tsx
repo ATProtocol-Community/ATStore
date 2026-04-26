@@ -117,6 +117,7 @@ function TextFieldContent({
           {...stylex.props(inputStyles.input)}
           ref={inputRef}
           placeholder={placeholder}
+          data-focus-always-visible
         />
         {isPasswordInput && (
           <PasswordToggle

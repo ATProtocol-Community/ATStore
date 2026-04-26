@@ -24,6 +24,7 @@ import {
   size as sizeSpace,
 } from "./semantic-spacing.stylex";
 import { fontSize, fontWeight, lineHeight } from "./typography.stylex";
+import { blue } from "./colors/blue.stylex";
 
 const styles = stylex.create({
   field: {
@@ -98,6 +99,7 @@ const styles = stylex.create({
     boxSizing: "border-box",
     display: "flex",
     lineHeight: lineHeight["none"],
+    outline: "none",
   },
   input: {
     borderWidth: 0,
@@ -122,9 +124,9 @@ const styles = stylex.create({
   primary: {
     borderColor: {
       default: uiColor.border1,
-      ":has(:is([data-hovered])):not(:has(:is([data-invalid])))":
+      ":is([data-hovered]:not(:has(:is([data-invalid]))))":
         uiColor.border2,
-      ":focus": uiColor.border3,
+      ":is([data-focus-visible],:has( [data-focused][data-focus-always-visible]))": blue.border3,
     },
     borderStyle: "solid",
     borderWidth: 1,
@@ -145,7 +147,7 @@ const styles = stylex.create({
   primaryInvalid: {
     borderColor: {
       default: criticalColor.border2,
-      ":has(:is([data-hovered]))": criticalColor.border3,
+      ":is([data-hovered])": criticalColor.border3,
       ":focus": uiColor.solid1,
     },
     backgroundColor: {
@@ -160,7 +162,7 @@ const styles = stylex.create({
   primaryWarning: {
     borderColor: {
       default: warningColor.border2,
-      ":has(:is([data-hovered]))": warningColor.border3,
+      ":is([data-hovered])": warningColor.border3,
       ":focus": uiColor.solid1,
     },
     backgroundColor: {
@@ -175,7 +177,7 @@ const styles = stylex.create({
   primaryValid: {
     borderColor: {
       default: successColor.border2,
-      ":has(:is([data-hovered]))": successColor.border3,
+      ":is([data-hovered])": successColor.border3,
       ":focus": uiColor.solid1,
     },
     backgroundColor: {
@@ -190,7 +192,7 @@ const styles = stylex.create({
   secondary: {
     borderColor: {
       default: uiColor.border1,
-      ":has(:is([data-hovered])):not(:has(:is([data-invalid])))":
+      ":is([data-hovered]:not(:has(:is([data-invalid]))))":
         uiColor.border2,
       ":focus": uiColor.border3,
     },

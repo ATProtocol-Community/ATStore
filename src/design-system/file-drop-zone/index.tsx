@@ -28,6 +28,7 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "../theme/semantic-spacing.stylex";
+import { blue } from "../theme/colors/blue.stylex";
 
 async function getFiles(items: Array<DropItem>): Promise<Array<File>> {
   return Promise.all(
@@ -99,6 +100,7 @@ const styles = stylex.create({
     borderColor: {
       default: uiColor.border3,
       ":is([data-drop-target])": primaryColor.solid1,
+      ":is([data-focus-visible])": blue.border3,
     },
     paddingRight: horizontalSpace["2xl"],
     borderRadius: radius.lg,
