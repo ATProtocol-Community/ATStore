@@ -67,6 +67,7 @@ const styles = stylex.create({
   },
   reviewQuote: {
     fontSize: fontSize["lg"],
+    whiteSpace: "pre-wrap",
   },
   ratingActions: {
     alignItems: "center",
