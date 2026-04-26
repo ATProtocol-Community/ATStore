@@ -331,6 +331,9 @@ const styles = stylex.create({
     flexWrap: "wrap",
     gap: gap["md"],
   },
+  imageGuidelinesList: {
+    gap: gap.xs,
+  },
   requiredLabel: {
     alignItems: "center",
     gap: gap.xs,
@@ -1095,6 +1098,39 @@ export function ProductListingForm({
                       </Flex>
                     ) : null}
                   </Flex>
+                  <UnorderedList style={styles.imageGuidelinesList}>
+                    <ListItem>
+                      <Text size="sm" variant="secondary">
+                        Use a wide 16:9 rectangle, at least 1600 × 900 px so it
+                        stays sharp on large displays. PNG, JPEG, or WebP, up to
+                        12 MB.
+                      </Text>
+                    </ListItem>
+                    <ListItem>
+                      <Text size="sm" variant="secondary">
+                        Keep the subject centered — the image bleeds into a
+                        blurred backdrop glow behind it, so edges and corners
+                        are not the place for important detail.
+                      </Text>
+                    </ListItem>
+                    <ListItem>
+                      <Text size="sm" variant="secondary">
+                        Show the product itself — illustrative in-product UI
+                        (panels, editors, toolbars) reads well. Landing-page
+                        hero strips with &ldquo;Get started&rdquo; / &ldquo;Sign
+                        up&rdquo; / &ldquo;Try it free&rdquo; do not; lean on
+                        your brand palette and feel instead.
+                      </Text>
+                    </ListItem>
+                    <ListItem>
+                      <Text size="sm" variant="secondary">
+                        Skip browser chrome, device mockups, cursors, cookie
+                        banners, watermarks, and tiny UI text. The hero is also
+                        used as the social share preview, so detail gets lost
+                        when scaled down.
+                      </Text>
+                    </ListItem>
+                  </UnorderedList>
                   <FileDropZone
                     acceptedFileTypes={["image/*"]}
                     isDisabled={isSubmitting}
