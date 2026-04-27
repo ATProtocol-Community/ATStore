@@ -667,7 +667,10 @@ function ProductPage() {
   const [screenshotLightboxIndex, setScreenshotLightboxIndex] = useState(0);
 
   const isAdmin = Boolean(session?.user?.isAdmin);
-  const canRemoveHero = isAdmin && Boolean(listing.heroImageUrl);
+  const canRemoveHero =
+    isAdmin &&
+    Boolean(editAccess?.isStoreManaged) &&
+    Boolean(listing.heroImageUrl);
   const removeHeroMutation = useMutation({
     mutationFn: async () =>
       directoryListingApi.removeStoreManagedListingHero({
@@ -731,7 +734,7 @@ function ProductPage() {
               >
                 Edit listing
               </AppLink>
-            ) : editAccess?.needsClaim || !editAccess?.canEdit ? (
+            ) : editAccess?.isStoreManaged ? (
               <ButtonLink
                 to="/product/claim"
                 search={{ listing: listing.id }}

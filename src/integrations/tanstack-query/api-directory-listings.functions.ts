@@ -4170,30 +4170,37 @@ const getProductListingEditAccess = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getProductListingEditAccessInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
-    if (!session?.did) {
-      return { canEdit: false as const, needsClaim: false as const }
-    }
-
     const full = await getFullDirectoryListing(context, data.listingId)
 
     if (!full.rkey?.trim() || !full.atUri?.trim()) {
-      return { canEdit: false as const, needsClaim: false as const }
+      return {
+        canEdit: false as const,
+        needsClaim: false as const,
+        isStoreManaged: false as const,
+      }
     }
 
     const atstoreDid = await getAtstoreRepoDid()
     const repo = full.repoDid?.trim()
     const productDid = full.productAccountDid?.trim()
+    const isStoreManaged = repo === atstoreDid
 
-    const needsClaim = Boolean(
-      productDid === session.did && repo === atstoreDid,
-    )
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return {
+        canEdit: false as const,
+        needsClaim: false as const,
+        isStoreManaged,
+      }
+    }
+
+    const needsClaim = Boolean(productDid === session.did && isStoreManaged)
 
     const canEdit = Boolean(
       repo === session.did && productDid === session.did,
     )
 
-    return { canEdit, needsClaim }
+    return { canEdit, needsClaim, isStoreManaged }
   })
 
 function getProductListingEditAccessQueryOptions(listingId: string) {
