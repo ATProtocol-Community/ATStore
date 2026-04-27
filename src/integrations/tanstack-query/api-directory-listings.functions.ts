@@ -204,6 +204,12 @@ export interface DirectoryListingCard {
 export interface DirectoryListingDetail extends DirectoryListingCard {
   /** Canonical AT URI for `fyi.atstore.listing.detail` when Tap-synced; needed to publish reviews. */
   atUri: string | null
+  /**
+   * True when the listing record is hosted on the at-store publisher repo (or
+   * is not yet on AT proto at all). False once an account other than at-store
+   * has claimed the listing and now hosts the record themselves.
+   */
+  isStoreManaged: boolean
   /** Official product Bluesky DID (`fyi.atstore.listing.detail`). */
   productAccountDid: string | null
   /** Raw `store_listings.tagline` for owner edit forms (display tagline may fall back to description). */
@@ -761,6 +767,7 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
 
 type DirectoryListingDetailRow = DirectoryListingRow & {
   atUri: string | null
+  repoDid: string | null
   productAccountDid: string | null
   productAccountHandle: string | null
   sourceUrl: string
@@ -797,13 +804,17 @@ type ExtractedPageCopy = {
   paragraphs: string[]
 }
 
-function toListingDetail(row: DirectoryListingDetailRow): DirectoryListingDetail {
+function toListingDetail(
+  row: DirectoryListingDetailRow,
+  options: { isStoreManaged: boolean },
+): DirectoryListingDetail {
   const primary = primaryCategorySlug(row.categorySlugs)
   const assignedCategory = getDirectoryCategoryOption(primary)
 
   return {
     ...toListingCard(row),
     atUri: row.atUri,
+    isStoreManaged: options.isStoreManaged,
     productAccountDid: row.productAccountDid,
     sourceTagline: row.tagline ?? null,
     sourceFullDescription: row.fullDescription ?? null,
@@ -2158,6 +2169,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         fullDescription: table.fullDescription,
         categorySlugs: table.categorySlugs,
         atUri: table.atUri,
+        repoDid: table.repoDid,
         productAccountDid: table.productAccountDid,
         productAccountHandle: table.productAccountHandle,
         reviewCount: table.reviewCount,
@@ -2176,7 +2188,9 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
       return null
     }
 
-    return toListingDetail(row)
+    return toListingDetail(row, {
+      isStoreManaged: await computeIsStoreManaged(row),
+    })
   })
 
 const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
@@ -2203,6 +2217,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         fullDescription: table.fullDescription,
         categorySlugs: table.categorySlugs,
         atUri: table.atUri,
+        repoDid: table.repoDid,
         productAccountDid: table.productAccountDid,
         productAccountHandle: table.productAccountHandle,
         reviewCount: table.reviewCount,
@@ -2221,8 +2236,27 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
       return null
     }
 
-    return toListingDetail(row)
+    return toListingDetail(row, {
+      isStoreManaged: await computeIsStoreManaged(row),
+    })
   })
+
+/**
+ * Determines whether a listing's AT proto record is hosted by the at-store
+ * publisher (or whether it is not yet on AT proto at all). Listings whose
+ * record now lives on a different repo have been claimed by their owner.
+ */
+async function computeIsStoreManaged(row: {
+  atUri: string | null
+  repoDid: string | null
+}): Promise<boolean> {
+  const atUri = row.atUri?.trim()
+  if (!atUri) return true
+  const repoDid = row.repoDid?.trim()
+  if (!repoDid) return true
+  const atstoreDid = await getAtstoreRepoDid()
+  return repoDid === atstoreDid
+}
 
 function getDirectoryListingDetailQueryOptions(id: string) {
   return queryOptions({

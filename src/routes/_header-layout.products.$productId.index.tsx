@@ -15,6 +15,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import {
+  BadgeCheck,
   BookOpen,
   ChevronLeft,
   Code2,
@@ -30,7 +31,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { Link as AriaLink } from "react-aria-components";
+import { Link as AriaLink, Pressable } from "react-aria-components";
 
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
@@ -83,6 +84,7 @@ import type { ListingLink } from "#/lib/atproto/listing-record";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { BlueskyIcon } from "#/components/bluesky-icon";
 import { ToggleButton } from "#/design-system/toggle-button";
+import { Tooltip } from "../design-system/tooltip";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -1008,6 +1010,25 @@ function HeroSection({
     listing.categorySlugs,
   );
 
+  const verificationBadge = listing.isStoreManaged ? (
+    <Tooltip text="This listing is managed by the ATStore team. Claim it to add more details.">
+      <Pressable>
+        <Badge size="sm" variant="warning" aria-label="Unverified listing">
+          Unverified
+        </Badge>
+      </Pressable>
+    </Tooltip>
+  ) : (
+    <Tooltip text="This listing is managed by the owner of the product.">
+      <Pressable>
+        <Badge size="sm" variant="success" aria-label="Claimed by owner">
+          <BadgeCheck aria-hidden />
+          Verified
+        </Badge>
+      </Pressable>
+    </Tooltip>
+  );
+
   const tags = (listing.appTags.length > 0 ||
     subproductCategories.length > 0) && (
     <Flex gap="md" style={styles.tagRow}>
@@ -1112,7 +1133,7 @@ function HeroSection({
               style={styles.heroAvatar}
             />
             <Flex direction="column" gap="2xl" style={styles.heroHeaderText}>
-              <Flex gap="xl" align="center">
+              <Flex gap="xl" align="center" wrap>
                 <Text
                   font="title"
                   size={{ default: "4xl", sm: "4xl" }}
@@ -1121,6 +1142,7 @@ function HeroSection({
                 >
                   {listing.name}
                 </Text>
+                {verificationBadge}
                 <div {...stylex.props(styles.desktopOnly)}>{tags}</div>
               </Flex>
               <Body style={[styles.heroTagline, styles.desktopOnly]}>
