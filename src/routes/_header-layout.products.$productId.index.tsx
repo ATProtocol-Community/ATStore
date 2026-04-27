@@ -33,6 +33,7 @@ import {
 import { useState } from "react";
 import { Link as AriaLink, Pressable } from "react-aria-components";
 
+import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -698,6 +699,25 @@ function ProductPage() {
   return (
     <Page.Root variant="small" style={styles.page}>
       <Flex direction="column" gap="6xl">
+        {listing.isStoreManaged && !editAccess?.canEdit ? (
+          <Alert
+            variant="warning"
+            title="Unverified listing"
+            action={
+              <ButtonLink
+                to="/product/claim"
+                search={{ listing: listing.id }}
+                variant="secondary"
+                size="sm"
+              >
+                Claim listing
+              </ButtonLink>
+            }
+          >
+            This listing is managed by the at-store team. Claim it to update
+            details, links, and respond to reviews.
+          </Alert>
+        ) : null}
         <Flex
           align="center"
           justify="between"
@@ -736,15 +756,6 @@ function ProductPage() {
               >
                 Edit listing
               </AppLink>
-            ) : listing.isStoreManaged ? (
-              <ButtonLink
-                to="/product/claim"
-                search={{ listing: listing.id }}
-                variant="secondary"
-                size="sm"
-              >
-                Claim listing
-              </ButtonLink>
             ) : null}
           </Flex>
         </Flex>
