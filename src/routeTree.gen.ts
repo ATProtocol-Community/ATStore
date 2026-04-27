@@ -16,6 +16,7 @@ import { Route as OgIndexRouteImport } from './routes/og.index'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutHomeRouteImport } from './routes/_header-layout.home'
+import { Route as HeaderLayoutAboutRouteImport } from './routes/_header-layout.about'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
 import { Route as ApiAdminHeroCandidateImageRouteImport } from './routes/api.admin.hero-candidate-image'
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
@@ -90,6 +91,11 @@ const HeaderLayoutNotificationsRoute =
 const HeaderLayoutHomeRoute = HeaderLayoutHomeRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => HeaderLayoutRoute,
+} as any)
+const HeaderLayoutAboutRoute = HeaderLayoutAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const HeaderLayoutAdminLayoutRoute = HeaderLayoutAdminLayoutRouteImport.update({
@@ -327,6 +333,7 @@ const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/about': typeof HeaderLayoutAboutRoute
   '/home': typeof HeaderLayoutHomeRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
@@ -374,6 +381,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/about': typeof HeaderLayoutAboutRoute
   '/home': typeof HeaderLayoutHomeRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
@@ -423,6 +431,7 @@ export interface FileRoutesById {
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
   '/login': typeof LoginRoute
   '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
+  '/_header-layout/about': typeof HeaderLayoutAboutRoute
   '/_header-layout/home': typeof HeaderLayoutHomeRoute
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
   '/_header-layout/search': typeof HeaderLayoutSearchRoute
@@ -472,6 +481,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/about'
     | '/home'
     | '/notifications'
     | '/search'
@@ -519,6 +529,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/about'
     | '/home'
     | '/notifications'
     | '/search'
@@ -567,6 +578,7 @@ export interface FileRouteTypes {
     | '/_header-layout'
     | '/login'
     | '/_header-layout/_admin-layout'
+    | '/_header-layout/about'
     | '/_header-layout/home'
     | '/_header-layout/notifications'
     | '/_header-layout/search'
@@ -674,6 +686,13 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/home'
       preLoaderRoute: typeof HeaderLayoutHomeRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/about': {
+      id: '/_header-layout/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof HeaderLayoutAboutRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/_admin-layout': {
@@ -1030,6 +1049,7 @@ const HeaderLayoutProductsProductIdReviewsRouteWithChildren =
 
 interface HeaderLayoutRouteChildren {
   HeaderLayoutAdminLayoutRoute: typeof HeaderLayoutAdminLayoutRouteWithChildren
+  HeaderLayoutAboutRoute: typeof HeaderLayoutAboutRoute
   HeaderLayoutHomeRoute: typeof HeaderLayoutHomeRoute
   HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
   HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
@@ -1055,6 +1075,7 @@ interface HeaderLayoutRouteChildren {
 
 const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutAdminLayoutRoute: HeaderLayoutAdminLayoutRouteWithChildren,
+  HeaderLayoutAboutRoute: HeaderLayoutAboutRoute,
   HeaderLayoutHomeRoute: HeaderLayoutHomeRoute,
   HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
   HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
