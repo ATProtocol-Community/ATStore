@@ -205,7 +205,7 @@ function AboutPage() {
           <Body>
             It&rsquo;s maintained as a community project under the{" "}
             <Link
-              href="https://atproto.wiki/en/home"
+              href="https://discourse.atprotocol.community"
               target="_blank"
               rel="noreferrer"
             >
@@ -255,7 +255,7 @@ function AboutPage() {
             <Body>
               <strong>Community.</strong> Join the conversation on the{" "}
               <Link
-                href="https://atproto.wiki/en/home"
+                href="https://discourse.atprotocol.community"
                 target="_blank"
                 rel="noreferrer"
               >
