@@ -198,7 +198,12 @@ export function tryParseListingDetailRecord(
       blobSummary: summarizeBlobRefForDebug(d.icon),
     }
   }
-  if (!blobRefAcceptableForTap(d.heroImage)) {
+  /**
+   * `heroImage` is optional in the lexicon — a record may omit it entirely. We only reject when
+   * the field is present-but-malformed (e.g. wrong shape) so an undefined/null hero is treated
+   * as "no hero" rather than an ingest failure.
+   */
+  if (d.heroImage != null && !blobRefAcceptableForTap(d.heroImage)) {
     return {
       ok: false,
       reason: `heroImage blob not recognized (${summarizeBlobRefForDebug(d.heroImage)})`,
@@ -230,11 +235,11 @@ export function tryParseListingDetailRecord(
     tagline: d.tagline,
     externalUrl: d.externalUrl,
     icon: d.icon as AtprotoBlob,
-    heroImage: d.heroImage as AtprotoBlob,
     categorySlug: d.categorySlug,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   }
+  if (d.heroImage != null) rec.heroImage = d.heroImage as AtprotoBlob
   if (d.description) rec.description = d.description
   if (d.screenshots?.length) {
     rec.screenshots = d.screenshots.filter(blobRefAcceptableForTap) as AtprotoBlob[]

@@ -167,45 +167,59 @@ function AdminHeroCandidatesPage() {
     <Page.Root variant="large" style={styles.page}>
       <Flex direction="column" gap="6xl" style={styles.section}>
         <Flex direction="column" gap="2xl">
-          <Heading1>Missing hero images (dev)</Heading1>
+          <Heading1>Hero candidate review queue (dev)</Heading1>
           <SmallBody>
-            AtStore-managed listings whose <code>heroImageUrl</code> is empty,
-            with the <code>og:image</code> we scraped from the listing&rsquo;s
-            external URL as a proposed replacement. Click{" "}
-            <em>Use as hero</em> to upload the og:image as a fresh atproto blob
-            on the listing&rsquo;s <code>fyi.atstore.listing.detail</code>{" "}
-            record and update <code>storeListings.heroImageUrl</code>.
+            Every AtStore-managed listing for which the scrape captured a hero
+            candidate &mdash; either the site&rsquo;s <code>og:image</code> or,
+            when none is published, a screenshot of the homepage. The current
+            hero is on the left, the candidate on the right. Click{" "}
+            <em>Use as hero</em> to upload the candidate as a fresh atproto blob
+            (this also marks the listing reviewed), <em>Skip</em> to leave the
+            existing hero alone, <em>Remove og/screenshot</em> to delete the
+            captured candidate from disk so it&rsquo;s not offered again, or{" "}
+            <em>Remove hero</em> to clear the listing&rsquo;s current hero
+            entirely (republishes the lexicon record with no{" "}
+            <code>heroImage</code> blob &mdash; the directory then falls back to
+            screenshots / category art). Reviews persist in{" "}
+            <code>out/hero-candidates/reviewed.json</code>, so the queue shrinks
+            as you work through it. Listings whose current hero is a legacy{" "}
+            <code>/generated/listings/&hellip;</code> AI image (the ones we want
+            to replace) are surfaced first, then og:image candidates, then
+            screenshot fallbacks.
           </SmallBody>
           <Text size="sm" variant="secondary">
-            {data.totalListingsMissingHero} listings missing a hero &middot;{" "}
-            {data.withOgCandidate} have a scraped og:image &middot; last scrape:{" "}
+            {data.pending.length} pending &middot; {data.totalApplied} applied{" "}
+            &middot; {data.totalDismissed} skipped &middot;{" "}
+            {data.totalWithOgCandidate} og:image &middot;{" "}
+            {data.totalWithScreenshotCandidate} screenshot &middot; last scrape:{" "}
             {generatedAtLabel}
           </Text>
         </Flex>
 
-        {data.totalListingsMissingHero === 0 ? (
+        {data.totalWithOgCandidate + data.totalWithScreenshotCandidate === 0 ? (
           <Card style={styles.itemCard}>
             <CardBody>
               <Body style={styles.emptyMessage}>
-                No AtStore-managed listings are missing a hero image. Nothing
-                to fix here right now.
+                No hero candidates in{" "}
+                <code>out/hero-candidates/index.json</code>. Run{" "}
+                <code>npm run scrape:product-hero-candidates</code> first.
               </Body>
             </CardBody>
           </Card>
-        ) : data.entries.length === 0 ? (
+        ) : data.pending.length === 0 ? (
           <Card style={styles.itemCard}>
             <CardBody>
               <Body style={styles.emptyMessage}>
-                {data.totalListingsMissingHero} listing(s) are missing a hero,
-                but none of them have a scraped <code>og:image</code> in{" "}
-                <code>out/hero-candidates/index.json</code>. Re-run{" "}
-                <code>npm run scrape:product-hero-candidates</code> and refresh.
+                Queue empty &mdash; you&rsquo;ve reviewed all{" "}
+                {data.totalWithOgCandidate + data.totalWithScreenshotCandidate}{" "}
+                listings with a hero candidate. Delete{" "}
+                <code>out/hero-candidates/reviewed.json</code> to start over.
               </Body>
             </CardBody>
           </Card>
         ) : (
           <div {...stylex.props(styles.itemList)}>
-            {data.entries.map((entry) => (
+            {data.pending.map((entry) => (
               <HeroCandidateCard key={entry.id} entry={entry} />
             ))}
           </div>
@@ -221,30 +235,62 @@ interface HeroCandidateCardProps {
 
 function HeroCandidateCard({ entry }: HeroCandidateCardProps) {
   const queryClient = useQueryClient();
-  const [appliedHero, setAppliedHero] = useState<string | null>(null);
 
-  const mutation = useMutation({
+  const invalidateQueue = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["admin", "hero-candidates"],
+    });
+  };
+
+  const applyMutation = useMutation({
     mutationFn: async () =>
       adminHeroCandidatesApi.applyHeroCandidate({
         data: { listingId: entry.id },
       }),
-    onSuccess: async (result) => {
-      setAppliedHero(result.heroImageUrl);
-      await queryClient.invalidateQueries({
-        queryKey: ["admin", "hero-candidates"],
-      });
-    },
+    onSuccess: invalidateQueue,
   });
 
-  const liveHeroUrl = appliedHero ?? entry.currentHeroImageUrl;
-  const isApplied = appliedHero != null;
+  const dismissMutation = useMutation({
+    mutationFn: async () =>
+      adminHeroCandidatesApi.dismissHeroCandidate({
+        data: { listingId: entry.id },
+      }),
+    onSuccess: invalidateQueue,
+  });
 
+  const removeOgMutation = useMutation({
+    mutationFn: async () =>
+      adminHeroCandidatesApi.removeOgCandidate({
+        data: { listingId: entry.id },
+      }),
+    onSuccess: invalidateQueue,
+  });
+
+  const removeHeroMutation = useMutation({
+    mutationFn: async () =>
+      adminHeroCandidatesApi.removeHero({
+        data: { listingId: entry.id },
+      }),
+    onSuccess: invalidateQueue,
+  });
+
+  const busy =
+    applyMutation.isPending ||
+    dismissMutation.isPending ||
+    removeOgMutation.isPending ||
+    removeHeroMutation.isPending;
   const errorMessage =
-    mutation.error instanceof Error
-      ? mutation.error.message
-      : mutation.error
-        ? String(mutation.error)
-        : null;
+    applyMutation.error instanceof Error
+      ? applyMutation.error.message
+      : dismissMutation.error instanceof Error
+        ? dismissMutation.error.message
+        : removeOgMutation.error instanceof Error
+          ? removeOgMutation.error.message
+          : removeHeroMutation.error instanceof Error
+            ? removeHeroMutation.error.message
+            : null;
+
+  const liveHeroUrl = entry.currentHeroImageUrl;
 
   return (
     <Card style={styles.itemCard}>
@@ -265,9 +311,11 @@ function HeroCandidateCard({ entry }: HeroCandidateCardProps) {
             ) : null}
           </Flex>
           <Flex style={styles.buttonRow}>
-            <span {...stylex.props(styles.pill)}>og:image</span>
-            {isApplied ? (
-              <span {...stylex.props(styles.pill)}>Applied</span>
+            <span {...stylex.props(styles.pill)}>
+              {entry.candidate.kind === "og" ? "og:image" : "screenshot"}
+            </span>
+            {entry.currentHeroIsAiGenerated ? (
+              <span {...stylex.props(styles.pill)}>AI-generated hero</span>
             ) : null}
           </Flex>
         </Flex>
@@ -290,11 +338,14 @@ function HeroCandidateCard({ entry }: HeroCandidateCardProps) {
 
             <Flex direction="column" style={styles.imagePane}>
               <Flex style={styles.paneLabel}>
-                <Heading3>Proposed (og:image)</Heading3>
+                <Heading3>
+                  Proposed (
+                  {entry.candidate.kind === "og" ? "og:image" : "screenshot"})
+                </Heading3>
               </Flex>
               <ComparisonImage
                 src={entry.candidateImageUrl}
-                fallbackText="og:image not on disk"
+                fallbackText="candidate file not on disk"
               />
               <Text size="xs" variant="secondary" style={styles.externalUrl}>
                 {entry.candidate.sourceUrl}
@@ -311,23 +362,48 @@ function HeroCandidateCard({ entry }: HeroCandidateCardProps) {
           <Flex style={styles.buttonRow}>
             <Button
               size="sm"
-              isDisabled={mutation.isPending}
-              onPress={() => mutation.mutate()}
+              isDisabled={busy}
+              onPress={() => applyMutation.mutate()}
             >
-              {mutation.isPending
-                ? "Uploading blob…"
-                : isApplied
-                  ? "Re-apply og:image"
-                  : "Use as hero"}
+              {applyMutation.isPending ? "Uploading blob…" : "Use as hero"}
             </Button>
             <Button
               size="sm"
               variant="secondary"
+              isDisabled={busy}
+              onPress={() => dismissMutation.mutate()}
+            >
+              {dismissMutation.isPending ? "Skipping…" : "Skip"}
+            </Button>
+            <Button
+              size="sm"
+              variant="critical"
+              isDisabled={busy}
+              onPress={() => removeOgMutation.mutate()}
+            >
+              {removeOgMutation.isPending
+                ? "Removing…"
+                : entry.candidate.kind === "og"
+                  ? "Remove og"
+                  : "Remove screenshot"}
+            </Button>
+            <Button
+              size="sm"
+              variant="critical"
+              isDisabled={busy || !entry.currentHeroImageUrl}
+              onPress={() => removeHeroMutation.mutate()}
+            >
+              {removeHeroMutation.isPending ? "Clearing hero…" : "Remove hero"}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              isDisabled={busy}
               onPress={() => {
                 window.open(entry.candidateImageUrl, "_blank");
               }}
             >
-              Open og:image
+              Open candidate
             </Button>
           </Flex>
         </Flex>

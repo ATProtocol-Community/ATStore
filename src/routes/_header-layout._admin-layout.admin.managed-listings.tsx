@@ -99,6 +99,13 @@ const styles = stylex.create({
   devToolsHelp: {
     color: uiColor.text2,
   },
+  dangerZone: {
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    borderTopColor: uiColor.border2,
+    gap: gap["md"],
+    paddingTop: verticalSpace["lg"],
+  },
 
   imageReviewCard: {
     boxShadow: shadow.lg,
@@ -297,6 +304,7 @@ function ManagedListingEditor({
   >(null);
   const [pendingImageCommit, setPendingImageCommit] = useState(false);
   const [pendingHeroRemoval, setPendingHeroRemoval] = useState(false);
+  const [pendingListingDeletion, setPendingListingDeletion] = useState(false);
   const [imageReviewDraft, setImageReviewDraft] =
     useState<null | ImageReviewDraft>(null);
   const [toolbarStatus, setToolbarStatus] = useState<ToolbarStatus | null>(
@@ -442,6 +450,34 @@ function ManagedListingEditor({
       });
     } finally {
       setPendingHeroRemoval(false);
+    }
+  }
+
+  async function deleteListing() {
+    if (pendingListingDeletion) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Permanently delete "${listing?.name ?? "this listing"}"? This tombstones the record on the store PDS and removes it from the directory immediately. This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setPendingListingDeletion(true);
+    setToolbarStatus(null);
+    try {
+      await directoryListingApi.deleteStoreManagedListing({
+        data: { id: listingId },
+      });
+      await invalidateListingCaches();
+      onClear();
+    } catch (error) {
+      setToolbarStatus({
+        tone: "critical",
+        text:
+          error instanceof Error ? error.message : "Could not delete listing.",
+      });
+      setPendingListingDeletion(false);
     }
   }
 
@@ -661,19 +697,6 @@ function ManagedListingEditor({
               Generate hero image
             </Button>
             <Button
-              variant="critical-outline"
-              isPending={pendingHeroRemoval}
-              isDisabled={
-                pendingHeroRemoval ||
-                pendingGeneration !== null ||
-                imageReviewDraft !== null ||
-                !listing.heroImageUrl
-              }
-              onPress={() => void removeHero()}
-            >
-              Remove hero
-            </Button>
-            <Button
               variant="secondary"
               isPending={pendingGeneration === "tagline"}
               isDisabled={pendingGeneration !== null}
@@ -701,6 +724,34 @@ function ManagedListingEditor({
               {toolbarStatus?.text ?? " "}
             </Text>
           )}
+
+          <Flex direction="column" style={styles.dangerZone}>
+            <Text size="sm" weight="semibold">
+              Danger zone
+            </Text>
+            <SmallBody variant="secondary">
+              Tombstones the record on the store PDS and removes the listing
+              from the directory. This cannot be undone.
+            </SmallBody>
+            <Flex>
+              <Button
+                variant="critical-outline"
+                isPending={pendingListingDeletion}
+                isDisabled={
+                  pendingListingDeletion ||
+                  pendingHeroRemoval ||
+                  pendingGeneration !== null ||
+                  pendingImageCommit ||
+                  pendingMetadataSave !== null ||
+                  saveMutation.isPending ||
+                  imageReviewDraft !== null
+                }
+                onPress={() => void deleteListing()}
+              >
+                Delete listing
+              </Button>
+            </Flex>
+          </Flex>
         </Flex>
       </Card>
 

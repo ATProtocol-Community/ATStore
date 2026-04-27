@@ -3244,6 +3244,77 @@ const commitDirectoryListingHeroImage = createServerFn({ method: 'POST' })
     }
   })
 
+const removeStoreManagedListingHeroInput = z.object({
+  id: z.string().min(1),
+})
+
+/**
+ * Clear the displayed hero image for an AtStore-managed listing.
+ *
+ * Only the DB column is cleared so the directory immediately stops rendering the hero. We
+ * intentionally do not republish the atproto record: the lexicon requires `heroImage`, so a
+ * republish would either re-upload the existing blob (no-op) or fall back to the placeholder /
+ * a screenshot — and Tap ingest would then overwrite this column right back. The hero candidates
+ * admin flow is the inverse pathway for re-attaching a hero later.
+ */
+const removeStoreManagedListingHero = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .inputValidator(removeStoreManagedListingHeroInput)
+  .handler(async ({ data, context }) => {
+    const full = await getFullDirectoryListing(context, data.id)
+    const atstoreRepoDid = await getAtstoreRepoDid()
+    if (full.repoDid?.trim() !== atstoreRepoDid) {
+      throw new Error(
+        'Only AtStore-managed listings can have their hero image removed by an admin.',
+      )
+    }
+
+    const t = context.schema.storeListings
+    await context.db
+      .update(t)
+      .set({ heroImageUrl: null, updatedAt: new Date() })
+      .where(eq(t.id, data.id))
+
+    return { id: data.id }
+  })
+
+const deleteStoreManagedListingInput = z.object({
+  id: z.string().min(1),
+})
+
+/**
+ * Admin: permanently delete an AtStore-managed directory listing.
+ *
+ * Tombstones the lexicon record on the store PDS and removes the mirror row from `storeListings`
+ * so the directory updates immediately. Tap ingest will eventually see the tombstone too;
+ * `markListingRemovedFromTap` is idempotent on a missing row so the double-delete is safe.
+ */
+const deleteStoreManagedListing = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .inputValidator(deleteStoreManagedListingInput)
+  .handler(async ({ data, context }) => {
+    const full = await getFullDirectoryListing(context, data.id)
+    const atstoreRepoDid = await getAtstoreRepoDid()
+    if (full.repoDid?.trim() !== atstoreRepoDid) {
+      throw new Error(
+        'Only AtStore-managed listings can be deleted from this admin page.',
+      )
+    }
+    if (!full.rkey) {
+      throw new Error(
+        'Listing has no ATProto record (missing rkey). Nothing to delete on the PDS.',
+      )
+    }
+
+    const { client, repoDid } = await createAtstorePublishClient()
+    await deleteRecord(client, repoDid, COLLECTION.listingDetail, full.rkey)
+
+    const t = context.schema.storeListings
+    await context.db.delete(t).where(eq(t.id, data.id))
+
+    return { id: data.id }
+  })
+
 const previewDirectoryListingIcon = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
@@ -5440,6 +5511,8 @@ export const directoryListingApi = {
   deleteDirectoryListing,
   previewDirectoryListingHeroImage,
   commitDirectoryListingHeroImage,
+  removeStoreManagedListingHero,
+  deleteStoreManagedListing,
   previewDirectoryListingIcon,
   commitDirectoryListingIcon,
   regenerateDirectoryListingTagline,

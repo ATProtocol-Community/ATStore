@@ -44,7 +44,6 @@ export const lexicons = [
             "tagline",
             "externalUrl",
             "icon",
-            "heroImage",
             "categorySlug",
             "createdAt",
             "updatedAt"

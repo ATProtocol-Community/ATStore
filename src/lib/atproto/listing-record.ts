@@ -68,7 +68,12 @@ export type FyiAtstoreListingDetail = {
   description?: string
   externalUrl: string
   icon: AtprotoBlob
-  heroImage: AtprotoBlob
+  /**
+   * Optional hero/cover blob. The lexicon allows listings without a hero (some sites have no
+   * good source image and we'd rather render nothing than a generic AI placeholder); when
+   * absent the directory falls back to the first screenshot, then to category-level art.
+   */
+  heroImage?: AtprotoBlob
   screenshots?: AtprotoBlob[]
   /** Lexicon field name; ordered list, first is primary for legacy surfaces. */
   categorySlug: string[]
@@ -160,7 +165,8 @@ export function pickUri(
 export type ListingDetailDbUrls = {
   /** Same HTTPS (or `/…`) URLs we use for the web directory + DB columns. */
   iconUrl: string
-  heroImageUrl: string
+  /** Null when the listing intentionally has no hero (cleared via the admin tooling). */
+  heroImageUrl: string | null
   screenshotUrls: string[]
 }
 
@@ -174,6 +180,12 @@ export type ListingDetailBlobOverrides = {
   icon?: ListingDetailInMemoryImage
   heroImage?: ListingDetailInMemoryImage
   screenshots?: ListingDetailInMemoryImage[]
+  /**
+   * When true, publish the record without a `heroImage` blob and clear `heroImageUrl` in the
+   * DB. Takes precedence over `heroImage` overrides and any prior blob ref for the slot — this
+   * is the explicit "remove the hero" signal from the admin tooling.
+   */
+  clearHero?: boolean
 }
 
 /**
@@ -264,13 +276,20 @@ export async function buildListingDetailRecordWithBlobs(
     iconUrl,
     PLACEHOLDER_ICON,
   )
-  const heroImage = await resolveImageSlot(
-    'heroImage',
-    blobOverrides?.heroImage,
-    existingBlobs?.heroImage,
-    heroUrl,
-    PLACEHOLDER_HERO,
-  )
+  /**
+   * `clearHero` wins over both fresh-bytes overrides and the prior blob ref so the admin
+   * "Remove hero" action actually removes the hero — otherwise the existing-blob branch in
+   * `resolveImageSlot` would silently re-attach the prior hero on every republish.
+   */
+  const heroImage = blobOverrides?.clearHero
+    ? undefined
+    : await resolveImageSlot(
+        'heroImage',
+        blobOverrides?.heroImage,
+        existingBlobs?.heroImage,
+        heroUrl,
+        PLACEHOLDER_HERO,
+      )
 
   const screenshots: AtprotoBlob[] = []
   if (blobOverrides?.screenshots !== undefined) {
@@ -303,11 +322,11 @@ export async function buildListingDetailRecordWithBlobs(
     tagline,
     externalUrl,
     icon,
-    heroImage,
     categorySlug,
     createdAt,
     updatedAt,
   }
+  if (heroImage) record.heroImage = heroImage
 
   const desc = row.fullDescription?.trim()
   if (desc) record.description = desc
@@ -330,7 +349,7 @@ export async function buildListingDetailRecordWithBlobs(
     record,
     dbUrls: {
       iconUrl,
-      heroImageUrl: heroUrl,
+      heroImageUrl: heroImage ? heroUrl : null,
       screenshotUrls,
     },
   }

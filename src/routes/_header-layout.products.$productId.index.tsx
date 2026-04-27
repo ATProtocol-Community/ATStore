@@ -661,9 +661,34 @@ function ProductPage() {
   const canGoBack = useCanGoBack();
   const navigate = useNavigate();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isScreenshotLightboxOpen, setIsScreenshotLightboxOpen] =
     useState(false);
   const [screenshotLightboxIndex, setScreenshotLightboxIndex] = useState(0);
+
+  const isAdmin = Boolean(session?.user?.isAdmin);
+  const canRemoveHero = isAdmin && Boolean(listing.heroImageUrl);
+  const removeHeroMutation = useMutation({
+    mutationFn: async () =>
+      directoryListingApi.removeStoreManagedListingHero({
+        data: { id: listing.id },
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
+      await router.invalidate();
+    },
+  });
+
+  function handleRemoveHero() {
+    if (!canRemoveHero || removeHeroMutation.isPending) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Remove the hero image from "${listing.name}"?`)
+    ) {
+      return;
+    }
+    removeHeroMutation.mutate();
+  }
 
   return (
     <Page.Root variant="small" style={styles.page}>
@@ -687,23 +712,36 @@ function ProductPage() {
               </AppLink>
             )}
           </Flex>
-          {editAccess?.canEdit ? (
-            <AppLink
-              to="/products/$productId/edit"
-              params={{ productId: productSlug }}
-            >
-              Edit listing
-            </AppLink>
-          ) : editAccess?.needsClaim || !editAccess?.canEdit ? (
-            <ButtonLink
-              to="/product/claim"
-              search={{ listing: listing.id }}
-              variant="secondary"
-              size="sm"
-            >
-              Claim listing
-            </ButtonLink>
-          ) : null}
+          <Flex align="center" gap="lg">
+            {canRemoveHero ? (
+              <Button
+                variant="critical-outline"
+                size="sm"
+                isPending={removeHeroMutation.isPending}
+                isDisabled={removeHeroMutation.isPending}
+                onPress={handleRemoveHero}
+              >
+                Remove hero
+              </Button>
+            ) : null}
+            {editAccess?.canEdit ? (
+              <AppLink
+                to="/products/$productId/edit"
+                params={{ productId: productSlug }}
+              >
+                Edit listing
+              </AppLink>
+            ) : editAccess?.needsClaim || !editAccess?.canEdit ? (
+              <ButtonLink
+                to="/product/claim"
+                search={{ listing: listing.id }}
+                variant="secondary"
+                size="sm"
+              >
+                Claim listing
+              </ButtonLink>
+            ) : null}
+          </Flex>
         </Flex>
         <HeroSection listing={listing} productId={productId} />
         <Flex direction="column" gap="6xl">
