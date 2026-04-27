@@ -4621,6 +4621,60 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
     return { ok: true as const }
   })
 
+const removeOwnedProductListingHeroImageInput = z.object({
+  listingId: z.string().uuid(),
+})
+
+/**
+ * Owner-side counterpart to `removeStoreManagedListingHero`. Republishes the
+ * listing record to the owner's PDS with `clearHero: true` so the lexicon record
+ * loses its `heroImage` blob, then clears `heroImageUrl` in Postgres so the
+ * directory stops rendering the hero immediately. Tap ingest reconciles back to
+ * a record without a hero, so this stays clean across re-syncs.
+ */
+const removeOwnedProductListingHeroImage = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(removeOwnedProductListingHeroImageInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to update images.')
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+
+    if (full.repoDid?.trim() !== session.did) {
+      throw new Error(
+        'Only the account that hosts the listing record can edit it.',
+      )
+    }
+
+    if (full.productAccountDid?.trim() !== session.did) {
+      throw new Error('This listing is not associated with your account.')
+    }
+
+    const { uri } = await publishOwnedListingDetail(
+      session.client,
+      session.did,
+      full,
+      undefined,
+      { clearHero: true },
+    )
+
+    const now = new Date()
+    const t = context.schema.storeListings
+    await context.db
+      .update(t)
+      .set({
+        heroImageUrl: null,
+        atUri: uri,
+        updatedAt: now,
+      })
+      .where(eq(t.id, full.id))
+
+    return { ok: true as const }
+  })
+
 const updateOwnedProductListingScreenshots = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware])
   .inputValidator(updateOwnedProductListingScreenshotsInput)
@@ -5545,6 +5599,7 @@ export const directoryListingApi = {
   createOwnedProductListing,
   updateOwnedProductListing,
   updateOwnedProductListingImage,
+  removeOwnedProductListingHeroImage,
   updateOwnedProductListingScreenshots,
   claimProductListingToPds,
   getProfileOwnedProductListings,

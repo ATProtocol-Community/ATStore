@@ -533,6 +533,12 @@ export type ProductListingFormSubmitValues = {
   productHandle: string;
   categorySlug: string;
   pendingHeroBlob: Blob | null;
+  /**
+   * True when the user clicked "Remove hero" without staging a replacement, so
+   * the existing hero should be cleared on save. Mutually exclusive with
+   * `pendingHeroBlob` — picking a new image cancels the pending removal.
+   */
+  pendingHeroRemoval: boolean;
   pendingIconBlob: Blob | null;
   pendingScreenshotBlobs: Blob[];
   retainedScreenshotUrls: string[];
@@ -574,6 +580,13 @@ type ProductListingFormProps = {
    * from the product's homepage using the current `name` and `externalUrl`.
    */
   isAdmin?: boolean;
+  /**
+   * When true, the form renders a "Remove hero" toggle in the hero header that
+   * stages a hero removal. The actual mutation is deferred to the next save —
+   * `onSubmit` receives `pendingHeroRemoval: true` so the caller can call its
+   * remove API as part of the same transaction.
+   */
+  allowRemoveHero?: boolean;
 };
 
 export function ProductListingForm({
@@ -587,6 +600,7 @@ export function ProductListingForm({
   errorMessage,
   successMessage,
   isAdmin = false,
+  allowRemoveHero = false,
 }: ProductListingFormProps) {
   const { data: categoryTree } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryTreeQueryOptions,
@@ -692,6 +706,7 @@ export function ProductListingForm({
   const [pendingHeroPreviewUrl, setPendingHeroPreviewUrl] = useState<
     string | null
   >(null);
+  const [pendingHeroRemoval, setPendingHeroRemoval] = useState(false);
   const pendingIconBlobRef = useRef<Blob | null>(null);
   const [pendingIconPreviewUrl, setPendingIconPreviewUrl] = useState<
     string | null
@@ -818,10 +833,16 @@ export function ProductListingForm({
     return out;
   }
   const hasHeroImage = Boolean(
-    pendingHeroPreviewUrl || initialValues.heroImageUrl,
+    pendingHeroPreviewUrl ||
+    (initialValues.heroImageUrl && !pendingHeroRemoval),
   );
   const hasIconImage = Boolean(pendingIconPreviewUrl || initialValues.iconUrl);
-  const hasRequiredImages = hasHeroImage && hasIconImage;
+  /**
+   * `pendingHeroRemoval` is an explicit "save without a hero" signal so the
+   * Save button stays enabled even though `hasHeroImage` is false.
+   */
+  const hasRequiredImages =
+    (hasHeroImage || pendingHeroRemoval) && hasIconImage;
 
   const { dragAndDropHooks } = useDragAndDrop({
     getItems: (keys) =>
@@ -927,6 +948,7 @@ export function ProductListingForm({
         return nextPreviewUrl;
       });
       pendingHeroBlobRef.current = blob;
+      setPendingHeroRemoval(false);
       setGenerationStatus({
         tone: "neutral",
         text: "Hero image staged. Submit the form to publish.",
@@ -1030,6 +1052,8 @@ export function ProductListingForm({
             productHandle,
             categorySlug,
             pendingHeroBlob: pendingHeroBlobRef.current,
+            pendingHeroRemoval:
+              pendingHeroRemoval && !pendingHeroBlobRef.current,
             pendingIconBlob: pendingIconBlobRef.current,
             pendingScreenshotBlobs: pendingScreenshotBlobsRef.current,
             retainedScreenshotUrls: screenshotItems
@@ -1115,17 +1139,44 @@ export function ProductListingForm({
                         *
                       </Text>
                     </Flex>
-                    {isAdmin ? (
+                    {isAdmin ||
+                    (allowRemoveHero && initialValues.heroImageUrl) ? (
                       <Flex style={styles.imageAssetHeaderActions}>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          isPending={pendingGeneration === "hero"}
-                          isDisabled={isGenerateDisabled}
-                          onPress={() => void runGeneration("hero")}
-                        >
-                          Generate hero image
-                        </Button>
+                        {allowRemoveHero && initialValues.heroImageUrl ? (
+                          <Button
+                            size="sm"
+                            variant={
+                              pendingHeroRemoval
+                                ? "secondary"
+                                : "critical-outline"
+                            }
+                            isDisabled={isSubmitting}
+                            onPress={() => {
+                              setPendingHeroRemoval((prev) => {
+                                const next = !prev;
+                                if (next && pendingHeroPreviewUrl) {
+                                  URL.revokeObjectURL(pendingHeroPreviewUrl);
+                                  setPendingHeroPreviewUrl(null);
+                                  pendingHeroBlobRef.current = null;
+                                }
+                                return next;
+                              });
+                            }}
+                          >
+                            {pendingHeroRemoval ? "Undo remove" : "Remove hero"}
+                          </Button>
+                        ) : null}
+                        {isAdmin ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            isPending={pendingGeneration === "hero"}
+                            isDisabled={isGenerateDisabled}
+                            onPress={() => void runGeneration("hero")}
+                          >
+                            Generate hero image
+                          </Button>
+                        ) : null}
                       </Flex>
                     ) : null}
                   </Flex>
@@ -1170,7 +1221,7 @@ export function ProductListingForm({
                     }}
                     style={[styles.imageDropZone, styles.imageDropZoneHero]}
                   >
-                    {pendingHeroPreviewUrl || initialValues.heroImageUrl ? (
+                    {hasHeroImage ? (
                       <img
                         src={
                           pendingHeroPreviewUrl ??
@@ -1415,6 +1466,7 @@ export function ProductListingForm({
                   }
                   pendingHeroBlobRef.current = cropped;
                   setPendingHeroPreviewUrl(nextPreviewUrl);
+                  setPendingHeroRemoval(false);
                 } else {
                   if (pendingIconPreviewUrl) {
                     URL.revokeObjectURL(pendingIconPreviewUrl);

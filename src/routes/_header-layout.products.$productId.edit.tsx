@@ -156,6 +156,10 @@ function EditProductListingPage() {
             imageBase64,
           },
         });
+      } else if (values.pendingHeroRemoval) {
+        await directoryListingApi.removeOwnedProductListingHeroImage({
+          data: { listingId: productId },
+        });
       }
 
       if (values.pendingIconBlob) {
@@ -243,6 +247,7 @@ function EditProductListingPage() {
         });
       }}
       onSubmit={(values) => saveMutation.mutate(values)}
+      allowRemoveHero
       errorMessage={
         saveMutation.isError
           ? saveMutation.error instanceof Error
