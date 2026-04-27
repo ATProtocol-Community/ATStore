@@ -1076,7 +1076,7 @@ function HeroSection({
           target="_blank"
           rel="noopener noreferrer"
         >
-          {listing.priceLabel} <ExternalLink />
+          Explore <ExternalLink />
         </ButtonLink>
       ) : null}
     </Flex>

@@ -718,7 +718,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
           <Flex align="center" justify="between" gap="xl">
             <StoreIcon listing={listing} size="lg" />
             <Button size="lg" variant="secondary">
-              {listing.priceLabel}
+              Explore
             </Button>
           </Flex>
         </Flex>
@@ -756,7 +756,7 @@ function PopularListItem({
         <SmallBody variant="secondary">{listing.tagline}</SmallBody>
       </Flex>
       <Button size="lg" variant="secondary">
-        {listing.priceLabel}
+        Explore
       </Button>
     </RouterLink>
   );
@@ -808,7 +808,7 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
         <Flex align="center" justify="between" gap="xl">
           <StoreIcon listing={listing} size="lg" />
           <Button size="lg" variant="secondary">
-            {listing.priceLabel}
+            Explore
           </Button>
         </Flex>
       </Flex>
