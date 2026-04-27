@@ -38,6 +38,13 @@ interface FeaturedListingGridProps<T> {
   items: T[];
   getKey: (item: T, index: number) => Key;
   isFeatured?: (item: T, index: number) => boolean;
+  /**
+   * Optional predicate gating which items are eligible for a featured slot.
+   * Items that fail this check are swapped out of featured positions so a
+   * hero-less listing never lands in the oversized card. If no eligible item
+   * exists for a slot, that slot falls back to the non-featured layout.
+   */
+  canFeature?: (item: T) => boolean;
   renderItem: (
     item: T,
     options: {
@@ -52,13 +59,24 @@ export function FeaturedListingGrid<T>({
   hasFeatured = true,
   getKey,
   isFeatured = (_, index) => index % 9 === 0,
+  canFeature,
   renderItem,
   style,
 }: StyleXComponentProps<FeaturedListingGridProps<T>>) {
+  const arrangedItems = arrangeForFeaturing({
+    items,
+    hasFeatured,
+    isFeatured,
+    canFeature,
+  });
+
   return (
     <Grid style={[styles.grid, style]}>
-      {items.map((item, index) => {
-        const featured = hasFeatured ? isFeatured(item, index) : false;
+      {arrangedItems.map((item, index) => {
+        const featured =
+          hasFeatured &&
+          isFeatured(item, index) &&
+          (canFeature ? canFeature(item) : true);
 
         return (
           <div
@@ -71,4 +89,43 @@ export function FeaturedListingGrid<T>({
       })}
     </Grid>
   );
+}
+
+function arrangeForFeaturing<T>({
+  items,
+  hasFeatured,
+  isFeatured,
+  canFeature,
+}: {
+  items: T[];
+  hasFeatured: boolean;
+  isFeatured: (item: T, index: number) => boolean;
+  canFeature?: (item: T) => boolean;
+}): T[] {
+  if (!hasFeatured || !canFeature) return items;
+
+  const arranged = items.slice();
+  const featuredFlags = arranged.map((item, index) => isFeatured(item, index));
+
+  let swapCursor = 0;
+  for (let i = 0; i < arranged.length; i++) {
+    if (!featuredFlags[i]) continue;
+    if (canFeature(arranged[i])) continue;
+
+    while (swapCursor < arranged.length) {
+      if (
+        !featuredFlags[swapCursor] &&
+        canFeature(arranged[swapCursor])
+      ) {
+        const tmp = arranged[i];
+        arranged[i] = arranged[swapCursor];
+        arranged[swapCursor] = tmp;
+        swapCursor++;
+        break;
+      }
+      swapCursor++;
+    }
+  }
+
+  return arranged;
 }

@@ -115,6 +115,14 @@ function RouteComponent() {
             <SidebarLink to="/admin/hero-art" activeProps={{ isActive: true }}>
               Hero Art
             </SidebarLink>
+            {import.meta.env.DEV ? (
+              <SidebarLink
+                to="/admin/hero-candidates"
+                activeProps={{ isActive: true }}
+              >
+                Hero Candidates (dev)
+              </SidebarLink>
+            ) : null}
           </SidebarSection>
           {isSuperAdmin ? (
             <SidebarSection title="Super admin">

@@ -18,6 +18,7 @@ import {
 
 import { AppTagHero } from "../components/AppTagHero";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
+import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
@@ -505,6 +506,7 @@ function CategoryPage() {
           <FeaturedListingGrid
             items={data.listings}
             getKey={(listing) => listing.id}
+            canFeature={(listing) => Boolean(listing.heroImageUrl)}
             renderItem={(listing, { featured }) => (
               <CategoryListingCard featured={featured} listing={listing} />
             )}
@@ -630,12 +632,14 @@ function CategoryListingCard({
       )}
     >
       {featured ? (
-        listing.heroImageUrl && (
+        listing.heroImageUrl ? (
           <HeroImage
             alt={`${listing.name} preview`}
             glowIntensity={0.8}
             src={listing.heroImageUrl}
           />
+        ) : (
+          <FeaturedListingFallbackCard listing={listing} />
         )
       ) : (
         <Card style={[styles.listingCard]}>

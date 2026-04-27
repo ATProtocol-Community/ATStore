@@ -37,6 +37,7 @@ import {
 import { HeaderLayout } from "#/design-system/header-layout";
 import { SiteHeader } from "#/components/SiteHeader";
 import { SiteFooter } from "#/components/SiteFooter";
+import { FeaturedListingFallbackCard } from "#/components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "#/components/FeaturedListingGrid";
 import { Flex } from "#/design-system/flex";
 import { Avatar } from "#/design-system/avatar";
@@ -1016,6 +1017,7 @@ function RouteComponent() {
             items={appBrowserApps.slice(0, MAX_BROWSER_APPS)}
             getKey={(app) => app.id}
             isFeatured={(_, index) => index === 0}
+            canFeature={(app) => Boolean(app.heroImageUrl)}
             renderItem={(app, { featured }) => (
               <AppBrowserListingCard featured={featured} listing={app} />
             )}
@@ -1111,6 +1113,7 @@ function RouteComponent() {
             items={ecosystemBrowserApps.slice(0, MAX_BROWSER_APPS)}
             getKey={(app) => app.id}
             isFeatured={(_, index) => index === 0}
+            canFeature={(app) => Boolean(app.heroImageUrl)}
             renderItem={(app, { featured }) => (
               <AppBrowserListingCard featured={featured} listing={app} />
             )}
@@ -1219,12 +1222,14 @@ function AppBrowserListingCard({
       )}
     >
       {featured ? (
-        listing.heroImageUrl && (
+        listing.heroImageUrl ? (
           <HeroImage
             alt={`${listing.name} preview`}
             glowIntensity={0.8}
             src={listing.heroImageUrl}
           />
+        ) : (
+          <FeaturedListingFallbackCard listing={listing} />
         )
       ) : (
         <Card

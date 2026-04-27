@@ -10,6 +10,7 @@ import { Link as RouterLink } from "@tanstack/react-router";
 
 import { AppTagCard } from "../components/AppTagCard";
 import { HeroImage } from "../components/HeroImage";
+import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
@@ -539,6 +540,7 @@ function HomePage() {
               index === 0 ? `featured-${listing.id}` : `spotlight-${listing.id}`
             }
             isFeatured={(_, index) => index === 0}
+            canFeature={(listing) => Boolean(listing.heroImageUrl)}
             renderItem={(listing, { featured }) =>
               featured ? (
                 <HeroCard listing={listing} />
@@ -665,7 +667,9 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
           glowIntensity={0.8}
           src={listing.heroImageUrl}
         />
-      ) : null}
+      ) : (
+        <FeaturedListingFallbackCard listing={listing} />
+      )}
     </RouterLink>
   );
 }

@@ -253,6 +253,7 @@ function EcosystemCategorySection({
         hasFeatured={sectionIndex === 0}
         items={listings}
         getKey={(listing) => `${category.id}-${listing.id}`}
+        canFeature={(listing) => Boolean(listing.heroImageUrl)}
         style={styles.sectionGrid}
         renderItem={(listing, { featured }) => (
           <EcosystemListingCard listing={listing} featured={featured} />

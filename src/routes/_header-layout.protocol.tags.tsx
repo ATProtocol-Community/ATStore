@@ -8,6 +8,7 @@ import {
 import { ChevronLeft } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
+import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { HeroImage } from "../components/HeroImage";
 import { Avatar } from "../design-system/avatar";
@@ -211,6 +212,7 @@ function ProtocolCategorySection({
         hasFeatured={sectionIndex === 0}
         items={visibleListings}
         getKey={(listing) => `${group.categoryId}-${listing.id}`}
+        canFeature={(listing) => Boolean(listing.heroImageUrl)}
         renderItem={(listing, { featured }) => (
           <ProtocolListingCard listing={listing} featured={featured} />
         )}
@@ -238,6 +240,8 @@ function ProtocolListingCard({
           glowIntensity={0.8}
           src={listing.heroImageUrl}
         />
+      ) : featured ? (
+        <FeaturedListingFallbackCard listing={listing} />
       ) : (
         <Card style={styles.listingCard}>
           <Flex direction="column" style={styles.listingCardBody}>

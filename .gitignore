@@ -12,3 +12,4 @@ dist-ssr
 __unconfig*
 todos.json
 backups/
+out/hero-candidates/

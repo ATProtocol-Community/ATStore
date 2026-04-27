@@ -25,6 +25,7 @@
     "generate:protocol-category-covers": "tsx -r dotenv/config scripts/generate-protocol-category-cover-images.ts",
     "upload:generated-banners": "tsx -r dotenv/config scripts/upload-generated-banners-to-atproto.ts",
     "generate:listing-images": "tsx scripts/generate-listing-images.ts",
+    "scrape:product-hero-candidates": "tsx -r dotenv/config scripts/scrape-product-hero-candidates.ts",
     "generate:listing-copy": "tsx scripts/generate-listing-copy.ts",
     "listing:add": "tsx scripts/add-manual-directory-listing.ts",
     "listing:publish-store": "tsx -r dotenv/config scripts/publish-store-listing-to-atproto.ts",

@@ -64,12 +64,19 @@ function mergeListingRow(
 
 /**
  * Publish `fyi.atstore.listing.detail` to the store repo. Postgres is updated by Tap ingest, not here.
+ *
+ * Returns the new record `uri` plus the CDN URLs for the resulting `icon` / `heroImage` blobs so
+ * callers that need to update Postgres immediately (without waiting on Tap) can do so.
  */
 export async function publishDirectoryListingDetail(
   row: StoreListing,
   patch?: Partial<StoreListing>,
   blobOverrides?: ListingDetailBlobOverrides,
-): Promise<{ uri: string }> {
+): Promise<{
+  uri: string
+  iconUrl: string | null
+  heroImageUrl: string | null
+}> {
   const { client, repoDid } = await createAtstorePublishClient()
   const merged = mergeListingRow(row, patch)
   const { record } = await buildListingDetailRecordWithBlobs(
@@ -79,11 +86,17 @@ export async function publishDirectoryListingDetail(
   )
   record.updatedAt = new Date().toISOString()
 
+  let uri: string
   if (row.rkey && row.atUri) {
-    return putListingDetailRecord(client, repoDid, row.rkey, record)
+    ;({ uri } = await putListingDetailRecord(client, repoDid, row.rkey, record))
+  } else {
+    ;({ uri } = await createListingDetailRecord(client, repoDid, record))
   }
-  const { uri } = await createListingDetailRecord(client, repoDid, record)
-  return { uri }
+  return {
+    uri,
+    iconUrl: blobLikeToBskyCdnUrl(record.icon, repoDid),
+    heroImageUrl: blobLikeToBskyCdnUrl(record.heroImage, repoDid),
+  }
 }
 
 /**

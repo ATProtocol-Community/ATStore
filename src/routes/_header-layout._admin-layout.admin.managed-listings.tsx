@@ -296,6 +296,7 @@ function ManagedListingEditor({
     null | "hero" | "icon" | "tagline" | "description"
   >(null);
   const [pendingImageCommit, setPendingImageCommit] = useState(false);
+  const [pendingHeroRemoval, setPendingHeroRemoval] = useState(false);
   const [imageReviewDraft, setImageReviewDraft] =
     useState<null | ImageReviewDraft>(null);
   const [toolbarStatus, setToolbarStatus] = useState<ToolbarStatus | null>(
@@ -409,6 +410,38 @@ function ManagedListingEditor({
       });
     } finally {
       setPendingGeneration(null);
+    }
+  }
+
+  async function removeHero() {
+    if (pendingHeroRemoval) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Remove the hero image from "${listing?.name ?? "this listing"}"? The listing will publish with a placeholder hero until you set a new one.`,
+      )
+    ) {
+      return;
+    }
+    setPendingHeroRemoval(true);
+    setToolbarStatus(null);
+    try {
+      await directoryListingApi.removeStoreManagedListingHero({
+        data: { id: listingId },
+      });
+      setImageReviewDraft(null);
+      setToolbarStatus({
+        tone: "neutral",
+        text: "Removed the hero image and republished the listing with a placeholder.",
+      });
+      await invalidateListingCaches();
+    } catch (error) {
+      setToolbarStatus({
+        tone: "critical",
+        text: error instanceof Error ? error.message : "Could not remove hero.",
+      });
+    } finally {
+      setPendingHeroRemoval(false);
     }
   }
 
@@ -626,6 +659,19 @@ function ManagedListingEditor({
               onPress={() => void runGeneration("hero")}
             >
               Generate hero image
+            </Button>
+            <Button
+              variant="critical-outline"
+              isPending={pendingHeroRemoval}
+              isDisabled={
+                pendingHeroRemoval ||
+                pendingGeneration !== null ||
+                imageReviewDraft !== null ||
+                !listing.heroImageUrl
+              }
+              onPress={() => void removeHero()}
+            >
+              Remove hero
             </Button>
             <Button
               variant="secondary"

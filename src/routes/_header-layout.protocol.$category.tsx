@@ -10,6 +10,7 @@ import {
 import { ChevronLeft } from "lucide-react";
 
 import { AppTagHero } from "../components/AppTagHero";
+import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { ProtocolCategoryCard } from "../components/ProtocolCategoryCard";
 import { Avatar } from "../design-system/avatar";
@@ -416,6 +417,7 @@ function ProtocolCategoryPage() {
           <FeaturedListingGrid
             getKey={(listing) => `${data.categoryId}-${listing.id}`}
             items={data.listings}
+            canFeature={(listing) => Boolean(listing.heroImageUrl)}
             renderItem={(listing, { featured }) => (
               <ProtocolCategoryListingCard
                 featured={featured}
@@ -481,12 +483,14 @@ function ProtocolCategoryListingCard({
       )}
     >
       {featured ? (
-        listing.heroImageUrl && (
+        listing.heroImageUrl ? (
           <HeroImage
             alt={`${listing.name} preview`}
             glowIntensity={0.8}
             src={listing.heroImageUrl}
           />
+        ) : (
+          <FeaturedListingFallbackCard listing={listing} />
         )
       ) : (
         <Card style={[styles.listingCard]}>
@@ -600,11 +604,9 @@ function ProtocolSubfolderSection({
         hasFeatured={sectionIndex === 0}
         items={section.listings}
         getKey={(listing) => `${section.id}-${listing.id}`}
+        canFeature={(listing) => Boolean(listing.heroImageUrl)}
         renderItem={(listing, { featured }) => (
-          <ProtocolCategoryListingCard
-            featured={featured}
-            listing={listing}
-          />
+          <ProtocolCategoryListingCard featured={featured} listing={listing} />
         )}
       />
     </Flex>

@@ -11,6 +11,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
+import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { HeroImage } from "../components/HeroImage";
 import { Avatar } from "../design-system/avatar";
@@ -443,6 +444,7 @@ function AppsTagPage() {
         <FeaturedListingGrid
           items={data.listings}
           getKey={(listing) => `${data.tag}-${listing.id}`}
+          canFeature={(listing) => Boolean(listing.heroImageUrl)}
           renderItem={(listing, { featured }) => (
             <AppTagListingCard featured={featured} listing={listing} />
           )}
@@ -473,12 +475,14 @@ function AppTagListingCard({
       )}
     >
       {featured ? (
-        listing.heroImageUrl && (
+        listing.heroImageUrl ? (
           <HeroImage
             alt={`${listing.name} preview`}
             glowIntensity={0.8}
             src={listing.heroImageUrl}
           />
+        ) : (
+          <FeaturedListingFallbackCard listing={listing} />
         )
       ) : (
         <Card style={[styles.listingCard]}>

@@ -15,6 +15,7 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { FeaturedListingFallbackCard } from "./FeaturedListingFallbackCard";
 import { HeroImage } from "./HeroImage";
 
 const styles = stylex.create({
@@ -86,6 +87,8 @@ export function EcosystemListingCard({
           glowIntensity={0.8}
           src={listing.heroImageUrl}
         />
+      ) : featured ? (
+        <FeaturedListingFallbackCard listing={listing} />
       ) : (
         <Card style={styles.listingCard}>
           <Flex direction="column" style={styles.listingCardBody}>
