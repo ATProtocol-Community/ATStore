@@ -736,7 +736,7 @@ function ProductPage() {
               >
                 Edit listing
               </AppLink>
-            ) : editAccess?.isStoreManaged ? (
+            ) : listing.isStoreManaged ? (
               <ButtonLink
                 to="/product/claim"
                 search={{ listing: listing.id }}
