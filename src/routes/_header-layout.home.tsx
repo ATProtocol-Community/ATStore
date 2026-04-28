@@ -405,6 +405,7 @@ const styles = stylex.create({
     paddingTop: verticalSpace["2xl"],
   },
   listItem: {
+    boxShadow: shadow.none,
     alignItems: "center",
     borderRadius: radius.md,
     display: "flex",
@@ -417,12 +418,31 @@ const styles = stylex.create({
       default: uiColor.bg,
       ":hover": uiColor.component2,
     },
-    boxShadow: shadow.lg,
     textDecoration: "none",
     color: uiColor.text2,
-    transitionProperty: "background-color",
+    transitionProperty: "background-color, z-index",
     transitionDuration: "0.2s",
     transitionTimingFunction: "ease-in-out",
+    position: "relative",
+    zIndex: {
+      default: 0,
+      ":hover": 1,
+    },
+
+    "::after": {
+      content: "''",
+      position: "absolute",
+      inset: 0,
+      boxShadow: shadow.lg,
+      borderRadius: radius.md,
+      opacity: 0,
+      transitionProperty: "opacity",
+      transitionDuration: "0.2s",
+      transitionTimingFunction: "ease-in-out",
+    },
+    ":hover::after": {
+      opacity: 1,
+    },
   },
   rankNumber: {
     minWidth: "1.25rem",
