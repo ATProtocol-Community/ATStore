@@ -21,7 +21,11 @@ import { teal } from "../design-system/theme/colors/teal.stylex";
 import { tomato } from "../design-system/theme/colors/tomato.stylex";
 import { violet } from "../design-system/theme/colors/violet.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
+import {
+  gap,
+  horizontalSpace,
+  verticalSpace,
+} from "../design-system/theme/semantic-spacing.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
@@ -34,9 +38,9 @@ interface AppTagHeroProps {
   title: string;
   description?: string;
   /**
-   * When provided, render an accent-tinted banner panel (gradient surface + emoji scatter)
-   * above the copy. Mirrors the visual language of `AppTagCard` so tag/category index pages
-   * read as part of the same family. Takes precedence over `imageSrc`.
+   * When provided, render an accent hero: gradient + emoji scatter with eyebrow, title,
+   * description, and action **inside** the panel (`uiColor.textContrast` + shadows for
+   * readability). Takes precedence over `imageSrc`.
    */
   accent?: AppTagAccent;
   /**
@@ -79,22 +83,73 @@ const styles = stylex.create({
     width: "100%",
   },
   /**
-   * The accent banner is a narrower variant of `AppTagCard`'s surface — same gradient/border
-   * but stretched into a wide panel. It's purely decorative (no text overlaid), so the
-   * emoji scatter can spread across the full width without competing with copy.
+   * Accent hero: gradient + emoji scatter with title / description / control overlaid.
+   * `minHeight` + padding keeps breathing room; content column stays `z-index: 1` above glyphs.
    */
   accentBanner: {
     borderRadius: radius["2xl"],
     borderStyle: "solid",
     borderWidth: 1,
     cornerShape: "squircle",
-    height: {
-      default: "140px",
-      [breakpoints.sm]: "200px",
+    display: "flex",
+    flexDirection: "column",
+    minHeight: {
+      default: "200px",
+      [breakpoints.sm]: "260px",
     },
     overflow: "hidden",
     position: "relative",
     width: "100%",
+  },
+  accentBannerContent: {
+    display: "flex",
+    alignItems: {
+      default: "flex-start",
+      [breakpoints.sm]: "flex-end",
+    },
+    flexDirection: {
+      default: "column",
+      [breakpoints.sm]: "row",
+    },
+    flexGrow: 1,
+    gap: 0,
+    minHeight: "100%",
+    paddingBottom: verticalSpace["5xl"],
+    paddingLeft: horizontalSpace["5xl"],
+    paddingRight: horizontalSpace["5xl"],
+    paddingTop: verticalSpace["5xl"],
+    position: "relative",
+    zIndex: 1,
+  },
+  bannerTopStack: {
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+  },
+  bannerEyebrow: {
+    color: uiColor.textContrast,
+    letterSpacing: "0.16em",
+    textShadow:
+      "0 1px 2px color-mix(in srgb, black 42%, transparent), 0 4px 16px color-mix(in srgb, black 28%, transparent)",
+    textTransform: "uppercase",
+  },
+  bannerTitle: {
+    color: uiColor.textContrast,
+    textShadow: "0 1px 2px rgb(0 0 0 / 0.45)",
+  },
+  /** Extra air between the display title and the supporting description. */
+  bannerDescription: {
+    color: uiColor.textContrast,
+    marginTop: verticalSpace["6xl"],
+    maxWidth: "40rem",
+    opacity: 0.94,
+    textShadow: "0 1px 2px rgb(0 0 0 / 0.35)",
+  },
+  /** Sort control pinned to the bottom of the hero (parent column is `min-height` + flex). */
+  bannerActionRow: {
+    flexShrink: 0,
+    justifyContent: "flex-end",
+    flexGrow: 1,
   },
   copy: {
     paddingTop: {
@@ -207,7 +262,6 @@ const styles = stylex.create({
     position: "absolute",
   },
   emojiBase: {
-    color: uiColor.textContrast,
     filter: "drop-shadow(0 2px 4px rgb(0 0 0 / 0.35))",
     fontFamily:
       '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
@@ -218,7 +272,7 @@ const styles = stylex.create({
   },
   emojiSlot1: {
     fontSize: "5em",
-    opacity: 0.24,
+    opacity: 0.18,
     right: "8%",
     top: "16%",
     transform: "rotate(-12deg)",
@@ -226,14 +280,14 @@ const styles = stylex.create({
   emojiSlot2: {
     bottom: "12%",
     fontSize: "3.25em",
-    opacity: 0.2,
+    opacity: 0.15,
     right: "30%",
     transform: "rotate(16deg)",
   },
   emojiSlot3: {
     fontSize: "3em",
     left: "44%",
-    opacity: 0.22,
+    opacity: 0.16,
     top: "10%",
     transform: "rotate(22deg)",
   },
@@ -241,13 +295,13 @@ const styles = stylex.create({
     bottom: "16%",
     fontSize: "2.5em",
     left: "26%",
-    opacity: 0.24,
+    opacity: 0.17,
     transform: "rotate(-18deg)",
   },
   emojiSlot5: {
     fontSize: "2.25em",
     left: "8%",
-    opacity: 0.22,
+    opacity: 0.16,
     top: "24%",
     transform: "rotate(10deg)",
   },
@@ -269,11 +323,10 @@ export function AppTagHero({
     <Flex direction="column" gap="4xl" style={styles.root}>
       {accent ? (
         <div
-          aria-hidden="true"
           {...stylex.props(styles.accentBanner, getSoftAccentSurface(accent))}
         >
           {slotEmojis ? (
-            <div {...stylex.props(styles.emojiBackdrop)}>
+            <div aria-hidden="true" {...stylex.props(styles.emojiBackdrop)}>
               <span {...stylex.props(styles.emojiBase, styles.emojiSlot1)}>
                 {slotEmojis[0]}
               </span>
@@ -291,33 +344,66 @@ export function AppTagHero({
               </span>
             </div>
           ) : null}
+          <Flex style={styles.accentBannerContent}>
+            <Flex direction="row" style={styles.bannerTopStack}>
+              <Flex direction="column" gap="4xl">
+                {eyebrow ? (
+                  <SmallBody style={styles.bannerEyebrow}>{eyebrow}</SmallBody>
+                ) : null}
+                <Text
+                  size={{ default: "4xl", sm: "6xl" }}
+                  weight="semibold"
+                  style={styles.bannerTitle}
+                >
+                  {title}
+                </Text>
+              </Flex>
+              {description ? (
+                <Body style={styles.bannerDescription}>{description}</Body>
+              ) : null}
+            </Flex>
+            {action ? (
+              <Flex
+                align="center"
+                justify="end"
+                gap="md"
+                style={styles.bannerActionRow}
+              >
+                {action}
+              </Flex>
+            ) : null}
+          </Flex>
         </div>
       ) : (
-        <div {...stylex.props(styles.imageFrame, ui.bgSubtle)}>
-          {bannerSrc ? (
-            <img {...stylex.props(styles.image)} alt="" src={bannerSrc} />
-          ) : (
-            <div {...stylex.props(styles.imageFallback)} aria-hidden="true" />
-          )}
-        </div>
-      )}
+        <>
+          <div {...stylex.props(styles.imageFrame, ui.bgSubtle)}>
+            {bannerSrc ? (
+              <img {...stylex.props(styles.image)} alt="" src={bannerSrc} />
+            ) : (
+              <div {...stylex.props(styles.imageFallback)} aria-hidden="true" />
+            )}
+          </div>
 
-      <Flex justify="between" gap="5xl" align="end" wrap>
-        <Flex direction="column" gap="5xl" style={styles.copy}>
-          {eyebrow ? (
-            <SmallBody style={styles.eyebrow}>{eyebrow}</SmallBody>
-          ) : null}
-          <Text size={{ default: "4xl", sm: "6xl" }} weight="semibold">
-            {title}
-          </Text>
-          {description ? <Body variant="secondary">{description}</Body> : null}
-        </Flex>
-        {action ? (
-          <Flex align="center" justify="end" gap="md" style={styles.action}>
-            {action}
+          <Flex justify="between" gap="5xl" align="end" wrap>
+            <Flex direction="column" gap="5xl" style={styles.copy}>
+              {eyebrow ? (
+                <SmallBody style={styles.eyebrow}>{eyebrow}</SmallBody>
+              ) : null}
+              <Text size={{ default: "4xl", sm: "6xl" }} weight="semibold">
+                {title}
+              </Text>
+              {description ? (
+                <Body variant="secondary">{description}</Body>
+              ) : null}
+            </Flex>
+            {action ? (
+              <Flex align="center" justify="end" gap="md" style={styles.action}>
+                {action}
+              </Flex>
+            ) : null}
           </Flex>
-        ) : null}
-      </Flex>
+        </>
+      )}
     </Flex>
   );
 }
