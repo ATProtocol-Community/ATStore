@@ -80,6 +80,7 @@ import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
+import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
@@ -1121,7 +1122,7 @@ function HeroSection({
     <Flex direction="column" gap="6xl">
       {listing.heroImageUrl && (
         <HeroImage
-          alt={`${listing.name} preview`}
+          alt={getDirectoryListingHeroImageAlt(listing)}
           glowIntensity={0.9}
           src={listing.heroImageUrl}
         />

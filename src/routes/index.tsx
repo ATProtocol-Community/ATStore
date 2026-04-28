@@ -49,6 +49,7 @@ import {
 import { formatAppTagLabel } from "#/lib/app-tag-metadata";
 import { getListingsForCategoryBranch } from "#/lib/ecosystem-listings";
 import { getDirectoryListingSlug } from "#/lib/directory-listing-slugs";
+import { getDirectoryListingHeroImageAlt } from "#/lib/listing-copy";
 import { getHomePageHeroArtSpec } from "#/lib/home-page-hero-art";
 import { buildRouteOgMeta } from "#/lib/og-meta";
 import { Body, SmallBody } from "#/design-system/typography";
@@ -1275,7 +1276,7 @@ function AppBrowserListingCard({
       {featured ? (
         listing.heroImageUrl ? (
           <HeroImage
-            alt={`${listing.name} preview`}
+            alt={getDirectoryListingHeroImageAlt(listing)}
             glowIntensity={0.8}
             src={listing.heroImageUrl}
           />

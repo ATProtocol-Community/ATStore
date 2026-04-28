@@ -45,6 +45,7 @@ import {
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { getHomePageHeroArtSpec } from "../lib/home-page-hero-art";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
@@ -742,7 +743,7 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
     >
       {listing.heroImageUrl ? (
         <HeroImage
-          alt={`${listing.name} preview`}
+          alt={getDirectoryListingHeroImageAlt(listing)}
           glowIntensity={0.8}
           src={listing.heroImageUrl}
         />
@@ -837,7 +838,7 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
         {listing.heroImageUrl ? (
           <CardImage
             aspectRatio={16 / 9}
-            alt={`${listing.name} preview`}
+            alt={getDirectoryListingHeroImageAlt(listing)}
             src={listing.heroImageUrl}
           />
         ) : null}

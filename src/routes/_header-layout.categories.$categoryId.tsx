@@ -57,6 +57,7 @@ import { getCategoryBentoArtSpec } from "../lib/category-bento-art";
 import { getEcosystemHeroAssetPathForCategory } from "../lib/ecosystem-hero-art";
 import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
 import { HeroImage } from "#/components/HeroImage";
@@ -634,7 +635,7 @@ function CategoryListingCard({
       {featured ? (
         listing.heroImageUrl ? (
           <HeroImage
-            alt={`${listing.name} preview`}
+            alt={getDirectoryListingHeroImageAlt(listing)}
             glowIntensity={0.8}
             src={listing.heroImageUrl}
           />

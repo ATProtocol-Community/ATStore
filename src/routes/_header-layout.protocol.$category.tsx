@@ -41,6 +41,7 @@ import {
   type DirectoryProtocolCategoryGroup,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { getProtocolCategoryCoverAssetPathForSegment } from "../lib/protocol-category-hero-art";
 import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
@@ -485,7 +486,7 @@ function ProtocolCategoryListingCard({
       {featured ? (
         listing.heroImageUrl ? (
           <HeroImage
-            alt={`${listing.name} preview`}
+            alt={getDirectoryListingHeroImageAlt(listing)}
             glowIntensity={0.8}
             src={listing.heroImageUrl}
           />

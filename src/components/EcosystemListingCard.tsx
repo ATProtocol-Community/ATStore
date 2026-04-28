@@ -15,6 +15,7 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { FeaturedListingFallbackCard } from "./FeaturedListingFallbackCard";
 import { HeroImage } from "./HeroImage";
 
@@ -83,7 +84,7 @@ export function EcosystemListingCard({
     >
       {featured && listing.heroImageUrl ? (
         <HeroImage
-          alt={`${listing.name} preview`}
+          alt={getDirectoryListingHeroImageAlt(listing)}
           glowIntensity={0.8}
           src={listing.heroImageUrl}
         />

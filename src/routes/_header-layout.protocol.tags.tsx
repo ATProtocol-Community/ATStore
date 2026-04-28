@@ -31,6 +31,7 @@ import {
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
 import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
 import { StarRating } from "#/design-system/star-rating";
@@ -236,7 +237,7 @@ function ProtocolListingCard({
     >
       {featured && listing.heroImageUrl ? (
         <HeroImage
-          alt={`${listing.name} preview`}
+          alt={getDirectoryListingHeroImageAlt(listing)}
           glowIntensity={0.8}
           src={listing.heroImageUrl}
         />
