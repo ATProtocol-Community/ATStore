@@ -209,11 +209,22 @@ Visit the dev server at `http://127.0.0.1:3000` and make sure
 
 ## License
 
-at.store is licensed under the **GNU Affero General Public License v3.0
-or later** (AGPL-3.0-or-later). See [`LICENSE`](./LICENSE) for the full
-text.
+### Source code
 
-In short: you are free to use, modify, and redistribute this software,
-but if you run a modified version as a network service, you must make
-the corresponding source code available to the users of that service
-under the same license.
+This project’s source code is licensed under the **Apache License,
+Version 2.0** (SPDX: `Apache-2.0`). See [`LICENSE`](./LICENSE). Copyright
+notice: [`NOTICE`](./NOTICE).
+
+### Site design and branding
+
+Anyone is welcome to reuse and adapt **this codebase** under the Apache
+license (similar to how Bluesky core uses permissive licenses).
+
+This site uses a **custom visual design**—layout, typography, imagery,
+and the AT Store wordmark. Please **do not reuse that design wholesale**
+for another product or site without asking first.
+
+The AT Store wordmark and related branding are **© Atproto Community
+Collective**. They are not licensed for unrestricted reuse the same way
+the program source is; the distinction between code and visual identity
+is intentional.
