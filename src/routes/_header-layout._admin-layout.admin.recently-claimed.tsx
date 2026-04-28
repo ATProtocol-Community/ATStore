@@ -102,9 +102,9 @@ function AdminRecentlyClaimedPage() {
       <Flex direction="column" gap="6xl" style={styles.section}>
         <Heading1>Recently claimed listings</Heading1>
         <SmallBody>
-          Listings whose ownership has been claimed by a Bluesky account, newest
-          first. Useful for spot-checking new claims and product account
-          assignments.
+          Listings whose ownership has been claimed by a Bluesky account.
+          Ordered by claim date when known; otherwise by directory date added
+          (legacy PDS claims). Newest first.
         </SmallBody>
 
         <Card>
@@ -172,8 +172,13 @@ function AdminRecentlyClaimedPage() {
 
                           <Flex direction="column" style={styles.claimColumn}>
                             {row.claimedAt ? (
-                              <Text size="sm">{formatDate(row.claimedAt)}</Text>
+                              <Text size="sm">
+                                Claimed {formatDate(row.claimedAt)}
+                              </Text>
                             ) : null}
+                            <Text size="xs" variant="secondary">
+                              Added {formatDate(row.createdAt)}
+                            </Text>
                             <Text size="xs" variant="secondary">
                               {row.claimSource === "pds-migration"
                                 ? "PDS migration"

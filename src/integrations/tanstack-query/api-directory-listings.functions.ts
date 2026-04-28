@@ -72,6 +72,7 @@ import {
   createListingDetailRecord,
   createListingReviewRecord,
   deleteRecord,
+  fetchListingDetailRecord,
   putListingFavoriteRecord,
   putListingReviewRecord,
 } from '#/lib/atproto/repo-records'
@@ -4204,10 +4205,31 @@ const getProductListingEditAccessInput = z.object({
   listingId: z.string().uuid(),
 })
 
-function buildDraftOwnedListingSlug(name: string): string {
-  const baseSlug = buildDirectoryListingSlug({ name, sourceUrl: null })
-  const suffix = crypto.randomUUID().slice(0, 8)
-  return `${baseSlug}--${suffix}`
+/**
+ * Stable, human-readable URL slug (same rules as curated listings via
+ * {@link buildDirectoryListingSlug}). If that base is taken by another row,
+ * allocates `slug-2`, `slug-3`, … rather than `--hex` prefixes from the old draft flow.
+ */
+async function allocateUniqueStoreListingSlug(
+  db: Database,
+  name: string,
+  sourceUrl: string,
+): Promise<string> {
+  const base = buildDirectoryListingSlug({ name, sourceUrl })
+  const t = dbSchema.storeListings
+  let candidate = base
+  let suffix = 2
+  for (let attempt = 0; attempt < 5000; attempt++) {
+    const [row] = await db
+      .select({ id: t.id })
+      .from(t)
+      .where(eq(t.slug, candidate))
+      .limit(1)
+    if (!row) return candidate
+    candidate = `${base}-${suffix}`
+    suffix += 1
+  }
+  throw new Error('Could not allocate a unique listing slug.')
 }
 
 const getProductListingEditAccess = createServerFn({ method: 'GET' })
@@ -4355,7 +4377,7 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
 const createOwnedProductListing = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware])
   .inputValidator(createOwnedProductListingInput)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const session = await getAtprotoSessionForRequest(getRequest())
     if (!session?.did) {
       throw new Error('Sign in to create a listing.')
@@ -4366,7 +4388,11 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
     const descClean = sanitizeListingDescription(data.fullDescription)
     const externalUrl = data.externalUrl.trim()
     const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
-    const slug = buildDraftOwnedListingSlug(name)
+    const slug = await allocateUniqueStoreListingSlug(
+      context.db,
+      name,
+      externalUrl,
+    )
     const productHandleInput = data.productHandle.trim()
 
     let productAccountHandle: string | null = null
@@ -4891,9 +4917,27 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
       .where(eq(t.id, full.id))
 
     try {
+      /**
+       * Slug for directory URLs must stay aligned with the listing that lived on the store
+       * account. Prefer the authoritative `fyi.atstore.listing.detail` on the store PDS so the
+       * claimed record (and mirror row) cannot drift from the migrated-from listing if Postgres
+       * was ever out of sync.
+       */
+      const priorOnStore = await fetchListingDetailRecord(
+        client,
+        atstoreDid,
+        oldRkey,
+      )
+      const inheritedSlug =
+        priorOnStore?.value.slug?.trim() || full.slug?.trim() || ''
+      if (!inheritedSlug) {
+        throw new Error('This listing has no stable slug; cannot complete the claim.')
+      }
+      const rowForClaim: StoreListing = { ...full, slug: inheritedSlug }
+
       const { record } = await buildListingDetailRecordWithBlobs(
         client,
-        full,
+        rowForClaim,
         undefined,
         {
           migratedFromAtUri: canonicalOldAtUri,
@@ -4912,6 +4956,7 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
       await context.db
         .update(t)
         .set({
+          slug: inheritedSlug,
           atUri: newUri,
           repoDid: session.did,
           rkey: newRkey,
@@ -4919,11 +4964,17 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
           verificationStatus: 'verified',
           /** Handshake satisfied — clear so the marker cannot gate a future re-publish. */
           claimPendingForDid: null,
+          /**
+           * Mirrors admin approval (`setClaimStatus`): stable claim timestamp for admin
+           * views and sorts. Tap ingest does not overwrite these columns.
+           */
+          claimedAt: now,
+          claimedByDid: session.did,
           updatedAt: now,
         })
         .where(eq(t.id, full.id))
 
-      return { slug: full.slug }
+      return { slug: inheritedSlug }
     } catch (err) {
       await context.db
         .update(t)
@@ -5432,9 +5483,9 @@ const createStoreManagedListingInput = z.object({
  * lands; this server fn only publishes to the PDS and returns the slug/uri.
  */
 const createStoreManagedListing = createServerFn({ method: 'POST' })
-  .middleware([adminFnMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(createStoreManagedListingInput)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { client, repoDid } = await createAtstorePublishClient()
 
     const name = data.name.trim().slice(0, 640)
@@ -5442,7 +5493,11 @@ const createStoreManagedListing = createServerFn({ method: 'POST' })
     const descClean = sanitizeListingDescription(data.fullDescription)
     const externalUrl = data.externalUrl.trim()
     const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
-    const slug = buildDraftOwnedListingSlug(name)
+    const slug = await allocateUniqueStoreListingSlug(
+      context.db,
+      name,
+      externalUrl,
+    )
     const productHandleInput = data.productHandle.trim()
 
     let productAccountHandle: string | null = null

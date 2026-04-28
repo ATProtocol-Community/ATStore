@@ -321,16 +321,19 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
     /**
      * "Claimed" covers two paths:
      * - Manual admin approval (`setClaimStatus`) — sets `claimedAt` + `claimedByDid`.
-     * - PDS migration handshake (`claimProductListingToPds`) — sets `migratedFromAtUri`
-     *   and re-points `repoDid` to the user. Does not touch `claimedAt` / `claimedByDid`.
+     * - PDS migration (`claimProductListingToPds`) — sets `migratedFromAtUri`, re-points
+     *   `repoDid`, and (on success) `claimedAt` + `claimedByDid` so claim time is stable
+     *   (Tap ingest does not bump those columns).
      *
      * Restrict the migration branch to verified rows whose `repoDid` is no longer the
      * store account so we don't surface spoofed `migratedFromAtUri` values from
      * unverified records.
+     *
+     * Sort by claim time when present (`claimed_at`). Rows that predate that column
+     * (legacy PDS claims with null `claimed_at`) fall back to directory `created_at` so
+     * newly added listings are not ranked by Tap-bounced `updated_at`.
      */
     const atstoreDid = await getAtstoreRepoDid()
-
-    const effectiveClaimedAt = sql<Date>`COALESCE(${listings.claimedAt}, ${listings.updatedAt})`
 
     const rows = await db
       .select({
@@ -349,7 +352,7 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
         migratedFromAtUri: listings.migratedFromAtUri,
         verificationStatus: listings.verificationStatus,
         updatedAt: listings.updatedAt,
-        effectiveClaimedAt,
+        createdAt: listings.createdAt,
       })
       .from(listings)
       .where(
@@ -366,12 +369,14 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
           ),
         ),
       )
-      .orderBy(desc(effectiveClaimedAt))
+      .orderBy(
+        desc(sql`COALESCE(${listings.claimedAt}, ${listings.createdAt})`),
+        desc(listings.id),
+      )
       .limit(RECENTLY_CLAIMED_LISTINGS_LIMIT)
 
     return rows.map((row) => {
       const isMigration =
-        row.claimedAt == null &&
         row.migratedFromAtUri != null &&
         row.repoDid != null &&
         row.repoDid !== atstoreDid
@@ -390,6 +395,7 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
         productAccountDid: row.productAccountDid,
         claimedByDid,
         claimedAt: claimedAtDate ? claimedAtDate.toISOString() : null,
+        createdAt: row.createdAt.toISOString(),
         claimSource: (isMigration ? 'pds-migration' : 'admin-approval') as
           | 'pds-migration'
           | 'admin-approval',
