@@ -21,7 +21,7 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { Heading1 } from "../design-system/typography";
+import { Blockquote, Heading1 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
@@ -183,6 +183,12 @@ function CreateProductListingPage() {
               handle as the product. Example: if the product is "ATStore" create
               the listing with the handle "@atstore.fyi".
             </Text>
+            <Blockquote>
+              <Text size="base" leading="base" variant="secondary">
+                If your product is already listed, you can claim it by clicking
+                the "Claim" button on the listing page.
+              </Text>
+            </Blockquote>
           </Flex>
         </Flex>
         <Page.StickyFooter>
