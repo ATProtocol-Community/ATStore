@@ -8,16 +8,44 @@ export interface SavedHandle {
   lastUsed: number
 }
 
+/** Keep cookie under ~4KB browser limits when many avatars are CDN URLs */
+const SAVED_HANDLE_AVATAR_MAX_CHARS = 900
+
+function truncateAvatarForCookie(avatar: string | null): string | null {
+  if (avatar === null) {
+    return null
+  }
+  if (avatar.length <= SAVED_HANDLE_AVATAR_MAX_CHARS) {
+    return avatar
+  }
+  return avatar.slice(0, SAVED_HANDLE_AVATAR_MAX_CHARS)
+}
+
+function normalizeSavedHandlesCookie(raw: unknown): Array<SavedHandle> {
+  if (!raw) {
+    return []
+  }
+  if (Array.isArray(raw)) {
+    return raw as Array<SavedHandle>
+  }
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      return Array.isArray(parsed) ? (parsed as Array<SavedHandle>) : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 export function getSavedHandles(
   cookieHeader?: string | null,
 ): Array<SavedHandle> {
   try {
     const cookies = new Cookies(cookieHeader || undefined)
     const cookieValue = cookies.get(SAVED_HANDLES_COOKIE_NAME)
-    if (!cookieValue) {
-      return []
-    }
-    return cookieValue as Array<SavedHandle>
+    return normalizeSavedHandlesCookie(cookieValue)
   } catch (error) {
     console.error({ error })
     return []
@@ -32,7 +60,11 @@ export function saveHandle(handle: string, avatar: string | null): void {
   try {
     const saved = getSavedHandles()
     const filtered = saved.filter((h) => h.handle !== handle)
-    const updated = [{ handle, avatar, lastUsed: Date.now() }, ...filtered]
+    const storedAvatar = truncateAvatarForCookie(avatar)
+    const updated = [
+      { handle, avatar: storedAvatar, lastUsed: Date.now() },
+      ...filtered,
+    ]
       .sort((a: SavedHandle, b: SavedHandle) => b.lastUsed - a.lastUsed)
       .slice(0, 5)
 
@@ -40,7 +72,7 @@ export function saveHandle(handle: string, avatar: string | null): void {
     const maxAge = 365 * 24 * 60 * 60
     const isSecure = globalThis.location.protocol === 'https:'
 
-    cookies.set(SAVED_HANDLES_COOKIE_NAME, JSON.stringify(updated), {
+    cookies.set(SAVED_HANDLES_COOKIE_NAME, updated, {
       path: '/',
       sameSite: 'lax',
       secure: isSecure,

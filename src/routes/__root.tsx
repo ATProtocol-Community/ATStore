@@ -2,11 +2,13 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as stylex from "@stylexjs/stylex";
+import { useLayoutEffect } from "react";
 
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import { user } from "../integrations/tanstack-query/api-user.functions";
@@ -15,6 +17,7 @@ import { getGeneratedBannerRecordUrlsQueryOptions } from "../integrations/tansta
 import appCss from "../styles.css?url";
 
 import type { QueryClient } from "@tanstack/react-query";
+import { saveHandle } from "#/utils/saved-handles";
 import { primaryColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { DEFAULT_THEME_MODE } from "../lib/theme";
@@ -72,6 +75,44 @@ html[data-theme="system"] { color-scheme: light; }
  */
 function safeJsonForScript(value: unknown) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+/**
+ * OAuth callback appends loginSuccess, handle, and avatar to the real browser
+ * URL. TanStack Router's `location.href` is built only from validated route
+ * search, so those params are often missing there—read `window.location`
+ * instead.
+ */
+function PersistOAuthSavedHandle() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useLayoutEffect(() => {
+    if (globalThis.window === undefined) return;
+
+    let url: URL;
+    try {
+      url = new URL(globalThis.location.href);
+    } catch {
+      return;
+    }
+    const loginSuccess = url.searchParams.get("loginSuccess");
+    const handleParam = url.searchParams.get("handle");
+    const avatarParam = url.searchParams.get("avatar");
+    if (loginSuccess === "true" && handleParam && handleParam.trim() !== "") {
+      const avatar =
+        avatarParam && avatarParam.trim() !== "" ? avatarParam : null;
+      saveHandle(handleParam.trim(), avatar);
+
+      url.searchParams.delete("loginSuccess");
+      url.searchParams.delete("handle");
+      url.searchParams.delete("avatar");
+      const qs = url.searchParams.toString();
+      const next = `${url.pathname}${qs ? `?${qs}` : ""}${url.hash}`;
+      globalThis.history.replaceState({}, "", next);
+    }
+  }, [pathname]);
+
+  return null;
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
@@ -184,6 +225,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body {...stylex.props(primaryColorTheme, styles.body)}>
+        <PersistOAuthSavedHandle />
         {children}
         <TanStackDevtools
           config={{
