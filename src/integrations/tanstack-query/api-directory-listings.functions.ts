@@ -2170,6 +2170,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
         categorySlugs: table.categorySlugs,
         atUri: table.atUri,
         repoDid: table.repoDid,
+        migratedFromAtUri: table.migratedFromAtUri,
         productAccountDid: table.productAccountDid,
         productAccountHandle: table.productAccountHandle,
         reviewCount: table.reviewCount,
@@ -2218,6 +2219,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
         categorySlugs: table.categorySlugs,
         atUri: table.atUri,
         repoDid: table.repoDid,
+        migratedFromAtUri: table.migratedFromAtUri,
         productAccountDid: table.productAccountDid,
         productAccountHandle: table.productAccountHandle,
         reviewCount: table.reviewCount,
@@ -2245,17 +2247,25 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
  * Determines whether a listing's AT proto record is hosted by the at-store
  * publisher (or whether it is not yet on AT proto at all). Listings whose
  * record now lives on a different repo have been claimed by their owner.
+ *
+ * Edge case: when the at-store publisher account itself is the official product
+ * account (e.g. the @atstore.fyi self-listing), a successful PDS claim leaves
+ * `repoDid === atstoreDid` because the claimant *is* at-store. `migratedFromAtUri`
+ * is set by `claimProductListingToPds` only after a successful PDS migration
+ * (and is rolled back on failure), so it's our truthful "claim happened" signal.
  */
 async function computeIsStoreManaged(row: {
   atUri: string | null
   repoDid: string | null
+  migratedFromAtUri: string | null
 }): Promise<boolean> {
   const atUri = row.atUri?.trim()
   if (!atUri) return true
   const repoDid = row.repoDid?.trim()
   if (!repoDid) return true
   const atstoreDid = await getAtstoreRepoDid()
-  return repoDid === atstoreDid
+  if (repoDid !== atstoreDid) return false
+  return !row.migratedFromAtUri?.trim()
 }
 
 function getDirectoryListingDetailQueryOptions(id: string) {
@@ -4217,7 +4227,14 @@ const getProductListingEditAccess = createServerFn({ method: 'GET' })
     const atstoreDid = await getAtstoreRepoDid()
     const repo = full.repoDid?.trim()
     const productDid = full.productAccountDid?.trim()
-    const isStoreManaged = repo === atstoreDid
+    /**
+     * Once a listing has been migrated via `claimProductListingToPds`,
+     * `migratedFromAtUri` is non-null even when the claimant *is* at-store
+     * itself (so `repo === atstoreDid` would otherwise misreport the listing
+     * as still store-managed and trigger a redundant claim CTA).
+     */
+    const isStoreManaged =
+      repo === atstoreDid && !full.migratedFromAtUri?.trim()
 
     const session = await getAtprotoSessionForRequest(getRequest())
     if (!session?.did) {
