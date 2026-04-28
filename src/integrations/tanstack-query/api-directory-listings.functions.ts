@@ -1696,9 +1696,9 @@ const getHomePageData = createServerFn({ method: 'GET' })
     const popular = requireCards(
       dedupedRecentRows
         .filter((row) => row.id !== featuredSource.id)
-        .slice(0, 3)
+        .slice(0, 6)
         .map(toListingCard),
-      3,
+      6,
       'homepage popular listings',
     )
 

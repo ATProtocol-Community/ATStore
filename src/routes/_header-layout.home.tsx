@@ -15,7 +15,7 @@ import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
-import { Card } from "../design-system/card";
+import { Card, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
@@ -98,6 +98,13 @@ const styles = stylex.create({
     display: "block",
     height: "100%",
     textDecoration: "none",
+    transitionProperty: "transform",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
+    transform: {
+      default: "none",
+      ":hover": "translateY(-2px)",
+    },
   },
   promoRatingRow: {
     marginBottom: verticalSpace["2xl"],
@@ -223,7 +230,7 @@ const styles = stylex.create({
     borderRadius: radius["lg"],
     borderStyle: "solid",
     borderWidth: 1,
-    borderColor: uiColor.border1,
+    borderColor: uiColor.component2,
     transitionProperty: "transform",
     transitionDuration: "0.2s",
     transitionTimingFunction: "ease-in-out",
@@ -288,6 +295,20 @@ const styles = stylex.create({
     paddingTop: verticalSpace["3xl"],
     position: "relative",
     zIndex: 1,
+  },
+  promoCardBody: {
+    boxSizing: "border-box",
+    flex: 1,
+    justifyContent: "flex-start",
+    paddingBottom: verticalSpace["3xl"],
+    paddingLeft: horizontalSpace["3xl"],
+    paddingRight: horizontalSpace["3xl"],
+    paddingTop: verticalSpace["sm"],
+    position: "relative",
+    zIndex: 1,
+  },
+  promoCardTagline: {
+    flexGrow: 1,
   },
   eyebrow: {
     letterSpacing: "0.16em",
@@ -368,6 +389,15 @@ const styles = stylex.create({
       [breakpoints.lg]: "minmax(0, 1.2fr) minmax(18rem, 0.9fr)",
     },
   },
+  popularList: {
+    backgroundColor: uiColor.bg,
+    borderRadius: radius.xl,
+    padding: verticalSpace["2xl"],
+    cornerShape: "squircle",
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderColor: uiColor.component2,
+  },
   listCard: {
     paddingBottom: verticalSpace["2xl"],
     paddingLeft: horizontalSpace["2xl"],
@@ -378,18 +408,21 @@ const styles = stylex.create({
     alignItems: "center",
     borderRadius: radius.md,
     display: "flex",
-    gap: gap["2xl"],
+    gap: gap["xl"],
     paddingBottom: verticalSpace["2xl"],
     paddingLeft: horizontalSpace["4xl"],
     paddingRight: horizontalSpace["2xl"],
     paddingTop: verticalSpace["2xl"],
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: uiColor.border1,
-    backgroundColor: uiColor.bg,
+    backgroundColor: {
+      default: uiColor.bg,
+      ":hover": uiColor.component2,
+    },
     boxShadow: shadow.lg,
     textDecoration: "none",
     color: uiColor.text2,
+    transitionProperty: "background-color",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
   },
   rankNumber: {
     minWidth: "1.25rem",
@@ -594,7 +627,7 @@ function HomePage() {
             search={{ sort: "popular" }}
           />
           <Grid style={styles.popularGrid}>
-            <Flex direction="column" gap="md">
+            <Flex direction="column" gap="md" style={styles.popularList}>
               {data.popular.map((listing, index) => (
                 <PopularListItem
                   key={listing.id}
@@ -749,7 +782,7 @@ function PopularListItem({
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.listItem, ui.bgSubtle)}
+      {...stylex.props(styles.listItem)}
     >
       <Text
         size="xl"
@@ -766,7 +799,7 @@ function PopularListItem({
         </Text>
         <SmallBody variant="secondary">{listing.tagline}</SmallBody>
       </Flex>
-      <Button size="lg" variant="secondary">
+      <Button variant="secondary" style={styles.exploreButton}>
         Explore
       </Button>
     </RouterLink>
@@ -778,37 +811,50 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, styles.promoCard)}
+      {...stylex.props(styles.bentoLink)}
     >
-      <Flex direction="column" gap="5xl" style={styles.compactCardContent}>
-        <SmallBody style={styles.eyebrow}>Trending</SmallBody>
-        <Flex direction="column" gap="2xl">
-          <Text
-            size={{ default: "2xl", sm: "4xl" }}
-            weight="semibold"
-            style={styles.heroTitle}
-          >
-            {listing.name}
-          </Text>
-          <Body style={styles.heroDescription}>{listing.tagline}</Body>
-        </Flex>
-        <div {...stylex.props(styles.ratingRow)}>
-          <Flex align="center" gap="md">
-            <Text weight="semibold">
-              {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+      <Card style={styles.promoCard}>
+        {listing.heroImageUrl ? (
+          <CardImage
+            aspectRatio={16 / 9}
+            alt={`${listing.name} preview`}
+            src={listing.heroImageUrl}
+          />
+        ) : null}
+        <Flex direction="column" gap="4xl" style={styles.promoCardBody}>
+          <Flex direction="column" gap="2xl">
+            <Flex align="center" justify="between">
+              <Text size="sm" weight="light" style={styles.eyebrow}>
+                Trending
+              </Text>
+              <StarRating
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+              />
+            </Flex>
+            <Text
+              size={{ default: "2xl", sm: "3xl" }}
+              weight="semibold"
+              style={styles.heroTitle}
+            >
+              {listing.name}
             </Text>
-            <SmallBody style={styles.heroDescription}>
-              {getListingMetadataLabel(listing)}
-            </SmallBody>
           </Flex>
-        </div>
-        <Flex align="center" justify="between" gap="xl">
-          <StoreIcon listing={listing} size="lg" />
-          <Button size="lg" variant="secondary">
-            Explore
-          </Button>
+          <Text
+            size="lg"
+            variant="secondary"
+            style={[styles.heroDescription, styles.promoCardTagline]}
+          >
+            {listing.tagline}
+          </Text>
+          <Flex align="center" justify="between" gap="xl">
+            <StoreIcon listing={listing} size="lg" />
+            <Button variant="secondary" style={styles.exploreButton}>
+              Explore
+            </Button>
+          </Flex>
         </Flex>
-      </Flex>
+      </Card>
     </RouterLink>
   );
 }
@@ -836,16 +882,7 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
           <Body variant="secondary">{listing.tagline}</Body>
           <div {...stylex.props(styles.spacer)} />
           <Flex align="center" justify="end" gap="xl">
-            <Flex align="center" gap="sm">
-              <Text size="sm" weight="semibold">
-                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-              </Text>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
-              />
-            </Flex>
+            <ChevronRight />
           </Flex>
         </Flex>
       </Card>
