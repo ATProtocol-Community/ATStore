@@ -318,6 +318,9 @@ const styles = stylex.create({
     alignItems: "center",
     flexWrap: "wrap",
   },
+  heroContent: {
+    position: "relative",
+  },
   ratingRow: {
     alignItems: "center",
   },
@@ -1124,7 +1127,7 @@ function HeroSection({
         />
       )}
 
-      <Flex direction="column" gap="3xl">
+      <Flex direction="column" gap="3xl" style={styles.heroContent}>
         <Flex
           style={styles.mobileOnly}
           justify="between"
