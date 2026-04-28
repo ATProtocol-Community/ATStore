@@ -80,7 +80,6 @@ export const Route = createFileRoute("/_header-layout/search")({
       title: "Search all listings | at-store",
       description:
         "Search across the full at-store directory in one place, including app and protocol listings.",
-      image: getProtocolPageHeroArtSpec("search")?.assetPath,
     }),
   component: SearchPage,
 });

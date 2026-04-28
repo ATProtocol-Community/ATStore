@@ -63,6 +63,33 @@ export function buildFallbackOgImageUrl(input: {
   return `/og?${params.toString()}`;
 }
 
+/**
+ * Build an OG image URL for the tag-card style preview (`/og/tag`). Used by both app-tag and
+ * directory/protocol category routes — pass the `tag` (used for accent + emoji lookup), an
+ * optional `label` (for human-friendly title casing like "Account Tool" vs the slug
+ * "account-tool"), and an optional `kind` shown as the small uppercase badge in the header
+ * (e.g. "App Tag", "Category", "Protocol").
+ */
+export function buildAppTagOgImageUrl(input: {
+  tag: string;
+  label?: string;
+  kind?: string;
+  count?: number;
+}) {
+  const params = new URLSearchParams();
+  params.set("tag", input.tag);
+  if (input.label?.trim()) {
+    params.set("label", truncate(input.label.trim(), 64));
+  }
+  if (input.kind?.trim()) {
+    params.set("kind", truncate(input.kind.trim(), 24));
+  }
+  if (typeof input.count === "number" && Number.isFinite(input.count)) {
+    params.set("count", String(Math.max(0, Math.floor(input.count))));
+  }
+  return `/og/tag?${params.toString()}`;
+}
+
 export function buildRouteOgMeta(input: OgMetaInput) {
   const title = truncate(input.title.trim(), 90);
   const description = truncate(input.description.trim(), 220);

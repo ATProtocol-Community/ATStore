@@ -70,7 +70,6 @@ export const Route = createFileRoute("/_header-layout/protocol/listings")({
       title: "All protocol listings | at-store",
       description:
         "Search every protocol listing in the directory: infrastructure, tooling, and services filed under protocol categories.",
-      image: getProtocolPageHeroArtSpec("listings")?.assetPath,
     }),
   component: ProtocolListingsPage,
 });

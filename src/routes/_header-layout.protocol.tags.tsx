@@ -50,7 +50,6 @@ export const Route = createFileRoute("/_header-layout/protocol/tags")({
       title: "Protocol Tools | at-store",
       description:
         "Browse protocol listings by top-level category, from PDS and AppView to supporting infrastructure.",
-      image: getProtocolPageHeroArtSpec("tags")?.assetPath,
     }),
   component: ProtocolTagsPage,
 });

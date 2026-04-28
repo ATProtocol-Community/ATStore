@@ -53,12 +53,11 @@ import {
   type DirectoryCategoryAccent,
   type DirectoryCategoryTreeNode,
 } from "../lib/directory-categories";
-import { getCategoryBentoArtSpec } from "../lib/category-bento-art";
-import { getEcosystemHeroAssetPathForCategory } from "../lib/ecosystem-hero-art";
-import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
+import type { AppTagAccent } from "../lib/app-tag-visuals";
+import { getEcosystemCategoryEmoji } from "../lib/ecosystem-category-emoji";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
-import { buildRouteOgMeta } from "../lib/og-meta";
+import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
 import { HeroImage } from "#/components/HeroImage";
 
@@ -96,16 +95,21 @@ export const Route = createFileRoute("/_header-layout/categories/$categoryId")({
     }
 
     const category = data.category;
-    const categoryImageSrc =
-      getEcosystemHeroAssetPathForCategory(category.id) ??
-      getCategoryBentoArtSpec(category.label)?.assetPath ??
-      null;
 
     return {
       categoryId: params.categoryId,
       ogTitle: `${category.label} | at-store`,
       ogDescription: category.description,
-      ogImage: categoryImageSrc,
+      /**
+       * OG card mirrors the `AppTagCard` look — accent + emoji from the category label via
+       * `/og/tag` (Satori). In-app hero uses the same accent family + `getEcosystemCategoryEmoji`.
+       */
+      ogImage: buildAppTagOgImageUrl({
+        tag: category.label,
+        label: category.label,
+        kind: "Category",
+        count: data.listings.length,
+      }),
     };
   },
   head: ({ loaderData }) =>
@@ -435,10 +439,6 @@ function CategoryPage() {
   }
 
   const category = data.category;
-  const categoryImageSrc =
-    getEcosystemHeroAssetPathForCategory(category.id) ??
-    getCategoryBentoArtSpec(category.label)?.assetPath ??
-    null;
   const browsePath = getDirectoryBrowsePath(category.id);
   const [, AppName] = category.pathLabels;
   const appSegment =
@@ -471,7 +471,8 @@ function CategoryPage() {
             eyebrow={formatCount(category.count)}
             title={category.label}
             description={category.description}
-            imageSrc={categoryImageSrc}
+            accent={mapCategoryAccentToTagAccent(category.accent)}
+            emojis={buildCategoryHeroEmojis(category)}
             action={
               <Select
                 aria-label="Sort category listings"
@@ -567,11 +568,7 @@ function RelatedAppCategoriesSection({
       </Flex>
       <Grid style={styles.childGrid}>
         {categories.map((category) => (
-          <EcosystemCategoryCard
-            key={category.id}
-            category={category}
-            imageSrc={pickListingImageForCategoryBranch(category.id, listings)}
-          />
+          <EcosystemCategoryCard key={category.id} category={category} />
         ))}
       </Grid>
     </Flex>
@@ -796,4 +793,61 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
+}
+
+/**
+ * Bridge `DirectoryCategoryAccent` (the 4-color accent baked into directory metadata) over
+ * to the broader `AppTagAccent` palette used by `AppTagHero` / `AppTagCard`.
+ *
+ * "green" maps to `indigo` to stay visually consistent with `EcosystemCategoryCard`, which
+ * (for legacy reasons) imports `indigo as green` and renders the green-accent surface using
+ * the indigo palette. Changing one without the other would make the hero and the tile cards
+ * disagree on what "green" looks like.
+ */
+function mapCategoryAccentToTagAccent(
+  accent: DirectoryCategoryAccent,
+): AppTagAccent {
+  switch (accent) {
+    case "blue":
+      return "blue";
+    case "pink":
+      return "pink";
+    case "purple":
+      return "purple";
+    case "green":
+      return "indigo";
+  }
+}
+
+/**
+ * Build the emoji list for the hero's scatter. Anchors on the category's own emoji, then
+ * walks `children` (and grandchildren if the immediate child layer is too narrow) to add
+ * distinct glyphs. Mirrors the approach in `EcosystemCategoryCard.pickSlotEmojis` so the
+ * page hero and the children-tile grid below it share the same vocabulary.
+ */
+function buildCategoryHeroEmojis(
+  category: DirectoryCategoryTreeNode,
+): string[] {
+  const anchor = getEcosystemCategoryEmoji(category.label);
+  const seen = new Set<string>([anchor]);
+  const pool: string[] = [anchor];
+
+  const visit = (nodes: DirectoryCategoryTreeNode[]) => {
+    for (const node of nodes) {
+      const emoji = getEcosystemCategoryEmoji(node.label);
+      if (seen.has(emoji)) continue;
+      seen.add(emoji);
+      pool.push(emoji);
+    }
+  };
+
+  visit(category.children);
+  if (pool.length < 5) {
+    for (const child of category.children) {
+      visit(child.children);
+      if (pool.length >= 5) break;
+    }
+  }
+
+  return pool;
 }

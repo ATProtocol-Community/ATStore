@@ -50,7 +50,6 @@ import { formatAppTagLabel } from "#/lib/app-tag-metadata";
 import { getListingsForCategoryBranch } from "#/lib/ecosystem-listings";
 import { getDirectoryListingSlug } from "#/lib/directory-listing-slugs";
 import { getDirectoryListingHeroImageAlt } from "#/lib/listing-copy";
-import { getHomePageHeroArtSpec } from "#/lib/home-page-hero-art";
 import { buildRouteOgMeta } from "#/lib/og-meta";
 import { Body, SmallBody } from "#/design-system/typography";
 import { useHover } from "react-aria";
@@ -81,10 +80,6 @@ export const Route = createFileRoute("/")({
       title: "at-store | The Atmosphere",
       description:
         "Discover apps and tools across the Atmosphere, with open identity and portable data.",
-      image:
-        getHomePageHeroArtSpec("home-og")?.assetPath ??
-        loaderData?.preloadHeroImages?.[0] ??
-        null,
     }),
     links: (loaderData?.preloadHeroImages ?? []).map((href) => ({
       rel: "preload",

@@ -47,10 +47,10 @@ import {
   formatAppTagLabel,
   getAppTagDescription,
 } from "../lib/app-tag-metadata";
-import { getAppTagHeroAssetPathForTag } from "../lib/app-tag-hero-art";
+import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
-import { buildRouteOgMeta } from "../lib/og-meta";
+import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 import { StarRating } from "#/design-system/star-rating";
 
 const sortOptions = [
@@ -89,7 +89,12 @@ export const Route = createFileRoute("/_header-layout/apps/$tag")({
       tag: params.tag,
       ogTitle: `${formatAppTagLabel(data.tag)} apps | at-store`,
       ogDescription: getAppTagDescription(data.tag),
-      ogImage: getAppTagHeroAssetPathForTag(data.tag),
+      ogImage: buildAppTagOgImageUrl({
+        tag: data.tag,
+        label: formatAppTagLabel(data.tag),
+        kind: "App Tag",
+        count: data.count,
+      }),
     };
   },
   head: ({ loaderData }) =>
@@ -410,7 +415,8 @@ function AppsTagPage() {
             eyebrow={formatAppTagCount(data.count)}
             title={formatAppTagLabel(data.tag)}
             description={getAppTagDescription(data.tag)}
-            imageSrc={getAppTagHeroAssetPathForTag(data.tag)}
+            accent={getAppTagAccent(data.tag)}
+            emojis={[getAppTagEmoji(data.tag)]}
             action={
               <Select
                 aria-label="Sort apps in tag"

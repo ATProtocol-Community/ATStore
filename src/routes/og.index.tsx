@@ -3,10 +3,43 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
-const INTER_FONT_URL =
+const INTER_REGULAR_URL =
   "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff";
+const INTER_BOLD_URL =
+  "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff";
 
-let interFontPromise: Promise<ArrayBuffer> | null = null;
+/**
+ * Brand surface for the "general store page" OG card. Pulled from the design system's blue
+ * tokens (`border1`/`border2`/`solid1`) so the gradient matches `AppTagCard` blue surface and
+ * sits next to tag/category OG cards as the same visual family.
+ */
+const BRAND_GRADIENT_START = "#8ec8f6";
+const BRAND_GRADIENT_END = "#0090ff";
+const BRAND_BORDER = "#acd8fc";
+const BRAND_INK = "#0c2452";
+
+type FontPair = { regular: ArrayBuffer; bold: ArrayBuffer };
+let fontPromise: Promise<FontPair> | null = null;
+
+async function fetchArrayBuffer(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Could not load asset (${response.status}) from ${url}`);
+  }
+
+  return response.arrayBuffer();
+}
+
+async function getFonts() {
+  if (!fontPromise) {
+    fontPromise = Promise.all([
+      fetchArrayBuffer(INTER_REGULAR_URL),
+      fetchArrayBuffer(INTER_BOLD_URL),
+    ]).then(([regular, bold]) => ({ regular, bold }));
+  }
+
+  return fontPromise;
+}
 
 function getQueryText(
   searchParams: URLSearchParams,
@@ -24,53 +57,19 @@ function getQueryText(
     : value;
 }
 
-function getQueryUrl(searchParams: URLSearchParams, key: string) {
-  const value = searchParams.get(key)?.trim();
-  if (!value) {
-    return "";
-  }
-
-  return value;
-}
-
-function getQueryNumber(
-  searchParams: URLSearchParams,
-  key: string,
-  fallback: number,
-) {
-  const raw = searchParams.get(key)?.trim();
-  if (!raw) {
-    return fallback;
-  }
-
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return fallback;
-  }
-
-  return parsed;
-}
-
+/**
+ * Strip emoji + emoji modifiers from a string. Satori can't render color emoji from the bundled
+ * Inter font, so without an explicit Twemoji loader emojis come out as missing-glyph rectangles.
+ * The emoji-rich variant lives at `/og/tag` (used for tag/category cards). The general OG just
+ * leads with the ATStore wordmark, so dropping emojis here keeps the title clean rather than
+ * pretending we have emoji rendering.
+ */
 function stripEmoji(value: string) {
   const withoutEmoji = value
     .replace(/\p{Extended_Pictographic}/gu, "")
     .replace(/\p{Emoji_Component}/gu, "");
   const collapsedWhitespace = withoutEmoji.replace(/\s+/g, " ").trim();
-  return collapsedWhitespace || "at-store";
-}
-
-async function getInterFont() {
-  if (!interFontPromise) {
-    interFontPromise = fetch(INTER_FONT_URL).then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Could not load Inter font (${response.status}).`);
-      }
-
-      return response.arrayBuffer();
-    });
-  }
-
-  return interFontPromise;
+  return collapsedWhitespace || "ATStore";
 }
 
 export const Route = createFileRoute("/og/")({
@@ -79,245 +78,132 @@ export const Route = createFileRoute("/og/")({
       GET: async ({ request }) => {
         try {
           const url = new URL(request.url);
-          const title = stripEmoji(
-            getQueryText(url.searchParams, "title", "at-store", 90),
+          const rawTitle = getQueryText(
+            url.searchParams,
+            "title",
+            "ATStore",
+            90,
           );
           const description = getQueryText(
             url.searchParams,
             "description",
-            "Discover apps and protocol tooling across the Atmosphere ecosystem.",
+            "Discover apps and tools across the Atmosphere ecosystem.",
             220,
           );
-          const avatarUrl = getQueryUrl(url.searchParams, "avatar");
-          const ownedProductCount = getQueryNumber(
-            url.searchParams,
-            "ownedProducts",
-            getQueryNumber(url.searchParams, "products", 0),
-          );
-          const reviewCount = getQueryNumber(url.searchParams, "reviews", 0);
-          const fontData = await getInterFont();
-          const initials =
-            title
-              .split(/\s+/)
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((part) => part[0]?.toUpperCase() ?? "")
-              .join("") || "AS";
+          const title = stripEmoji(rawTitle);
+          /**
+           * Detect whether the title is just our brand name. If so we drop the redundant
+           * "ATStore" subtitle line — the wordmark already carries it. Otherwise we show the
+           * page-specific title beneath the wordmark.
+           */
+          const titleIsBrand = /^at[-\s]?store$/i.test(title.trim());
+          const { regular, bold } = await getFonts();
 
           const svg = await satori(
             <div
               style={{
                 alignItems: "stretch",
-                background: "#f8fafc",
-                color: "#0f172a",
+                background: `linear-gradient(135deg, ${BRAND_GRADIENT_START} 0%, ${BRAND_GRADIENT_END} 100%)`,
+                color: BRAND_INK,
                 display: "flex",
                 flexDirection: "column",
                 fontFamily: "Inter",
                 height: "100%",
-                justifyContent: "space-between",
-                padding: "48px",
+                justifyContent: "center",
+                padding: "96px",
+                position: "relative",
                 width: "100%",
+                border: `2px solid ${BRAND_BORDER}`,
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
                   alignItems: "center",
-                  width: "100%",
+                  gap: "32px",
                 }}
               >
                 <div
                   style={{
-                    fontSize: 28,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "#1d4ed8",
-                    fontWeight: 700,
-                  }}
-                >
-                  at-store
-                </div>
-                <div
-                  style={{
-                    background: "#dbeafe",
-                    border: "2px solid #93c5fd",
-                    borderRadius: 999,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    height: 86,
-                    width: 86,
-                    overflow: "hidden",
+                    width: 168,
+                    height: 168,
+                    borderRadius: 36,
+                    background: "rgba(255, 255, 255, 0.65)",
+                    border: `2px solid ${BRAND_BORDER}`,
+                    fontSize: 120,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    color: BRAND_INK,
                   }}
                 >
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt=""
-                      width={86}
-                      height={86}
-                      style={{ objectFit: "cover" }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        color: "#1e3a8a",
-                        fontSize: 30,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {initials}
-                    </div>
-                  )}
+                  {/*
+                   * In Inter the "@" sits noticeably low inside the line box (its optical
+                   * center is a bit below the geometric center of the em-square). Flex
+                   * `alignItems: center` aligns the line box, not the glyph, so the badge
+                   * looks visibly bottom-heavy. Nudge the glyph up a few pixels — tuned so
+                   * the curl of the @ sits on the badge's horizontal centerline.
+                   */}
+                  <div
+                    style={{ display: "flex", transform: "translateY(-10px)" }}
+                  >
+                    @
+                  </div>
                 </div>
-              </div>
-              <div
-                style={{
-                  background: "#ffffff",
-                  border: "2px solid #cbd5e1",
-                  borderRadius: 28,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "28px",
-                  marginTop: "22px",
-                  padding: "38px",
-                }}
-              >
                 <div
                   style={{
+                    color: "white",
+                    display: "flex",
+                    fontSize: 144,
+                    fontWeight: 700,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1,
+                    textShadow: "0 3px 8px rgba(0, 0, 0, 0.22)",
+                  }}
+                >
+                  ATStore
+                </div>
+              </div>
+              {!titleIsBrand ? (
+                <div
+                  style={{
+                    color: "white",
                     display: "flex",
                     flexWrap: "wrap",
-                    fontSize: 66,
+                    fontSize: 56,
                     fontWeight: 700,
                     lineHeight: 1.1,
-                    color: "#0f172a",
+                    marginTop: 56,
+                    maxWidth: "100%",
+                    textShadow: "0 2px 6px rgba(0, 0, 0, 0.22)",
                   }}
                 >
                   {title}
                 </div>
-                <div
-                  style={{
-                    color: "#334155",
-                    display: "flex",
-                    flexWrap: "wrap",
-                    fontSize: 32,
-                    lineHeight: 1.35,
-                    maxWidth: "100%",
-                  }}
-                >
-                  {description}
-                </div>
-                <div
-                  style={{
-                    alignItems: "center",
-                    display: "flex",
-                    gap: "20px",
-                  }}
-                >
-                  {ownedProductCount > 0 ? (
-                    <div
-                      style={{
-                        alignItems: "center",
-                        background: "#eff6ff",
-                        border: "1px solid #bfdbfe",
-                        borderRadius: 999,
-                        color: "#1e3a8a",
-                        display: "flex",
-                        gap: "10px",
-                        padding: "10px 16px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 2,
-                          width: 18,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <div
-                          style={{
-                            background: "#2563eb",
-                            borderRadius: 2,
-                            width: 8,
-                            height: 8,
-                          }}
-                        />
-                        <div
-                          style={{
-                            background: "#2563eb",
-                            borderRadius: 2,
-                            width: 8,
-                            height: 8,
-                          }}
-                        />
-                        <div
-                          style={{
-                            background: "#2563eb",
-                            borderRadius: 2,
-                            width: 8,
-                            height: 8,
-                          }}
-                        />
-                        <div
-                          style={{
-                            background: "#2563eb",
-                            borderRadius: 2,
-                            width: 8,
-                            height: 8,
-                          }}
-                        />
-                      </div>
-                      <div style={{ fontSize: 24, fontWeight: 700 }}>
-                        {`${ownedProductCount.toLocaleString()} owned products`}
-                      </div>
-                    </div>
-                  ) : null}
-                  <div
-                    style={{
-                      alignItems: "center",
-                      background: "#eff6ff",
-                      border: "1px solid #bfdbfe",
-                      borderRadius: 999,
-                      color: "#1e3a8a",
-                      display: "flex",
-                      gap: "10px",
-                      padding: "10px 16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        alignItems: "center",
-                        border: "2px solid #2563eb",
-                        borderRadius: 999,
-                        display: "flex",
-                        justifyContent: "center",
-                        height: 12,
-                        width: 22,
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: "#2563eb",
-                          borderRadius: 999,
-                          height: 6,
-                          width: 6,
-                        }}
-                      />
-                    </div>
-                    <div style={{ fontSize: 24, fontWeight: 700 }}>
-                      {`${reviewCount.toLocaleString()} reviews written`}
-                    </div>
-                  </div>
-                </div>
+              ) : null}
+              <div
+                style={{
+                  color: "rgba(255, 255, 255, 0.92)",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  fontSize: 32,
+                  lineHeight: 1.35,
+                  marginTop: titleIsBrand ? 56 : 24,
+                  maxWidth: "100%",
+                  textShadow: "0 1px 3px rgba(0, 0, 0, 0.22)",
+                }}
+              >
+                {description}
               </div>
             </div>,
             {
               width: OG_WIDTH,
               height: OG_HEIGHT,
               fonts: [
-                { name: "Inter", data: fontData, weight: 400, style: "normal" },
+                { name: "Inter", data: regular, weight: 400, style: "normal" },
+                { name: "Inter", data: bold, weight: 700, style: "normal" },
               ],
             },
           );

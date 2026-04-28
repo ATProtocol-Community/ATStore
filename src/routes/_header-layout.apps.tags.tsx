@@ -31,7 +31,6 @@ export const Route = createFileRoute("/_header-layout/apps/tags")({
       title: "App Collections | at-store",
       description:
         "Explore app collections by workflow tags like analytics, moderation, and automation.",
-      image: getAppTagHeroArtSpec("all")?.assetPath,
     }),
   component: AppsAllPage,
 });

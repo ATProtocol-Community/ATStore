@@ -46,7 +46,6 @@ import {
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
-import { getHomePageHeroArtSpec } from "../lib/home-page-hero-art";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
@@ -68,7 +67,6 @@ export const Route = createFileRoute("/_header-layout/home")({
       title: "at-store | Apps on the Atmosphere",
       description:
         "Discover apps and tools across the Atmosphere. Find you next favorite app today!",
-      image: getHomePageHeroArtSpec("home-og")?.assetPath,
     }),
   component: HomePage,
 });

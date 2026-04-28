@@ -36,31 +36,11 @@ import {
   formatAppTagLabel,
   getAppTagSlug,
 } from "../lib/app-tag-metadata";
-
-/**
- * AppTagCard's accent palette is intentionally broader than `DirectoryListingCard["accent"]`
- * (which is locked to 4 brand-level category accents). App tags are a finer cut — one accent per
- * tag so the `/apps/tags` grid reads as a colorful taxonomy rather than four repeating colors.
- */
-type AppTagAccent =
-  | "amber"
-  | "blue"
-  | "bronze"
-  | "crimson"
-  | "cyan"
-  | "grass"
-  | "indigo"
-  | "iris"
-  | "jade"
-  | "orange"
-  | "pink"
-  | "plum"
-  | "purple"
-  | "ruby"
-  | "sky"
-  | "teal"
-  | "tomato"
-  | "violet";
+import {
+  type AppTagAccent,
+  getAppTagAccent,
+  getAppTagEmoji,
+} from "../lib/app-tag-visuals";
 
 const styles = stylex.create({
   card: {
@@ -385,139 +365,6 @@ export function AppTagCard({ tag, isFeatured }: AppTagCardProps) {
       </Flex>
     </RouterLink>
   );
-}
-
-/**
- * Per-tag accent assignments. Picks are intentional, not hash-based:
- *   - data / analytics / science lean cool cyans,
- *   - creative / media / art lean warm pinks/violets/plums,
- *   - dev / work / messaging lean indigo/iris,
- *   - publishing / writing / books lean bronze (paper/ink),
- *   - safety / moderation / news / video lean ruby/tomato,
- *   - community / fitness / outdoors lean grass.
- *
- * Keys must match the lowercase canonical form produced by `normalizeAppTag`. Tags not in this
- * map fall through to `blue` (the loud blue surface) so they're visually obvious as unmapped.
- */
-const APP_TAG_ACCENTS: Record<string, AppTagAccent> = {
-  "account tool": "indigo",
-  analytics: "cyan",
-  annotation: "amber",
-  art: "pink",
-  articles: "bronze",
-  audio: "violet",
-  automation: "orange",
-  bookmarks: "amber",
-  books: "bronze",
-  community: "grass",
-  conferencing: "cyan",
-  creative: "ruby",
-  "creator tool": "pink",
-  "data-explorer": "cyan",
-  design: "violet",
-  developer: "iris",
-  "developer tool": "iris",
-  developers: "iris",
-  events: "orange",
-  experiments: "teal",
-  "feed generator": "sky",
-  fitness: "grass",
-  food: "tomato",
-  fun: "pink",
-  games: "ruby",
-  groups: "grass",
-  labeler: "ruby",
-  livestreaming: "tomato",
-  location: "sky",
-  marketplace: "amber",
-  messaging: "indigo",
-  moderation: "ruby",
-  news: "tomato",
-  "personal page": "amber",
-  photo: "plum",
-  productivity: "teal",
-  publishing: "bronze",
-  reviews: "orange",
-  roleplaying: "plum",
-  science: "cyan",
-  social: "purple",
-  sports: "grass",
-  utility: "teal",
-  video: "tomato",
-  work: "indigo",
-  writing: "bronze",
-};
-
-function getAppTagAccent(tag: string): AppTagAccent {
-  /**
-   * Tags can arrive with mixed casing or extra whitespace from older records — normalize
-   * the same way the storage layer does before lookup, and fall back to the original key as a
-   * last resort so manually-mapped exotic tags still hit.
-   */
-  const normalized = tag.trim().toLowerCase().replace(/\s+/g, " ");
-  return APP_TAG_ACCENTS[normalized] ?? APP_TAG_ACCENTS[tag] ?? "blue";
-}
-
-/**
- * Per-tag emoji. Picks aim for a *single, unambiguous* glyph per tag — close-but-distinct
- * choices (e.g. 📰 articles vs. 🗞️ news) are deliberate so the grid reads as a taxonomy at a
- * glance, not as a dozen identical newspaper icons.
- *
- * Keys mirror `APP_TAG_ACCENTS`. Unmapped tags fall through to ✨ — a visible signal that the
- * tag is new and should get a deliberate emoji.
- */
-const APP_TAG_EMOJI: Record<string, string> = {
-  "account tool": "🪪",
-  analytics: "📊",
-  annotation: "✍️",
-  art: "🎨",
-  articles: "📰",
-  audio: "🎧",
-  automation: "🤖",
-  bookmarks: "🔖",
-  books: "📚",
-  community: "👥",
-  conferencing: "📞",
-  creative: "🪄",
-  "creator tool": "🎬",
-  "data-explorer": "🔍",
-  design: "🖌️",
-  developer: "👨‍💻",
-  "developer tool": "🛠️",
-  developers: "👩‍💻",
-  events: "📅",
-  experiments: "🧪",
-  "feed generator": "📡",
-  fitness: "💪",
-  food: "🍳",
-  fun: "🎉",
-  games: "🎮",
-  groups: "🫂",
-  labeler: "🏷️",
-  livestreaming: "📺",
-  location: "📍",
-  marketplace: "🛍️",
-  messaging: "💬",
-  moderation: "🛡️",
-  news: "🗞️",
-  "personal page": "👤",
-  photo: "📷",
-  productivity: "✅",
-  publishing: "📖",
-  reviews: "⭐",
-  roleplaying: "🎭",
-  science: "🔬",
-  social: "🌐",
-  sports: "⚽",
-  utility: "🧰",
-  video: "🎥",
-  work: "💼",
-  writing: "✏️",
-};
-
-function getAppTagEmoji(tag: string): string {
-  const normalized = tag.trim().toLowerCase().replace(/\s+/g, " ");
-  return APP_TAG_EMOJI[normalized] ?? APP_TAG_EMOJI[tag] ?? "✨";
 }
 
 function getSoftAccentSurface(accent: AppTagAccent) {

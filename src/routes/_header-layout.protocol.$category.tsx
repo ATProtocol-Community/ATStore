@@ -42,7 +42,7 @@ import {
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
-import { buildRouteOgMeta } from "../lib/og-meta";
+import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 import { getProtocolCategoryCoverAssetPathForSegment } from "../lib/protocol-category-hero-art";
 import { getProtocolCategoryDescription } from "../lib/protocol-category-metadata";
 import { StarRating } from "#/design-system/star-rating";
@@ -81,7 +81,6 @@ export const Route = createFileRoute("/_header-layout/protocol/$category")({
       throw notFound();
     }
 
-    const heroImage = getProtocolCategoryCoverAssetPathForSegment(data.segment);
     const description =
       data.description.trim() ||
       getProtocolCategoryDescription(data.categoryId);
@@ -90,7 +89,17 @@ export const Route = createFileRoute("/_header-layout/protocol/$category")({
       category: params.category,
       ogTitle: `${data.label} protocol tools | at-store`,
       ogDescription: description,
-      ogImage: heroImage,
+      /**
+       * Protocol categories use the same tag-card OG style — accent/emoji fall back through
+       * `app-tag-visuals` (matching by label, e.g. "Developer" → iris/👨‍💻). `getProtocolCategoryCoverAssetPathForSegment`
+       * is still used inline below for the page hero treatment.
+       */
+      ogImage: buildAppTagOgImageUrl({
+        tag: data.label,
+        label: data.label,
+        kind: "Protocol",
+        count: data.count,
+      }),
     };
   },
   head: ({ loaderData }) =>

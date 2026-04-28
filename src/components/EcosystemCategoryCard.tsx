@@ -23,7 +23,7 @@ import type {
 } from "../lib/directory-categories";
 import { formatEcosystemListingCount } from "../lib/ecosystem-listings";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import { resolveResizedBannerRecordUrl } from "../lib/banner-record-url";
+import { getEcosystemCategoryEmoji } from "../lib/ecosystem-category-emoji";
 
 const styles = stylex.create({
   cardContentLayout: {
@@ -53,9 +53,25 @@ const styles = stylex.create({
     gap: gap["8xl"],
     justifyContent: "space-between",
     overflow: "hidden",
-
     position: "relative",
     textDecoration: "none",
+    transitionProperty: "transform",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
+    transform: {
+      default: "none",
+      ":hover": "translateY(-2px)",
+    },
+    /**
+     * Mirrors the `AppTagCard` parallax: 0 → 1 on hover, read by each emoji slot's
+     * `transform` via `calc()`. Custom properties don't interpolate without `@property`
+     * but the dependent `transform` on the children does, so the children's transitions
+     * (defined on `transform`) handle the actual animation.
+     */
+    "--emoji-hover": {
+      default: 0,
+      ":hover": 1,
+    },
   },
   cardContent: {
     position: "relative",
@@ -64,19 +80,6 @@ const styles = stylex.create({
   cardFooter: {
     position: "relative",
     zIndex: 1,
-  },
-  cardImage: {
-    height: "100%",
-    inset: 0,
-    objectFit: "cover",
-    opacity: 0.78,
-    position: "absolute",
-    width: "100%",
-  },
-  cardOverlay: {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 28%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 58%, transparent) 45%, color-mix(in srgb, ${uiColor.overlayBackdrop} 94%, transparent) 100%)`,
-    inset: 0,
-    position: "absolute",
   },
   chevron: {
     marginLeft: "auto",
@@ -119,23 +122,81 @@ const styles = stylex.create({
       "0 1px 2px color-mix(in srgb, black 42%, transparent), 0 4px 16px color-mix(in srgb, black 28%, transparent)",
     textTransform: "uppercase",
   },
+  /**
+   * Decorative emoji scatter behind the title/footer. Same pattern as `AppTagCard`:
+   *   - absolute positioning (each slot picks its own top/left/right/bottom + rotate),
+   *   - pointer-events: none so the parent <a> still receives clicks,
+   *   - userSelect: none so emojis don't get caught in text selection,
+   *   - transition on transform so the parent's `--emoji-hover` flip animates smoothly,
+   *   - color-emoji font stack (Linux/headless fallbacks render greyscale text glyphs otherwise).
+   *
+   * The card is a 16:9 banner rather than a square, so slots are spread along the width:
+   * one cluster anchored center-right (largest), one peeking from the left, and supporting
+   * glyphs around them — keeping the visual mass biased to the right of the title.
+   */
+  emojiBackdrop: {
+    fontSize: "1rem",
+    inset: 0,
+    pointerEvents: "none",
+    position: "absolute",
+    zIndex: 0,
+  },
+  emojiBase: {
+    filter: "drop-shadow(0 2px 4px rgb(0 0 0 / 0.35))",
+    fontFamily:
+      '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif',
+    lineHeight: 1,
+    pointerEvents: "none",
+    position: "absolute",
+    transitionProperty: "transform",
+    transitionDuration: "500ms",
+    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    userSelect: "none",
+    zIndex: 0,
+  },
+  emojiSlot1: {
+    fontSize: "7em",
+    opacity: 0.22,
+    right: "6%",
+    top: "12%",
+    transform:
+      "translate(calc(var(--emoji-hover) * 12px), calc(var(--emoji-hover) * -8px)) rotate(-12deg)",
+  },
+  emojiSlot2: {
+    bottom: "10%",
+    fontSize: "4em",
+    opacity: 0.18,
+    right: "26%",
+    transform:
+      "translate(calc(var(--emoji-hover) * 6px), calc(var(--emoji-hover) * 10px)) rotate(16deg)",
+  },
+  emojiSlot3: {
+    fontSize: "3.25em",
+    left: "42%",
+    opacity: 0.2,
+    top: "16%",
+    transform:
+      "translate(calc(var(--emoji-hover) * -7px), calc(var(--emoji-hover) * -10px)) rotate(22deg)",
+  },
+  emojiSlot4: {
+    bottom: "18%",
+    fontSize: "2.5em",
+    opacity: 0.24,
+    right: "44%",
+    transform:
+      "translate(calc(var(--emoji-hover) * 9px), calc(var(--emoji-hover) * 8px)) rotate(-18deg)",
+  },
 });
 
 type EcosystemCategoryCardProps = {
   category: DirectoryCategoryTreeNode;
-  imageSrc?: string | null;
 };
 
 export function EcosystemCategoryCard({
   category,
-  imageSrc,
 }: EcosystemCategoryCardProps) {
   const accent = category.accent;
-  const bannerSrc = resolveResizedBannerRecordUrl(imageSrc, {
-    width: 1280,
-    height: 720,
-    mode: "fill",
-  });
+  const slotEmojis = pickSlotEmojis(category);
 
   return (
     <RouterLink
@@ -143,15 +204,14 @@ export function EcosystemCategoryCard({
       params={{ categoryId: category.id }}
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}
     >
-      {bannerSrc ? (
-        <img
-          {...stylex.props(styles.cardImage)}
-          alt=""
-          aria-hidden="true"
-          src={bannerSrc}
-        />
-      ) : null}
-      <div {...stylex.props(styles.cardOverlay)} />
+      <div aria-hidden="true" {...stylex.props(styles.emojiBackdrop)}>
+        <span {...stylex.props(styles.emojiBase, styles.emojiSlot1)}>
+          {slotEmojis[0]}
+        </span>
+        <span {...stylex.props(styles.emojiBase, styles.emojiSlot4)}>
+          {slotEmojis[3]}
+        </span>
+      </div>
       <div {...stylex.props(styles.cardContentLayout)}>
         <Flex direction="column" gap="xl" style={styles.cardContent}>
           <SmallBody style={styles.eyebrow}>
@@ -186,4 +246,48 @@ function getSoftAccentSurface(accent: DirectoryCategoryAccent) {
   if (accent === "green") return styles.softGreenSurface;
 
   return styles.softBlueSurface;
+}
+
+const SLOT_COUNT = 4;
+
+/**
+ * Build the per-slot emoji list. Strategy:
+ *   1. Start with the category's *own* emoji as the anchor (slot 1 is the largest, so this
+ *      is the glyph users associate with the card).
+ *   2. Walk the category's children and append each child's emoji, skipping duplicates so
+ *      the scatter reads varied — resolved via `getEcosystemCategoryEmoji` (directory-aware,
+ *      not the app-tag ✨ fallback).
+ *   3. If the dedup'd pool is still shorter than the slot count (leaf categories or shallow
+ *      trees), recursively descend grandchildren before falling back to repeating the
+ *      anchor emoji. This makes top-level "Apps" and "Protocol Tools" — which have many
+ *      grandchildren — visually rich, while small categories degrade gracefully.
+ */
+function pickSlotEmojis(category: DirectoryCategoryTreeNode): string[] {
+  const anchor = getEcosystemCategoryEmoji(category.label);
+  const seen = new Set<string>([anchor]);
+  const pool: string[] = [anchor];
+
+  const visit = (nodes: DirectoryCategoryTreeNode[]) => {
+    for (const node of nodes) {
+      if (pool.length >= SLOT_COUNT) return;
+      const emoji = getEcosystemCategoryEmoji(node.label);
+      if (seen.has(emoji)) continue;
+      seen.add(emoji);
+      pool.push(emoji);
+    }
+  };
+
+  visit(category.children);
+  if (pool.length < SLOT_COUNT) {
+    for (const child of category.children) {
+      if (pool.length >= SLOT_COUNT) break;
+      visit(child.children);
+    }
+  }
+
+  while (pool.length < SLOT_COUNT) {
+    pool.push(anchor);
+  }
+
+  return pool;
 }

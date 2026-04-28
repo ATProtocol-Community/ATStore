@@ -70,7 +70,6 @@ export const Route = createFileRoute("/_header-layout/apps/all")({
       title: "All apps | at-store",
       description:
         "Browse the full Bluesky app catalog and filter by search, popularity, or newest listings.",
-      image: getAppTagHeroArtSpec("all-apps")?.assetPath,
     }),
   component: AppsAllPage,
 });

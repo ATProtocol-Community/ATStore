@@ -73,7 +73,6 @@ import {
   getDirectoryCategoryOption,
   type DirectoryCategoryOption,
 } from "../lib/directory-categories";
-import { pickListingImageForCategoryBranch } from "../lib/ecosystem-listings";
 import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import {
@@ -1242,11 +1241,7 @@ function ProductEcosystemSection({
       {category.children.length > 0 ? (
         <Grid style={styles.ecosystemGrid}>
           {category.children.map((child) => (
-            <EcosystemCategoryCard
-              key={child.id}
-              category={child}
-              imageSrc={pickListingImageForCategoryBranch(child.id, listings)}
-            />
+            <EcosystemCategoryCard key={child.id} category={child} />
           ))}
         </Grid>
       ) : (
