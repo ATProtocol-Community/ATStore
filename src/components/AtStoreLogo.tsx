@@ -1,3 +1,7 @@
+/**
+ * AT Store wordmark. © Atproto Community Collective — see README (design vs
+ * Apache-licensed source code).
+ */
 import * as stylex from "@stylexjs/stylex";
 
 import { blue } from "../design-system/theme/colors/blue.stylex";

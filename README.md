@@ -204,3 +204,27 @@ You need pgvector installed alongside Postgres:
 ATProto's public-client OAuth requires `127.0.0.1`, not `localhost`.
 Visit the dev server at `http://127.0.0.1:3000` and make sure
 `ATPROTO_BASE_URL=http://127.0.0.1:3000` in `.env`.
+
+---
+
+## License
+
+### Source code
+
+This project’s source code is licensed under the **Apache License,
+Version 2.0** (SPDX: `Apache-2.0`). See [`LICENSE`](./LICENSE). Copyright
+notice: [`NOTICE`](./NOTICE).
+
+### Site design and branding
+
+Anyone is welcome to reuse and adapt **this codebase** under the Apache
+license (similar to how Bluesky core uses permissive licenses).
+
+This site uses a **custom visual design**—layout, typography, imagery,
+and the AT Store wordmark. Please **do not reuse that design wholesale**
+for another product or site without asking first.
+
+The AT Store wordmark and related branding are **© Atproto Community
+Collective**. They are not licensed for unrestricted reuse the same way
+the program source is; the distinction between code and visual identity
+is intentional.
