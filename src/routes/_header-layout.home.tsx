@@ -82,7 +82,7 @@ const styles = stylex.create({
     paddingTop: verticalSpace["8xl"],
   },
   headerDescription: {
-    maxWidth: "50rem",
+    maxWidth: "41rem",
   },
   bentoLink: {
     textDecoration: "none",
@@ -137,7 +137,7 @@ const styles = stylex.create({
   pageHeader: {
     paddingBottom: {
       default: verticalSpace["8xl"],
-      [breakpoints.sm]: verticalSpace["11xl"],
+      [breakpoints.sm]: verticalSpace["10xl"],
     },
     paddingTop: {
       default: verticalSpace["4xl"],
@@ -177,7 +177,7 @@ const styles = stylex.create({
   pageSections: {
     gap: {
       default: 40,
-      [breakpoints.sm]: 64,
+      [breakpoints.sm]: 52,
     },
   },
   section: {
@@ -518,8 +518,13 @@ function HomePage() {
           </Alert>
         ) : null}
 
-        <Flex direction="column" gap="5xl" style={styles.pageHeader}>
-          <Heading1>Apps on the Atmosphere</Heading1>
+        <Flex direction="column" gap="6xl" style={styles.pageHeader}>
+          <Flex direction="column" gap="5xl">
+            <Text size="lg" weight="normal" style={styles.eyebrow}>
+              The AT Protocol app directory
+            </Text>
+            <Heading1>Apps on the Atmosphere</Heading1>
+          </Flex>
           <Text
             variant="secondary"
             size={{ default: "xl", sm: "2xl" }}
