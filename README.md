@@ -204,3 +204,16 @@ You need pgvector installed alongside Postgres:
 ATProto's public-client OAuth requires `127.0.0.1`, not `localhost`.
 Visit the dev server at `http://127.0.0.1:3000` and make sure
 `ATPROTO_BASE_URL=http://127.0.0.1:3000` in `.env`.
+
+---
+
+## License
+
+at.store is licensed under the **GNU Affero General Public License v3.0
+or later** (AGPL-3.0-or-later). See [`LICENSE`](./LICENSE) for the full
+text.
+
+In short: you are free to use, modify, and redistribute this software,
+but if you run a modified version as a network service, you must make
+the corresponding source code available to the users of that service
+under the same license.
