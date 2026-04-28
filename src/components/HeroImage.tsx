@@ -45,6 +45,13 @@ const styles = stylex.create({
     display: "block",
     objectFit: "cover",
     width: "100%",
+    transitionProperty: "transform",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
+    transform: {
+      default: "scale(1)",
+      [stylex.when.ancestor(":hover")]: "scale(1.01)",
+    },
   },
   imageFill: {
     display: "block",
@@ -53,6 +60,13 @@ const styles = stylex.create({
     objectFit: "cover",
     position: "absolute",
     width: "100%",
+    transitionProperty: "transform",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
+    transform: {
+      default: "scale(1)",
+      [stylex.when.ancestor(":hover")]: "scale(1.01)",
+    },
   },
   overlay: {
     background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 6%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 24%, transparent) 38%, color-mix(in srgb, ${uiColor.overlayBackdrop} 92%, transparent) 100%)`,

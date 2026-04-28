@@ -190,7 +190,6 @@ const styles = stylex.create({
     borderRadius: radius["3xl"],
     borderStyle: "solid",
     borderWidth: 1,
-    color: "white",
     cornerShape: "squircle",
     overflow: "hidden",
     position: "relative",
@@ -210,6 +209,13 @@ const styles = stylex.create({
     minHeight: "12.5rem",
     height: "100%",
     borderRadius: radius["xl"],
+    transitionProperty: "transform",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
+    transform: {
+      default: "none",
+      ":hover": "translateY(-2px)",
+    },
   },
   promoCard: {
     borderRadius: radius["xl"],
@@ -281,14 +287,10 @@ const styles = stylex.create({
   heroTitle: {
     display: "block",
     maxWidth: "18ch",
-    textShadow: `0 10px 30px ${uiColor.overlayBackdrop}`,
   },
   heroDescription: {
-    color: uiColor.textContrast,
     margin: 0,
     maxWidth: "32rem",
-    textShadow: `0 6px 20px ${uiColor.overlayBackdrop}`,
-    fontSize: fontSize["lg"],
   },
   heroMetaRow: {
     flexWrap: "wrap",
@@ -477,6 +479,11 @@ const styles = stylex.create({
     backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
     borderColor: green.border1,
   },
+  exploreButton: {
+    borderRadius: radius.full,
+    cornerShape: "unset",
+    cursor: "pointer",
+  },
 });
 
 function HomePage() {
@@ -563,8 +570,8 @@ function HomePage() {
             to="/apps/tags"
           />
           <Grid style={styles.categoriesGrid}>
-            {data.tags.map((tag) => (
-              <AppTagCard key={tag.tag} tag={tag} />
+            {data.tags.map((tag, index) => (
+              <AppTagCard key={tag.tag} tag={tag} isFeatured={index === 0} />
             ))}
           </Grid>
         </section>
@@ -664,7 +671,11 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, styles.bentoLinkFeatured)}
+      {...stylex.props(
+        styles.bentoLink,
+        styles.bentoLinkFeatured,
+        stylex.defaultMarker(),
+      )}
     >
       {listing.heroImageUrl ? (
         <HeroImage
@@ -686,22 +697,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
       params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.bentoLink)}
     >
-      <Card
-        style={[
-          styles.accentCard,
-          styles.spotlightCard,
-          getAccentSurface(listing.accent),
-        ]}
-      >
-        <div {...stylex.props(styles.accentOverlay)} />
-        <div {...stylex.props(styles.ambientGlow)}>
-          <div
-            {...stylex.props(
-              styles.ambientGlowInner,
-              getAccentGlow(listing.accent),
-            )}
-          />
-        </div>
+      <Card style={[styles.accentCard, styles.spotlightCard]}>
         <Flex direction="column" gap="2xl" style={styles.compactCardContent}>
           <SmallBody style={styles.eyebrow}>
             {getListingMetadataLabel(listing)}
@@ -712,7 +708,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
             style={styles.compactCardContentText}
           >
             <Text
-              size={{ default: "2xl", sm: "3xl" }}
+              size={{ default: "xl", sm: "2xl" }}
               weight="semibold"
               style={styles.heroTitle}
             >
@@ -722,7 +718,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
           </Flex>
           <Flex align="center" justify="between" gap="xl">
             <StoreIcon listing={listing} size="lg" />
-            <Button size="lg" variant="secondary">
+            <Button variant="secondary" style={styles.exploreButton}>
               Explore
             </Button>
           </Flex>

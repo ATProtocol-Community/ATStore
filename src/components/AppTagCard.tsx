@@ -15,7 +15,6 @@ import {
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import {
   type DirectoryAppTagSummary,
@@ -48,6 +47,13 @@ const styles = stylex.create({
     paddingTop: verticalSpace["4xl"],
     position: "relative",
     textDecoration: "none",
+    transitionProperty: "transform",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
+    transform: {
+      default: "none",
+      ":hover": "translateY(-2px)",
+    },
   },
   cardContent: {
     flexGrow: 1,
@@ -100,13 +106,18 @@ const styles = stylex.create({
     color: uiColor.textContrast,
     textShadow: "0 1px 2px rgb(0 0 0 / 0.45)",
   },
+  cardFeatured: {
+    gridColumn: "span 2",
+    gridRow: "span 2",
+  },
 });
 
 type AppTagCardProps = {
   tag: Pick<DirectoryAppTagSummary, "tag" | "count">;
+  isFeatured?: boolean;
 };
 
-export function AppTagCard({ tag }: AppTagCardProps) {
+export function AppTagCard({ tag, isFeatured }: AppTagCardProps) {
   const accent = getAppTagAccent(tag.tag);
   const imageSrc = resolveResizedBannerRecordUrl(
     getAppTagHeroAssetPathForTag(tag.tag),
@@ -118,7 +129,11 @@ export function AppTagCard({ tag }: AppTagCardProps) {
       to="/apps/$tag"
       params={{ tag: getAppTagSlug(tag.tag) }}
       search={{ sort: "popular" }}
-      {...stylex.props(styles.card, getSoftAccentSurface(accent))}
+      {...stylex.props(
+        styles.card,
+        getSoftAccentSurface(accent),
+        isFeatured && styles.cardFeatured,
+      )}
     >
       {imageSrc ? (
         <img
@@ -131,7 +146,11 @@ export function AppTagCard({ tag }: AppTagCardProps) {
       <div {...stylex.props(styles.cardOverlay)} />
       <Flex direction="column" gap="2xl" style={styles.cardContent}>
         <Text
-          size={{ default: "xl", sm: "2xl" }}
+          size={
+            isFeatured
+              ? { default: "3xl", sm: "4xl" }
+              : { default: "xl", sm: "2xl" }
+          }
           weight="semibold"
           style={styles.title}
         >
@@ -139,9 +158,16 @@ export function AppTagCard({ tag }: AppTagCardProps) {
         </Text>
       </Flex>
       <Flex align="center" justify="between" gap="md" style={styles.cardFooter}>
-        <SmallBody style={styles.footerText}>
+        <Text
+          style={styles.footerText}
+          size={
+            isFeatured
+              ? { default: "xl", sm: "2xl" }
+              : { default: "sm", sm: "base" }
+          }
+        >
           {formatAppTagCount(tag.count)}
-        </SmallBody>
+        </Text>
         <ChevronRight {...stylex.props(styles.chevron)} />
       </Flex>
     </RouterLink>

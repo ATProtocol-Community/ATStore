@@ -1711,7 +1711,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
       'homepage fresh listings',
     )
 
-    const tags = buildHomePageTagSummaries(tagRows, 8)
+    const tags = buildHomePageTagSummaries(tagRows, 9)
     const dedupedProtocolRows = dedupeListings(protocolRows)
     const protocolFeaturedSource =
       dedupedProtocolRows.find((row) => row.screenshotUrls.length > 0 || row.iconUrl) ||
