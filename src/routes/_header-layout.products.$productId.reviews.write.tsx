@@ -149,7 +149,10 @@ function ProductReviewWritePage() {
           <Card style={styles.reviewCard}>
             <Form
               style={styles.reviewCardBody}
-              onSubmit={() => submitReview.mutate()}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitReview.mutate();
+              }}
             >
               <Flex gap="2xl" align="center">
                 <Text size="sm" variant="secondary">

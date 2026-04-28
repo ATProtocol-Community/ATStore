@@ -199,7 +199,10 @@ function ProductReviewEditPage() {
           <Card style={styles.reviewCard}>
             <Form
               style={styles.reviewCardBody}
-              onSubmit={() => saveReview.mutate()}
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveReview.mutate();
+              }}
             >
               <Flex gap="2xl" align="center">
                 <Text size="sm" variant="secondary">
