@@ -56,6 +56,7 @@ import { useHover } from "react-aria";
 import { StarRating } from "#/design-system/star-rating";
 import { Button } from "#/design-system/button";
 import { HeroImage } from "#/components/HeroImage";
+import { Text } from "#/design-system/typography/text.tsx";
 
 const ButtonLink = createLink(Button);
 
@@ -200,8 +201,14 @@ const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     gap: gap["4xl"],
-    marginBottom: verticalSpace["8xl"],
-    marginTop: verticalSpace["11xl"],
+    marginBottom: {
+      default: verticalSpace["2xl"],
+      [breakpoints.md]: verticalSpace["8xl"],
+    },
+    marginTop: {
+      default: verticalSpace["8xl"],
+      [breakpoints.md]: verticalSpace["11xl"],
+    },
     paddingLeft: horizontalSpace["2xl"],
     paddingRight: horizontalSpace["2xl"],
     textAlign: "center",
@@ -278,6 +285,12 @@ const styles = stylex.create({
     paddingLeft: horizontalSpace["4xl"],
     paddingRight: horizontalSpace["4xl"],
   },
+  cardDescription: {
+    fontSize: fontSize.base,
+    lineHeight: lineHeight.base,
+    margin: 0,
+    color: uiColor.text1,
+  },
   accountCard: {
     backgroundImage: `linear-gradient(-45deg, ${uiColor.bgSubtle} 0%, ${uiColor.component2} 100%)`,
     borderColor: uiColor.border1,
@@ -287,13 +300,31 @@ const styles = stylex.create({
     boxShadow: shadow.xl,
     maxWidth: "90vw",
     boxSizing: "border-box",
-    paddingTop: verticalSpace["10xl"],
-    paddingBottom: verticalSpace["10xl"],
-    paddingLeft: horizontalSpace["7xl"],
-    paddingRight: horizontalSpace["7xl"],
+    paddingTop: {
+      default: verticalSpace["5xl"],
+      [breakpoints.md]: verticalSpace["10xl"],
+    },
+    paddingBottom: {
+      default: verticalSpace["5xl"],
+      [breakpoints.md]: verticalSpace["10xl"],
+    },
+    paddingLeft: {
+      default: horizontalSpace["5xl"],
+      [breakpoints.md]: horizontalSpace["7xl"],
+    },
+    paddingRight: {
+      default: horizontalSpace["5xl"],
+      [breakpoints.md]: horizontalSpace["7xl"],
+    },
     textAlign: "center",
-    marginLeft: horizontalSpace["8xl"],
-    marginRight: horizontalSpace["8xl"],
+    marginLeft: {
+      default: horizontalSpace["5xl"],
+      [breakpoints.md]: horizontalSpace["8xl"],
+    },
+    marginRight: {
+      default: horizontalSpace["5xl"],
+      [breakpoints.md]: horizontalSpace["8xl"],
+    },
   },
   accountLogo: {
     alignItems: "center",
@@ -330,7 +361,10 @@ const styles = stylex.create({
   accountTags: {
     display: "flex",
     flexWrap: "wrap",
-    gap: gap.md,
+    gap: {
+      default: gap.sm,
+      [breakpoints.md]: gap.md,
+    },
     justifyContent: "center",
     marginBottom: verticalSpace["2xl"],
     marginTop: verticalSpace["2xl"],
@@ -343,7 +377,10 @@ const styles = stylex.create({
     borderWidth: 1,
     borderRadius: radius.full,
     color: uiColor.text1,
-    fontSize: fontSize.sm,
+    fontSize: {
+      default: fontSize.xs,
+      [breakpoints.md]: fontSize.sm,
+    },
     fontWeight: fontWeight.semibold,
     fontFamily: fontFamily.sans,
     paddingTop: verticalSpace.sm,
@@ -462,8 +499,18 @@ const styles = stylex.create({
     paddingLeft: horizontalSpace["4xl"],
     paddingRight: horizontalSpace["4xl"],
     display: "flex",
-    flexDirection: "column",
-    gap: gap.xl,
+    alignItems: {
+      default: "center",
+      [breakpoints.md]: "flex-start",
+    },
+    flexDirection: {
+      default: "row",
+      [breakpoints.md]: "column",
+    },
+    gap: {
+      default: gap["4xl"],
+      [breakpoints.md]: gap["2xl"],
+    },
     flexGrow: 1,
     flexShrink: 0,
     flexBasis: 0,
@@ -919,9 +966,9 @@ function RouteComponent() {
                 </span>
               ))}
             </div>
-            <p {...stylex.props(styles.sectionBody)}>
+            <Text size="base" style={styles.cardDescription}>
               One account. Hundreds of apps. All your data, always yours.
-            </p>
+            </Text>
           </div>
         </Flex>
       </Page.Hero>
@@ -965,15 +1012,19 @@ function RouteComponent() {
                     <span {...stylex.props(styles.featureIcon)}>
                       <item.icon size={20} />
                     </span>
-                    <Flex direction="column" gap="md">
+                    <Flex direction="column" gap="2xl">
                       <div {...stylex.props(styles.featureTitleRow)}>
-                        <h3 {...stylex.props(styles.featureTitle)}>
+                        <Text
+                          weight="semibold"
+                          size="lg"
+                          style={styles.featureTitle}
+                        >
                           {item.title}
-                        </h3>
+                        </Text>
                       </div>
-                      <p {...stylex.props(styles.featureBody)}>
+                      <Text size="base" style={styles.featureBody}>
                         {item.subtitle}
-                      </p>
+                      </Text>
                     </Flex>
                   </article>
                 ))}
