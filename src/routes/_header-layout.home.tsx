@@ -177,7 +177,7 @@ const styles = stylex.create({
   pageSections: {
     gap: {
       default: 40,
-      [breakpoints.sm]: 52,
+      [breakpoints.sm]: 64,
     },
   },
   section: {
@@ -206,7 +206,6 @@ const styles = stylex.create({
   },
   spotlightCard: {
     boxShadow: shadow.xl,
-    minHeight: "12.5rem",
     height: "100%",
     borderRadius: radius["xl"],
     transitionProperty: "transform",
@@ -218,9 +217,20 @@ const styles = stylex.create({
     },
   },
   promoCard: {
-    borderRadius: radius["xl"],
     boxShadow: shadow.xl,
-    minHeight: "18rem",
+    color: uiColor.text2,
+    height: "100%",
+    borderRadius: radius["lg"],
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderColor: uiColor.border1,
+    transitionProperty: "transform",
+    transitionDuration: "0.2s",
+    transitionTimingFunction: "ease-in-out",
+    transform: {
+      default: "none",
+      ":hover": "translateY(-2px)",
+    },
   },
   accentOverlay: {
     background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 12%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent) 46%, color-mix(in srgb, ${uiColor.overlayBackdrop} 100%, transparent) 100%)`,
@@ -768,22 +778,8 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(
-        styles.bentoLink,
-        styles.accentCard,
-        styles.promoCard,
-        getAccentSurface(listing.accent),
-      )}
+      {...stylex.props(styles.bentoLink, styles.promoCard)}
     >
-      <div {...stylex.props(styles.accentOverlay)} />
-      <div {...stylex.props(styles.ambientGlow)}>
-        <div
-          {...stylex.props(
-            styles.ambientGlowInner,
-            getAccentGlow(listing.accent),
-          )}
-        />
-      </div>
       <Flex direction="column" gap="5xl" style={styles.compactCardContent}>
         <SmallBody style={styles.eyebrow}>Trending</SmallBody>
         <Flex direction="column" gap="2xl">
