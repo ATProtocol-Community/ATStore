@@ -329,9 +329,8 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
      * store account so we don't surface spoofed `migratedFromAtUri` values from
      * unverified records.
      *
-     * Sort by claim time when present (`claimed_at`). Rows that predate that column
-     * (legacy PDS claims with null `claimed_at`) fall back to directory `created_at` so
-     * newly added listings are not ranked by Tap-bounced `updated_at`.
+     * Sort by `COALESCE(claimed_at, created_at)` only. Legacy PDS rows without
+     * `claimed_at` use directory date added; backfill `claimed_at` when possible.
      */
     const atstoreDid = await getAtstoreRepoDid()
 
@@ -351,7 +350,6 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
         repoDid: listings.repoDid,
         migratedFromAtUri: listings.migratedFromAtUri,
         verificationStatus: listings.verificationStatus,
-        updatedAt: listings.updatedAt,
         createdAt: listings.createdAt,
       })
       .from(listings)
@@ -381,8 +379,6 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
         row.repoDid != null &&
         row.repoDid !== atstoreDid
       const claimedByDid = row.claimedByDid ?? (isMigration ? row.repoDid : null)
-      const claimedAtDate =
-        row.claimedAt ?? (isMigration ? row.updatedAt : null)
       return {
         id: row.id,
         name: row.name,
@@ -394,7 +390,7 @@ const getRecentlyClaimedListings = createServerFn({ method: 'GET' })
         productAccountHandle: row.productAccountHandle,
         productAccountDid: row.productAccountDid,
         claimedByDid,
-        claimedAt: claimedAtDate ? claimedAtDate.toISOString() : null,
+        claimedAt: row.claimedAt ? row.claimedAt.toISOString() : null,
         createdAt: row.createdAt.toISOString(),
         claimSource: (isMigration ? 'pds-migration' : 'admin-approval') as
           | 'pds-migration'
