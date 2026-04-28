@@ -42,7 +42,6 @@ import { formatAppTagLabel } from "../lib/app-tag-metadata";
 import { getDirectoryCategoryOption } from "../lib/directory-categories";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { getProtocolPageHeroArtSpec } from "../lib/protocol-page-hero-art";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { useFocusRing } from "react-aria";
@@ -223,7 +222,6 @@ function SearchPage() {
             eyebrow={`${listings.length} total listings`}
             title="Search all listings"
             description="Find any listing in one place, across apps and protocol tools."
-            imageSrc={getProtocolPageHeroArtSpec("search")?.assetPath}
           />
         </Flex>
 

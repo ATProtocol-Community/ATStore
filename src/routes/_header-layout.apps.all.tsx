@@ -216,7 +216,6 @@ function AppsAllPage() {
             eyebrow={`${apps.length} curated app listings`}
             title="Browse All Apps"
             description="Scan the full Bluesky app catalog in one place, then narrow it down with search or jump into editorial collections by tag."
-            imageSrc={getAppTagHeroArtSpec("all-apps")?.assetPath}
           />
         </Flex>
 

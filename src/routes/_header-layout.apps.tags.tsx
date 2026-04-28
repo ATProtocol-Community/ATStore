@@ -91,7 +91,6 @@ function AppsAllPage() {
             eyebrow="Collections"
             title="Find your new favorite app"
             description="Explore cross-cutting app tags like analytics, moderation, and automation. Listings can appear in more than one group when they fit multiple workflows."
-            imageSrc={getAppTagHeroArtSpec("all")?.assetPath}
           />
         </Flex>
 

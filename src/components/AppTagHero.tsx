@@ -379,9 +379,7 @@ export function AppTagHero({
           <div {...stylex.props(styles.imageFrame, ui.bgSubtle)}>
             {bannerSrc ? (
               <img {...stylex.props(styles.image)} alt="" src={bannerSrc} />
-            ) : (
-              <div {...stylex.props(styles.imageFallback)} aria-hidden="true" />
-            )}
+            ) : null}
           </div>
 
           <Flex justify="between" gap="5xl" align="end" wrap>
