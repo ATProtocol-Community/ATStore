@@ -1,5 +1,6 @@
-/** HttpOnly app session cookie (Better Auth–shaped; ATProto tokens live in OAuth store). */
+/**
+ * HttpOnly app session cookie. The token is opaque (random UUID) and resolves
+ * server-side to a `session` row, which authoritatively determines the user
+ * (and therefore the DID) for the request. Never trust client-supplied DIDs.
+ */
 export const AUTH_SESSION_TOKEN_COOKIE = 'atstore-auth.session_token'
-
-/** Set by OAuth callback; used to restore ATProto OAuth session from the verification store. */
-export const ATPROTO_DID_COOKIE = 'atproto-did'

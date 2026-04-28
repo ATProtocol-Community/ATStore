@@ -5,11 +5,12 @@
 
 import { Client } from '@atcute/client'
 import { isDid } from '@atcute/lexicons/syntax'
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { redirect } from '@tanstack/react-router'
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 
+import { AUTH_SESSION_TOKEN_COOKIE } from '#/integrations/auth/constants'
 import { SUPER_ADMIN_DID } from '#/lib/super-admin'
 import { getSafePostLoginRedirect } from '#/utils/auth-redirect'
 
@@ -29,19 +30,32 @@ export type AtprotoSessionContext = {
   }
 }
 
-/** Session + ATProto `Client` when cookies and OAuth session are valid. */
+function readSessionTokenCookie(cookieHeader: string | null): string | undefined {
+  if (!cookieHeader) return undefined
+  for (const pair of cookieHeader.split('; ')) {
+    const eqIdx = pair.indexOf('=')
+    if (eqIdx === -1) continue
+    const name = pair.slice(0, eqIdx)
+    if (name === AUTH_SESSION_TOKEN_COOKIE) {
+      return pair.slice(eqIdx + 1)
+    }
+  }
+  return undefined
+}
+
+/**
+ * Session + ATProto `Client` when the request carries a valid app session
+ * token AND the user's stored OAuth session is still restorable.
+ *
+ * The DID is derived from the authenticated `user` row — never from a
+ * client-controlled cookie — so a request can only act as the user that the
+ * (opaque, server-issued) session token belongs to.
+ */
 export async function getAtprotoSessionForRequest(
   request: Request,
 ): Promise<AtprotoSessionContext | undefined> {
-  const cookieHeader = request.headers.get('cookie') || ''
-  const cookiePairs = cookieHeader.split('; ').map((c) => {
-    const [key, ...valueParts] = c.split('=')
-    return [key ?? '', valueParts.join('=')] as [string, string]
-  })
-  const cookies = Object.fromEntries(cookiePairs) as Record<string, string>
-  const did = cookies['atproto-did'] as string | undefined
-
-  if (!did || !isDid(did)) {
+  const sessionToken = readSessionTokenCookie(request.headers.get('cookie'))
+  if (!sessionToken) {
     return
   }
 
@@ -51,27 +65,29 @@ export async function getAtprotoSessionForRequest(
     import('#/integrations/auth/atproto'),
   ])
 
-  const atprotoSession = await restoreAtprotoSession(did)
-
-  if (!atprotoSession) {
-    return
-  }
-
-  const account = await db.query.account.findFirst({
-    where: and(
-      eq(schema.account.accountId, did),
-      eq(schema.account.providerId, 'atproto'),
-    ),
+  const sessionRow = await db.query.session.findFirst({
+    where: eq(schema.session.token, sessionToken),
     with: { user: true },
   })
 
-  if (!account?.user) {
+  if (!sessionRow || sessionRow.expiresAt.getTime() <= Date.now()) {
+    return
+  }
+
+  const userRow = sessionRow.user
+  const did = userRow?.did
+  if (!did || !isDid(did)) {
+    return
+  }
+
+  const atprotoSession = await restoreAtprotoSession(did)
+  if (!atprotoSession) {
     return
   }
 
   const client = new Client({ handler: atprotoSession })
 
-  return { did, atprotoSession, client, session: { user: account.user } }
+  return { did, atprotoSession, client, session: { user: userRow } }
 }
 
 async function getSessionContext(request: Request) {

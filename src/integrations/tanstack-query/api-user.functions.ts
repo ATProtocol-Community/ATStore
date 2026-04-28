@@ -1,5 +1,6 @@
 import type { Did } from '@atcute/lexicons'
 
+import { isDid } from '@atcute/lexicons/syntax'
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie, getRequest, setCookie } from '@tanstack/react-start/server'
@@ -10,6 +11,7 @@ import {
   restoreAtprotoSession,
   revokeAtprotoSession,
 } from '#/integrations/auth/atproto'
+import { AUTH_SESSION_TOKEN_COOKIE } from '#/integrations/auth/constants'
 import {
   fetchBlueskyHandleForDid,
 } from '#/lib/bluesky-public-profile'
@@ -41,44 +43,53 @@ const getSession = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     const request = getRequest()
     const cookies = parseCookies(request.headers.get('cookie'))
-    const did = cookies['atproto-did'] as string | undefined
+    const sessionToken = cookies[AUTH_SESSION_TOKEN_COOKIE]
 
-    if (!did) {
-      return null
-    }
-
-    const atprotoSession = await restoreAtprotoSession(did as Did)
-    if (!atprotoSession) {
+    if (!sessionToken) {
       return null
     }
 
     const db = context.db
     const schema = context.schema
-    const userRow = await db.query.user.findFirst({
-      where: eq(schema.user.did, did),
-      columns: {
-        id: true,
-        name: true,
-        email: true,
-        did: true,
-        emailVerified: true,
-        image: true,
-        isAdmin: true,
-        createdAt: true,
-        updatedAt: true,
+    const sessionRow = await db.query.session.findFirst({
+      where: eq(schema.session.token, sessionToken),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+            did: true,
+            emailVerified: true,
+            image: true,
+            isAdmin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     })
 
-    if (!userRow) {
+    if (!sessionRow || sessionRow.expiresAt.getTime() <= Date.now()) {
+      return null
+    }
+
+    const userRow = sessionRow.user
+    if (!userRow?.did || !isDid(userRow.did)) {
+      return null
+    }
+
+    const atprotoSession = await restoreAtprotoSession(userRow.did)
+    if (!atprotoSession) {
       return null
     }
 
     return {
       user: userRow,
       session: {
-        id: crypto.randomUUID(),
+        id: sessionRow.id,
         userId: userRow.id,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        expiresAt: sessionRow.expiresAt,
       },
     }
   })
@@ -185,21 +196,44 @@ const setThemePreference = createServerFn({ method: 'POST' })
     return { mode: data.mode }
   })
 
-const signOut = createServerFn({ method: 'POST' }).handler(async () => {
-  const request = getRequest()
-  const cookies = parseCookies(request.headers.get('cookie'))
-  const did = cookies['atproto-did'] as string | undefined
+const signOut = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const request = getRequest()
+    const cookies = parseCookies(request.headers.get('cookie'))
+    const sessionToken = cookies[AUTH_SESSION_TOKEN_COOKIE]
 
-  if (did) {
-    try {
-      await revokeAtprotoSession(did as Did)
-    } catch (error) {
-      console.warn('Failed to revoke Atproto session:', error)
+    if (sessionToken) {
+      const db = context.db
+      const schema = context.schema
+      const sessionRow = await db.query.session.findFirst({
+        where: eq(schema.session.token, sessionToken),
+        with: { user: { columns: { did: true } } },
+      })
+
+      if (sessionRow) {
+        await db.delete(schema.session).where(eq(schema.session.id, sessionRow.id))
+
+        const did = sessionRow.user?.did
+        if (did && isDid(did)) {
+          try {
+            await revokeAtprotoSession(did as Did)
+          } catch (error) {
+            console.warn('Failed to revoke Atproto session:', error)
+          }
+        }
+      }
     }
-  }
 
-  return { success: true }
-})
+    setCookie(AUTH_SESSION_TOKEN_COOKIE, '', {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 0,
+    })
+
+    return { success: true }
+  })
 
 export const user = {
   getSession,

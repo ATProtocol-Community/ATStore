@@ -2,7 +2,6 @@ import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
 import { LogOut, Monitor, Moon, Shield, Sun } from "lucide-react";
-import Cookies from "universal-cookie";
 
 import { AvatarButton } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
@@ -13,10 +12,6 @@ import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
 import { NavbarAction } from "../design-system/navbar";
 import { criticalColor } from "../design-system/theme/color.stylex";
 import { size } from "../design-system/theme/semantic-spacing.stylex";
-import {
-  ATPROTO_DID_COOKIE,
-  AUTH_SESSION_TOKEN_COOKIE,
-} from "#/integrations/auth/constants";
 import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
 import { user } from "#/integrations/tanstack-query/api-user.functions";
 import { useNotificationReadState } from "#/lib/notification-read-state";
@@ -66,10 +61,6 @@ export function NavbarAuth() {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await user.signOut();
-
-      const cookies = new Cookies();
-      cookies.remove(ATPROTO_DID_COOKIE, { path: "/" });
-      cookies.remove(AUTH_SESSION_TOKEN_COOKIE, { path: "/" });
 
       queryClient.setQueryData(user.getSessionQueryOptions.queryKey, null);
       await queryClient.resetQueries();

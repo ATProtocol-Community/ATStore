@@ -2,10 +2,7 @@ import { Client } from "@atcute/client";
 import { and, eq } from "drizzle-orm";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import {
-  AUTH_SESSION_TOKEN_COOKIE,
-  ATPROTO_DID_COOKIE,
-} from "#/integrations/auth/constants";
+import { AUTH_SESSION_TOKEN_COOKIE } from "#/integrations/auth/constants";
 import { atprotoOAuth } from "#/integrations/auth/atproto";
 import {
   fetchBlueskyPublicProfileFields,
@@ -179,10 +176,6 @@ export const Route = createFileRoute("/api/auth/atproto/callback")({
           headers.append(
             "Set-Cookie",
             `${AUTH_SESSION_TOKEN_COOKIE}=${sessionToken}; ${cookieAttributes}`,
-          );
-          headers.append(
-            "Set-Cookie",
-            `${ATPROTO_DID_COOKIE}=${did}; ${cookieAttributes}`,
           );
 
           return new Response(null, {
