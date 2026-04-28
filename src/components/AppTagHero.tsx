@@ -80,14 +80,6 @@ export function AppTagHero({
 
   return (
     <Flex direction="column" gap="4xl" style={styles.root}>
-      <div {...stylex.props(styles.imageFrame, ui.bgSubtle)}>
-        {bannerSrc ? (
-          <img {...stylex.props(styles.image)} alt="" src={bannerSrc} />
-        ) : (
-          <div {...stylex.props(styles.imageFallback)} aria-hidden="true" />
-        )}
-      </div>
-
       <Flex justify="between" gap="5xl" align="end" wrap>
         <Flex direction="column" gap="5xl" style={styles.copy}>
           {eyebrow ? (
