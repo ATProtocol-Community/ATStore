@@ -9,6 +9,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNull,
   ne,
   or,
   sql,
@@ -568,6 +569,11 @@ const listDirectoryListingsInput = z.object({
    * When true, only listings with no `product_account_handle` (e.g. manual claim picker).
    */
   withoutProductAccountHandleOnly: z.boolean().optional().default(false),
+  /**
+   * When true, exclude listings the current session already “owns” (same `product_account_did`
+   * or listing record lives in the user’s repo). Used by `/product/claim` manual search.
+   */
+  excludeOwnedListingsForSession: z.boolean().optional().default(false),
 })
 
 const listingSortInput = z
@@ -3128,10 +3134,27 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
       ? sql`coalesce(trim(${table.productAccountHandle}), '') = ''`
       : undefined
 
-    const filterExtra =
+    let filterExtra: SQL | undefined =
       searchClause && noProductHandleClause
         ? and(searchClause, noProductHandleClause)
         : (searchClause ?? noProductHandleClause)
+
+    if (data.excludeOwnedListingsForSession) {
+      const session = await getAtprotoSessionForRequest(getRequest())
+      const did = session?.did?.trim()
+      if (did) {
+        const notAlreadyProductAccount = or(
+          isNull(table.productAccountDid),
+          ne(table.productAccountDid, did),
+        )
+        const notPublishedInClaimantRepo = or(
+          isNull(table.repoDid),
+          ne(table.repoDid, did),
+        )
+        const excludeOwned = and(notAlreadyProductAccount, notPublishedInClaimantRepo)
+        filterExtra = filterExtra ? and(filterExtra, excludeOwned) : excludeOwned
+      }
+    }
 
     const rows = await context.db
       .select(listingSelect)

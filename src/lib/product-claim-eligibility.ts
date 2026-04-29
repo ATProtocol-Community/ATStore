@@ -3,7 +3,10 @@ import {
   asc,
   eq,
   isNotNull,
+  isNull,
+  ne,
   not,
+  or,
   sql,
   type SQL,
 } from 'drizzle-orm'
@@ -37,6 +40,11 @@ export function cookieHeaderSkipsProductClaim(
 /**
  * Listings still on the AT Store repo whose product account DID matches `productAccountDid`
  * (user can claim them onto their PDS).
+ *
+ * When the store publisher DID equals the product owner DID (typical in local dev), a completed
+ * claim still satisfies `repo_did = atstore_did` because both match the user's DID. Those rows
+ * have migration lineage + no pending claim; still-waiting rows have no `migrated_from_at_uri` yet,
+ * or an in-flight claim sets `claim_pending_for_did`.
  */
 export async function findEligibleProductClaimsForDid(
   db: Database,
@@ -68,6 +76,11 @@ export async function findEligibleProductClaimsForDid(
         eq(t.verificationStatus, 'verified'),
         eq(t.productAccountDid, productAccountDid),
         eq(t.repoDid, atstoreDid),
+        or(
+          isNull(t.migratedFromAtUri),
+          ne(t.repoDid, t.productAccountDid),
+          isNotNull(t.claimPendingForDid),
+        ),
         isNotNull(t.atUri),
         isNotNull(t.rkey),
         not(sqlCategorySlugsHasProtocolBrowseableSegment(t.categorySlugs)),

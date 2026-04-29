@@ -163,6 +163,7 @@ function ProductClaimPage() {
         canSearch && deferredSearch.length >= 2 ? deferredSearch : undefined,
       limit: 12,
       withoutProductAccountHandleOnly: true,
+      excludeOwnedListingsForSession: true,
     }),
     enabled: canSearch && deferredSearch.length >= 2,
   });
