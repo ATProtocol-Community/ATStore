@@ -8,7 +8,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { Separator } from "../design-system/separator";
+import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { StarRating } from "../design-system/star-rating";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
@@ -69,9 +69,6 @@ const styles = stylex.create({
     paddingLeft: horizontalSpace.lg,
     paddingRight: horizontalSpace.lg,
     paddingTop: verticalSpace.lg,
-  },
-  reviewBody: {
-    whiteSpace: "pre-wrap",
   },
   listingRow: {
     alignItems: "center",
@@ -206,13 +203,11 @@ function AdminReviewsPage() {
 
                         {r.text && r.text.trim() !== "" ? (
                           <div {...stylex.props(styles.reviewBlock)}>
-                            <Text
-                              size="sm"
-                              variant="secondary"
-                              style={styles.reviewBody}
-                            >
-                              {r.text}
-                            </Text>
+                            <RestrictedMarkdownContent
+                              compact
+                              content={r.text}
+                              paragraphVariant="secondary"
+                            />
                           </div>
                         ) : (
                           <Text size="sm" variant="secondary">

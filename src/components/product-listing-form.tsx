@@ -1239,6 +1239,7 @@ export function ProductListingForm({
                   />
                   <TextArea
                     label="Description"
+                    description="Describe what your product does, then call out your top features—paragraphs or bullets both work."
                     value={fullDescription}
                     onChange={setFullDescription}
                     rows={10}

@@ -86,6 +86,7 @@ import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { BlueskyIcon } from "#/components/bluesky-icon";
 import { ToggleButton } from "#/design-system/toggle-button";
 import { Tooltip } from "../design-system/tooltip";
+import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -768,16 +769,10 @@ function ProductPage() {
           </Flex>
         </Flex>
         <HeroSection listing={listing} productId={productId} />
-        <Flex direction="column" gap="6xl">
-          {getDescriptionBlocks(listing.description).map((block, index) => (
-            <Body
-              key={`${listing.id}-description-${index}`}
-              style={styles.descriptionText}
-            >
-              {block}
-            </Body>
-          ))}
-        </Flex>
+        <RestrictedMarkdownContent
+          content={listing.description}
+          paragraphStyle={styles.descriptionText}
+        />
         {listing.links.length > 0 ? (
           <ListingLinksRow links={listing.links} />
         ) : null}
@@ -1334,15 +1329,6 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
-}
-
-function getDescriptionBlocks(description: string) {
-  const blocks = description
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter(Boolean);
-
-  return blocks.length > 0 ? blocks : [description];
 }
 
 function isProtocolCategorySlug(slug: string) {

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
 import { formatAppTagLabel } from "#/lib/app-tag-metadata";
-import { Badge } from "../design-system/badge";
+import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { Button } from "../design-system/button";
 import {
   Card,
@@ -74,9 +74,6 @@ const styles = stylex.create({
   },
   listStack: {
     gap: gap.xl,
-  },
-  description: {
-    whiteSpace: "pre-wrap",
   },
   appTagsRow: {
     flexWrap: "wrap",
@@ -256,13 +253,11 @@ function UnverifiedListingsPage() {
                             </Flex>
                           </Flex>
                           {row.fullDescription ? (
-                            <Text
-                              size="sm"
-                              variant="secondary"
-                              style={styles.description}
-                            >
-                              {row.fullDescription}
-                            </Text>
+                            <RestrictedMarkdownContent
+                              compact
+                              content={row.fullDescription}
+                              paragraphVariant="secondary"
+                            />
                           ) : null}
                           {row.appTags && row.appTags.length > 0 ? (
                             <Flex style={styles.appTagsRow}>

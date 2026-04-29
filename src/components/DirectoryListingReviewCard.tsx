@@ -32,7 +32,7 @@ import {
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { Body } from "../design-system/typography";
+import { RestrictedMarkdownContent } from "./restricted-markdown-content";
 import { Text } from "../design-system/typography/text";
 import {
   directoryListingApi,
@@ -68,9 +68,8 @@ const styles = stylex.create({
   reviewMeta: {
     color: uiColor.text1,
   },
-  reviewQuote: {
+  reviewQuoteParagraph: {
     fontSize: fontSize["lg"],
-    whiteSpace: "pre-wrap",
   },
   ratingActions: {
     alignItems: "center",
@@ -324,7 +323,10 @@ export function DirectoryListingReviewCard({
             {reviewedListing && listingProductId ? (
               <>
                 {review.text ? (
-                  <Body style={styles.reviewQuote}>{review.text}</Body>
+                  <RestrictedMarkdownContent
+                    content={review.text}
+                    paragraphStyle={styles.reviewQuoteParagraph}
+                  />
                 ) : null}
                 <Text size="sm" variant="secondary" style={styles.reviewMeta}>
                   {new Date(review.reviewCreatedAt).toLocaleDateString(
@@ -427,7 +429,10 @@ export function DirectoryListingReviewCard({
                   </Flex>
                 </Flex>
                 {review.text ? (
-                  <Body style={styles.reviewQuote}>{review.text}</Body>
+                  <RestrictedMarkdownContent
+                    content={review.text}
+                    paragraphStyle={styles.reviewQuoteParagraph}
+                  />
                 ) : null}
                 <Text size="sm" variant="secondary" style={styles.reviewMeta}>
                   {new Date(review.reviewCreatedAt).toLocaleDateString(

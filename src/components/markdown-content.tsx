@@ -7,11 +7,11 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
-import type { LinkProps } from "../link";
-import type { StyleXComponentProps } from "../theme/types";
+import type { LinkProps } from "#/design-system/link";
+import type { StyleXComponentProps } from "#/design-system/theme/types";
 
-import { Link } from "../link";
-import { verticalSpace } from "../theme/semantic-spacing.stylex";
+import { Link } from "#/design-system/link";
+import { verticalSpace } from "#/design-system/theme/semantic-spacing.stylex";
 import {
   Blockquote,
   Body,
@@ -25,8 +25,8 @@ import {
   OrderedList,
   Pre,
   UnorderedList,
-} from "../typography";
-import { Text } from "../typography/text";
+} from "#/design-system/typography";
+import { Text } from "#/design-system/typography/text";
 
 const styles = stylex.create({
   root: {},
@@ -57,7 +57,7 @@ const styles = stylex.create({
 
 /** Map of react-markdown element types to Hip typography; not a React component. */
 // oxlint-disable-next-line react-refresh/only-export-components
-export const components: Components = {
+export const markdownComponents: Components = {
   h1: ({ className: _className, style: _style, ...props }) => (
     <Heading1 {...props} />
   ),
@@ -126,7 +126,7 @@ export function MarkdownContent({
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize]}
-        components={components}
+        components={markdownComponents}
       >
         {content}
       </ReactMarkdown>
