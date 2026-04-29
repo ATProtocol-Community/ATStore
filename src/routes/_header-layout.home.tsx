@@ -50,6 +50,8 @@ import { buildRouteOgMeta } from "../lib/og-meta";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 import { StarRating } from "../design-system/star-rating";
+import { animationDuration } from "../design-system/theme/animations.stylex";
+import { animationTimingFunction } from "../design-system/theme/animations.stylex";
 
 export const Route = createFileRoute("/_header-layout/home")({
   loader: async ({ context }) => {
@@ -94,6 +96,7 @@ const styles = stylex.create({
     zIndex: 0,
   },
   newCardLink: {
+    boxShadow: shadow.md,
     display: "block",
     height: "100%",
     textDecoration: "none",
@@ -103,6 +106,24 @@ const styles = stylex.create({
     transform: {
       default: "none",
       ":hover": "translateY(-2px)",
+    },
+    borderRadius: radius.lg,
+    cornerShape: "squircle",
+
+    "::before": {
+      content: "''",
+      position: "absolute",
+      inset: 0,
+      boxShadow: shadow.lg,
+      borderRadius: radius.lg,
+      cornerShape: "squircle",
+      opacity: 0,
+      transitionProperty: "opacity",
+      transitionDuration: "0.2s",
+      transitionTimingFunction: "ease-in-out",
+    },
+    ":hover::before": {
+      opacity: 1,
     },
   },
   promoRatingRow: {
@@ -210,8 +231,30 @@ const styles = stylex.create({
     borderStyle: "solid",
     borderWidth: 2,
   },
-  spotlightCard: {
+  spotlightCardShadow: {
+    position: "relative",
     boxShadow: shadow.xl,
+    borderRadius: radius.xl,
+    cornerShape: "squircle",
+
+    "::before": {
+      content: "''",
+      position: "absolute",
+      inset: 0,
+      boxShadow: shadow.xl,
+      borderRadius: radius.xl,
+      cornerShape: "squircle",
+      opacity: 0,
+      transitionProperty: "opacity",
+      transitionDuration: animationDuration.default,
+      transitionTimingFunction: animationTimingFunction.linear,
+    },
+    ":hover::before": {
+      opacity: 1,
+    },
+  },
+  spotlightCard: {
+    boxShadow: shadow.none,
     height: "100%",
     borderRadius: radius["xl"],
     transitionProperty: "transform",
@@ -225,6 +268,7 @@ const styles = stylex.create({
   promoCard: {
     color: uiColor.text2,
     height: "100%",
+    boxShadow: shadow.none,
     borderRadius: radius["lg"],
     borderStyle: "solid",
     borderWidth: 1,
@@ -235,6 +279,28 @@ const styles = stylex.create({
     transform: {
       default: "none",
       ":hover": "translateY(-2px)",
+    },
+  },
+  promoCardShadow: {
+    position: "relative",
+    boxShadow: shadow.md,
+    borderRadius: radius.lg,
+    cornerShape: "squircle",
+
+    "::before": {
+      content: "''",
+      position: "absolute",
+      inset: 0,
+      boxShadow: shadow.lg,
+      borderRadius: radius.lg,
+      cornerShape: "squircle",
+      opacity: 0,
+      transitionProperty: "opacity",
+      transitionDuration: animationDuration.default,
+      transitionTimingFunction: animationTimingFunction.linear,
+    },
+    ":hover::before": {
+      opacity: 1,
     },
   },
   accentOverlay: {
@@ -464,6 +530,8 @@ const styles = stylex.create({
   },
   newCard: {
     height: "100%",
+    boxShadow: shadow.none,
+    position: "relative",
   },
   newCardContent: {
     display: "flex",
@@ -756,7 +824,7 @@ function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink)}
+      {...stylex.props(styles.bentoLink, styles.spotlightCardShadow)}
     >
       <Card style={[styles.accentCard, styles.spotlightCard]}>
         <Flex direction="column" gap="2xl" style={styles.compactCardContent}>
@@ -829,7 +897,7 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink)}
+      {...stylex.props(styles.bentoLink, styles.promoCardShadow)}
     >
       <Card style={styles.promoCard}>
         {listing.heroImageUrl ? (

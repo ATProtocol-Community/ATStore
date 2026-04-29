@@ -41,26 +41,16 @@ import {
   getAppTagAccent,
   getAppTagEmoji,
 } from "../lib/app-tag-visuals";
+import {
+  animationDuration,
+  animationTimingFunction,
+} from "../design-system/theme/animations.stylex";
 
 const styles = stylex.create({
-  card: {
-    borderRadius: radius.xl,
-    borderStyle: "solid",
-    borderWidth: 1,
-    boxShadow: shadow.lg,
-    color: "white",
-    cornerShape: "squircle",
+  cardLink: {
+    textDecoration: "none",
     display: "flex",
     flexDirection: "column",
-    gap: gap["8xl"],
-    justifyContent: "space-between",
-    overflow: "hidden",
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["4xl"],
-    position: "relative",
-    textDecoration: "none",
     transitionProperty: "transform",
     transitionDuration: "0.2s",
     transitionTimingFunction: "ease-in-out",
@@ -68,6 +58,27 @@ const styles = stylex.create({
       default: "none",
       ":hover": "translateY(-2px)",
     },
+    boxShadow: shadow.md,
+    borderRadius: radius["2xl"],
+    cornerShape: "squircle",
+  },
+  card: {
+    borderRadius: radius.xl,
+    borderStyle: "solid",
+    borderWidth: 1,
+    color: "white",
+    cornerShape: "squircle",
+    display: "flex",
+    flexDirection: "column",
+    gap: gap["8xl"],
+    justifyContent: "space-between",
+    position: "relative",
+    paddingBottom: verticalSpace["2xl"],
+    paddingLeft: horizontalSpace["3xl"],
+    paddingRight: horizontalSpace["3xl"],
+    paddingTop: verticalSpace["4xl"],
+    flexGrow: 1,
+
     /**
      * Drives the emoji-scatter parallax: 0 → 1 on hover. Each emoji's `transform` reads this
      * via `calc()` so individual glyphs can drift in different directions/distances while
@@ -78,6 +89,25 @@ const styles = stylex.create({
     "--emoji-hover": {
       default: 0,
       ":hover": 1,
+    },
+  },
+  cardShadow: {
+    position: "relative",
+
+    "::before": {
+      content: "''",
+      position: "absolute",
+      inset: 0,
+      borderRadius: radius.xl,
+      boxShadow: shadow["xl"],
+      cornerShape: "squircle",
+      opacity: 0,
+      transitionProperty: "opacity",
+      transitionDuration: animationDuration.default,
+      transitionTimingFunction: animationTimingFunction.linear,
+    },
+    ":hover::before": {
+      opacity: 1,
     },
   },
   cardContent: {
@@ -280,6 +310,7 @@ const styles = stylex.create({
     pointerEvents: "none",
     position: "absolute",
     zIndex: 0,
+    overflow: "hidden",
   },
   emojiBackdropFeatured: {
     fontSize: "1.5rem",
@@ -305,64 +336,71 @@ export function AppTagCard({ tag, isFeatured }: AppTagCardProps) {
       params={{ tag: getAppTagSlug(tag.tag) }}
       search={{ sort: "popular" }}
       {...stylex.props(
-        styles.card,
-        getSoftAccentSurface(accent),
+        styles.cardLink,
+        styles.cardShadow,
         isFeatured && styles.cardFeatured,
       )}
     >
-      <div
-        aria-hidden="true"
-        {...stylex.props(
-          styles.emojiBackdrop,
-          isFeatured && styles.emojiBackdropFeatured,
-        )}
-      >
-        <span {...stylex.props(styles.emojiBase, styles.emojiSlot1)}>
-          {emoji}
-        </span>
-        <span {...stylex.props(styles.emojiBase, styles.emojiSlot2)}>
-          {emoji}
-        </span>
-        <span {...stylex.props(styles.emojiBase, styles.emojiSlot3)}>
-          {emoji}
-        </span>
-        {isFeatured ? (
-          <>
-            <span {...stylex.props(styles.emojiBase, styles.emojiSlot4)}>
-              {emoji}
-            </span>
-            <span {...stylex.props(styles.emojiBase, styles.emojiSlot5)}>
-              {emoji}
-            </span>
-          </>
-        ) : null}
+      <div {...stylex.props(styles.card, getSoftAccentSurface(accent))}>
+        <div
+          aria-hidden="true"
+          {...stylex.props(
+            styles.emojiBackdrop,
+            isFeatured && styles.emojiBackdropFeatured,
+          )}
+        >
+          <span {...stylex.props(styles.emojiBase, styles.emojiSlot1)}>
+            {emoji}
+          </span>
+          <span {...stylex.props(styles.emojiBase, styles.emojiSlot2)}>
+            {emoji}
+          </span>
+          <span {...stylex.props(styles.emojiBase, styles.emojiSlot3)}>
+            {emoji}
+          </span>
+          {isFeatured ? (
+            <>
+              <span {...stylex.props(styles.emojiBase, styles.emojiSlot4)}>
+                {emoji}
+              </span>
+              <span {...stylex.props(styles.emojiBase, styles.emojiSlot5)}>
+                {emoji}
+              </span>
+            </>
+          ) : null}
+        </div>
+        <Flex direction="column" gap="2xl" style={styles.cardContent}>
+          <Text
+            size={
+              isFeatured
+                ? { default: "3xl", sm: "4xl" }
+                : { default: "xl", sm: "2xl" }
+            }
+            weight="semibold"
+            style={styles.title}
+          >
+            {formatAppTagLabel(tag.tag)}
+          </Text>
+        </Flex>
+        <Flex
+          align="center"
+          justify="between"
+          gap="md"
+          style={styles.cardFooter}
+        >
+          <Text
+            style={styles.footerText}
+            size={
+              isFeatured
+                ? { default: "xl", sm: "2xl" }
+                : { default: "sm", sm: "base" }
+            }
+          >
+            {formatAppTagCount(tag.count)}
+          </Text>
+          <ChevronRight {...stylex.props(styles.chevron)} />
+        </Flex>
       </div>
-      <Flex direction="column" gap="2xl" style={styles.cardContent}>
-        <Text
-          size={
-            isFeatured
-              ? { default: "3xl", sm: "4xl" }
-              : { default: "xl", sm: "2xl" }
-          }
-          weight="semibold"
-          style={styles.title}
-        >
-          {formatAppTagLabel(tag.tag)}
-        </Text>
-      </Flex>
-      <Flex align="center" justify="between" gap="md" style={styles.cardFooter}>
-        <Text
-          style={styles.footerText}
-          size={
-            isFeatured
-              ? { default: "xl", sm: "2xl" }
-              : { default: "sm", sm: "base" }
-          }
-        >
-          {formatAppTagCount(tag.count)}
-        </Text>
-        <ChevronRight {...stylex.props(styles.chevron)} />
-      </Flex>
     </RouterLink>
   );
 }
