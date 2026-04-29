@@ -115,6 +115,12 @@ function RouteComponent() {
             <SidebarLink to="/admin/hero-art" activeProps={{ isActive: true }}>
               Hero Art
             </SidebarLink>
+            <SidebarLink
+              to="/admin/listing-heroes"
+              activeProps={{ isActive: true }}
+            >
+              Listing heroes
+            </SidebarLink>
             {import.meta.env.DEV ? (
               <SidebarLink
                 to="/admin/hero-candidates"

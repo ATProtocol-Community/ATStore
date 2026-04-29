@@ -23,7 +23,7 @@ import {
   suggestAppTagsFromListing,
   suggestedTagsForListing,
 } from '../../lib/app-tags'
-import { findAppTagBySlug } from '../../lib/app-tag-metadata'
+import { findAppTagBySlug, formatAppTagLabel } from '../../lib/app-tag-metadata'
 import {
   buildDirectoryCategoryTree,
   flattenDirectoryCategoryTree,
@@ -43,6 +43,12 @@ import {
 import {
   buildDirectoryListingSlug,
 } from '../../lib/directory-listing-slugs'
+import { resolveBannerRecordUrl } from '../../lib/banner-record-url'
+import {
+  discoverOgImageUrlFromPage,
+  getListingExternalPageUrl,
+} from '../../lib/discover-external-og-image'
+import { buildFallbackOgImageUrl } from '../../lib/og-meta'
 import {
   adminFnMiddleware,
   getAtprotoSessionForRequest,
@@ -3294,13 +3300,12 @@ const removeStoreManagedListingHeroInput = z.object({
 })
 
 /**
- * Clear the displayed hero image for an AtStore-managed listing.
+ * Clear the hero image for an AtStore-managed listing: republish without a `heroImage` blob
+ * (see `clearHero` in `buildListingDetailRecordWithBlobs`), then null `hero_image_url` in Postgres
+ * so the site updates immediately.
  *
- * Only the DB column is cleared so the directory immediately stops rendering the hero. We
- * intentionally do not republish the atproto record: the lexicon requires `heroImage`, so a
- * republish would either re-upload the existing blob (no-op) or fall back to the placeholder /
- * a screenshot — and Tap ingest would then overwrite this column right back. The hero candidates
- * admin flow is the inverse pathway for re-attaching a hero later.
+ * DB-only clears are not enough: Tap ingest mirrors the chain record and would restore `heroImageUrl`
+ * from the blob on the next event.
  */
 const removeStoreManagedListingHero = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware, adminFnMiddleware])
@@ -3313,6 +3318,8 @@ const removeStoreManagedListingHero = createServerFn({ method: 'POST' })
         'Only AtStore-managed listings can have their hero image removed by an admin.',
       )
     }
+
+    await publishDirectoryListingDetail(full, undefined, { clearHero: true })
 
     const t = context.schema.storeListings
     await context.db
@@ -5083,6 +5090,216 @@ const getStoreManagedListingsQueryOptions = queryOptions({
   queryFn: async () => getStoreManagedListings(),
 })
 
+export type AdminListingHeroReviewRow = {
+  id: string
+  name: string
+  productSlug: string
+  heroImageUrl: string | null
+  /** Resolved catalog hero URL (e.g. imgproxy for `/generated/…`), when present. */
+  ogShareImageFromHero: string | null
+  /** `/og?…` card used for Open Graph when there is no hero. */
+  ogFallbackImagePath: string
+  /** Relative URL: resolved hero if set, otherwise the fallback `/og` card. */
+  effectiveOgImagePath: string
+  /** Product site URL used to scrape `og:image` (external link, else source URL). */
+  externalPageUrl: string | null
+  /** `repo_did` is the store publisher — hero can be cleared only when one exists (`canRemoveHero`). */
+  isStorePublished: boolean
+  canRemoveHero: boolean
+}
+
+/**
+ * Admin-only: every verified listing with fields needed to review on-page hero vs social preview.
+ */
+const getAdminListingHeroReview = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .handler(async ({ context }) => {
+    const atstoreDid = await getAtstoreRepoDid()
+    const t = context.schema.storeListings
+    const rows = await context.db
+      .select({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        tagline: t.tagline,
+        fullDescription: t.fullDescription,
+        heroImageUrl: t.heroImageUrl,
+        repoDid: t.repoDid,
+        appTags: t.appTags,
+        externalUrl: t.externalUrl,
+        sourceUrl: t.sourceUrl,
+      })
+      .from(t)
+      .where(listingPublicWhere(t))
+      .orderBy(asc(t.name))
+
+    return rows.map((row): AdminListingHeroReviewRow => {
+      const heroImageUrl = protocolRecordImageUrlOrNull(row.heroImageUrl)
+      const tagline =
+        sanitizeListingTagline(row.tagline) ||
+        sanitizeListingTagline(row.fullDescription) ||
+        'Discover a polished Bluesky tool.'
+      const primaryTag = row.appTags?.[0]
+        ? formatAppTagLabel(row.appTags[0])
+        : null
+      const ogDescription = primaryTag
+        ? `${tagline} Tag: ${primaryTag}.`
+        : tagline
+      const ogTitle = `${row.name} | at-store`
+      const resolvedHero = resolveBannerRecordUrl(heroImageUrl)
+      const ogFallbackImagePath = buildFallbackOgImageUrl({
+        title: ogTitle,
+        description: ogDescription,
+      })
+      const effectiveOgImagePath = resolvedHero ?? ogFallbackImagePath
+      const productSlug =
+        row.slug?.trim() || buildDirectoryListingSlug({ name: row.name })
+      const rawHero = row.heroImageUrl?.trim()
+      const isStorePublished = row.repoDid?.trim() === atstoreDid
+
+      return {
+        id: row.id,
+        name: row.name,
+        productSlug,
+        heroImageUrl,
+        ogShareImageFromHero: resolvedHero,
+        ogFallbackImagePath,
+        effectiveOgImagePath,
+        externalPageUrl: getListingExternalPageUrl({
+          externalUrl: row.externalUrl,
+          sourceUrl: row.sourceUrl,
+        }),
+        isStorePublished,
+        canRemoveHero: isStorePublished && Boolean(rawHero),
+      }
+    })
+  })
+
+const getAdminListingHeroReviewQueryOptions = queryOptions({
+  queryKey: ['storeListings', 'adminListingHeroReview'] as const,
+  queryFn: async () => getAdminListingHeroReview(),
+})
+
+const fetchListingExternalOgImageInput = z.object({
+  id: z.string().uuid(),
+})
+
+const fetchListingExternalOgImage = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .inputValidator(fetchListingExternalOgImageInput)
+  .handler(async ({ data, context }) => {
+    const t = context.schema.storeListings
+    const [row] = await context.db
+      .select({
+        externalUrl: t.externalUrl,
+        sourceUrl: t.sourceUrl,
+      })
+      .from(t)
+      .where(and(listingPublicWhere(t), eq(t.id, data.id)))
+      .limit(1)
+
+    if (!row) {
+      throw new Error('Listing not found.')
+    }
+
+    const pageUrl = getListingExternalPageUrl({
+      externalUrl: row.externalUrl,
+      sourceUrl: row.sourceUrl,
+    })
+
+    if (!pageUrl) {
+      return {
+        ogImageUrl: null as string | null,
+        pageUrl: null as string | null,
+      }
+    }
+
+    const ogImageUrl = await discoverOgImageUrlFromPage(pageUrl)
+    return { ogImageUrl, pageUrl }
+  })
+
+function getFetchListingExternalOgImageQueryOptions(listingId: string) {
+  const id = fetchListingExternalOgImageInput.parse({ id: listingId }).id
+  return queryOptions({
+    queryKey: ['storeListings', 'adminExternalOg', id] as const,
+    queryFn: async () => fetchListingExternalOgImage({ data: { id } }),
+    staleTime: 60 * 60 * 1000,
+  })
+}
+
+const applyListingHeroFromExternalOgInput = z.object({
+  id: z.string().uuid(),
+})
+
+/**
+ * Re-fetch og:image from the listing product URL, upload as a new hero blob on the store
+ * record, and mirror the CDN URL into `hero_image_url` (same constraints as remove hero).
+ */
+const applyListingHeroFromExternalOg = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .inputValidator(applyListingHeroFromExternalOgInput)
+  .handler(async ({ data, context }) => {
+    const full = await getFullDirectoryListing(context, data.id)
+    const atstoreRepoDid = await getAtstoreRepoDid()
+    if (full.repoDid?.trim() !== atstoreRepoDid) {
+      throw new Error(
+        'Only listings published from the store account can set hero from site OG.',
+      )
+    }
+
+    const pageUrl = getListingExternalPageUrl({
+      externalUrl: full.externalUrl,
+      sourceUrl: full.sourceUrl,
+    })
+    if (!pageUrl?.trim()) {
+      throw new Error('Listing has no product URL to scrape for og:image.')
+    }
+
+    const ogUrl = await discoverOgImageUrlFromPage(pageUrl)
+    if (!ogUrl) {
+      throw new Error(
+        'No og:image (or Twitter image) meta tag found on the product page.',
+      )
+    }
+
+    const { bytes, mimeType } = await resolveUrlToImageBytes(ogUrl)
+    if (!mimeType.startsWith('image/')) {
+      throw new Error(`og:image resolved to non-image content: ${mimeType}`)
+    }
+    const maxBytes = 12_000_000
+    if (bytes.byteLength > maxBytes) {
+      throw new Error(
+        `og:image is too large (${bytes.byteLength} bytes); max ${maxBytes}.`,
+      )
+    }
+
+    const { heroImageUrl: publishedHero } = await publishDirectoryListingDetail(
+      full,
+      undefined,
+      {
+        heroImage: {
+          bytes,
+          mimeType,
+        },
+      },
+    )
+
+    const t = context.schema.storeListings
+    await context.db
+      .update(t)
+      .set({
+        heroImageUrl: publishedHero ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(t.id, data.id))
+
+    return {
+      id: data.id,
+      heroImageUrl: publishedHero ?? null,
+      ogSourceUrl: ogUrl,
+    }
+  })
+
 const updateStoreManagedListingInput = z.object({
   listingId: z.string().uuid(),
   name: z.string().trim().min(1).max(640),
@@ -5712,6 +5929,11 @@ export const directoryListingApi = {
   getProfileOwnedProductListingsQueryOptions,
   getStoreManagedListings,
   getStoreManagedListingsQueryOptions,
+  getAdminListingHeroReview,
+  getAdminListingHeroReviewQueryOptions,
+  fetchListingExternalOgImage,
+  getFetchListingExternalOgImageQueryOptions,
+  applyListingHeroFromExternalOg,
   updateStoreManagedListing,
   previewListingHeroImageByUrl,
   previewListingIconByUrl,

@@ -103,6 +103,11 @@ function AdminOverviewPage() {
             to="/admin/add-listing"
           />
           <SummaryCard
+            description="Walk verified listings one-by-one: hero vs site og:image; skip locally or remove store-published heroes."
+            title="Listing heroes"
+            to="/admin/listing-heroes"
+          />
+          <SummaryCard
             description="Find categories and tags that are missing hero art and generate the missing banners."
             title="Hero art"
             to="/admin/hero-art"
