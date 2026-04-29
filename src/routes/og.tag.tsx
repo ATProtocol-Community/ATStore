@@ -1,4 +1,4 @@
-import satori from "satori";
+import satori, { type SatoriOptions } from "satori";
 import { createFileRoute } from "@tanstack/react-router";
 
 import {
@@ -7,9 +7,14 @@ import {
   type AppTagAccent,
 } from "../lib/app-tag-visuals";
 import { getOgTagCardPalette } from "../lib/og-tag-card-style";
+import {
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_WIDTH,
+  renderOg,
+} from "#/lib/render-og.server";
 
-const OG_WIDTH = 1200;
-const OG_HEIGHT = 630;
+const OG_WIDTH = OG_IMAGE_WIDTH;
+const OG_HEIGHT = OG_IMAGE_HEIGHT;
 const INTER_REGULAR_URL =
   "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff";
 const INTER_BOLD_URL =
@@ -360,16 +365,13 @@ export const Route = createFileRoute("/og/tag")({
                 { name: "Inter", data: regular, weight: 400, style: "normal" },
                 { name: "Inter", data: bold, weight: 700, style: "normal" },
               ],
-              loadAdditionalAsset,
+              loadAdditionalAsset: loadAdditionalAsset as NonNullable<
+                SatoriOptions["loadAdditionalAsset"]
+              >,
             },
           );
 
-          return new Response(svg, {
-            headers: {
-              "Content-Type": "image/svg+xml; charset=utf-8",
-              "Cache-Control": "public, max-age=3600",
-            },
-          });
+          return renderOg(svg, { width: OG_WIDTH, height: OG_HEIGHT });
         } catch (error) {
           const message =
             error instanceof Error

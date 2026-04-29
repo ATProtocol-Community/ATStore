@@ -64,7 +64,7 @@ export function buildFallbackOgImageUrl(input: {
 }
 
 /**
- * Dynamic OG image for a single listing review (`/og/review` — server-rendered SVG).
+ * Dynamic OG image for a single listing review (`/og/review` — server-rendered PNG via Satori).
  * Crawlers load this when the shared URL includes `?review=` on the reviews page.
  */
 export function buildListingReviewOgImageUrl(input: {
