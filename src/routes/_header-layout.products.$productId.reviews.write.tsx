@@ -11,8 +11,16 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogActionButton,
+  AlertDialogCancelButton,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+} from "../design-system/alert-dialog";
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
@@ -28,6 +36,7 @@ import { Body } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
 import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { Route as ProductReviewsRoute } from "./_header-layout.products.$productId.reviews";
@@ -85,6 +94,18 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["4xl"],
     paddingTop: verticalSpace["4xl"],
   },
+  /** Inert trigger for a controlled `AlertDialog`. */
+  dialogTriggerPlaceholder: {
+    borderWidth: 0,
+    clip: "rect(0, 0, 0, 0)",
+    height: 1,
+    margin: -1,
+    overflow: "hidden",
+    padding: 0,
+    position: "absolute",
+    whiteSpace: "nowrap",
+    width: 1,
+  },
 });
 
 function ProductReviewWritePage() {
@@ -104,11 +125,20 @@ function ProductReviewWritePage() {
   const [draftRating, setDraftRating] = useState(5);
   const [draftText, setDraftText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [shareReviewId, setShareReviewId] = useState<string | null>(null);
+  const skipShareDialogOpenChange = useRef(false);
+
+  const navigateToProduct = () => {
+    navigate({
+      to: "/products/$productId",
+      params: { productId: productSlug },
+    });
+  };
 
   const submitReview = useMutation({
     mutationFn: async () => {
       setFormError(null);
-      await directoryListingApi.createDirectoryListingReview({
+      return directoryListingApi.createDirectoryListingReview({
         data: {
           listingId: productId,
           rating: draftRating,
@@ -116,7 +146,7 @@ function ProductReviewWritePage() {
         },
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       const did = session?.user?.did;
       if (did != null && did !== "") {
         await queryClient.invalidateQueries({
@@ -126,10 +156,19 @@ function ProductReviewWritePage() {
           exact: true,
         });
       }
-      navigate({
-        to: "/products/$productId",
-        params: { productId: productSlug },
+      await queryClient.invalidateQueries({
+        queryKey:
+          directoryListingApi.getDirectoryListingReviewsQueryOptions(productId)
+            .queryKey,
+        exact: true,
       });
+      await queryClient.invalidateQueries({
+        queryKey:
+          directoryListingApi.getDirectoryListingDetailQueryOptions(productId)
+            .queryKey,
+        exact: true,
+      });
+      setShareReviewId(data.reviewId);
     },
     onError: (e: unknown) => {
       setFormError(
@@ -143,6 +182,58 @@ function ProductReviewWritePage() {
       <Text weight="semibold" size="3xl">
         Write a review
       </Text>
+
+      <AlertDialog
+        isOpen={shareReviewId !== null}
+        onOpenChange={(open) => {
+          if (open) {
+            return;
+          }
+          if (skipShareDialogOpenChange.current) {
+            skipShareDialogOpenChange.current = false;
+            return;
+          }
+          const id = shareReviewId;
+          setShareReviewId(null);
+          if (id != null) {
+            navigateToProduct();
+          }
+        }}
+        trigger={
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden
+            {...stylex.props(styles.dialogTriggerPlaceholder)}
+          />
+        }
+      >
+        <AlertDialogHeader>Share on Bluesky?</AlertDialogHeader>
+        <AlertDialogDescription>
+          Open Bluesky with a draft post that links to your review, same as the
+          share button on the reviews page. You can edit before you publish.
+        </AlertDialogDescription>
+        <AlertDialogFooter>
+          <AlertDialogCancelButton>Not now</AlertDialogCancelButton>
+          <AlertDialogActionButton
+            closeOnPress={false}
+            onPress={() => {
+              if (shareReviewId != null) {
+                skipShareDialogOpenChange.current = true;
+                window.open(
+                  blueskyReviewShareIntentHref(productSlug, shareReviewId),
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+                setShareReviewId(null);
+                navigateToProduct();
+              }
+            }}
+          >
+            Open Bluesky
+          </AlertDialogActionButton>
+        </AlertDialogFooter>
+      </AlertDialog>
 
       {session?.user ? (
         listing.atUri ? (

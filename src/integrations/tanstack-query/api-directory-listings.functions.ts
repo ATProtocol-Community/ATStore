@@ -58,7 +58,7 @@ import { dbMiddleware } from './db-middleware'
 import type { Database } from '#/db/index.server'
 import type { StoreListing } from '#/db/schema'
 import * as dbSchema from '#/db/schema'
-import { COLLECTION } from '#/lib/atproto/nsids'
+import { COLLECTION, NSID } from '#/lib/atproto/nsids'
 import { parseAtUriParts } from '#/lib/atproto/at-uri'
 import {
   LISTING_LINK_LABEL_MAX_LENGTH,
@@ -75,6 +75,7 @@ import {
   publishDirectoryListingDetail,
   publishOwnedListingDetail,
 } from '#/lib/atproto/publish-directory-listing'
+import { upsertListingReviewFromTap } from '#/lib/atproto/tap-review-sync'
 import {
   createListingDetailRecord,
   createListingReviewRecord,
@@ -2845,7 +2846,46 @@ const createDirectoryListingReview = createServerFn({ method: 'POST' })
       text: data.text,
     })
 
-    return { uri }
+    const { repo, rkey } = parseAtUriParts(uri)
+    if (repo !== session.did) {
+      throw new Error('Unexpected review record repo DID.')
+    }
+
+    const record: {
+      $type: typeof NSID.listingReview
+      subject: string
+      rating: number
+      createdAt: string
+      text?: string
+    } = {
+      $type: NSID.listingReview,
+      subject: atUri,
+      rating: data.rating,
+      createdAt,
+    }
+    const trimmed = data.text?.trim()
+    if (trimmed) {
+      record.text = trimmed
+    }
+
+    await upsertListingReviewFromTap({
+      db: context.db,
+      did: repo,
+      rkey,
+      record,
+    })
+
+    const [reviewRow] = await context.db
+      .select({ id: rev.id })
+      .from(rev)
+      .where(eq(rev.atUri, uri))
+      .limit(1)
+
+    if (!reviewRow) {
+      throw new Error('Review was created on the network but could not be mirrored locally.')
+    }
+
+    return { uri, reviewId: reviewRow.id }
   })
 
 const updateDirectoryListingReview = createServerFn({ method: 'POST' })

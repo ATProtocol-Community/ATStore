@@ -39,23 +39,11 @@ import {
   type DirectoryListingReview,
   type DirectoryUserReviewListing,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/product-reviews-route";
 
 const IconButtonLink = createLink(IconButton);
-
-function blueskyReviewShareIntentHref(
-  productSlug: string,
-  reviewId: string,
-): string {
-  const path = `/products/${productSlug}/reviews?review=${reviewId}`;
-  const origin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : (process.env.BETTER_AUTH_URL ?? "").trim().replace(/\/+$/, "");
-  const absolute = origin ? `${origin}${path}` : path;
-  return `https://bsky.app/intent/compose?text=${encodeURIComponent(absolute)}`;
-}
 
 const styles = stylex.create({
   reviewedListingCardBody: {
