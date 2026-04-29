@@ -5,7 +5,13 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { MoreVertical, PencilLine, Plus, Trash2 } from "lucide-react";
+import {
+  ExternalLink,
+  MoreVertical,
+  PencilLine,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "../design-system/badge";
@@ -215,6 +221,19 @@ function ManageListingsPage() {
           </IconButton>
         }
       >
+        {isLive ? (
+          <MenuItem
+            prefix={<ExternalLink size={16} aria-hidden />}
+            onPress={() => {
+              void navigate({
+                to: "/products/$productId",
+                params: { productId: listing.slug },
+              });
+            }}
+          >
+            View listing
+          </MenuItem>
+        ) : null}
         <MenuItem
           prefix={<PencilLine size={16} aria-hidden />}
           onPress={() => {
