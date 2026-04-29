@@ -196,6 +196,11 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       ? [listing.heroImageUrl]
       : [];
 
+    const ogTitle =
+      listing.rating != null
+        ? `${listing.name} · ${listing.rating.toFixed(1)} ★ | at-store`
+        : `${listing.name} | at-store`;
+
     return {
       productId: listing.id,
       productSlug,
@@ -209,7 +214,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       listingMentionTotal: listingMentionsResult.total,
       session,
       editAccess,
-      ogTitle: `${listing.name} | at-store`,
+      ogTitle,
       ogDescription,
       ogImage: listing.heroImageUrl || null,
       preloadHeroImages,
