@@ -3,8 +3,10 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
+  Button as AriaButton,
+  DropIndicator,
+  GridList,
+  GridListItem,
   type DropTarget,
   useDragAndDrop,
 } from "react-aria-components";
@@ -34,7 +36,8 @@ import { Select, SelectItem } from "../design-system/select";
 import { TextArea } from "../design-system/text-area";
 import { TextField } from "../design-system/text-field";
 import { ToggleButton } from "../design-system/toggle-button";
-import { uiColor } from "../design-system/theme/color.stylex";
+import { primaryColor, uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
@@ -280,6 +283,22 @@ function toKebabCaseSegment(value: string): string {
 }
 
 const styles = stylex.create({
+  screenshotPreviewActionButton: {
+    flexShrink: 0,
+    height: size["4xl"],
+    width: size["4xl"],
+    paddingTop: verticalSpace.xs,
+    paddingBottom: verticalSpace.xs,
+    paddingLeft: horizontalSpace.sm,
+    paddingRight: horizontalSpace.sm,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    // Let pointer events reach the draggable row (GridListItem); grip is for keyboard a11y.
+    pointerEvents: "none",
+  },
   list: {
     gap: 0,
   },
@@ -316,9 +335,6 @@ const styles = stylex.create({
   },
   form: {
     gap: gap["3xl"],
-  },
-  imageSection: {
-    gap: gap["2xl"],
   },
   imageAsset: {
     gap: gap["xl"],
@@ -370,9 +386,6 @@ const styles = stylex.create({
     justifyContent: "center",
     minHeight: 0,
   },
-  imageDropZoneScreenshots: {
-    height: size["9xl"],
-  },
   imageDropZoneHero: {
     aspectRatio: "16 / 9",
     padding: 0,
@@ -383,13 +396,27 @@ const styles = stylex.create({
     alignSelf: "flex-start",
     width: size["9xl"],
   },
+  screenshotPreviewRow: {
+    alignItems: "stretch",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: {
+      default: "wrap",
+      [breakpoints.lg]: "nowrap",
+    },
+    gap: gap.md,
+    width: "100%",
+  },
+  /** GridList: screenshot cards in a cluster; flexGrow set inline vs. drop slot (N:1). */
   screenshotPreviewGrid: {
+    alignItems: "stretch",
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
-    alignItems: "flex-start",
     gap: gap.md,
-    width: "100%",
+    minHeight: 0,
+    minWidth: 0,
   },
   screenshotPreviewCard: {
     backgroundColor: uiColor.bg,
@@ -397,37 +424,117 @@ const styles = stylex.create({
     borderRadius: radius.lg,
     borderStyle: "solid",
     borderWidth: 1,
+    boxSizing: "border-box",
     cornerShape: "squircle",
     display: "flex",
     flexDirection: "column",
+    flexBasis: {
+      default: "auto",
+      [breakpoints.lg]: 0,
+    },
+    flexGrow: {
+      default: 0,
+      [breakpoints.lg]: 1,
+    },
+    flexShrink: {
+      default: 0,
+      [breakpoints.lg]: 1,
+    },
     gap: gap.sm,
-    width: "220px",
+    minWidth: 0,
     overflow: "hidden",
-    padding: horizontalSpace.sm,
+    width: {
+      default: "220px",
+      [breakpoints.lg]: "auto",
+    },
   },
   screenshotPreviewImage: {
     backgroundColor: uiColor.overlayBackdrop,
-    borderColor: uiColor.border1,
-    borderRadius: radius.lg,
-    borderStyle: "solid",
-    borderWidth: 1,
+    borderTopColor: uiColor.border1,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
     cornerShape: "squircle",
+    display: "block",
+    flexShrink: 0,
+    height: size["10xl"],
+    maxWidth: "100%",
     objectFit: "cover",
     overflow: "hidden",
-    width: 200,
-    height: "auto",
+    width: {
+      default: 200,
+      [breakpoints.lg]: "100%",
+    },
+  },
+  /** Drop zone in the screenshot row: grows to fill space + matches card stack height (less jump). */
+  screenshotPreviewRowDropSlot: {
+    alignSelf: "stretch",
+    boxSizing: "border-box",
+    flexBasis: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: `calc(${horizontalSpace.sm} + ${horizontalSpace.sm} + ${size["10xl"]} + ${gap.sm} + ${size["2xl"]} + 2px)`,
+    minWidth: 0,
   },
   screenshotPreviewActions: {
     alignItems: "center",
     justifyContent: "space-between",
+    padding: horizontalSpace.sm,
   },
   screenshotDropZoneContent: {
     alignItems: "center",
+    boxSizing: "border-box",
+    flexGrow: 1,
+    flexShrink: 1,
     justifyContent: "center",
+    minHeight: 0,
     width: "100%",
   },
   screenshotDropZoneHint: {
     textAlign: "center",
+  },
+  /** Between-cards insert marker: width + flex gap would shift layout; negative margins cancel. */
+  screenshotReorderDropIndicator: {
+    alignSelf: "stretch",
+    backgroundColor: primaryColor.solid1,
+    borderRadius: radius.lg,
+    boxSizing: "border-box",
+    flexBasis: 6,
+    flexGrow: 0,
+    flexShrink: 0,
+    marginLeft: `calc((${gap.md} + 6px) / -2)`,
+    marginRight: `calc((${gap.md} + 6px) / -2)`,
+    outlineColor: primaryColor.solid1,
+    outlineOffset: 2,
+    outlineStyle: "solid",
+    outlineWidth: 2,
+    position: "relative",
+    /** Above sibling cards (negative margins overlap them in document order). */
+    zIndex: 2,
+    width: 6,
+  },
+  /** Native drag preview (system drag image): small square crop of the screenshot. */
+  screenshotDragPreview: {
+    borderColor: uiColor.border2,
+    borderRadius: radius.md,
+    borderStyle: "solid",
+    borderWidth: 1,
+    boxShadow: shadow.md,
+    cornerShape: "squircle",
+    display: "block",
+    height: size["5xl"],
+    objectFit: "cover",
+    width: size["5xl"],
+  },
+  screenshotDragPreviewPlaceholder: {
+    backgroundColor: uiColor.bgSubtle,
+    borderColor: uiColor.border2,
+    borderRadius: radius.md,
+    borderStyle: "solid",
+    borderWidth: 1,
+    boxSizing: "border-box",
+    cornerShape: "squircle",
+    height: size["5xl"],
+    width: size["5xl"],
   },
   stickyFooterActions: {
     justifyContent: "flex-end",
@@ -861,6 +968,27 @@ export function ProductListingForm({
         reorderScreenshotItems(currentItems, event.keys, event.target),
       );
     },
+    renderDragPreview: (items) => {
+      const id = String(items[0]?.["text/plain"] ?? "");
+      const shot = screenshotItems.find((s) => s.id === id);
+      const thumb = shot?.previewUrl ? (
+        <img
+          src={shot.previewUrl}
+          alt=""
+          {...stylex.props(styles.screenshotDragPreview)}
+        />
+      ) : (
+        <div {...stylex.props(styles.screenshotDragPreviewPlaceholder)} />
+      );
+      /** ~half of `size["5xl"]` (3.5rem) at default root — keeps pointer near center of drag image. */
+      return { element: thumb, x: 28, y: 28 };
+    },
+    renderDropIndicator: (target) => (
+      <DropIndicator
+        target={target}
+        {...stylex.props(styles.screenshotReorderDropIndicator)}
+      />
+    ),
   });
 
   useEffect(() => {
@@ -1132,7 +1260,7 @@ export function ProductListingForm({
 
           <Card style={styles.card} size="lg">
             <CardBody>
-              <Flex direction="column" gap="2xl" style={styles.imageSection}>
+              <Flex direction="column" gap="6xl">
                 <Text weight="semibold" size="lg">
                   Images
                 </Text>
@@ -1310,84 +1438,93 @@ export function ProductListingForm({
                       Screenshots (1-4)
                     </Text>
                   </Flex>
-                  {screenshotItems.length < MAX_SCREENSHOT_COUNT ? (
-                    <FileDropZone
-                      acceptedFileTypes={["image/*"]}
-                      isDisabled={isSubmitting}
-                      onAddFiles={onPickScreenshots}
-                      style={[
-                        styles.imageDropZone,
-                        styles.imageDropZoneScreenshots,
-                      ]}
-                    >
-                      <Flex
-                        direction="column"
-                        gap="sm"
-                        style={styles.screenshotDropZoneContent}
+                  <div {...stylex.props(styles.screenshotPreviewRow)}>
+                    {screenshotItems.length > 0 ? (
+                      <GridList
+                        aria-label="Selected screenshots"
+                        items={screenshotItems}
+                        dragAndDropHooks={dragAndDropHooks}
+                        layout="grid"
+                        selectionMode="none"
+                        {...stylex.props(styles.screenshotPreviewGrid)}
+                        style={{
+                          flexBasis: 0,
+                          flexGrow:
+                            screenshotItems.length < MAX_SCREENSHOT_COUNT
+                              ? Math.max(screenshotItems.length, 1)
+                              : 1,
+                          flexShrink: 1,
+                          minWidth: 0,
+                        }}
                       >
-                        <Text
-                          size="sm"
-                          variant="secondary"
-                          style={styles.screenshotDropZoneHint}
+                        {(item) => (
+                          <GridListItem
+                            id={item.id}
+                            textValue="Screenshot"
+                            {...stylex.props(styles.screenshotPreviewCard)}
+                          >
+                            <Flex style={styles.screenshotPreviewActions}>
+                              <AriaButton
+                                slot="drag"
+                                size="sm"
+                                variant="secondary"
+                                isDisabled={isSubmitting}
+                                {...stylex.props(
+                                  styles.screenshotPreviewActionButton,
+                                )}
+                              >
+                                <Flex align="center" gap="xs">
+                                  <GripVertical size={20} />
+                                </Flex>
+                              </AriaButton>
+                              <IconButton
+                                label="Delete screenshot"
+                                variant="critical"
+                                isDisabled={isSubmitting}
+                                onPress={() => {
+                                  onRemoveScreenshot(item.id);
+                                }}
+                              >
+                                <Trash2 size={20} />
+                              </IconButton>
+                            </Flex>
+                            <img
+                              src={item.previewUrl}
+                              alt=""
+                              {...stylex.props(styles.screenshotPreviewImage)}
+                            />
+                          </GridListItem>
+                        )}
+                      </GridList>
+                    ) : null}
+                    {screenshotItems.length < MAX_SCREENSHOT_COUNT ? (
+                      <FileDropZone
+                        acceptedFileTypes={["image/*"]}
+                        isDisabled={isSubmitting}
+                        onAddFiles={onPickScreenshots}
+                        style={[
+                          styles.imageDropZone,
+                          styles.screenshotPreviewRowDropSlot,
+                        ]}
+                      >
+                        <Flex
+                          direction="column"
+                          gap="sm"
+                          style={styles.screenshotDropZoneContent}
                         >
-                          Add screenshots ({screenshotItems.length}/
-                          {MAX_SCREENSHOT_COUNT})
-                        </Text>
-                        <FileDropDefaultTrigger aria-label="Select screenshots">
-                          Add screenshots
-                        </FileDropDefaultTrigger>
-                      </Flex>
-                    </FileDropZone>
-                  ) : null}
-                  {screenshotItems.length > 0 ? (
-                    <AriaListBox
-                      aria-label="Selected screenshots"
-                      items={screenshotItems}
-                      selectionMode="none"
-                      dragAndDropHooks={dragAndDropHooks}
-                      {...stylex.props(styles.screenshotPreviewGrid)}
-                    >
-                      {(item) => (
-                        <AriaListBoxItem
-                          id={item.id}
-                          textValue="Screenshot"
-                          {...stylex.props(styles.screenshotPreviewCard)}
-                        >
-                          <img
-                            src={item.previewUrl}
-                            alt=""
-                            {...stylex.props(styles.screenshotPreviewImage)}
-                          />
-                          <Flex style={styles.screenshotPreviewActions}>
-                            <Button
-                              slot="drag"
-                              size="sm"
-                              variant="secondary"
-                              isDisabled={isSubmitting}
-                            >
-                              <Flex align="center" gap="xs">
-                                <GripVertical size={14} />
-                                Reorder
-                              </Flex>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              isDisabled={isSubmitting}
-                              onPress={() => {
-                                onRemoveScreenshot(item.id);
-                              }}
-                            >
-                              <Flex align="center" gap="xs">
-                                <Trash2 size={14} />
-                                Delete
-                              </Flex>
-                            </Button>
-                          </Flex>
-                        </AriaListBoxItem>
-                      )}
-                    </AriaListBox>
-                  ) : null}
+                          <Text
+                            size="sm"
+                            variant="secondary"
+                            style={styles.screenshotDropZoneHint}
+                          >
+                            Add screenshots ({screenshotItems.length}/
+                            {MAX_SCREENSHOT_COUNT})
+                          </Text>
+                          <FileDropDefaultTrigger aria-label="Select screenshots"></FileDropDefaultTrigger>
+                        </Flex>
+                      </FileDropZone>
+                    ) : null}
+                  </div>
                 </Flex>
                 {isAdmin && generationStatus ? (
                   <Text
