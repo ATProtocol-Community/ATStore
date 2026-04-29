@@ -260,7 +260,7 @@ function ProductClaimPage() {
               )}
               <CardBody>
                 <Flex direction="column" style={styles.preview}>
-                  <Flex gap="xl" align="start">
+                  <Flex gap="2xl" align="center">
                     {listing.iconUrl ? (
                       <img
                         src={listing.iconUrl}
@@ -268,7 +268,7 @@ function ProductClaimPage() {
                         {...stylex.props(styles.previewIcon)}
                       />
                     ) : null}
-                    <Flex direction="column" gap="xl">
+                    <Flex direction="column" gap="2xl">
                       <Text size="2xl" weight="bold">
                         {listing.name}
                       </Text>
