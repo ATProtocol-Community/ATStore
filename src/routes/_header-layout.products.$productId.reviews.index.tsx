@@ -25,13 +25,6 @@ const reviewsIndexSearchSchema = z.object({
   review: z.string().uuid().optional(),
 });
 
-function truncateOg(value: string, maxLength: number) {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
-}
-
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews/",
 )({
@@ -61,6 +54,7 @@ export const Route = createFileRoute(
     let ogDescription =
       listing.tagline || "Read and write reviews for products on at-store.";
     let ogImage: string | null = listing.heroImageUrl || null;
+    let ogImageAlt: string | null = null;
 
     const reviewParam = deps.reviewFromSearch;
     if (reviewParam) {
@@ -71,12 +65,10 @@ export const Route = createFileRoute(
           reviewId: hit.id,
         });
         const author = hit.authorDisplayName?.trim() || "Someone";
-        ogTitle = `${listing.name} · ${author} · review | at-store`;
-        ogDescription = truncateOg(
-          hit.text?.trim() ||
-            `${author} rated ${listing.name} ${String(hit.rating)}/5 on at-store.`,
-          220,
-        );
+        /** “Read” surfaces in link previews (Slack, Discord, iMessage) via og:title / description. */
+        ogTitle = `Read · ${author}'s “${listing.name}” review | at-store`;
+        ogDescription = `${String(hit.rating)}/5 — Open to read the full review on at-store.`;
+        ogImageAlt = `Read ${author}'s review of ${listing.name} on AT Store`;
       }
     }
 
@@ -84,6 +76,7 @@ export const Route = createFileRoute(
       ogTitle,
       ogDescription,
       ogImage,
+      ogImageAlt,
     };
   },
   head: ({ loaderData }) =>
@@ -93,6 +86,7 @@ export const Route = createFileRoute(
         loaderData?.ogDescription ||
         "Read and write reviews for products on at-store.",
       image: loaderData?.ogImage,
+      imageAlt: loaderData?.ogImageAlt ?? null,
     }),
   component: ProductReviewsListPage,
 });

@@ -4,6 +4,8 @@ type OgMetaInput = {
   title: string;
   description: string;
   image?: string | null;
+  /** Shown as `og:image:alt` / `twitter:image:alt` when set (accessibility + some clients use it in previews). */
+  imageAlt?: string | null;
   avatar?: string | null;
   ownedProducts?: number;
   reviews?: number;
@@ -119,20 +121,35 @@ export function buildRouteOgMeta(input: OgMetaInput) {
       }),
   );
 
-  return {
-    meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:type", content: "website" },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-      { property: "og:image", content: ogImage },
-      { property: "og:image:width", content: DEFAULT_OG_WIDTH },
-      { property: "og:image:height", content: DEFAULT_OG_HEIGHT },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: title },
-      { name: "twitter:description", content: description },
-      { name: "twitter:image", content: ogImage },
-    ],
-  };
+  const imageAltRaw =
+    typeof input.imageAlt === "string" ? input.imageAlt.trim() : "";
+  const imageAlt = imageAltRaw ? truncate(imageAltRaw, 420) : "";
+
+  const meta: Array<
+    | { title: string }
+    | { name: string; content: string }
+    | { property: string; content: string }
+  > = [
+    { title },
+    { name: "description", content: description },
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:image", content: ogImage },
+    { property: "og:image:width", content: DEFAULT_OG_WIDTH },
+    { property: "og:image:height", content: DEFAULT_OG_HEIGHT },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: description },
+    { name: "twitter:image", content: ogImage },
+  ];
+
+  if (imageAlt) {
+    meta.push(
+      { property: "og:image:alt", content: imageAlt },
+      { name: "twitter:image:alt", content: imageAlt },
+    );
+  }
+
+  return { meta };
 }
