@@ -8,6 +8,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
+import { Separator } from "../design-system/separator";
 import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { StarRating } from "../design-system/star-rating";
 import { uiColor } from "../design-system/theme/color.stylex";
