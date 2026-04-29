@@ -223,7 +223,6 @@ const styles = stylex.create({
     },
   },
   promoCard: {
-    boxShadow: shadow.xl,
     color: uiColor.text2,
     height: "100%",
     borderRadius: radius["lg"],
