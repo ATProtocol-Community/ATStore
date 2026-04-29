@@ -1190,6 +1190,12 @@ export function ProductListingForm({
                     </ListItem>
                     <ListItem>
                       <Text size="sm" variant="secondary">
+                        Include the name of the product in the image and
+                        potentially the tagline.
+                      </Text>
+                    </ListItem>
+                    <ListItem>
+                      <Text size="sm" variant="secondary">
                         Keep the subject centered — the image bleeds into a
                         blurred backdrop glow behind it, so edges and corners
                         are not the place for important detail.
