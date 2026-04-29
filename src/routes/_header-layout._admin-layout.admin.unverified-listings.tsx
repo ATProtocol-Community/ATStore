@@ -23,7 +23,13 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { Body, Heading1, SmallBody } from "../design-system/typography";
+import {
+  Body,
+  Heading1,
+  ListItem,
+  SmallBody,
+  UnorderedList,
+} from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { TextArea } from "../design-system/text-area";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
@@ -95,6 +101,10 @@ const styles = stylex.create({
     maxWidth: "100%",
     width: "100%",
   },
+  criteriaList: {
+    marginBlock: 0,
+    paddingInlineStart: horizontalSpace["2xl"],
+  },
 });
 
 function UnverifiedListingsPage() {
@@ -115,6 +125,62 @@ function UnverifiedListingsPage() {
           Review and moderate unverified listings. Approve to verify, or reject
           to remove them from discovery.
         </SmallBody>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Acceptance criteria</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <UnorderedList style={styles.criteriaList}>
+              <ListItem>
+                <Text size="sm" variant="secondary">
+                  Open the product link and confirm it works and matches the
+                  listing.
+                </Text>
+              </ListItem>
+              <ListItem>
+                <Text size="sm" variant="secondary">
+                  Check the Bluesky product account handle — it should clearly
+                  belong to this product (official or dedicated), not an
+                  unrelated personal account.
+                </Text>
+              </ListItem>
+              <ListItem>
+                <Text size="sm" variant="secondary">
+                  Category and tags should accurately describe the tool. If they
+                  are misleading or plainly miss better-fitting tags, reject or
+                  send back for fixes. A quick sanity check is enough — no need
+                  for a full tagging audit or long notes.
+                </Text>
+              </ListItem>
+              <ListItem>
+                <Text size="sm" variant="secondary">
+                  No prerelease-only listings: if a user cannot sign in and use
+                  the product <Text weight="bold">today</Text>, do not verify.
+                  If sign-in works and real product use is available, it&apos;s
+                  acceptable even if the product still calls itself beta.
+                </Text>
+              </ListItem>
+              <ListItem>
+                <Text size="sm" variant="secondary">
+                  In general we only accept{" "}
+                  <Text weight="bold">user-facing tools</Text> that people can
+                  log into — not libraries, raw APIs, or other non-app surfaces
+                  unless that is genuinely what the listing is.
+                </Text>
+              </ListItem>
+              <ListItem>
+                <Text size="sm" variant="secondary">
+                  Hero image should follow the same guidelines as the listing
+                  form: wide 16:9 (e.g. at least 1600×900), product name (and
+                  tagline if present) readable, subject centered for the blurred
+                  backdrop crop, no browser chrome / device mockups / watermarks
+                  / tiny UI text.
+                </Text>
+              </ListItem>
+            </UnorderedList>
+          </CardBody>
+        </Card>
 
         <Card>
           <CardHeader>
