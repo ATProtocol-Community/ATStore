@@ -4,14 +4,34 @@ import {
   ProductReviewsPageChrome,
   loadProductReviewsRoute,
 } from "../lib/product-reviews-route";
-import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { buildRouteOgMeta } from "../lib/og-meta";
 
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews",
 )({
   loader: async ({ context, params, location }) => {
     const pathname = location.pathname;
+    let preserveReviewId: string | undefined;
+    try {
+      const href =
+        location.href ??
+        (typeof location.pathname === "string"
+          ? `${location.pathname}${location.searchStr ?? ""}`
+          : "");
+      const raw = href
+        ? new URL(href, "http://localhost").searchParams.get("review")
+        : null;
+      if (
+        raw &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          raw,
+        )
+      ) {
+        preserveReviewId = raw;
+      }
+    } catch {
+      preserveReviewId = undefined;
+    }
+
     let slugMismatchRedirectTo:
       | "/products/$productId/reviews"
       | "/products/$productId/reviews/write"
@@ -35,30 +55,13 @@ export const Route = createFileRoute(
       prefetchReviews: true,
       slugMismatchRedirectTo,
       slugMismatchExtraParams,
+      preserveReviewId,
     });
-
-    const listing = await context.queryClient.ensureQueryData(
-      directoryListingApi.getDirectoryListingDetailQueryOptions(
-        routeData.productId,
-      ),
-    );
 
     return {
       ...routeData,
-      ogTitle: `${listing?.name || "Product"} reviews | at-store`,
-      ogDescription:
-        listing?.tagline || "Read and write reviews for products on at-store.",
-      ogImage: listing?.heroImageUrl || null,
     };
   },
-  head: ({ loaderData }) =>
-    buildRouteOgMeta({
-      title: loaderData?.ogTitle ?? "Product reviews | at-store",
-      description:
-        loaderData?.ogDescription ||
-        "Read and write reviews for products on at-store.",
-      image: loaderData?.ogImage,
-    }),
   component: ProductReviewsLayout,
 });
 

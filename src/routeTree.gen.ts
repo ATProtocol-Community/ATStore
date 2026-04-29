@@ -17,6 +17,7 @@ import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
 import { Route as OgIndexRouteImport } from './routes/og.index'
 import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
 import { Route as OgTagRouteImport } from './routes/og.tag'
+import { Route as OgReviewRouteImport } from './routes/og.review'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
@@ -99,6 +100,11 @@ const HeaderLayoutIndexRoute = HeaderLayoutIndexRouteImport.update({
 const OgTagRoute = OgTagRouteImport.update({
   id: '/og/tag',
   path: '/og/tag',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OgReviewRoute = OgReviewRouteImport.update({
+  id: '/og/review',
+  path: '/og/review',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HeaderLayoutSearchRoute = HeaderLayoutSearchRouteImport.update({
@@ -364,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
+  '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
   '/og/': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
@@ -416,6 +423,7 @@ export interface FileRoutesByTo {
   '/': typeof HeaderLayoutIndexRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
+  '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
   '/og': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
@@ -469,6 +477,7 @@ export interface FileRoutesById {
   '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
   '/_header-layout/search': typeof HeaderLayoutSearchRoute
+  '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
   '/_header-layout/': typeof HeaderLayoutIndexRoute
   '/og/': typeof OgIndexRoute
@@ -524,6 +533,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/notifications'
     | '/search'
+    | '/og/review'
     | '/og/tag'
     | '/og/'
     | '/apps/$tag'
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
     | '/'
     | '/notifications'
     | '/search'
+    | '/og/review'
     | '/og/tag'
     | '/og'
     | '/apps/$tag'
@@ -628,6 +639,7 @@ export interface FileRouteTypes {
     | '/_header-layout/_admin-layout'
     | '/_header-layout/notifications'
     | '/_header-layout/search'
+    | '/og/review'
     | '/og/tag'
     | '/_header-layout/'
     | '/og/'
@@ -680,6 +692,7 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   IndexOldRoute: typeof IndexOldRoute
   LoginRoute: typeof LoginRoute
+  OgReviewRoute: typeof OgReviewRoute
   OgTagRoute: typeof OgTagRoute
   OgIndexRoute: typeof OgIndexRoute
   ApiAdminHeroCandidateImageRoute: typeof ApiAdminHeroCandidateImageRoute
@@ -746,6 +759,13 @@ declare module '@tanstack/react-router' {
       path: '/og/tag'
       fullPath: '/og/tag'
       preLoaderRoute: typeof OgTagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/review': {
+      id: '/og/review'
+      path: '/og/review'
+      fullPath: '/og/review'
+      preLoaderRoute: typeof OgReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_header-layout/search': {
@@ -1197,6 +1217,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   IndexOldRoute: IndexOldRoute,
   LoginRoute: LoginRoute,
+  OgReviewRoute: OgReviewRoute,
   OgTagRoute: OgTagRoute,
   OgIndexRoute: OgIndexRoute,
   ApiAdminHeroCandidateImageRoute: ApiAdminHeroCandidateImageRoute,

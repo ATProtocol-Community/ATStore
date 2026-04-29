@@ -1,0 +1,627 @@
+import { and, eq } from "drizzle-orm";
+import satori from "satori";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { db } from "#/db/index.server";
+import * as schema from "#/db/schema";
+import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
+
+const OG_WIDTH = 1200;
+const OG_HEIGHT = 630;
+const INTER_REGULAR_URL =
+  "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff";
+const INTER_BOLD_URL =
+  "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff";
+
+/** Neutral surface — avoids brand blue so previews read clearly as “review” cards. */
+const BG = "#fafafa";
+const BORDER = "#e4e4e7";
+const TEXT = "#18181b";
+const TEXT_MUTED = "#71717a";
+const SURFACE_SUBTLE = "#f4f4f5";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** OG excerpt body — must match `lineHeight` / `fontSize` on the Satori node below. */
+const EXCERPT_FONT_SIZE_PX = 34;
+const EXCERPT_LINE_HEIGHT = 1.42;
+const EXCERPT_MAX_LINES = 5;
+const EXCERPT_MAX_HEIGHT_PX = Math.round(
+  EXCERPT_FONT_SIZE_PX * EXCERPT_LINE_HEIGHT * EXCERPT_MAX_LINES,
+);
+
+type FontPair = { regular: ArrayBuffer; bold: ArrayBuffer };
+let fontPromise: Promise<FontPair> | null = null;
+
+async function fetchArrayBuffer(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Could not load asset (${response.status}) from ${url}`);
+  }
+
+  return response.arrayBuffer();
+}
+
+async function getFonts() {
+  if (!fontPromise) {
+    fontPromise = Promise.all([
+      fetchArrayBuffer(INTER_REGULAR_URL),
+      fetchArrayBuffer(INTER_BOLD_URL),
+    ]).then(([regular, bold]) => ({ regular, bold }));
+  }
+
+  return fontPromise;
+}
+
+/**
+ * Twemoji loader for Satori (same approach as `/og/tag`). Lets emoji render instead of tofu.
+ */
+function emojiToTwemojiCodepoints(emoji: string): string {
+  const ZWJ = "\u200D";
+  const VS16 = /\uFE0F/g;
+  const normalized = emoji.includes(ZWJ) ? emoji : emoji.replace(VS16, "");
+
+  const codepoints: string[] = [];
+  let highSurrogate = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    const c = normalized.charCodeAt(i);
+    if (highSurrogate) {
+      codepoints.push(
+        (0x10000 + ((highSurrogate - 0xd800) << 10) + (c - 0xdc00)).toString(
+          16,
+        ),
+      );
+      highSurrogate = 0;
+    } else if (c >= 0xd800 && c <= 0xdbff) {
+      highSurrogate = c;
+    } else {
+      codepoints.push(c.toString(16));
+    }
+  }
+
+  return codepoints.join("-");
+}
+
+const twemojiSvgCache = new Map<string, string>();
+
+async function twemojiLoadAdditionalAsset(
+  code: string,
+  segment: string,
+): Promise<string | undefined> {
+  if (code !== "emoji") return undefined;
+  if (typeof segment !== "string" || segment.length === 0) return undefined;
+  const codepoints = emojiToTwemojiCodepoints(segment);
+  if (!codepoints) return undefined;
+
+  const cached = twemojiSvgCache.get(codepoints);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(
+      `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg`,
+    );
+    if (!response.ok) return undefined;
+    const svg = await response.text();
+    const base64 = Buffer.from(svg, "utf8").toString("base64");
+    const dataUrl = `data:image/svg+xml;base64,${base64}`;
+    twemojiSvgCache.set(codepoints, dataUrl);
+    return dataUrl;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Collapse whitespace only — emoji and other characters pass through for Twemoji rendering. */
+function normalizeOgText(value: string) {
+  const s = typeof value === "string" ? value : String(value ?? "");
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function truncate(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function formatDidShort(did: string) {
+  const d = did.trim();
+  if (d.length <= 28) return d;
+  return `${d.slice(0, 16)}…${d.slice(-6)}`;
+}
+
+function ratingFractionLabel(rating: number) {
+  const r = Math.max(1, Math.min(5, Math.round(Number(rating))));
+  return `${String(r)} / 5`;
+}
+
+function initialsFrom(label: string) {
+  const t =
+    typeof label === "string" ? label.trim() : String(label ?? "").trim();
+  if (!t) return "?";
+  const parts = t.split(/\s+/).filter(Boolean).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+/** Remote image URLs for Satori `<img>`. Used when raster preload fails. */
+function ogRemoteImgSrc(url: string | null | undefined): string | null {
+  const t = typeof url === "string" ? url.trim() : "";
+  if (!t || !/^https?:\/\//i.test(t)) {
+    return null;
+  }
+  return t;
+}
+
+/**
+ * Fetch + resize remote images before `satori()` so pixels are fully decoded (avatars/icons
+ * reliably paint). Output is a small JPEG data URL — large raw `data:` blobs break Yoga.
+ */
+async function preloadOgRasterImageForSatori(
+  url: string | null | undefined,
+  displayEdgePx: number,
+): Promise<string | undefined> {
+  const src = ogRemoteImgSrc(url);
+  if (!src) {
+    return undefined;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    const res = await fetch(src, {
+      signal: controller.signal,
+      headers: { Accept: "image/*,*/*" },
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      return undefined;
+    }
+
+    const input = Buffer.from(await res.arrayBuffer());
+    if (input.byteLength === 0 || input.byteLength > 12_000_000) {
+      return undefined;
+    }
+
+    const { default: sharp } = await import("sharp");
+
+    const encode = async (edge: number, quality: number) =>
+      sharp(input, { failOn: "none" })
+        .rotate()
+        .resize(edge, edge, { fit: "cover" })
+        .jpeg({ quality, mozjpeg: true })
+        .toBuffer();
+
+    const edge = Math.min(384, Math.max(displayEdgePx * 2, displayEdgePx));
+    let buf = await encode(edge, 84);
+    if (buf.byteLength > 300_000) {
+      buf = await encode(Math.min(192, edge), 78);
+    }
+    if (buf.byteLength > 350_000) {
+      buf = await encode(128, 72);
+    }
+
+    return `data:image/jpeg;base64,${buf.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
+}
+
+export const Route = createFileRoute("/og/review")({
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        try {
+          const url = new URL(request.url);
+          const listingId = url.searchParams.get("listingId")?.trim() ?? "";
+          const reviewId = url.searchParams.get("reviewId")?.trim() ?? "";
+
+          if (!UUID_RE.test(listingId) || !UUID_RE.test(reviewId)) {
+            return new Response("Invalid listing or review id.", {
+              status: 400,
+              headers: { "Content-Type": "text/plain; charset=utf-8" },
+            });
+          }
+
+          const listings = schema.storeListings;
+          const rev = schema.storeListingReviews;
+
+          const [row] = await db
+            .select({
+              listingName: listings.name,
+              iconUrl: listings.iconUrl,
+              reviewText: rev.text,
+              rating: rev.rating,
+              authorDid: rev.authorDid,
+              authorDisplayName: rev.authorDisplayName,
+              authorAvatarUrl: rev.authorAvatarUrl,
+            })
+            .from(rev)
+            .innerJoin(listings, eq(rev.storeListingId, listings.id))
+            .where(
+              and(
+                eq(listings.verificationStatus, "verified"),
+                eq(listings.id, listingId),
+                eq(rev.id, reviewId),
+              ),
+            )
+            .limit(1);
+
+          if (!row) {
+            return new Response("Review not found.", {
+              status: 404,
+              headers: { "Content-Type": "text/plain; charset=utf-8" },
+            });
+          }
+
+          const profile = await fetchBlueskyPublicProfileFields(row.authorDid);
+          const dbDisplay =
+            row.authorDisplayName != null
+              ? String(row.authorDisplayName).trim() || null
+              : null;
+          const dbAvatar =
+            row.authorAvatarUrl != null
+              ? String(row.authorAvatarUrl).trim() || null
+              : null;
+
+          const displayName =
+            dbDisplay ||
+            (profile?.displayName != null
+              ? String(profile.displayName).trim() || null
+              : null);
+          const handleFromProfile =
+            profile?.handle != null ? String(profile.handle).trim() : "";
+          const handleRaw = handleFromProfile.replace(/^@/, "") || null;
+          const handleLabel = handleRaw ? `@${handleRaw}` : null;
+
+          const primaryLine =
+            displayName || handleLabel || formatDidShort(row.authorDid);
+          const secondaryLine = displayName && handleLabel ? handleLabel : null;
+
+          const profileAvatarTrimmed =
+            profile?.avatarUrl != null
+              ? String(profile.avatarUrl).trim() || null
+              : null;
+          const avatarUrlMerged = dbAvatar || profileAvatarTrimmed;
+
+          const [iconImgPreloaded, avatarImgPreloaded] = await Promise.all([
+            preloadOgRasterImageForSatori(
+              row.iconUrl != null ? String(row.iconUrl) : null,
+              120,
+            ),
+            preloadOgRasterImageForSatori(avatarUrlMerged, 96),
+          ]);
+
+          const iconImgSrc =
+            iconImgPreloaded ??
+            ogRemoteImgSrc(row.iconUrl != null ? String(row.iconUrl) : null);
+          const avatarImgSrc =
+            avatarImgPreloaded ?? ogRemoteImgSrc(avatarUrlMerged);
+
+          const listingNameRaw =
+            row.listingName != null ? String(row.listingName).trim() : "";
+          const listingTitle = truncate(
+            normalizeOgText(listingNameRaw) || "Product",
+            64,
+          );
+
+          const reviewRaw =
+            row.reviewText != null ? String(row.reviewText).trim() : "";
+          const reviewNorm = normalizeOgText(reviewRaw);
+          const hasWrittenReview = Boolean(reviewNorm);
+          const reviewPlain = hasWrittenReview ? reviewNorm : "";
+          const excerpt = hasWrittenReview ? truncate(reviewPlain, 280) : "";
+
+          const ratingText = ratingFractionLabel(row.rating);
+
+          const { regular, bold } = await getFonts();
+
+          const svg = await satori(
+            <div
+              style={{
+                backgroundColor: BG,
+                borderColor: BORDER,
+                borderStyle: "solid",
+                borderWidth: "2px",
+                color: TEXT,
+                display: "flex",
+                flexDirection: "column",
+                fontFamily: "Inter",
+                height: "100%",
+                padding: "40px 64px",
+                width: "100%",
+              }}
+            >
+              <div
+                style={{
+                  alignItems: "center",
+                  display: "flex",
+                  flexDirection: "row",
+                  width: "100%",
+                }}
+              >
+                <div
+                  style={{
+                    alignItems: "center",
+                    backgroundColor: SURFACE_SUBTLE,
+                    borderColor: BORDER,
+                    borderRadius: "24px",
+                    borderStyle: "solid",
+                    borderWidth: "1px",
+                    display: "flex",
+                    flexShrink: 0,
+                    height: "120px",
+                    justifyContent: "center",
+                    marginRight: "32px",
+                    overflow: "hidden",
+                    width: "120px",
+                  }}
+                >
+                  {iconImgSrc ? (
+                    <img
+                      alt=""
+                      src={iconImgSrc}
+                      height={120}
+                      width={120}
+                      style={{
+                        height: "120px",
+                        objectFit: "cover",
+                        width: "120px",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        color: TEXT_MUTED,
+                        fontSize: "44px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      @
+                    </div>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: TEXT_MUTED,
+                      fontSize: "22px",
+                      fontWeight: 700,
+                      letterSpacing: "0.14em",
+                      marginBottom: "10px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Review
+                  </div>
+                  <div
+                    style={{
+                      color: TEXT,
+                      fontSize: "46px",
+                      fontWeight: 700,
+                      lineHeight: 1.12,
+                    }}
+                  >
+                    {listingTitle}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    alignItems: "flex-end",
+                    display: "flex",
+                    flexDirection: "column",
+                    flexShrink: 0,
+                    marginLeft: "28px",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: TEXT_MUTED,
+                      fontSize: "22px",
+                      fontWeight: 700,
+                      letterSpacing: "0.12em",
+                      marginBottom: "8px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Rating
+                  </div>
+                  <div
+                    style={{
+                      color: TEXT,
+                      fontSize: "40px",
+                      fontWeight: 700,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {ratingText}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  flexGrow: 1,
+                  marginTop: "36px",
+                  minHeight: 0,
+                }}
+              >
+                <div
+                  style={{
+                    alignItems: hasWrittenReview ? "stretch" : "center",
+                    display: "flex",
+                    flexDirection: "column",
+                    flexGrow: 1,
+                    justifyContent: hasWrittenReview ? "flex-start" : "center",
+                    minHeight: 0,
+                    width: "100%",
+                  }}
+                >
+                  {hasWrittenReview ? (
+                    <div
+                      style={{
+                        color: TEXT,
+                        fontSize: `${EXCERPT_FONT_SIZE_PX}px`,
+                        fontWeight: 400,
+                        lineHeight: EXCERPT_LINE_HEIGHT,
+                        marginBottom: "28px",
+                        maxHeight: `${EXCERPT_MAX_HEIGHT_PX}px`,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {excerpt}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        color: TEXT_MUTED,
+                        fontSize: "28px",
+                        fontWeight: 400,
+                        lineHeight: 1.45,
+                        marginBottom: "28px",
+                        textAlign: "center",
+                      }}
+                    >
+                      No written review.
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    borderTopColor: BORDER,
+                    borderTopStyle: "solid",
+                    borderTopWidth: "1px",
+                    display: "flex",
+                    flexDirection: "column",
+                    flexShrink: 0,
+                    paddingTop: "28px",
+                  }}
+                >
+                  <div
+                    style={{
+                      alignItems: "center",
+                      display: "flex",
+                      flexDirection: "row",
+                    }}
+                  >
+                    <div
+                      style={{
+                        alignItems: "center",
+                        backgroundColor: SURFACE_SUBTLE,
+                        borderColor: BORDER,
+                        borderRadius: "999px",
+                        borderStyle: "solid",
+                        borderWidth: "1px",
+                        display: "flex",
+                        flexShrink: 0,
+                        height: "96px",
+                        justifyContent: "center",
+                        marginRight: "28px",
+                        overflow: "hidden",
+                        width: "96px",
+                      }}
+                    >
+                      {avatarImgSrc ? (
+                        <img
+                          alt=""
+                          src={avatarImgSrc}
+                          height={96}
+                          width={96}
+                          style={{
+                            height: "96px",
+                            objectFit: "cover",
+                            width: "96px",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            color: TEXT_MUTED,
+                            fontSize: "32px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {initialsFrom(primaryLine)}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: TEXT,
+                          fontSize: "32px",
+                          fontWeight: 700,
+                          marginBottom: secondaryLine ? "8px" : "0px",
+                        }}
+                      >
+                        {truncate(primaryLine, 52)}
+                      </div>
+                      {secondaryLine ? (
+                        <div
+                          style={{
+                            color: TEXT_MUTED,
+                            fontSize: "26px",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {truncate(secondaryLine, 56)}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            {
+              width: OG_WIDTH,
+              height: OG_HEIGHT,
+              fonts: [
+                { name: "Inter", data: regular, weight: 400, style: "normal" },
+                { name: "Inter", data: bold, weight: 700, style: "normal" },
+              ],
+              loadAdditionalAsset: twemojiLoadAdditionalAsset,
+            },
+          );
+
+          return new Response(svg, {
+            headers: {
+              "Content-Type": "image/svg+xml; charset=utf-8",
+              "Cache-Control": "public, max-age=3600",
+            },
+          });
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Could not render OG image.";
+
+          return new Response(message, {
+            status: 500,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+            },
+          });
+        }
+      },
+    },
+  },
+});

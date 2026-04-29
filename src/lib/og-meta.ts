@@ -64,6 +64,20 @@ export function buildFallbackOgImageUrl(input: {
 }
 
 /**
+ * Dynamic OG image for a single listing review (`/og/review` — server-rendered SVG).
+ * Crawlers load this when the shared URL includes `?review=` on the reviews page.
+ */
+export function buildListingReviewOgImageUrl(input: {
+  listingId: string;
+  reviewId: string;
+}) {
+  const params = new URLSearchParams();
+  params.set("listingId", input.listingId);
+  params.set("reviewId", input.reviewId);
+  return `/og/review?${params.toString()}`;
+}
+
+/**
  * Build an OG image URL for the tag-card style preview (`/og/tag`). Used by both app-tag and
  * directory/protocol category routes — pass the `tag` (used for accent + emoji lookup), an
  * optional `label` (for human-friendly title casing like "Account Tool" vs the slug

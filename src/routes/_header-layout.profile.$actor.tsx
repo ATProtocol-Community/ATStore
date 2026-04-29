@@ -362,6 +362,8 @@ function UserProfilePage() {
                 reviewedListing={review.listing}
                 review={review}
                 viewerDid={session?.user?.did ?? null}
+                anchorId={`listing-review-${review.id}`}
+                shareProductSlug={getDirectoryListingSlug(review.listing)}
                 onEditReview={() => {
                   void navigate({
                     to: "/products/$productId/reviews/$reviewId/edit",

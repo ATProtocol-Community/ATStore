@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link as TanstackLink } from "@tanstack/react-router";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { createLink, Link as TanstackLink } from "@tanstack/react-router";
+import { MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -41,6 +41,21 @@ import {
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/product-reviews-route";
+
+const IconButtonLink = createLink(IconButton);
+
+function blueskyReviewShareIntentHref(
+  productSlug: string,
+  reviewId: string,
+): string {
+  const path = `/products/${productSlug}/reviews?review=${reviewId}`;
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : (process.env.BETTER_AUTH_URL ?? "").trim().replace(/\/+$/, "");
+  const absolute = origin ? `${origin}${path}` : path;
+  return `https://bsky.app/intent/compose?text=${encodeURIComponent(absolute)}`;
+}
 
 const styles = stylex.create({
   reviewedListingCardBody: {
@@ -149,6 +164,10 @@ export type DirectoryListingReviewCardProps = {
   linkAuthorProfile?: boolean;
   /** When set, the card highlights the listing being reviewed (e.g. profile page). */
   reviewedListing?: DirectoryUserReviewListing;
+  /** Anchor for scroll/deep links (`?review=`). */
+  anchorId?: string;
+  /** Canonical product slug — enables “Share” (Bluesky) for this review. */
+  shareProductSlug?: string | null;
 };
 
 function authorLabelFor(review: DirectoryListingReview) {
@@ -168,6 +187,8 @@ export function DirectoryListingReviewCard({
   style,
   linkAuthorProfile = true,
   reviewedListing,
+  anchorId,
+  shareProductSlug,
 }: DirectoryListingReviewCardProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -217,7 +238,7 @@ export function DirectoryListingReviewCard({
 
   return (
     <>
-      <Card style={[styles.reviewCard, style]}>
+      <Card id={anchorId} style={[styles.reviewCard, style]}>
         {reviewedListing && listingProductId ? (
           <CardHeader hasBorder>
             <TanstackLink
@@ -254,6 +275,21 @@ export function DirectoryListingReviewCard({
             <CardHeaderAction>
               <Flex style={styles.ratingActions}>
                 <StarRating rating={review.rating} showReviewCount={false} />
+                {shareProductSlug ? (
+                  <IconButtonLink
+                    to={blueskyReviewShareIntentHref(
+                      shareProductSlug,
+                      review.id,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Share review on Bluesky"
+                    variant="tertiary"
+                    size="lg"
+                  >
+                    <Share2 size={18} />
+                  </IconButtonLink>
+                ) : null}
                 {showAuthorMenu ? (
                   <Menu
                     placement="bottom end"
@@ -356,6 +392,21 @@ export function DirectoryListingReviewCard({
                       rating={review.rating}
                       showReviewCount={false}
                     />
+                    {shareProductSlug ? (
+                      <IconButtonLink
+                        to={blueskyReviewShareIntentHref(
+                          shareProductSlug,
+                          review.id,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Share review on Bluesky"
+                        variant="tertiary"
+                        size="lg"
+                      >
+                        <Share2 size={18} />
+                      </IconButtonLink>
+                    ) : null}
                     {showAuthorMenu ? (
                       <Menu
                         placement="bottom end"

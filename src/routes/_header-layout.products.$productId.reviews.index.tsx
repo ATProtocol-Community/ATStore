@@ -6,6 +6,8 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
+import { useLayoutEffect } from "react";
+import { z } from "zod";
 
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { Flex } from "../design-system/flex";
@@ -16,13 +18,26 @@ import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
-import { buildRouteOgMeta } from "../lib/og-meta";
+import { buildListingReviewOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 import { Route as ProductReviewsRoute } from "./_header-layout.products.$productId.reviews";
+
+const reviewsIndexSearchSchema = z.object({
+  review: z.string().uuid().optional(),
+});
+
+function truncateOg(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
 
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews/",
 )({
-  loader: async ({ context, params }) => {
+  validateSearch: reviewsIndexSearchSchema,
+  loaderDeps: ({ search }) => ({ reviewFromSearch: search.review }),
+  loader: async ({ context, params, deps }) => {
     const legacyListingId = getLegacyDirectoryListingId(params.productId);
     const listing = await context.queryClient.ensureQueryData(
       legacyListingId
@@ -34,11 +49,41 @@ export const Route = createFileRoute(
           ),
     );
 
+    if (!listing) {
+      throw notFound();
+    }
+
+    const reviews = await context.queryClient.ensureQueryData(
+      directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
+    );
+
+    let ogTitle = `${listing.name} reviews | at-store`;
+    let ogDescription =
+      listing.tagline || "Read and write reviews for products on at-store.";
+    let ogImage: string | null = listing.heroImageUrl || null;
+
+    const reviewParam = deps.reviewFromSearch;
+    if (reviewParam) {
+      const hit = reviews.find((r) => r.id === reviewParam);
+      if (hit) {
+        ogImage = buildListingReviewOgImageUrl({
+          listingId: listing.id,
+          reviewId: hit.id,
+        });
+        const author = hit.authorDisplayName?.trim() || "Someone";
+        ogTitle = `${listing.name} · ${author} · review | at-store`;
+        ogDescription = truncateOg(
+          hit.text?.trim() ||
+            `${author} rated ${listing.name} ${String(hit.rating)}/5 on at-store.`,
+          220,
+        );
+      }
+    }
+
     return {
-      ogTitle: `${listing?.name || "Product"} reviews | at-store`,
-      ogDescription:
-        listing?.tagline || "Read and write reviews for products on at-store.",
-      ogImage: listing?.heroImageUrl || null,
+      ogTitle,
+      ogDescription,
+      ogImage,
     };
   },
   head: ({ loaderData }) =>
@@ -67,6 +112,7 @@ const styles = stylex.create({
 
 function ProductReviewsListPage() {
   const navigate = useNavigate();
+  const { review: reviewSearchId } = Route.useSearch();
   const { productId, productSlug } = ProductReviewsRoute.useLoaderData();
   const detailQuery =
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
@@ -76,6 +122,15 @@ function ProductReviewsListPage() {
   const { data: listing } = useSuspenseQuery(detailQuery);
   const { data: reviews } = useSuspenseQuery(reviewsQuery);
   const { data: session } = useQuery(user.getSessionQueryOptions);
+
+  useLayoutEffect(() => {
+    if (!reviewSearchId) {
+      return;
+    }
+
+    const el = document.getElementById(`listing-review-${reviewSearchId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [reviewSearchId]);
 
   if (!listing) {
     throw notFound();
@@ -121,6 +176,8 @@ function ProductReviewsListPage() {
             listingId={productId}
             review={review}
             viewerDid={session?.user?.did ?? null}
+            anchorId={`listing-review-${review.id}`}
+            shareProductSlug={productSlug}
             onEditReview={() => {
               void navigate({
                 to: "/products/$productId/reviews/$reviewId/edit",

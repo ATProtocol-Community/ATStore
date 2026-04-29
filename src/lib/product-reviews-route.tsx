@@ -32,6 +32,7 @@ const styles = stylex.create({
   avatar: {
     height: size["6xl"],
     width: size["6xl"],
+    flexShrink: 0,
   },
 });
 
@@ -46,12 +47,15 @@ export async function loadProductReviewsRoute({
   prefetchReviews,
   slugMismatchRedirectTo,
   slugMismatchExtraParams,
+  preserveReviewId,
 }: {
   context: { queryClient: QueryClient };
   params: { productId: string };
   prefetchReviews: boolean;
   slugMismatchRedirectTo: ProductReviewsSlugRedirect;
   slugMismatchExtraParams?: { reviewId: string };
+  /** Keep `?review=` when correcting the listing slug (share links). */
+  preserveReviewId?: string;
 }) {
   const legacyListingId = getLegacyDirectoryListingId(params.productId);
   const listing = await context.queryClient.ensureQueryData(
@@ -77,6 +81,14 @@ export async function loadProductReviewsRoute({
   const productSlug = getDirectoryListingSlug(listing);
 
   if (params.productId !== productSlug) {
+    const reviewSearch =
+      preserveReviewId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        preserveReviewId,
+      )
+        ? { review: preserveReviewId }
+        : undefined;
+
     throw redirect({
       to: slugMismatchRedirectTo,
       params: {
@@ -85,6 +97,7 @@ export async function loadProductReviewsRoute({
           ? { reviewId: slugMismatchExtraParams.reviewId }
           : {}),
       },
+      search: reviewSearch,
       replace: true,
     });
   }
