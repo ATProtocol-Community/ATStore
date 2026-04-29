@@ -3,6 +3,7 @@ import type { Blob as AtprotoBlob } from '@atcute/lexicons/interfaces'
 
 import type { StoreListing } from '#/db/schema'
 
+import { blobLikeToBskyCdnUrl } from '#/lib/atproto/blob-cdn-url'
 import { uploadImageBlob } from '#/lib/atproto/blob-upload'
 import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
 
@@ -205,6 +206,48 @@ export type ListingDetailRecordExtras = {
 }
 
 /**
+ * Reuse prior screenshot blob refs in the order of `desiredUrls`, without uploading.
+ * Matches each URL to a blob via `blobLikeToBskyCdnUrl`; returns null when the multiset does
+ * not line up (e.g. CDN URL mismatch, missing `repoDid`) so callers can fall back.
+ */
+function takeExistingScreenshotsInUrlOrder(
+  desiredUrls: string[],
+  existing: AtprotoBlob[],
+  repoDid: string | null | undefined,
+): AtprotoBlob[] | null {
+  const did = repoDid?.trim()
+  if (!did || existing.length === 0 || desiredUrls.length === 0) {
+    return null
+  }
+
+  const queues = new Map<string, AtprotoBlob[]>()
+  for (const blob of existing) {
+    const cdnUrl = blobLikeToBskyCdnUrl(blob, did)
+    if (!cdnUrl) continue
+    const key = cdnUrl.trim()
+    const arr = queues.get(key) ?? []
+    arr.push(blob)
+    queues.set(key, arr)
+  }
+
+  const out: AtprotoBlob[] = []
+  for (const raw of desiredUrls.slice(0, 4)) {
+    const key = raw.trim()
+    const q = queues.get(key)
+    if (!q || q.length === 0) return null
+    const next = q.shift()
+    if (next === undefined) return null
+    out.push(next)
+    if (q.length === 0) queues.delete(key)
+  }
+
+  for (const q of queues.values()) {
+    if (q.length > 0) return null
+  }
+  return out
+}
+
+/**
  * Build a lexicon record with blobs (Kitchen-style uploadBlob) plus the string URLs to store in Postgres for the site.
  *
  * Blob resolution order per slot:
@@ -300,8 +343,17 @@ export async function buildListingDetailRecordWithBlobs(
       )
     }
   } else if (existingBlobs?.screenshots !== undefined) {
-    for (const ref of existingBlobs.screenshots.slice(0, 4)) {
-      screenshots.push(ref)
+    const reorder = takeExistingScreenshotsInUrlOrder(
+      screenshotUrls,
+      existingBlobs.screenshots,
+      row.repoDid,
+    )
+    if (reorder) {
+      for (const ref of reorder) screenshots.push(ref)
+    } else {
+      for (const ref of existingBlobs.screenshots.slice(0, 4)) {
+        screenshots.push(ref)
+      }
     }
   } else {
     for (const u of screenshotUrls.slice(0, 4)) {
