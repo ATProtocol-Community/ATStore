@@ -25,6 +25,7 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, Heading1, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { TextArea } from "../design-system/text-area";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 
 export const Route = createFileRoute(
@@ -90,12 +91,17 @@ const styles = stylex.create({
     objectFit: "contain",
     width: "auto",
   },
+  rejectNotes: {
+    maxWidth: "100%",
+    width: "100%",
+  },
 });
 
 function UnverifiedListingsPage() {
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(adminApi.getAdminDashboardQueryOptions);
   const [busy, setBusy] = useState<string | null>(null);
+  const [rejectDraft, setRejectDraft] = useState<Record<string, string>>({});
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin"] });
@@ -215,6 +221,24 @@ function UnverifiedListingsPage() {
                             </div>
                           ) : null}
                         </Flex>
+                        <Flex
+                          direction="column"
+                          gap="sm"
+                          style={styles.rejectNotes}
+                        >
+                          <TextArea
+                            label="Rejection reason"
+                            placeholder="Explain why — required to reject."
+                            rows={3}
+                            value={rejectDraft[row.id] ?? ""}
+                            onChange={(value) =>
+                              setRejectDraft((prev) => ({
+                                ...prev,
+                                [row.id]: value,
+                              }))
+                            }
+                          />
+                        </Flex>
                         <Flex gap="md">
                           <Button
                             isDisabled={busy === row.id}
@@ -237,17 +261,27 @@ function UnverifiedListingsPage() {
                           </Button>
                           <Button
                             variant="secondary"
-                            isDisabled={busy === row.id}
+                            isDisabled={
+                              busy === row.id ||
+                              (rejectDraft[row.id]?.trim() ?? "").length === 0
+                            }
                             onPress={async () => {
                               setBusy(row.id);
                               try {
+                                const notes = rejectDraft[row.id]?.trim();
                                 await adminApi.setListingVerification({
                                   data: {
                                     listingId: row.id,
                                     status: "rejected",
+                                    notes,
                                   },
                                 });
                                 await refresh();
+                                setRejectDraft((prev) => {
+                                  const next = { ...prev };
+                                  delete next[row.id];
+                                  return next;
+                                });
                               } finally {
                                 setBusy(null);
                               }

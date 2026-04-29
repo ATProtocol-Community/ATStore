@@ -1015,13 +1015,14 @@ function AboutPage() {
             </Text>
             <div {...stylex.props(styles.calloutStack)}>
               <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">Submit a listing.</Text>
+                <Text weight="bold">Manage your listing.</Text>
                 <Text size="base">
                   If you build on ATProto{" "}
-                  <LinkLink to="/products/create" style={styles.proseLink}>
-                    Add your product
+                  <LinkLink to="/products/manage" style={styles.proseLink}>
+                    Open manage listings
                   </LinkLink>{" "}
-                  to the directory. It only takes a minute.
+                  to submit, edit, or track review status—it only takes a
+                  minute.
                 </Text>
               </p>
               <p {...stylex.props(styles.calloutBody)}>

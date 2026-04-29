@@ -118,10 +118,10 @@ export function NavbarAuth() {
         </MenuItem>
         <MenuItem
           onPress={() => {
-            void navigate({ to: "/products/create" });
+            void navigate({ to: "/products/manage" });
           }}
         >
-          Submit a listing
+          Manage listings
         </MenuItem>
         <MenuItem
           onPress={() => {

@@ -18,10 +18,24 @@ const HOME_HERO_SLOT_COUNT = 3
 const RECENT_REVIEWS_LIMIT = 200
 const RECENTLY_CLAIMED_LISTINGS_LIMIT = 200
 
-const setListingVerificationInput = z.object({
-  listingId: z.string().uuid(),
-  status: z.enum(['verified', 'rejected', 'unverified']),
-})
+const setListingVerificationInput = z
+  .object({
+    listingId: z.string().uuid(),
+    status: z.enum(['verified', 'rejected', 'unverified']),
+    notes: z.string().max(8000).optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.status === 'rejected') {
+      const trimmed = val.notes?.trim() ?? ''
+      if (trimmed.length === 0) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'A rejection reason is required.',
+          path: ['notes'],
+        })
+      }
+    }
+  })
 
 const setClaimStatusInput = z.object({
   claimId: z.string().uuid(),
@@ -134,14 +148,31 @@ const setListingVerification = createServerFn({ method: 'POST' })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(setListingVerificationInput)
   .handler(async ({ data, context }) => {
+    const adminCtx = await getAtprotoSessionForRequest(getRequest())
+    const reviewerDid = adminCtx?.did ?? null
+
     const table = context.schema.storeListings
-    await context.db
-      .update(table)
-      .set({
-        verificationStatus: data.status,
-        updatedAt: new Date(),
-      })
-      .where(eq(table.id, data.listingId))
+    const events = context.schema.storeListingRejectionEvents
+
+    await context.db.transaction(async (tx) => {
+      await tx
+        .update(table)
+        .set({
+          verificationStatus: data.status,
+          updatedAt: new Date(),
+        })
+        .where(eq(table.id, data.listingId))
+
+      if (data.status === 'rejected') {
+        const reason = data.notes!.trim()
+        await tx.insert(events).values({
+          storeListingId: data.listingId,
+          reason,
+          reviewerDid,
+        })
+      }
+    })
+
     return { ok: true as const }
   })
 

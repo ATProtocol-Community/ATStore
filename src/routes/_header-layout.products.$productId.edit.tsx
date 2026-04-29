@@ -16,10 +16,7 @@ import {
 } from "#/components/product-listing-form";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
-import {
-  getDirectoryListingSlug,
-  getLegacyDirectoryListingId,
-} from "../lib/directory-listing-slugs";
+import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -57,15 +54,10 @@ export const Route = createFileRoute(
       });
     }
 
-    const legacyListingId = getLegacyDirectoryListingId(params.productId);
     const listing = await context.queryClient.ensureQueryData(
-      legacyListingId
-        ? directoryListingApi.getDirectoryListingDetailQueryOptions(
-            legacyListingId,
-          )
-        : directoryListingApi.getDirectoryListingDetailBySlugQueryOptions(
-            params.productId,
-          ),
+      directoryListingApi.getDirectoryListingDetailForOwnerEditQueryOptions(
+        params.productId,
+      ),
     );
 
     if (!listing) {
@@ -118,7 +110,9 @@ function EditProductListingPage() {
   const { productId, productSlug } = Route.useLoaderData();
 
   const detailQuery =
-    directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
+    directoryListingApi.getDirectoryListingDetailForOwnerEditQueryOptions(
+      productSlug,
+    );
   const { data: listing } = useSuspenseQuery(detailQuery);
 
   if (!listing) {
@@ -210,6 +204,10 @@ function EditProductListingPage() {
     },
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["storeListings"] });
+      await queryClient.invalidateQueries({
+        queryKey:
+          directoryListingApi.getMyProductListingsQueryOptions().queryKey,
+      });
       await queryClient.invalidateQueries({
         queryKey: detailQuery.queryKey,
         exact: true,

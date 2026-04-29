@@ -42,6 +42,7 @@ import {
 } from '../../lib/listing-copy'
 import {
   buildDirectoryListingSlug,
+  getLegacyDirectoryListingId,
 } from '../../lib/directory-listing-slugs'
 import { resolveBannerRecordUrl } from '../../lib/banner-record-url'
 import {
@@ -2289,6 +2290,89 @@ function getDirectoryListingDetailBySlugQueryOptions(slug: string) {
   })
 }
 
+const getDirectoryListingDetailForOwnerEditInput = z.object({
+  productId: z.string().min(1),
+})
+
+/** Owner or public-verified listings only — hides non-listed drafts from strangers. */
+const getDirectoryListingDetailForOwnerEdit = createServerFn({
+  method: 'GET',
+})
+  .middleware([dbMiddleware])
+  .inputValidator(getDirectoryListingDetailForOwnerEditInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return null
+    }
+
+    const legacyListingId = getLegacyDirectoryListingId(data.productId)
+    const table = context.schema.storeListings
+    const [row] = await context.db
+      .select({
+        id: table.id,
+        sourceUrl: table.sourceUrl,
+        name: table.name,
+        slug: table.slug,
+        externalUrl: table.externalUrl,
+        iconUrl: table.iconUrl,
+        heroImageUrl: table.heroImageUrl,
+        screenshotUrls: table.screenshotUrls,
+        tagline: table.tagline,
+        fullDescription: table.fullDescription,
+        categorySlugs: table.categorySlugs,
+        verificationStatus: table.verificationStatus,
+        atUri: table.atUri,
+        repoDid: table.repoDid,
+        migratedFromAtUri: table.migratedFromAtUri,
+        productAccountDid: table.productAccountDid,
+        productAccountHandle: table.productAccountHandle,
+        reviewCount: table.reviewCount,
+        averageRating: table.averageRating,
+        ...storeListingLegacyDetailColumns,
+        appTags: table.appTags,
+        links: table.links,
+        createdAt: table.createdAt,
+        updatedAt: table.updatedAt,
+      })
+      .from(table)
+      .where(
+        legacyListingId
+          ? eq(table.id, legacyListingId)
+          : eq(table.slug, data.productId.trim()),
+      )
+      .limit(1)
+
+    if (!row) {
+      return null
+    }
+
+    const verified = row.verificationStatus === 'verified'
+    const isOwner =
+      row.productAccountDid?.trim() === session.did &&
+      row.repoDid?.trim() === session.did
+
+    if (!verified && !isOwner) {
+      return null
+    }
+
+    const { verificationStatus: _status, ...detailRow } = row
+
+    return toListingDetail(detailRow as DirectoryListingDetailRow, {
+      isStoreManaged: await computeIsStoreManaged(row),
+    })
+  })
+
+function getDirectoryListingDetailForOwnerEditQueryOptions(productId: string) {
+  return queryOptions({
+    queryKey: ['storeListings', 'detailForOwnerEdit', productId] as const,
+    queryFn: async () =>
+      getDirectoryListingDetailForOwnerEdit({
+        data: { productId },
+      }),
+  })
+}
+
 const getDirectoryListingReviews = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryListingReviewsInput)
@@ -3365,6 +3449,51 @@ const deleteStoreManagedListing = createServerFn({ method: 'POST' })
     await context.db.delete(t).where(eq(t.id, data.id))
 
     return { id: data.id }
+  })
+
+const deleteOwnedProductListingInput = z.object({
+  listingId: z.string().uuid(),
+})
+
+/** Delete a listing hosted on the signed-in user's PDS and remove the Postgres mirror row. */
+const deleteOwnedProductListing = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(deleteOwnedProductListingInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      throw new Error('Sign in to delete your listing.')
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId)
+
+    if (full.repoDid?.trim() !== session.did) {
+      throw new Error(
+        'Only the account that hosts the listing record can delete it.',
+      )
+    }
+
+    if (full.productAccountDid?.trim() !== session.did) {
+      throw new Error('This listing is not associated with your account.')
+    }
+
+    if (!full.rkey?.trim()) {
+      throw new Error(
+        'Listing has no AT Proto record (missing rkey). Nothing to delete.',
+      )
+    }
+
+    await deleteRecord(
+      session.client,
+      session.did,
+      COLLECTION.listingDetail,
+      full.rkey.trim(),
+    )
+
+    const t = context.schema.storeListings
+    await context.db.delete(t).where(eq(t.id, data.listingId))
+
+    return { ok: true as const }
   })
 
 const previewDirectoryListingIcon = createServerFn({ method: 'POST' })
@@ -5034,6 +5163,77 @@ function getProfileOwnedProductListingsQueryOptions(did: string) {
   })
 }
 
+/** Signed-in user's listings (every verification status) with rejection history — for /products/manage */
+const getMyProductListings = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return []
+    }
+
+    const did = session.did
+    const t = context.schema.storeListings
+    const rej = context.schema.storeListingRejectionEvents
+
+    const rows = await context.db
+      .select({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        iconUrl: t.iconUrl,
+        verificationStatus: t.verificationStatus,
+        updatedAt: t.updatedAt,
+      })
+      .from(t)
+      .where(eq(t.productAccountDid, did))
+      .orderBy(desc(t.updatedAt))
+
+    if (rows.length === 0) {
+      return []
+    }
+
+    const ids = rows.map((r) => r.id)
+    const events = await context.db
+      .select({
+        storeListingId: rej.storeListingId,
+        reason: rej.reason,
+        createdAt: rej.createdAt,
+      })
+      .from(rej)
+      .where(inArray(rej.storeListingId, ids))
+      .orderBy(asc(rej.createdAt))
+
+    const byListing = new Map<string, { createdAt: Date; reason: string }[]>()
+
+    for (const e of events) {
+      const list = byListing.get(e.storeListingId) ?? []
+      list.push({ createdAt: e.createdAt, reason: e.reason })
+      byListing.set(e.storeListingId, list)
+    }
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      verificationStatus: row.verificationStatus,
+      updatedAt: row.updatedAt.toISOString(),
+      rejectionHistory:
+        byListing.get(row.id)?.map((h) => ({
+          createdAt: h.createdAt.toISOString(),
+          reason: h.reason,
+        })) ?? [],
+    }))
+  })
+
+function getMyProductListingsQueryOptions() {
+  return queryOptions({
+    queryKey: ['storeListings', 'mine'] as const,
+    queryFn: async () => getMyProductListings(),
+  })
+}
+
 export type StoreManagedListingSummary = {
   id: string
   slug: string
@@ -5867,6 +6067,8 @@ export const directoryListingApi = {
   getDirectoryListingDetailQueryOptions,
   getDirectoryListingDetailBySlug,
   getDirectoryListingDetailBySlugQueryOptions,
+  getDirectoryListingDetailForOwnerEdit,
+  getDirectoryListingDetailForOwnerEditQueryOptions,
   getDirectoryListingReviews,
   getDirectoryListingReviewsQueryOptions,
   getDirectoryListingMentions,
@@ -5897,6 +6099,7 @@ export const directoryListingApi = {
   commitDirectoryListingHeroImage,
   removeStoreManagedListingHero,
   deleteStoreManagedListing,
+  deleteOwnedProductListing,
   previewDirectoryListingIcon,
   commitDirectoryListingIcon,
   regenerateDirectoryListingTagline,
@@ -5927,6 +6130,8 @@ export const directoryListingApi = {
   claimProductListingToPds,
   getProfileOwnedProductListings,
   getProfileOwnedProductListingsQueryOptions,
+  getMyProductListings,
+  getMyProductListingsQueryOptions,
   getStoreManagedListings,
   getStoreManagedListingsQueryOptions,
   getAdminListingHeroReview,

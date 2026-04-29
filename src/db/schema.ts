@@ -272,6 +272,34 @@ export const storeListings = pgTable(
 )
 
 /**
+ * Append-only moderation log: each row is one admin rejection with a human-readable reason.
+ * Not touched by Tap ingest. Cleared from the active UX by moving status off `rejected`, not by DELETE.
+ */
+export const storeListingRejectionEvents = pgTable(
+  'store_listing_rejection_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    storeListingId: uuid('store_listing_id')
+      .notNull()
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    reviewerDid: text('reviewer_did'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingIdx: index('store_listing_rejection_events_store_listing_id_idx').on(
+      table.storeListingId,
+    ),
+    listingCreatedIdx: index('store_listing_rejection_events_listing_created_idx').on(
+      table.storeListingId,
+      table.createdAt,
+    ),
+  }),
+)
+
+/**
  * Source of truth for `/generated/...` → storage URL mapping (S3 / imgproxy).
  * Populated by the hero-art admin generator and the `upload:generated-banners` script.
  * Consumed at runtime via `resolveBannerRecordUrl` (hydrated on SSR + inline script).

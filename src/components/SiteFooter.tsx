@@ -12,7 +12,7 @@ const FOOTER_LINK_GROUPS = [
       { href: "/about", label: "About" },
       { href: "/home", label: "Home" },
       { href: "/search", label: "Search" },
-      { href: "/products/create", label: "Submit a listing" },
+      { href: "/products/manage", label: "Manage listings" },
     ],
   },
   {
@@ -32,8 +32,11 @@ export function SiteFooter() {
           <AtStoreLogo />
         </Footer.Logo>
         <Footer.NavSection>
-          {FOOTER_LINK_GROUPS.map((group) => (
-            <Footer.NavGroup key={group.title} title={group.title}>
+          {FOOTER_LINK_GROUPS.map((group, index) => (
+            <Footer.NavGroup
+              key={group.title ?? `links-${index}`}
+              title={"title" in group ? group.title : undefined}
+            >
               {group.links.map((link) => (
                 <FooterLink key={link.href} to={link.href as never}>
                   {link.label}

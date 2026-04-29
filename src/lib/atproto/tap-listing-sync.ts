@@ -292,8 +292,11 @@ function resolveListingVerificationStatus(input: {
   existingRkey: string | null
   existingVerificationStatus: string | null
   atstoreDid: string | null
-}): 'verified' | 'unverified' {
+}): 'verified' | 'unverified' | 'rejected' {
   if (input.trustedPublisher) return 'verified'
+
+  /** Admin moderation — do not downgrade via ingest; only API changes this. */
+  if (input.existingVerificationStatus === 'rejected') return 'rejected'
 
   const repoDid = input.ingestRepoDid.trim()
 
