@@ -587,6 +587,12 @@ type ProductListingFormProps = {
    * remove API as part of the same transaction.
    */
   allowRemoveHero?: boolean;
+  /**
+   * When false, the Save button stays enabled without a staged hero image
+   * (still requires an icon for top-level listings). Default true — most flows
+   * expect a hero for publication quality.
+   */
+  requireHero?: boolean;
 };
 
 export function ProductListingForm({
@@ -601,6 +607,7 @@ export function ProductListingForm({
   successMessage,
   isAdmin = false,
   allowRemoveHero = false,
+  requireHero = true,
 }: ProductListingFormProps) {
   const { data: categoryTree } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryTreeQueryOptions,
@@ -841,8 +848,8 @@ export function ProductListingForm({
    * `pendingHeroRemoval` is an explicit "save without a hero" signal so the
    * Save button stays enabled even though `hasHeroImage` is false.
    */
-  const hasRequiredImages =
-    (hasHeroImage || pendingHeroRemoval) && hasIconImage;
+  const heroSatisfied = !requireHero || hasHeroImage || pendingHeroRemoval;
+  const hasRequiredImages = heroSatisfied && hasIconImage;
 
   const { dragAndDropHooks } = useDragAndDrop({
     getItems: (keys) =>
@@ -1135,9 +1142,11 @@ export function ProductListingForm({
                       <Text size="sm" variant="secondary">
                         Hero (16:9)
                       </Text>
-                      <Text size="sm" variant="critical">
-                        *
-                      </Text>
+                      {requireHero ? (
+                        <Text size="sm" variant="critical">
+                          *
+                        </Text>
+                      ) : null}
                     </Flex>
                     {isAdmin ||
                     (allowRemoveHero && initialValues.heroImageUrl) ? (

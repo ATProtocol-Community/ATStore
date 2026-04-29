@@ -838,6 +838,7 @@ function ManagedListingEditor({
             : null
         }
         successMessage={saveSuccessMessage}
+        requireHero={false}
       />
     </Flex>
   );
