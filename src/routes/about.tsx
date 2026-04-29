@@ -870,47 +870,10 @@ function AboutPage() {
               ATStore
             </span>
             <h1 {...stylex.props(styles.h1)}>
-              An open directory of ATProto Apps
+              An open directory of Atmosphere Apps
             </h1>
             <p {...stylex.props(styles.heroBody)}>
-              Browse, discover, and explore the ATProto ecosystem.
-            </p>
-          </div>
-
-          <div {...stylex.props(styles.atstoreProseStack)}>
-            <p {...stylex.props(styles.proseInline)}>
-              ATStore is a public directory of ATProto apps and the tools and
-              apps that are built on top of them. Think Bluesky and friends,
-              plus the growing ecosystem of clients, viewers, analytics, and
-              other things people make on top of those apps&apos; data. Each
-              listing has a profile page, categories, ratings, reviews, and
-              links out to the real product.
-            </p>
-            <p {...stylex.props(styles.proseInline)}>
-              Listings live as records on the AT Protocol itself, under the{" "}
-              <Link
-                href="https://github.com/hipstersmoothie/ATStore/tree/main/lexicons"
-                target="_blank"
-                rel="noreferrer"
-                style={styles.proseLink}
-              >
-                <code style={styles.inlineCode}>fyi.atstore.*</code>
-              </Link>{" "}
-              lexicons. The site you&apos;re looking at is one view over that
-              data — anyone is free to build their own.
-            </p>
-            <p {...stylex.props(styles.proseInline)}>
-              The Atmosphere is growing quickly, but most of it is scattered
-              across GitHub repos, Bluesky posts, group chats, and personal
-              spreadsheets. New users have a hard time finding apps; new
-              developers have a hard time finding what already exists.
-            </p>
-            <p {...stylex.props(styles.proseInline)}>
-              ATStore is an attempt to fix that with a single, opinionated,
-              community-curated index — without becoming another walled garden.
-              The data is open, the lexicons are open, the categories are
-              community-defined, and any project that fits the protocol is
-              welcome.
+              Browse, discover, and explore the Atmosphere ecosystem.
             </p>
           </div>
         </Flex>
