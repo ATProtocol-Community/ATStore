@@ -221,6 +221,7 @@ function ManageListingsPage() {
             void navigate({
               to: "/products/$productId/edit",
               params: { productId: listing.slug },
+              search: { from: "manage" },
             });
           }}
         >

@@ -239,6 +239,11 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   updatedAt: string | null
   /** Trust/compliance/support/project links (see `fyi.atstore.listing.detail#link`). */
   links: ListingLink[]
+  /**
+   * Only set by `getDirectoryListingDetailForOwnerEdit` — sync with Postgres
+   * `verification_status` for routing (e.g. back to Manage when not live).
+   */
+  verificationStatus?: string
 }
 
 export interface DirectoryListingReview {
@@ -2356,11 +2361,14 @@ const getDirectoryListingDetailForOwnerEdit = createServerFn({
       return null
     }
 
-    const { verificationStatus: _status, ...detailRow } = row
+    const { verificationStatus: _removed, ...detailRow } = row
 
-    return toListingDetail(detailRow as DirectoryListingDetailRow, {
-      isStoreManaged: await computeIsStoreManaged(row),
-    })
+    return {
+      ...toListingDetail(detailRow as DirectoryListingDetailRow, {
+        isStoreManaged: await computeIsStoreManaged(row),
+      }),
+      verificationStatus: row.verificationStatus,
+    }
   })
 
 function getDirectoryListingDetailForOwnerEditQueryOptions(productId: string) {

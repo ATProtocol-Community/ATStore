@@ -153,8 +153,15 @@ const setListingVerification = createServerFn({ method: 'POST' })
 
     const table = context.schema.storeListings
     const events = context.schema.storeListingRejectionEvents
+    const approvals = context.schema.storeListingVerificationApprovalEvents
 
     await context.db.transaction(async (tx) => {
+      const [beforeRow] = await tx
+        .select({ verificationStatus: table.verificationStatus })
+        .from(table)
+        .where(eq(table.id, data.listingId))
+        .limit(1)
+
       await tx
         .update(table)
         .set({
@@ -162,6 +169,17 @@ const setListingVerification = createServerFn({ method: 'POST' })
           updatedAt: new Date(),
         })
         .where(eq(table.id, data.listingId))
+
+      if (
+        data.status === 'verified' &&
+        beforeRow != null &&
+        beforeRow.verificationStatus !== 'verified'
+      ) {
+        await tx.insert(approvals).values({
+          storeListingId: data.listingId,
+          reviewerDid,
+        })
+      }
 
       if (data.status === 'rejected') {
         const reason = data.notes!.trim()

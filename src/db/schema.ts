@@ -41,6 +41,13 @@ export const user = pgTable('user', {
   isAdmin: boolean('is_admin').default(false).notNull(),
   /** User's preferred color scheme: `'light' | 'dark' | null` (null = follow system). */
   themeMode: text('theme_mode'),
+  /**
+   * When the user last cleared the notifications inbox (mark all read).
+   * Used instead of browser localStorage so counts stay correct across devices.
+   */
+  notificationsReadAt: timestamp('notifications_read_at', {
+    withTimezone: true,
+  }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -296,6 +303,29 @@ export const storeListingRejectionEvents = pgTable(
       table.storeListingId,
       table.createdAt,
     ),
+  }),
+)
+
+/** Append-only: admin verified a listing — drives owner notifications alongside rejection events. */
+export const storeListingVerificationApprovalEvents = pgTable(
+  'store_listing_verification_approval_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    storeListingId: uuid('store_listing_id')
+      .notNull()
+      .references(() => storeListings.id, { onDelete: 'cascade' }),
+    reviewerDid: text('reviewer_did'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingIdx: index(
+      'store_listing_verification_approval_events_store_listing_id_idx',
+    ).on(table.storeListingId),
+    listingCreatedIdx: index(
+      'store_listing_verification_approval_events_listing_created_idx',
+    ).on(table.storeListingId, table.createdAt),
   }),
 )
 

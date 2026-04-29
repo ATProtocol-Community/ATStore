@@ -204,6 +204,13 @@
       "when": 1777900000000,
       "tag": "0028_store_listing_rejection_events",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1778000000000,
+      "tag": "0029_notifications_read_and_listing_approval_events",
+      "breakpoints": true
     }
   ]
 }

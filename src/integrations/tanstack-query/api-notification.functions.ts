@@ -12,6 +12,8 @@ import { dbMiddleware } from './db-middleware'
 export type ProductNotificationType =
   | 'listing_liked'
   | 'listing_reviewed'
+  | 'listing_verified'
+  | 'listing_rejected'
   | 'claim_approved'
   | 'claim_rejected'
 
@@ -48,8 +50,16 @@ const getProductNotifications = createServerFn({ method: 'GET' })
     const rev = context.schema.storeListingReviews
     const fav = context.schema.storeListingFavorites
     const claims = context.schema.listingClaims
+    const rej = context.schema.storeListingRejectionEvents
+    const approvals = context.schema.storeListingVerificationApprovalEvents
 
-    const [reviewRows, favoriteRows, claimRows] = await Promise.all([
+    const [
+      reviewRows,
+      favoriteRows,
+      claimRows,
+      rejectionRows,
+      approvalRows,
+    ] = await Promise.all([
       context.db
         .select({
           id: rev.id,
@@ -115,16 +125,53 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         )
         .orderBy(desc(claims.decidedAt))
         .limit(data.limit),
+      context.db
+        .select({
+          id: rej.id,
+          createdAt: rej.createdAt,
+          reason: rej.reason,
+          reviewerDid: rej.reviewerDid,
+          listingId: list.id,
+          listingName: list.name,
+          listingSlug: list.slug,
+          listingIconUrl: list.iconUrl,
+        })
+        .from(rej)
+        .innerJoin(list, eq(rej.storeListingId, list.id))
+        .where(eq(list.productAccountDid, session.did))
+        .orderBy(desc(rej.createdAt))
+        .limit(data.limit),
+      context.db
+        .select({
+          id: approvals.id,
+          createdAt: approvals.createdAt,
+          reviewerDid: approvals.reviewerDid,
+          listingId: list.id,
+          listingName: list.name,
+          listingSlug: list.slug,
+          listingIconUrl: list.iconUrl,
+        })
+        .from(approvals)
+        .innerJoin(list, eq(approvals.storeListingId, list.id))
+        .where(eq(list.productAccountDid, session.did))
+        .orderBy(desc(approvals.createdAt))
+        .limit(data.limit),
     ])
 
-    const actorDids = Array.from(
+    const actorDidsToResolve = Array.from(
       new Set([
         ...reviewRows.map((row) => row.actorDid),
         ...favoriteRows.map((row) => row.actorDid),
+        ...rejectionRows
+          .filter((row) => row.reviewerDid?.trim())
+          .map((row) => row.reviewerDid!.trim()),
+        ...approvalRows
+          .filter((row) => row.reviewerDid?.trim())
+          .map((row) => row.reviewerDid!.trim()),
       ]),
     )
     const actorHandleEntries = await Promise.all(
-      actorDids.map(async (did) => [did, await fetchBlueskyHandleForDid(did)] as const),
+      actorDidsToResolve.map(async (did) => [did, await fetchBlueskyHandleForDid(did)] as const),
     )
     const actorHandleByDid = new Map(actorHandleEntries)
 
@@ -177,6 +224,46 @@ const getProductNotifications = createServerFn({ method: 'GET' })
         reviewRating: null,
         reviewText: null,
       })),
+      ...rejectionRows.map((row) => {
+        const reviewer = row.reviewerDid?.trim()
+        const actorDid =
+          reviewer && reviewer.length > 0 ? reviewer : session.did
+        return {
+          id: `listing_rejected:${row.id}`,
+          type: 'listing_rejected' as const,
+          createdAt: row.createdAt.toISOString(),
+          listingId: row.listingId,
+          listingName: row.listingName,
+          listingSlug: row.listingSlug,
+          listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+          actorDid,
+          actorHandle: actorHandleByDid.get(actorDid) ?? null,
+          actorDisplayName: null,
+          actorAvatarUrl: null,
+          reviewRating: null,
+          reviewText: row.reason.trim(),
+        }
+      }),
+      ...approvalRows.map((row) => {
+        const reviewer = row.reviewerDid?.trim()
+        const actorDid =
+          reviewer && reviewer.length > 0 ? reviewer : session.did
+        return {
+          id: `listing_verified:${row.id}`,
+          type: 'listing_verified' as const,
+          createdAt: row.createdAt.toISOString(),
+          listingId: row.listingId,
+          listingName: row.listingName,
+          listingSlug: row.listingSlug,
+          listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+          actorDid,
+          actorHandle: actorHandleByDid.get(actorDid) ?? null,
+          actorDisplayName: null,
+          actorAvatarUrl: null,
+          reviewRating: null,
+          reviewText: null,
+        }
+      }),
     ]
 
     merged.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -194,7 +281,68 @@ function getProductNotificationsQueryOptions({
   })
 }
 
+const markNotificationsReadInput = z.object({
+  readAtIso: z.string().min(1),
+})
+
+const getNotificationsReadAt = createServerFn({ method: 'GET' })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return { readAtIso: null as string | null }
+    }
+
+    const userTbl = context.schema.user
+    const [row] = await context.db
+      .select({ notificationsReadAt: userTbl.notificationsReadAt })
+      .from(userTbl)
+      .where(eq(userTbl.did, session.did))
+      .limit(1)
+
+    return {
+      readAtIso: row?.notificationsReadAt?.toISOString() ?? null,
+    }
+  })
+
+const markNotificationsRead = createServerFn({ method: 'POST' })
+  .middleware([dbMiddleware])
+  .inputValidator(markNotificationsReadInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest())
+    if (!session?.did) {
+      return { ok: false as const }
+    }
+
+    const readAtMs = Date.parse(data.readAtIso)
+    if (!Number.isFinite(readAtMs)) {
+      throw new Error('Invalid readAtIso')
+    }
+
+    const userTbl = context.schema.user
+    const updatedAt = new Date()
+    await context.db
+      .update(userTbl)
+      .set({
+        notificationsReadAt: new Date(readAtMs),
+        updatedAt,
+      })
+      .where(eq(userTbl.did, session.did))
+
+    return { ok: true as const }
+  })
+
+function getNotificationsReadAtQueryOptions() {
+  return queryOptions({
+    queryKey: ['notifications', 'readAt'] as const,
+    queryFn: async () => getNotificationsReadAt(),
+  })
+}
+
 export const notificationApi = {
   getProductNotifications,
   getProductNotificationsQueryOptions,
+  getNotificationsReadAt,
+  getNotificationsReadAtQueryOptions,
+  markNotificationsRead,
 }

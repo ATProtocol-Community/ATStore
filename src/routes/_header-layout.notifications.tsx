@@ -6,7 +6,15 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { Ban, Bell, Check, CircleCheck, Heart, Star } from "lucide-react";
+import {
+  AlertCircle,
+  Ban,
+  Bell,
+  Check,
+  CircleCheck,
+  Heart,
+  Star,
+} from "lucide-react";
 
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -137,9 +145,14 @@ export const Route = createFileRoute("/_header-layout/notifications")({
         search: { redirect: "/notifications" },
       });
     }
-    await context.queryClient.ensureQueryData(
-      notificationApi.getProductNotificationsQueryOptions({ limit: 50 }),
-    );
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        notificationApi.getProductNotificationsQueryOptions({ limit: 50 }),
+      ),
+      context.queryClient.ensureQueryData(
+        notificationApi.getNotificationsReadAtQueryOptions(),
+      ),
+    ]);
     return {};
   },
   component: NotificationsPage,
@@ -190,13 +203,15 @@ function NotificationsPage() {
 
       {notifications.length === 0 ? (
         <Text variant="secondary">
-          No notifications yet. Likes, reviews, and listing claim decisions will
-          show up here.
+          No notifications yet. Likes, reviews, directory moderation decisions,
+          and listing claim outcomes will show up here.
         </Text>
       ) : (
         <div {...stylex.props(styles.notificationsList)}>
           {notifications.map((item) => {
             const isLike = item.type === "listing_liked";
+            const isListingVerified = item.type === "listing_verified";
+            const isListingRejected = item.type === "listing_rejected";
             const isClaimApproved = item.type === "claim_approved";
             const isClaimRejected = item.type === "claim_rejected";
             const actor =
@@ -212,17 +227,21 @@ function NotificationsPage() {
                     styles.icon,
                     isLike
                       ? styles.likedIcon
-                      : isClaimApproved
+                      : isListingVerified || isClaimApproved
                         ? styles.claimApprovedIcon
-                        : isClaimRejected
-                          ? styles.claimRejectedIcon
-                          : styles.reviewedIcon,
+                        : isListingRejected
+                          ? styles.reviewedIcon
+                          : isClaimRejected
+                            ? styles.claimRejectedIcon
+                            : styles.reviewedIcon,
                   )}
                 >
                   {isLike ? (
                     <Heart size={22} />
-                  ) : isClaimApproved ? (
+                  ) : isListingVerified || isClaimApproved ? (
                     <CircleCheck size={22} />
+                  ) : isListingRejected ? (
+                    <AlertCircle size={22} />
                   ) : isClaimRejected ? (
                     <Ban size={22} />
                   ) : (
@@ -237,13 +256,17 @@ function NotificationsPage() {
                     style={styles.headerRow}
                   >
                     <Text size="xl" weight="semibold">
-                      {isClaimApproved
-                        ? `Your claim for ${item.listingName} was approved`
-                        : isClaimRejected
-                          ? `Your claim for ${item.listingName} was declined`
-                          : isLike
-                            ? `${actor} liked ${item.listingName}`
-                            : `${actor} reviewed ${item.listingName}`}
+                      {isListingVerified
+                        ? `${item.listingName} was approved`
+                        : isListingRejected
+                          ? `${item.listingName} needs changes`
+                          : isClaimApproved
+                            ? `Your claim for ${item.listingName} was approved`
+                            : isClaimRejected
+                              ? `Your claim for ${item.listingName} was declined`
+                              : isLike
+                                ? `${actor} liked ${item.listingName}`
+                                : `${actor} reviewed ${item.listingName}`}
                     </Text>
                     <Text size="sm" variant="secondary">
                       {formatRelativeTime(item.createdAt)}
@@ -254,7 +277,19 @@ function NotificationsPage() {
                       Go to Claim listing to move this product to your PDS.
                     </Text>
                   ) : null}
+                  {isListingVerified ? (
+                    <Text size="sm" variant="secondary" style={styles.cardBody}>
+                      Your listing is visible in the public directory.
+                    </Text>
+                  ) : null}
+                  {isListingRejected && item.reviewText ? (
+                    <Text size="sm" variant="secondary" style={styles.cardBody}>
+                      <strong>Note:</strong> {item.reviewText}
+                    </Text>
+                  ) : null}
                   {!isLike &&
+                  !isListingVerified &&
+                  !isListingRejected &&
                   !isClaimApproved &&
                   !isClaimRejected &&
                   item.reviewRating != null ? (
@@ -285,6 +320,25 @@ function NotificationsPage() {
                       >
                         View claim page
                       </Button>
+                    ) : isListingVerified || isListingRejected ? (
+                      <Flex gap="md" wrap>
+                        <ButtonLink
+                          to="/products/$productId"
+                          params={{ productId }}
+                          size="sm"
+                        >
+                          Open product
+                        </ButtonLink>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onPress={() =>
+                            void navigate({ to: "/products/manage" })
+                          }
+                        >
+                          Manage listings
+                        </Button>
+                      </Flex>
                     ) : (
                       <ButtonLink
                         to="/products/$productId"

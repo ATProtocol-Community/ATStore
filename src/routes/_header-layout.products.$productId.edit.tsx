@@ -9,6 +9,7 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
+import { z } from "zod";
 
 import {
   ProductListingForm,
@@ -18,6 +19,10 @@ import { directoryListingApi } from "../integrations/tanstack-query/api-director
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
+
+const editListingSearchSchema = z.object({
+  from: z.literal("manage").optional(),
+});
 
 async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -38,18 +43,44 @@ async function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+function afterEditDestination(input: {
+  fromManage: boolean;
+  verificationStatus: string | undefined;
+  productSlug: string;
+}): { to: "/products/manage" } | { to: "/products/$productId"; params: { productId: string } } {
+  const goManage =
+    input.fromManage || input.verificationStatus !== "verified";
+  if (goManage) {
+    return { to: "/products/manage" };
+  }
+  return {
+    to: "/products/$productId",
+    params: { productId: input.productSlug },
+  };
+}
+
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/edit",
 )({
-  loader: async ({ context, params }) => {
+  validateSearch: (raw) =>
+    editListingSearchSchema.parse(
+      raw ?? ({} satisfies z.input<typeof editListingSearchSchema>),
+    ),
+  loaderDeps: ({ search }) => ({
+    from: search.from,
+  }),
+  loader: async ({ context, params, deps }) => {
     const session = await context.queryClient.ensureQueryData(
       user.getSessionQueryOptions,
     );
+    const fromManage = deps.from === "manage";
+    const editPath = `/products/${params.productId}/edit${fromManage ? "?from=manage" : ""}`;
+
     if (!session?.user?.did) {
       throw redirect({
         to: "/login",
         search: {
-          redirect: `/products/${params.productId}/edit`,
+          redirect: editPath,
         },
       });
     }
@@ -69,6 +100,7 @@ export const Route = createFileRoute(
       throw redirect({
         to: "/products/$productId/edit",
         params: { productId: productSlug },
+        search: fromManage ? { from: "manage" } : {},
         replace: true,
       });
     }
@@ -108,6 +140,7 @@ function EditProductListingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { productId, productSlug } = Route.useLoaderData();
+  const { from } = Route.useSearch();
 
   const detailQuery =
     directoryListingApi.getDirectoryListingDetailForOwnerEditQueryOptions(
@@ -118,6 +151,19 @@ function EditProductListingPage() {
   if (!listing) {
     throw notFound();
   }
+
+  const fromManage = from === "manage";
+  const verificationStatus = listing.verificationStatus;
+
+  const navigateAway = () => {
+    void navigate(
+      afterEditDestination({
+        fromManage,
+        verificationStatus,
+        productSlug: getDirectoryListingSlug(listing),
+      }),
+    );
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (values: ProductListingFormSubmitValues) => {
@@ -212,10 +258,12 @@ function EditProductListingPage() {
         queryKey: detailQuery.queryKey,
         exact: true,
       });
-      void navigate({
-        to: "/products/$productId",
-        params: { productId: result.slug },
+      const dest = afterEditDestination({
+        fromManage,
+        verificationStatus,
+        productSlug: result.slug,
       });
+      void navigate(dest);
     },
   });
 
@@ -238,12 +286,7 @@ function EditProductListingPage() {
         links: listing.links ?? [],
         appTags: listing.appTags ?? [],
       }}
-      onCancel={() => {
-        void navigate({
-          to: "/products/$productId",
-          params: { productId: productSlug },
-        });
-      }}
+      onCancel={navigateAway}
       onSubmit={(values) => saveMutation.mutate(values)}
       allowRemoveHero
       errorMessage={
