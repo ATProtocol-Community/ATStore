@@ -10,14 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as IndexOldRouteImport } from './routes/index-old'
+import { Route as HomeRouteImport } from './routes/home'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as OgIndexRouteImport } from './routes/og.index'
+import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
 import { Route as OgTagRouteImport } from './routes/og.tag'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
-import { Route as HeaderLayoutHomeRouteImport } from './routes/_header-layout.home'
-import { Route as HeaderLayoutAboutRouteImport } from './routes/_header-layout.about'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
 import { Route as ApiAdminHeroCandidateImageRouteImport } from './routes/api.admin.hero-candidate-image'
 import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
@@ -65,19 +66,34 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
-  id: '/_header-layout',
+const IndexOldRoute = IndexOldRouteImport.update({
+  id: '/index-old',
+  path: '/index-old',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
+  id: '/_header-layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OgIndexRoute = OgIndexRouteImport.update({
   id: '/og/',
   path: '/og/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const HeaderLayoutIndexRoute = HeaderLayoutIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const OgTagRoute = OgTagRouteImport.update({
   id: '/og/tag',
@@ -95,16 +111,6 @@ const HeaderLayoutNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
-const HeaderLayoutHomeRoute = HeaderLayoutHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => HeaderLayoutRoute,
-} as any)
-const HeaderLayoutAboutRoute = HeaderLayoutAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => HeaderLayoutRoute,
-} as any)
 const HeaderLayoutAdminLayoutRoute = HeaderLayoutAdminLayoutRouteImport.update({
   id: '/_admin-layout',
   getParentRoute: () => HeaderLayoutRoute,
@@ -344,10 +350,11 @@ const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof HeaderLayoutIndexRoute
+  '/about': typeof AboutRoute
+  '/home': typeof HomeRoute
+  '/index-old': typeof IndexOldRoute
   '/login': typeof LoginRoute
-  '/about': typeof HeaderLayoutAboutRoute
-  '/home': typeof HeaderLayoutHomeRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og/tag': typeof OgTagRoute
@@ -394,10 +401,11 @@ export interface FileRoutesByFullPath {
   '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/home': typeof HomeRoute
+  '/index-old': typeof IndexOldRoute
   '/login': typeof LoginRoute
-  '/about': typeof HeaderLayoutAboutRoute
-  '/home': typeof HeaderLayoutHomeRoute
+  '/': typeof HeaderLayoutIndexRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og/tag': typeof OgTagRoute
@@ -444,15 +452,16 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
+  '/about': typeof AboutRoute
+  '/home': typeof HomeRoute
+  '/index-old': typeof IndexOldRoute
   '/login': typeof LoginRoute
   '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
-  '/_header-layout/about': typeof HeaderLayoutAboutRoute
-  '/_header-layout/home': typeof HeaderLayoutHomeRoute
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
   '/_header-layout/search': typeof HeaderLayoutSearchRoute
   '/og/tag': typeof OgTagRoute
+  '/_header-layout/': typeof HeaderLayoutIndexRoute
   '/og/': typeof OgIndexRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -499,9 +508,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
     | '/about'
     | '/home'
+    | '/index-old'
+    | '/login'
     | '/notifications'
     | '/search'
     | '/og/tag'
@@ -548,10 +558,11 @@ export interface FileRouteTypes {
     | '/products/$productId/reviews/$reviewId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/login'
     | '/about'
     | '/home'
+    | '/index-old'
+    | '/login'
+    | '/'
     | '/notifications'
     | '/search'
     | '/og/tag'
@@ -597,15 +608,16 @@ export interface FileRouteTypes {
     | '/products/$productId/reviews/$reviewId/edit'
   id:
     | '__root__'
-    | '/'
     | '/_header-layout'
+    | '/about'
+    | '/home'
+    | '/index-old'
     | '/login'
     | '/_header-layout/_admin-layout'
-    | '/_header-layout/about'
-    | '/_header-layout/home'
     | '/_header-layout/notifications'
     | '/_header-layout/search'
     | '/og/tag'
+    | '/_header-layout/'
     | '/og/'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
@@ -650,8 +662,10 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   HeaderLayoutRoute: typeof HeaderLayoutRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  HomeRoute: typeof HomeRoute
+  IndexOldRoute: typeof IndexOldRoute
   LoginRoute: typeof LoginRoute
   OgTagRoute: typeof OgTagRoute
   OgIndexRoute: typeof OgIndexRoute
@@ -672,18 +686,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/index-old': {
+      id: '/index-old'
+      path: '/index-old'
+      fullPath: '/index-old'
+      preLoaderRoute: typeof IndexOldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_header-layout': {
       id: '/_header-layout'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof HeaderLayoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/og/': {
@@ -692,6 +720,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/og/'
       preLoaderRoute: typeof OgIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_header-layout/': {
+      id: '/_header-layout/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof HeaderLayoutIndexRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
     '/og/tag': {
       id: '/og/tag'
@@ -712,20 +747,6 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof HeaderLayoutNotificationsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/home': {
-      id: '/_header-layout/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof HeaderLayoutHomeRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/about': {
-      id: '/_header-layout/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof HeaderLayoutAboutRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/_admin-layout': {
@@ -1092,10 +1113,9 @@ const HeaderLayoutProductsProductIdReviewsRouteWithChildren =
 
 interface HeaderLayoutRouteChildren {
   HeaderLayoutAdminLayoutRoute: typeof HeaderLayoutAdminLayoutRouteWithChildren
-  HeaderLayoutAboutRoute: typeof HeaderLayoutAboutRoute
-  HeaderLayoutHomeRoute: typeof HeaderLayoutHomeRoute
   HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
   HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
+  HeaderLayoutIndexRoute: typeof HeaderLayoutIndexRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
   HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
@@ -1118,10 +1138,9 @@ interface HeaderLayoutRouteChildren {
 
 const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutAdminLayoutRoute: HeaderLayoutAdminLayoutRouteWithChildren,
-  HeaderLayoutAboutRoute: HeaderLayoutAboutRoute,
-  HeaderLayoutHomeRoute: HeaderLayoutHomeRoute,
   HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
   HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
+  HeaderLayoutIndexRoute: HeaderLayoutIndexRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
   HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
@@ -1151,8 +1170,10 @@ const HeaderLayoutRouteWithChildren = HeaderLayoutRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   HeaderLayoutRoute: HeaderLayoutRouteWithChildren,
+  AboutRoute: AboutRoute,
+  HomeRoute: HomeRoute,
+  IndexOldRoute: IndexOldRoute,
   LoginRoute: LoginRoute,
   OgTagRoute: OgTagRoute,
   OgIndexRoute: OgIndexRoute,

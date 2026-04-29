@@ -56,8 +56,8 @@ export function SiteHeader() {
         <AtStoreLogo variant="navbar" />
       </NavbarLogoLink>
       <NavbarNavigation justify="right">
-        <NavbarLinkLink to="/home" isActive={pathname.startsWith("/apps/")}>
-          Apps
+        <NavbarLinkLink to="/about" isActive={pathname.startsWith("/about")}>
+          About
         </NavbarLinkLink>
         <NavbarLinkLink
           to="/search"

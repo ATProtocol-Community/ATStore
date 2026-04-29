@@ -53,7 +53,7 @@ import { StarRating } from "../design-system/star-rating";
 import { animationDuration } from "../design-system/theme/animations.stylex";
 import { animationTimingFunction } from "../design-system/theme/animations.stylex";
 
-export const Route = createFileRoute("/_header-layout/home")({
+export const Route = createFileRoute("/_header-layout/")({
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(
@@ -973,7 +973,7 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
         </Flex>
       </Card>
     </RouterLink>
-  );
+  )
 }
 
 function StoreIcon({

@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import type { StyleXStyles } from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   Link as RouterLink,
@@ -8,7 +9,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { Page } from "../design-system/page";
-import { blue } from "../design-system/theme/colors/blue.stylex";
+import { blue, blueA } from "../design-system/theme/colors/blue.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
@@ -27,19 +28,24 @@ import {
   tracking,
 } from "../design-system/theme/typography.stylex";
 import {
+  Database,
   Globe,
   Layers3,
   ShieldCheck,
   Sparkles,
+  Tags,
+  TrendingUp,
+  UserCheck,
   UserRound,
   Wrench,
 } from "lucide-react";
 import { HeaderLayout } from "#/design-system/header-layout";
-import { SiteHeader } from "#/components/SiteHeader";
 import { SiteFooter } from "#/components/SiteFooter";
+import { SiteHeader } from "#/components/SiteHeader";
 import { FeaturedListingFallbackCard } from "#/components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "#/components/FeaturedListingGrid";
 import { Flex } from "#/design-system/flex";
+import { Link } from "#/design-system/link";
 import { Avatar } from "#/design-system/avatar";
 import { Card } from "#/design-system/card";
 import {
@@ -59,8 +65,11 @@ import { HeroImage } from "#/components/HeroImage";
 import { Text } from "#/design-system/typography/text.tsx";
 
 const ButtonLink = createLink(Button);
+const LinkLink = createLink(Link);
 
-export const Route = createFileRoute("/")({
+const BLUESKY_ECOSYSTEM_CATEGORY_ID = "apps/bluesky";
+
+export const Route = createFileRoute("/about")({
   loader: async ({ context }) => {
     const ecosystemData = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryCategoryPageQueryOptions({
@@ -77,9 +86,9 @@ export const Route = createFileRoute("/")({
   },
   head: ({ loaderData }) => ({
     ...buildRouteOgMeta({
-      title: "at-store | The Atmosphere",
+      title: "About | ATStore",
       description:
-        "Discover apps and tools across the Atmosphere, with open identity and portable data.",
+        "The open social web (the Atmosphere) and ATStore: an open directory of apps and tools on the AT Protocol, how it works, and how to get involved.",
     }),
     links: (loaderData?.preloadHeroImages ?? []).map((href) => ({
       rel: "preload",
@@ -87,7 +96,7 @@ export const Route = createFileRoute("/")({
       href,
     })),
   }),
-  component: RouteComponent,
+  component: AboutPage,
 });
 
 const ACCOUNT_TAGS = [
@@ -139,9 +148,32 @@ const DATA_CONTROL = [
     icon: Wrench,
   },
 ] as const;
+
+const HOW_ATSTORE_WORKS = [
+  {
+    title: "Listings as records",
+    body: "Every product is a fyi.atstore.listing.detail record on someone's PDS. ATStore ingests these records via a tap-sync consumer, so the directory stays in sync with whoever owns the listing.",
+    icon: Database,
+  },
+  {
+    title: "Claiming your listing",
+    body: "Anyone with an ATProto account can claim and manage the listing for a product they represent. Once claimed, the listing's record lives on the owner's PDS — not ours — so it's portable and revocable.",
+    icon: UserCheck,
+  },
+  {
+    title: "Reviews & trending",
+    body: "Reviews are public records too. A separate consumer watches Bluesky for posts that mention listings to surface what the community is actually using and talking about right now.",
+    icon: TrendingUp,
+  },
+  {
+    title: "Categories & tags",
+    body: "Listings are organized by the app they build on (e.g. Bluesky) and by cross-cutting workflow tags like analytics, moderation, or automation. Browse by whatever lens fits the question you're asking.",
+    icon: Tags,
+  },
+] as const;
+
 const MAX_BROWSER_TAGS = 8;
 const MAX_BROWSER_APPS = 12;
-const BLUESKY_ECOSYSTEM_CATEGORY_ID = "apps/bluesky";
 
 const styles = stylex.create({
   grow: {
@@ -153,44 +185,8 @@ const styles = stylex.create({
   fit: {
     minWidth: "fit-content",
   },
-  page: {
-    backgroundColor: uiColor.bg,
-  },
   shell: {
     fontFamily: fontFamily.sans,
-  },
-  topNav: {
-    alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: verticalSpace["8xl"],
-  },
-  logo: {
-    alignItems: "center",
-    color: uiColor.text2,
-    display: "flex",
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    gap: gap.md,
-  },
-  logoDot: {
-    backgroundColor: blue.solid1,
-    borderRadius: radius.full,
-    height: size.xs,
-    width: size.xs,
-  },
-  navList: {
-    display: "flex",
-    gap: gap["4xl"],
-  },
-  navItem: {
-    color: uiColor.text1,
-    fontSize: fontSize.sm,
-  },
-  navCta: {
-    color: blue.text1,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
   },
   hero: {
     alignItems: "center",
@@ -199,7 +195,7 @@ const styles = stylex.create({
     gap: gap["4xl"],
     marginBottom: {
       default: verticalSpace["2xl"],
-      [breakpoints.md]: verticalSpace["8xl"],
+      [breakpoints.md]: verticalSpace["4xl"],
     },
     marginTop: {
       default: verticalSpace["8xl"],
@@ -219,13 +215,13 @@ const styles = stylex.create({
     borderWidth: 1,
     borderRadius: radius.full,
     color: blue.text1,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.medium,
     fontFamily: fontFamily.sans,
-    paddingTop: verticalSpace.md,
-    paddingBottom: verticalSpace.md,
-    paddingLeft: horizontalSpace.xl,
-    paddingRight: horizontalSpace.xl,
+    paddingTop: verticalSpace["2xl"],
+    paddingBottom: verticalSpace["2xl"],
+    paddingLeft: horizontalSpace["4xl"],
+    paddingRight: horizontalSpace["4xl"],
   },
   h1: {
     color: uiColor.text2,
@@ -255,37 +251,26 @@ const styles = stylex.create({
     gap: gap.md,
     paddingTop: verticalSpace.xl,
   },
-  buttonPrimary: {
-    background: `linear-gradient(135deg, ${blue.solid1} 0%, ${blue.solid2} 100%)`,
-    border: "none",
-    borderRadius: radius.full,
-    color: uiColor.textContrast,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    paddingTop: verticalSpace.md,
-    paddingBottom: verticalSpace.md,
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-  },
-  buttonSecondary: {
-    backgroundColor: uiColor.bgSubtle,
-    borderColor: uiColor.border1,
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderRadius: radius.full,
-    color: uiColor.text2,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    paddingTop: verticalSpace.md,
-    paddingBottom: verticalSpace.md,
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-  },
   cardDescription: {
     fontSize: fontSize.base,
     lineHeight: lineHeight.base,
     margin: 0,
     color: uiColor.text1,
+  },
+  atstoreBridge: {
+    color: uiColor.text1,
+    fontFamily: fontFamily.sans,
+    fontSize: fontSize.lg,
+    lineHeight: lineHeight.base,
+    margin: 0,
+    marginTop: verticalSpace["2xl"],
+    maxWidth: "min(90vw, 42rem)",
+  },
+  atstoreBridgeLink: {
+    color: blue.text1,
+    fontWeight: fontWeight.semibold,
+    textDecoration: "underline",
+    textUnderlineOffset: 4,
   },
   accountCard: {
     backgroundImage: `linear-gradient(-45deg, ${uiColor.bgSubtle} 0%, ${uiColor.component2} 100%)`,
@@ -459,6 +444,26 @@ const styles = stylex.create({
     lineHeight: lineHeight.base,
     margin: 0,
   },
+  proseInline: {
+    color: uiColor.text1,
+    fontFamily: fontFamily.sans,
+    fontSize: {
+      default: fontSize.lg,
+      [breakpoints.md]: fontSize.xl,
+    },
+    lineHeight: lineHeight.base,
+    margin: 0,
+  },
+  proseLink: {
+    color: blue.text1,
+    fontWeight: fontWeight.medium,
+    textDecoration: "underline",
+    textUnderlineOffset: 3,
+  },
+  inlineCode: {
+    fontFamily: fontFamily.mono,
+    fontSize: "0.95em",
+  },
   twoCol: {
     maxWidth: "var(--page-content-max-width)",
     marginLeft: "auto",
@@ -471,14 +476,6 @@ const styles = stylex.create({
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.md]: "1fr 1fr",
-    },
-  },
-  cardGrid3: {
-    display: "grid",
-    gap: gap.lg,
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.md]: "1fr 1fr 1fr",
     },
   },
   featureCard: {
@@ -510,7 +507,7 @@ const styles = stylex.create({
     flexGrow: 1,
     flexShrink: 0,
     flexBasis: 0,
-    minWidth: 320,
+    minWidth: 280,
   },
   featureTitle: {
     color: uiColor.text2,
@@ -549,70 +546,11 @@ const styles = stylex.create({
     marginLeft: 0,
     marginRight: 0,
   },
-  centerIntro: {
-    marginBottom: verticalSpace["6xl"],
-    textAlign: "center",
-  },
-  statBand: {
-    backgroundImage: `linear-gradient(135deg, ${blue.solid1} 0%, ${blue.text1} 100%)`,
-    borderRadius: radius.xl,
-    cornerShape: "squircle",
-    color: uiColor.textContrast,
-    display: "grid",
-    gap: gap["6xl"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.md]: "1fr 1fr 1fr",
-    },
-    marginTop: verticalSpace["5xl"],
-    paddingTop: verticalSpace["8xl"],
-    paddingBottom: verticalSpace["8xl"],
-    paddingLeft: horizontalSpace["10xl"],
-    paddingRight: horizontalSpace["10xl"],
-    width: "fit-content",
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  statItem: {
-    textAlign: "center",
-  },
-  statValue: {
-    fontSize: {
-      default: fontSize["4xl"],
-      [breakpoints.md]: fontSize["6xl"],
-    },
-    fontWeight: fontWeight.bold,
-    letterSpacing: tracking.tight,
-    lineHeight: lineHeight.none,
-    margin: 0,
-  },
-  statLabel: {
-    color: uiColor.textContrast,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.light,
-    marginTop: verticalSpace.md,
-    marginBottom: 0,
-    marginLeft: 0,
-    marginRight: 0,
-    opacity: 0.9,
-  },
-  audienceBox: {
-    display: "grid",
-    gap: gap.md,
-  },
-  checkRow: {
-    backgroundColor: uiColor.bg,
-    borderColor: uiColor.border1,
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    color: uiColor.text2,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    paddingTop: verticalSpace.md,
-    paddingBottom: verticalSpace.md,
-    paddingLeft: horizontalSpace.lg,
-    paddingRight: horizontalSpace.lg,
+  atstoreProseStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: verticalSpace["3xl"],
+    maxWidth: "var(--page-content-max-width)",
   },
   ctaSection: {
     alignItems: "center",
@@ -660,18 +598,6 @@ const styles = stylex.create({
     margin: 0,
     maxWidth: "54ch",
   },
-  footerLine: {
-    borderTopColor: uiColor.border1,
-    borderTopStyle: "solid",
-    borderTopWidth: 1,
-    color: uiColor.text1,
-    display: "flex",
-    fontSize: fontSize.xs,
-    justifyContent: "space-between",
-    marginTop: verticalSpace.md,
-    paddingTop: verticalSpace["2xl"],
-    width: "100%",
-  },
   accountCardHero: {
     backgroundColor: uiColor.bg,
     paddingBottom: verticalSpace["11xl"],
@@ -685,30 +611,28 @@ const styles = stylex.create({
   sectionBodyContainer: {
     minWidth: 320,
   },
-  sectionBodyLarge: {
-    maxWidth: "44ch",
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  appBrowserSection: {
-    backgroundColor: uiColor.bg,
-    borderRadius: radius.lg,
-    marginBottom: verticalSpace["6xl"],
-    paddingTop: verticalSpace["11xl"],
-    paddingBottom: verticalSpace["11xl"],
-    paddingLeft: horizontalSpace["10xl"],
-    paddingRight: horizontalSpace["10xl"],
-  },
   appBrowserHeader: {
     textAlign: "center",
   },
   appBrowserEyebrow: {
-    color: blue.text1,
+    color: blue.text2,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     letterSpacing: tracking.widest,
     marginBottom: verticalSpace.lg,
     textTransform: "uppercase",
+    backgroundColor: blueA.component1,
+    borderRadius: radius.full,
+    paddingTop: verticalSpace.sm,
+    paddingBottom: verticalSpace.sm,
+    paddingLeft: horizontalSpace.xl,
+    paddingRight: horizontalSpace.xl,
+    borderColor: blue.border1,
+    borderStyle: "solid",
+    borderWidth: 1,
+    width: "fit-content",
+    marginLeft: "auto",
+    marginRight: "auto",
   },
   appBrowserDescription: {
     color: uiColor.text1,
@@ -773,10 +697,6 @@ const styles = stylex.create({
     height: "100%",
     overflow: "hidden",
   },
-  appCardFeatured: {
-    borderRadius: radius.xl,
-    boxShadow: shadow.lg,
-  },
   appCardBody: {
     height: "100%",
     display: "flex",
@@ -787,25 +707,6 @@ const styles = stylex.create({
     paddingBottom: verticalSpace["2xl"],
     paddingLeft: horizontalSpace["2xl"],
     paddingRight: horizontalSpace["2xl"],
-  },
-  featuredImage: {
-    display: "block",
-    height: "100%",
-    minHeight: "14rem",
-    objectFit: "cover",
-    width: "100%",
-  },
-  featuredFallback: {
-    alignItems: "center",
-    backgroundColor: uiColor.bgSubtle,
-    color: uiColor.text1,
-    display: "flex",
-    fontFamily: fontFamily.title,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
-    height: "100%",
-    justifyContent: "center",
-    minHeight: "14rem",
   },
   browserCardText: {
     minWidth: 0,
@@ -822,13 +723,6 @@ const styles = stylex.create({
     fontFamily: fontFamily.sans,
     fontSize: fontSize.base,
     margin: 0,
-  },
-  browserCardLink: {
-    color: blue.text1,
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    marginTop: verticalSpace.xs,
   },
   appBrowserGrid: {
     ":is(*) > :nth-child(4) ~ *": {
@@ -850,9 +744,48 @@ const styles = stylex.create({
   appCardAvatar: {
     flexShrink: 0,
   },
+  callout: {
+    maxWidth: "var(--page-content-max-width)",
+    marginLeft: "auto",
+    marginRight: "auto",
+    width: "100%",
+    backgroundColor: uiColor.bgSubtle,
+    borderRadius: radius.lg,
+    paddingTop: verticalSpace["3xl"],
+    paddingBottom: verticalSpace["3xl"],
+    paddingLeft: horizontalSpace["3xl"],
+    paddingRight: horizontalSpace["3xl"],
+    gap: gap["6xl"],
+    display: "flex",
+    flexDirection: "column",
+    marginBottom: verticalSpace["6xl"],
+  },
+  calloutHeading: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: fontSize["3xl"],
+    fontWeight: fontWeight.bold,
+    margin: 0,
+  },
+  calloutStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: verticalSpace["6xl"],
+  },
+  calloutBody: {
+    color: uiColor.text1,
+    fontFamily: fontFamily.sans,
+    fontSize: fontSize.base,
+    lineHeight: lineHeight.base,
+    margin: 0,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    gap: gap["2xl"],
+  },
 });
 
-function RouteComponent() {
+function AboutPage() {
   const { data: allApps } = useSuspenseQuery(
     directoryListingApi.getAllAppsQueryOptions({ sort: "popular" }),
   );
@@ -885,8 +818,6 @@ function RouteComponent() {
     () =>
       (blueskyEcosystemData?.category.children ?? [])
         .map((category) => ({
-          // Keep each category group ordered by trending signals.
-          // For ties, preserve incoming query order instead of forcing alphabetical.
           listings: sortListingsByTrendingSignals(
             getListingsForCategoryBranch(category.id, ecosystemApps),
           ),
@@ -930,44 +861,61 @@ function RouteComponent() {
       <HeaderLayout.Header>
         <SiteHeader />
       </HeaderLayout.Header>
+
       <Page.Hero style={styles.accountCardHero}>
         <Flex direction="column" gap="6xl" align="center" justify="center">
           <div {...stylex.props(styles.hero)}>
             <span {...stylex.props(styles.eyebrow)}>
-              <Sparkles size={16} />
-              The Atmosphere
+              <Sparkles size={20} />
+              ATStore
             </span>
             <h1 {...stylex.props(styles.h1)}>
-              The last social account
-              <br />
-              <span {...stylex.props(styles.h1Accent)}>
-                you&apos;ll ever need.
-              </span>
+              An open directory of ATProto Apps
             </h1>
             <p {...stylex.props(styles.heroBody)}>
-              One account for all your apps. Yours to keep, wherever you go.
+              Browse, discover, and explore the ATProto ecosystem.
             </p>
           </div>
 
-          <div {...stylex.props(styles.accountCard)}>
-            <div {...stylex.props(styles.accountLogo)}>
-              <Sparkles size={24} />
-            </div>
-            <div {...stylex.props(styles.accountLabel)}>Atmosphere Account</div>
-            <p {...stylex.props(styles.accountHandle)}>@yourname.com</p>
-            <div {...stylex.props(styles.accountTags)}>
-              {ACCOUNT_TAGS.map((tag) => (
-                <span key={tag} {...stylex.props(styles.accountTag)}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <Text size="base" style={styles.cardDescription}>
-              One account. Hundreds of apps. All your data, always yours.
-            </Text>
+          <div {...stylex.props(styles.atstoreProseStack)}>
+            <p {...stylex.props(styles.proseInline)}>
+              ATStore is a public directory of ATProto apps and the tools and
+              apps that are built on top of them. Think Bluesky and friends,
+              plus the growing ecosystem of clients, viewers, analytics, and
+              other things people make on top of those apps&apos; data. Each
+              listing has a profile page, categories, ratings, reviews, and
+              links out to the real product.
+            </p>
+            <p {...stylex.props(styles.proseInline)}>
+              Listings live as records on the AT Protocol itself, under the{" "}
+              <Link
+                href="https://github.com/hipstersmoothie/ATStore/tree/main/lexicons"
+                target="_blank"
+                rel="noreferrer"
+                style={styles.proseLink}
+              >
+                <code style={styles.inlineCode}>fyi.atstore.*</code>
+              </Link>{" "}
+              lexicons. The site you&apos;re looking at is one view over that
+              data — anyone is free to build their own.
+            </p>
+            <p {...stylex.props(styles.proseInline)}>
+              The Atmosphere is growing quickly, but most of it is scattered
+              across GitHub repos, Bluesky posts, group chats, and personal
+              spreadsheets. New users have a hard time finding apps; new
+              developers have a hard time finding what already exists.
+            </p>
+            <p {...stylex.props(styles.proseInline)}>
+              ATStore is an attempt to fix that with a single, opinionated,
+              community-curated index — without becoming another walled garden.
+              The data is open, the lexicons are open, the categories are
+              community-defined, and any project that fits the protocol is
+              welcome.
+            </p>
           </div>
         </Flex>
       </Page.Hero>
+
       <Page.Hero style={styles.sectionGray}>
         <Flex direction="column" gap="2xl" style={styles.twoCol}>
           <Flex direction="column" gap="2xl">
@@ -1029,186 +977,140 @@ function RouteComponent() {
           </Flex>
         </Flex>
       </Page.Hero>
-      <Page.Hero style={styles.sectionWhite}>
-        <Flex direction="column" gap="6xl" style={styles.twoCol}>
-          <Flex direction="column" gap="4xl" style={styles.appBrowserHeader}>
-            <div {...stylex.props(styles.appBrowserEyebrow)}>App Ecosystem</div>
-            <h2 {...stylex.props(styles.sectionHeading)}>
-              One account. Every app.
-            </h2>
-            <p {...stylex.props(styles.appBrowserDescription)}>
-              Sign in once and you&apos;re ready to use every app on the
-              Atmosphere with no new passwords and no starting over.
-            </p>
-          </Flex>
 
-          {appBrowserTags.length > 0 ? (
-            <div {...stylex.props(styles.chipRow)}>
-              {appBrowserTags.map((tag) => (
-                <button
-                  key={tag.tag}
-                  type="button"
-                  onClick={() => setActiveAppTag(tag.tag)}
-                  {...stylex.props(
-                    styles.chip,
-                    activeAppTagValue === tag.tag && styles.chipActive,
-                  )}
-                >
-                  {formatAppTagLabel(tag.tag)}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          <FeaturedListingGrid
-            items={appBrowserApps.slice(0, MAX_BROWSER_APPS)}
-            getKey={(app) => app.id}
-            isFeatured={(_, index) => index === 0}
-            canFeature={(app) => Boolean(app.heroImageUrl)}
-            renderItem={(app, { featured }) => (
-              <AppBrowserListingCard featured={featured} listing={app} />
-            )}
-            style={styles.appBrowserGrid}
-          />
-
-          <Flex
-            justify="center"
-            direction="column"
-            align="center"
-            gap="xl"
-            style={styles.bottomMetaContainer}
-          >
-            <ButtonLink to="/apps/tags" type="button" size="xl">
-              Browse all apps
-            </ButtonLink>
-            <p {...stylex.props(styles.bottomMeta)}>
-              <strong>{allApps.length}+</strong> apps already on the Atmosphere.
-            </p>
-          </Flex>
-        </Flex>
-      </Page.Hero>
-      <Page.Hero style={styles.sectionGray}>
-        <div {...stylex.props(styles.twoCol)}>
-          <Flex direction="column" gap="7xl">
-            <Flex direction="column" gap="lg">
-              <div {...stylex.props(styles.sectionEyebrow)}>Data ownership</div>
-              <h2 {...stylex.props(styles.sectionHeading)}>
-                Control your data.
-              </h2>
-              <p {...stylex.props(styles.sectionBody)}>
-                Your Atmosphere account lives in a PDS — a service that stores
-                your data and keeps it available across every app. You pick who
-                hosts your account, and you can switch any time. No matter which
-                provider you choose, your account works everywhere.
-              </p>
-            </Flex>
-            <Flex gap="lg" wrap>
-              {DATA_CONTROL.map((item) => (
-                <article key={item.title} {...stylex.props(styles.featureCard)}>
-                  <span {...stylex.props(styles.featureIcon)}>
-                    <item.icon size={20} />
-                  </span>
-                  <Flex direction="column" gap="md">
-                    <div {...stylex.props(styles.featureTitleRow)}>
-                      <h3 {...stylex.props(styles.featureTitle)}>
-                        {item.title}
-                      </h3>
-                    </div>
-                    <p {...stylex.props(styles.featureBody)}>{item.body}</p>
-                  </Flex>
-                </article>
-              ))}
-            </Flex>
-          </Flex>
-        </div>
-      </Page.Hero>
       <Page.Hero style={styles.sectionWhite}>
         <Flex direction="column" gap="6xl" style={styles.twoCol}>
           <Flex direction="column" gap="4xl" style={styles.appBrowserHeader}>
             <div {...stylex.props(styles.appBrowserEyebrow)}>
-              Organic Ecosystem
+              Under the hood
             </div>
-            <h2 {...stylex.props(styles.sectionHeading)}>Apps for your Apps</h2>
+            <h2 {...stylex.props(styles.sectionHeading)}>How ATStore works</h2>
             <p {...stylex.props(styles.appBrowserDescription)}>
-              Since you own your Atmosphere account, anyone can build new apps
-              with your data. Ditch the walled gardens and build your own.
-            </p>
-            <p {...stylex.props(styles.appBrowserDescription)}>
-              Below you can explore apps and tools that work with Bluesky.
+              ATStore is built on the same primitives as the apps it lists.
             </p>
           </Flex>
-
-          {ecosystemBrowserTags.length > 0 ? (
-            <div {...stylex.props(styles.chipRow)}>
-              {ecosystemBrowserTags.map((tag) => (
-                <button
-                  key={tag.tag}
-                  type="button"
-                  onClick={() => setActiveEcosystemTag(tag.tag)}
-                  {...stylex.props(
-                    styles.chip,
-                    activeEcosystemTagValue === tag.tag && styles.chipActive,
-                  )}
-                >
-                  {tag.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          <FeaturedListingGrid
-            items={ecosystemBrowserApps.slice(0, MAX_BROWSER_APPS)}
-            getKey={(app) => app.id}
-            isFeatured={(_, index) => index === 0}
-            canFeature={(app) => Boolean(app.heroImageUrl)}
-            renderItem={(app, { featured }) => (
-              <AppBrowserListingCard featured={featured} listing={app} />
-            )}
-            style={styles.appBrowserGrid}
-          />
-
-          <Flex
-            justify="center"
-            direction="column"
-            align="center"
-            style={styles.bottomMetaContainer}
-          >
-            <ButtonLink
-              to="/ecosystems/$app"
-              params={{ app: "bluesky" }}
-              type="button"
-              size="xl"
-            >
-              Browse all
-            </ButtonLink>
-            <p {...stylex.props(styles.bottomMeta)}>
-              <strong>{ecosystemApps.length}+</strong> Bluesky ecosystem apps in
-              the directory.
-            </p>
+          <Flex gap="lg" wrap>
+            {HOW_ATSTORE_WORKS.map((item) => (
+              <article key={item.title} {...stylex.props(styles.featureCard)}>
+                <span {...stylex.props(styles.featureIcon)}>
+                  <item.icon size={20} />
+                </span>
+                <Flex direction="column" gap="md">
+                  <div {...stylex.props(styles.featureTitleRow)}>
+                    <h3 {...stylex.props(styles.featureTitle)}>{item.title}</h3>
+                  </div>
+                  <p {...stylex.props(styles.featureBody)}>{item.body}</p>
+                </Flex>
+              </article>
+            ))}
           </Flex>
         </Flex>
       </Page.Hero>
-      <Page.Hero style={styles.ctaSection}>
-        <div {...stylex.props(styles.accountLogo)}>
-          <Sparkles size={24} />
-        </div>
-        <h2 {...stylex.props(styles.ctaTitle)}>
-          One account.
-          <br />
-          <span {...stylex.props(styles.ctaAccent)}>
-            Endless possibilities.
-          </span>
-        </h2>
-        <p {...stylex.props(styles.ctaBody)}>
-          Join the open social web. Create your Atmosphere account today and
-          take your identity and your data with you everywhere.
-        </p>
-        <div {...stylex.props(styles.heroButtons)}>
-          <ButtonLink to="/home" type="button" size="xl">
-            Start exploring
-          </ButtonLink>
-        </div>
+
+      <Page.Hero style={styles.sectionGray}>
+        <Flex direction="column" gap="6xl">
+          <Flex direction="column" gap="4xl" style={styles.twoCol}>
+            <Flex direction="column" gap="md">
+              <div {...stylex.props(styles.sectionEyebrow)}>People</div>
+              <h2 {...stylex.props(styles.sectionHeading)}>
+                Who built it &amp; who runs it
+              </h2>
+            </Flex>
+            <p {...stylex.props(styles.sectionBody)}>
+              ATStore was built by{" "}
+              <Link
+                href="https://github.com/hipstersmoothie"
+                target="_blank"
+                rel="noreferrer"
+                style={styles.proseLink}
+              >
+                Andrew Lisowski
+              </Link>
+              , an independent developer working on tools for the open social
+              web.
+            </p>
+            <p {...stylex.props(styles.sectionBody)}>
+              It&apos;s maintained as a community project under the{" "}
+              <Link
+                href="https://discourse.atprotocol.community"
+                target="_blank"
+                rel="noreferrer"
+                style={styles.proseLink}
+              >
+                AT Protocol Community
+              </Link>{" "}
+              — a community-hosted, community-moderated home for AT Protocol
+              documentation, working groups, and shared infrastructure.
+              Editorial decisions about categories, taxonomy, and curation
+              happen in the open alongside the wider community.
+            </p>
+          </Flex>
+
+          <div {...stylex.props(styles.callout)}>
+            <Text size="3xl" weight="bold">
+              Get in touch
+            </Text>
+            <div {...stylex.props(styles.calloutStack)}>
+              <p {...stylex.props(styles.calloutBody)}>
+                <Text weight="bold">Submit a listing.</Text>
+                <Text size="base">
+                  If you build on ATProto{" "}
+                  <LinkLink to="/products/create" style={styles.proseLink}>
+                    Add your product
+                  </LinkLink>{" "}
+                  to the directory. It only takes a minute.
+                </Text>
+              </p>
+              <p {...stylex.props(styles.calloutBody)}>
+                <Text weight="bold">On Bluesky.</Text>
+                <Text size="base">
+                  Reach out to{" "}
+                  <Link
+                    href="https://bsky.app/profile/atstore.fyi"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={styles.proseLink}
+                  >
+                    @atstore.fyi
+                  </Link>{" "}
+                  with feedback, corrections, or suggestions.
+                </Text>
+              </p>
+              <p {...stylex.props(styles.calloutBody)}>
+                <Text weight="bold">Open source.</Text>
+                <Text size="base">
+                  File issues or open a PR on{" "}
+                  <Link
+                    href="https://github.com/ATProtocol-Community/ATStore"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={styles.proseLink}
+                  >
+                    GitHub
+                  </Link>
+                  .
+                </Text>
+              </p>
+              <p {...stylex.props(styles.calloutBody)}>
+                <Text weight="bold">Community.</Text>
+                <Text size="base">
+                  Join the conversation on the{" "}
+                  <Link
+                    href="https://discourse.atprotocol.community"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={styles.proseLink}
+                  >
+                    AT Protocol Community
+                  </Link>
+                  .
+                </Text>
+              </p>
+            </div>
+          </div>
+        </Flex>
       </Page.Hero>
+
       <HeaderLayout.Footer>
         <SiteFooter />
       </HeaderLayout.Footer>
