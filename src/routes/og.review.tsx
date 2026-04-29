@@ -384,6 +384,8 @@ export const Route = createFileRoute("/og/review")({
                         height: "120px",
                         objectFit: "cover",
                         width: "120px",
+                        overflow: "hidden",
+                        borderRadius: "24px",
                       }}
                     />
                   ) : (
