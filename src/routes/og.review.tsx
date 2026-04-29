@@ -25,6 +25,16 @@ const TEXT = "#18181b";
 const TEXT_MUTED = "#71717a";
 const SURFACE_SUBTLE = "#f4f4f5";
 
+/**
+ * Matches `Avatar` size `xl` in `design-system/avatar/index.tsx`: `size["5xl"]` (3.5rem),
+ * `radius.xl` (~1.35rem), `uiColor.component1` / `border1`, `text1` for fallback initials.
+ */
+const AVATAR_OG_SIZE_PX = 80;
+const AVATAR_OG_RADIUS = "22px";
+const AVATAR_OG_BG = "#f2eff3";
+const AVATAR_OG_BORDER = "#dbd8e0";
+const AVATAR_OG_FALLBACK_TEXT = "#65636d";
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -296,7 +306,7 @@ export const Route = createFileRoute("/og/review")({
               row.iconUrl != null ? String(row.iconUrl) : null,
               120,
             ),
-            preloadOgRasterImageForSatori(avatarUrlMerged, 96),
+            preloadOgRasterImageForSatori(avatarUrlMerged, AVATAR_OG_SIZE_PX),
           ]);
 
           const iconImgSrc =
@@ -524,38 +534,45 @@ export const Route = createFileRoute("/og/review")({
                     <div
                       style={{
                         alignItems: "center",
-                        backgroundColor: SURFACE_SUBTLE,
-                        borderColor: BORDER,
-                        borderRadius: "999px",
+                        backgroundColor: AVATAR_OG_BG,
+                        borderColor: AVATAR_OG_BORDER,
+                        borderRadius: AVATAR_OG_RADIUS,
                         borderStyle: "solid",
                         borderWidth: "1px",
                         display: "flex",
                         flexShrink: 0,
-                        height: "96px",
+                        height: `${AVATAR_OG_SIZE_PX}px`,
                         justifyContent: "center",
-                        marginRight: "28px",
+                        marginRight: "16px",
                         overflow: "hidden",
-                        width: "96px",
+                        width: `${AVATAR_OG_SIZE_PX}px`,
                       }}
                     >
                       {avatarImgSrc ? (
                         <img
                           alt=""
                           src={avatarImgSrc}
-                          height={96}
-                          width={96}
+                          height={AVATAR_OG_SIZE_PX}
+                          width={AVATAR_OG_SIZE_PX}
                           style={{
-                            height: "96px",
+                            height: `${AVATAR_OG_SIZE_PX}px`,
                             objectFit: "cover",
-                            width: "96px",
+                            objectPosition: "center",
+                            width: `${AVATAR_OG_SIZE_PX}px`,
+                            overflow: "hidden",
+                            borderRadius: AVATAR_OG_RADIUS,
                           }}
                         />
                       ) : (
                         <div
                           style={{
-                            color: TEXT_MUTED,
-                            fontSize: "32px",
-                            fontWeight: 700,
+                            alignItems: "center",
+                            color: AVATAR_OG_FALLBACK_TEXT,
+                            display: "flex",
+                            fontSize: "20px",
+                            fontWeight: 500,
+                            justifyContent: "center",
+                            lineHeight: 1,
                           }}
                         >
                           {initialsFrom(primaryLine)}
