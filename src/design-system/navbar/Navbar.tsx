@@ -38,6 +38,7 @@ const styles = stylex.create({
       default: "none",
       ":is([data-navbar-open]):has([data-navbar-action])": "flex",
       ":has([data-always-visible])": "none",
+      ":has([data-always-visible]):is([data-navbar-open])": "none",
       [containerBreakpoints.sm]: "none",
     },
     "--visibility": {
@@ -65,7 +66,6 @@ const styles = stylex.create({
       ":has([data-always-visible]):is([data-navbar-open])": `
         "logo action hamburger"
         "navigation navigation navigation"
-        "separator separator separator"
       `,
       [containerBreakpoints.sm]: {
         default: `
@@ -82,7 +82,7 @@ const styles = stylex.create({
     alignItems: "center",
     boxSizing: "border-box",
     columnGap: {
-      default: sizeSpace["md"],
+      default: 0,
       [containerBreakpoints.sm]: sizeSpace["3xl"],
     },
     display: "grid",
@@ -96,8 +96,8 @@ const styles = stylex.create({
       },
     },
     gridTemplateRows: {
-      ":is([data-navbar-open])": `min-content min-content min-content`,
-      ":is([data-navbar-open]):has([data-navbar-action])": `min-content min-content min-content min-content`,
+      // ":is([data-navbar-open])": `min-content min-content min-content`,
+      // ":is([data-navbar-open]):has([data-navbar-action])": `min-content min-content min-content min-content`,
     },
     rowGap: {
       default: sizeSpace["md"],

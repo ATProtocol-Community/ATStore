@@ -14,13 +14,14 @@ import {
 import { uiColor } from "../theme/color.stylex";
 import { mediaQueries } from "../theme/media-queries.stylex";
 import { radius } from "../theme/radius.stylex";
-import { size as sizeSpace } from "../theme/semantic-spacing.stylex";
+import { gap, size as sizeSpace } from "../theme/semantic-spacing.stylex";
 import {
   fontFamily,
   fontSize,
   fontWeight,
   lineHeight,
 } from "../theme/typography.stylex";
+import { Text } from "../typography/text";
 
 const styles = stylex.create({
   wrapper: {
@@ -113,6 +114,9 @@ const styles = stylex.create({
     paddingTop: 0,
     cursor: "pointer",
     display: "inline-block",
+    display: "flex",
+    alignItems: "center",
+    gap: gap["xl"],
   },
   overlay: {
     inset: 0,
@@ -288,6 +292,8 @@ export interface AvatarButtonProps
     Pick<AvatarProps, "size" | "src" | "alt" | "fallback"> {
   /** The style for the avatar. */
   avatarStyle?: AvatarProps["style"];
+  /** The label for the avatar. */
+  label?: string;
 }
 
 export function AvatarButton({
@@ -297,6 +303,7 @@ export function AvatarButton({
   src,
   alt,
   fallback,
+  label,
   ...buttonProps
 }: AvatarButtonProps) {
   const size = sizeProp || use(SizeContext);
@@ -314,6 +321,7 @@ export function AvatarButton({
       {...stylex.props(styles.buttonWrapper, style)}
     >
       <Avatar {...avatarProps} size={size} style={avatarStyle} />
+      {label && <Text size="base">{label}</Text>}
     </AriaButton>
   );
 }

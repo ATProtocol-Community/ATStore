@@ -18,6 +18,7 @@ import { useNotificationReadState } from "#/lib/notification-read-state";
 import { useTheme } from "#/lib/ThemeContext";
 
 import { ThemeMenu, ThemeSubMenu } from "./ThemeMenu";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 
 const ButtonLink = createLink(Button);
 
@@ -38,6 +39,18 @@ const styles = stylex.create({
     right: "-2px",
     top: "-2px",
     width: size.xs,
+  },
+  desktopAvatar: {
+    display: {
+      default: "none",
+      [breakpoints.sm]: "flex",
+    },
+  },
+  mobileAvatar: {
+    display: {
+      default: "flex",
+      [breakpoints.sm]: "none",
+    },
   },
 });
 
@@ -79,6 +92,14 @@ export function NavbarAuth() {
               size="md"
               src={session.user.image ?? undefined}
               fallback={initial}
+              label={session.user.name}
+              style={styles.mobileAvatar}
+            />
+            <AvatarButton
+              size="md"
+              src={session.user.image ?? undefined}
+              fallback={initial}
+              style={styles.desktopAvatar}
             />
             {unreadCount > 0 && <span {...stylex.props(styles.unreadDot)} />}
           </div>
@@ -152,8 +173,7 @@ export function NavbarAuth() {
 
   return (
     <Flex align="center" gap="sm">
-      <GuestThemeMenu />
-      <ButtonLink to="/login" variant="secondary" size="md">
+      <ButtonLink to="/login" variant="secondary" size="lg">
         Log in
       </ButtonLink>
     </Flex>
@@ -167,7 +187,7 @@ function GuestThemeMenu() {
   return (
     <ThemeMenu
       trigger={
-        <IconButton variant="secondary" size="md" aria-label="Change theme">
+        <IconButton variant="secondary" size="lg" aria-label="Change theme">
           <Icon />
         </IconButton>
       }

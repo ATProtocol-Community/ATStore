@@ -67,18 +67,23 @@ export function SiteHeader() {
         >
           Search
         </NavbarLinkLink>
+        <div {...stylex.props(styles.mobileSearchLink)}>
+          <NavbarAuth />
+        </div>
       </NavbarNavigation>
-      <NavbarAction style={styles.navbarAction}>
+      <NavbarAction alwaysVisible={true}>
         <IconButtonLink
           to="/search"
           search={{ sort: "popular" }}
           aria-label="Search listings"
-          variant="secondary"
-          style={styles.desktopSearchLink}
+          variant="tertiary"
+          size="lg"
         >
           <Search />
         </IconButtonLink>
-        <NavbarAuth />
+        <div {...stylex.props(styles.desktopSearchLink)}>
+          <NavbarAuth />
+        </div>
       </NavbarAction>
     </Navbar>
   );
