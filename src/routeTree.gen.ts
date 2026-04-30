@@ -22,15 +22,10 @@ import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
 import { Route as ApiAdminHeroCandidateImageRouteImport } from './routes/api.admin.hero-candidate-image'
-import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
-import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
-import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
 import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
 import { Route as HeaderLayoutProductsManageRouteImport } from './routes/_header-layout.products.manage'
 import { Route as HeaderLayoutProductsCreateRouteImport } from './routes/_header-layout.products.create'
 import { Route as HeaderLayoutProductClaimRouteImport } from './routes/_header-layout.product.claim'
-import { Route as HeaderLayoutDevCategoriesRouteImport } from './routes/_header-layout.dev.categories'
-import { Route as HeaderLayoutDevAppTagsRouteImport } from './routes/_header-layout.dev.app-tags'
 import { Route as HeaderLayoutCategoriesCategoryIdRouteImport } from './routes/_header-layout.categories.$categoryId'
 import { Route as HeaderLayoutAppsTagsRouteImport } from './routes/_header-layout.apps.tags'
 import { Route as HeaderLayoutAppsAllRouteImport } from './routes/_header-layout.apps.all'
@@ -124,24 +119,6 @@ const ApiAdminHeroCandidateImageRoute =
     path: '/api/admin/hero-candidate-image',
     getParentRoute: () => rootRouteImport,
   } as any)
-const HeaderLayoutProtocolTagsRoute =
-  HeaderLayoutProtocolTagsRouteImport.update({
-    id: '/protocol/tags',
-    path: '/protocol/tags',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutProtocolListingsRoute =
-  HeaderLayoutProtocolListingsRouteImport.update({
-    id: '/protocol/listings',
-    path: '/protocol/listings',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutProtocolCategoryRoute =
-  HeaderLayoutProtocolCategoryRouteImport.update({
-    id: '/protocol/$category',
-    path: '/protocol/$category',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
 const HeaderLayoutProfileActorRoute =
   HeaderLayoutProfileActorRouteImport.update({
     id: '/profile/$actor',
@@ -166,17 +143,6 @@ const HeaderLayoutProductClaimRoute =
     path: '/product/claim',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
-const HeaderLayoutDevCategoriesRoute =
-  HeaderLayoutDevCategoriesRouteImport.update({
-    id: '/dev/categories',
-    path: '/dev/categories',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutDevAppTagsRoute = HeaderLayoutDevAppTagsRouteImport.update({
-  id: '/dev/app-tags',
-  path: '/dev/app-tags',
-  getParentRoute: () => HeaderLayoutRoute,
-} as any)
 const HeaderLayoutCategoriesCategoryIdRoute =
   HeaderLayoutCategoriesCategoryIdRouteImport.update({
     id: '/categories/$categoryId',
@@ -349,15 +315,10 @@ export interface FileRoutesByFullPath {
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
-  '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
-  '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/product/claim': typeof HeaderLayoutProductClaimRoute
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
-  '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
-  '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
@@ -398,15 +359,10 @@ export interface FileRoutesByTo {
   '/apps/all': typeof HeaderLayoutAppsAllRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
-  '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
-  '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/product/claim': typeof HeaderLayoutProductClaimRoute
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
-  '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
-  '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
@@ -449,15 +405,10 @@ export interface FileRoutesById {
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
   '/_header-layout/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/_header-layout/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
-  '/_header-layout/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
-  '/_header-layout/dev/categories': typeof HeaderLayoutDevCategoriesRoute
   '/_header-layout/product/claim': typeof HeaderLayoutProductClaimRoute
   '/_header-layout/products/create': typeof HeaderLayoutProductsCreateRoute
   '/_header-layout/products/manage': typeof HeaderLayoutProductsManageRoute
   '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
-  '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
-  '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/_header-layout/_admin-layout/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
@@ -500,15 +451,10 @@ export interface FileRouteTypes {
     | '/apps/all'
     | '/apps/tags'
     | '/categories/$categoryId'
-    | '/dev/app-tags'
-    | '/dev/categories'
     | '/product/claim'
     | '/products/create'
     | '/products/manage'
     | '/profile/$actor'
-    | '/protocol/$category'
-    | '/protocol/listings'
-    | '/protocol/tags'
     | '/api/admin/hero-candidate-image'
     | '/admin/add-listing'
     | '/admin/admins'
@@ -549,15 +495,10 @@ export interface FileRouteTypes {
     | '/apps/all'
     | '/apps/tags'
     | '/categories/$categoryId'
-    | '/dev/app-tags'
-    | '/dev/categories'
     | '/product/claim'
     | '/products/create'
     | '/products/manage'
     | '/profile/$actor'
-    | '/protocol/$category'
-    | '/protocol/listings'
-    | '/protocol/tags'
     | '/api/admin/hero-candidate-image'
     | '/admin/add-listing'
     | '/admin/admins'
@@ -599,15 +540,10 @@ export interface FileRouteTypes {
     | '/_header-layout/apps/all'
     | '/_header-layout/apps/tags'
     | '/_header-layout/categories/$categoryId'
-    | '/_header-layout/dev/app-tags'
-    | '/_header-layout/dev/categories'
     | '/_header-layout/product/claim'
     | '/_header-layout/products/create'
     | '/_header-layout/products/manage'
     | '/_header-layout/profile/$actor'
-    | '/_header-layout/protocol/$category'
-    | '/_header-layout/protocol/listings'
-    | '/_header-layout/protocol/tags'
     | '/api/admin/hero-candidate-image'
     | '/_header-layout/_admin-layout/admin/add-listing'
     | '/_header-layout/_admin-layout/admin/admins'
@@ -744,27 +680,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminHeroCandidateImageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_header-layout/protocol/tags': {
-      id: '/_header-layout/protocol/tags'
-      path: '/protocol/tags'
-      fullPath: '/protocol/tags'
-      preLoaderRoute: typeof HeaderLayoutProtocolTagsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/protocol/listings': {
-      id: '/_header-layout/protocol/listings'
-      path: '/protocol/listings'
-      fullPath: '/protocol/listings'
-      preLoaderRoute: typeof HeaderLayoutProtocolListingsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/protocol/$category': {
-      id: '/_header-layout/protocol/$category'
-      path: '/protocol/$category'
-      fullPath: '/protocol/$category'
-      preLoaderRoute: typeof HeaderLayoutProtocolCategoryRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
     '/_header-layout/profile/$actor': {
       id: '/_header-layout/profile/$actor'
       path: '/profile/$actor'
@@ -791,20 +706,6 @@ declare module '@tanstack/react-router' {
       path: '/product/claim'
       fullPath: '/product/claim'
       preLoaderRoute: typeof HeaderLayoutProductClaimRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/dev/categories': {
-      id: '/_header-layout/dev/categories'
-      path: '/dev/categories'
-      fullPath: '/dev/categories'
-      preLoaderRoute: typeof HeaderLayoutDevCategoriesRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/dev/app-tags': {
-      id: '/_header-layout/dev/app-tags'
-      path: '/dev/app-tags'
-      fullPath: '/dev/app-tags'
-      preLoaderRoute: typeof HeaderLayoutDevAppTagsRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/categories/$categoryId': {
@@ -1068,15 +969,10 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
   HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
   HeaderLayoutCategoriesCategoryIdRoute: typeof HeaderLayoutCategoriesCategoryIdRoute
-  HeaderLayoutDevAppTagsRoute: typeof HeaderLayoutDevAppTagsRoute
-  HeaderLayoutDevCategoriesRoute: typeof HeaderLayoutDevCategoriesRoute
   HeaderLayoutProductClaimRoute: typeof HeaderLayoutProductClaimRoute
   HeaderLayoutProductsCreateRoute: typeof HeaderLayoutProductsCreateRoute
   HeaderLayoutProductsManageRoute: typeof HeaderLayoutProductsManageRoute
   HeaderLayoutProfileActorRoute: typeof HeaderLayoutProfileActorRoute
-  HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
-  HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
-  HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
   HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
   HeaderLayoutProductsProductIdEditRoute: typeof HeaderLayoutProductsProductIdEditRoute
   HeaderLayoutProductsProductIdMentionsRoute: typeof HeaderLayoutProductsProductIdMentionsRoute
@@ -1094,15 +990,10 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
   HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
   HeaderLayoutCategoriesCategoryIdRoute: HeaderLayoutCategoriesCategoryIdRoute,
-  HeaderLayoutDevAppTagsRoute: HeaderLayoutDevAppTagsRoute,
-  HeaderLayoutDevCategoriesRoute: HeaderLayoutDevCategoriesRoute,
   HeaderLayoutProductClaimRoute: HeaderLayoutProductClaimRoute,
   HeaderLayoutProductsCreateRoute: HeaderLayoutProductsCreateRoute,
   HeaderLayoutProductsManageRoute: HeaderLayoutProductsManageRoute,
   HeaderLayoutProfileActorRoute: HeaderLayoutProfileActorRoute,
-  HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
-  HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
-  HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,
   HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
   HeaderLayoutProductsProductIdEditRoute:
     HeaderLayoutProductsProductIdEditRoute,
