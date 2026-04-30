@@ -1,8 +1,13 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createLink, Link as TanstackLink } from "@tanstack/react-router";
+import { Link as TanstackLink, createLink } from "@tanstack/react-router";
 import { MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
 import { useState } from "react";
+
+import type {
+  DirectoryListingReview,
+  DirectoryUserReviewListing,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import {
   AlertDialog,
@@ -24,24 +29,19 @@ import { IconButton } from "../design-system/icon-button";
 import { Menu, MenuItem } from "../design-system/menu";
 import { StarRating } from "../design-system/star-rating";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { fontSize } from "../design-system/theme/typography.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
-  horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { RestrictedMarkdownContent } from "./restricted-markdown-content";
+import { fontSize } from "../design-system/theme/typography.stylex";
 import { Text } from "../design-system/typography/text";
-import {
-  directoryListingApi,
-  type DirectoryListingReview,
-  type DirectoryUserReviewListing,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { getInitials } from "../lib/product-reviews-route";
+import { getInitials } from "../lib/get-initials";
+import { RestrictedMarkdownContent } from "./restricted-markdown-content";
 
 const IconButtonLink = createLink(IconButton);
 
@@ -62,7 +62,9 @@ const styles = stylex.create({
     alignItems: "center",
   },
   reviewAuthor: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   reviewMeta: {
@@ -72,69 +74,61 @@ const styles = stylex.create({
     fontSize: fontSize["lg"],
   },
   ratingActions: {
+    gap: gap.sm,
     alignItems: "center",
     flexShrink: 0,
-    gap: gap.sm,
   },
   /** Inert trigger so `AlertDialog` can be opened only via `isOpen` (e.g. from the menu). */
   dialogTriggerPlaceholder: {
-    borderWidth: 0,
-    clip: "rect(0, 0, 0, 0)",
-    height: 1,
     margin: -1,
-    overflow: "hidden",
     padding: 0,
+    borderWidth: 0,
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
     position: "absolute",
     whiteSpace: "nowrap",
+    height: 1,
     width: 1,
   },
   profileLink: {
     borderRadius: radius.md,
-    color: "inherit",
-    flex: 1,
-    minWidth: 0,
-    outlineOffset: 2,
     textDecoration: "none",
+    color: "inherit",
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
+    outlineOffset: 2,
+    minWidth: 0,
   },
   authorLinkRow: {
-    alignItems: "center",
-    flex: 1,
     gap: gap["2xl"],
+    alignItems: "center",
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   reviewSubjectLink: {
-    color: "inherit",
-    flex: 1,
-    minWidth: 0,
     textDecoration: "none",
+    color: "inherit",
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
+    minWidth: 0,
   },
   reviewSubjectMedia: {
-    alignItems: "center",
-    flex: 1,
     gap: gap["2xl"],
+    alignItems: "center",
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   listingTagline: {
-    display: "-webkit-box",
     overflow: "hidden",
     WebkitBoxOrient: "vertical",
     WebkitLineClamp: 2,
-  },
-  reviewSubjectBar: {
-    alignItems: "flex-start",
-    backgroundColor: uiColor.bgSubtle,
-    borderColor: uiColor.border2,
-    borderRadius: radius.lg,
-    borderStyle: "solid",
-    borderWidth: 1,
-    boxSizing: "border-box",
-    gap: gap["2xl"],
-    justifyContent: "space-between",
-    paddingBottom: verticalSpace["3xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
-    width: "100%",
+    display: "-webkit-box",
   },
 });
 

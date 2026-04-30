@@ -3,10 +3,9 @@
 import { Copy } from "lucide-react";
 import { useRef, useState } from "react";
 
-import type { StyleXComponentProps } from "../theme/types";
+import type { Size, StyleXComponentProps } from "../theme/types";
 
 import { IconButton } from "../icon-button";
-import type { Size } from "../theme/types";
 
 const defaultIcon = <Copy />;
 

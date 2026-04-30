@@ -1,20 +1,10 @@
-import {
-  and,
-  asc,
-  eq,
-  isNotNull,
-  isNull,
-  ne,
-  not,
-  or,
-  sql,
-  type SQL,
-} from 'drizzle-orm'
-import type { AnyPgColumn } from 'drizzle-orm/pg-core'
+import type { Database } from "#/db/index.server";
+import type { SQL } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
-import type { Database } from '#/db/index.server'
-import * as schema from '#/db/schema'
-import { getAtstoreRepoDid } from '#/lib/atproto/publish-directory-listing'
+import * as schema from "#/db/schema";
+import { getAtstoreRepoDid } from "#/lib/atproto/publish-directory-listing";
+import { and, asc, eq, isNotNull, isNull, ne, not, or, sql } from "drizzle-orm";
 
 /** Two-segment `protocol/…` slug — directory "Protocol" listings; not claimable as app product listings. */
 function sqlCategorySlugsHasProtocolBrowseableSegment(
@@ -24,17 +14,17 @@ function sqlCategorySlugsHasProtocolBrowseableSegment(
     select 1 from unnest(${categorySlugs}) as u(slug)
     where cardinality(string_to_array(trim(both from u.slug::text), '/')) = 2
       and trim(both from u.slug::text) like 'protocol/%'
-  )`
+  )`;
 }
 
 /** Client-visible cookie; when set, OAuth callback will not redirect to `/product/claim`. */
-export const SKIP_PRODUCT_CLAIM_COOKIE = 'atstore_skip_product_claim'
+export const SKIP_PRODUCT_CLAIM_COOKIE = "atstore_skip_product_claim";
 
 export function cookieHeaderSkipsProductClaim(
   cookieHeader: string | null | undefined,
 ): boolean {
-  if (!cookieHeader) return false
-  return /(?:^|;\s*)atstore_skip_product_claim=1(?:;|$)/.test(cookieHeader)
+  if (!cookieHeader) return false;
+  return /(?:^|;\s*)atstore_skip_product_claim=1(?:;|$)/.test(cookieHeader);
 }
 
 /**
@@ -50,17 +40,17 @@ export async function findEligibleProductClaimsForDid(
   db: Database,
   productAccountDid: string,
 ): Promise<
-  {
-    id: string
-    name: string
-    slug: string
-    tagline: string | null
-    iconUrl: string | null
-    heroImageUrl: string | null
-  }[]
+  Array<{
+    id: string;
+    name: string;
+    slug: string;
+    tagline: string | null;
+    iconUrl: string | null;
+    heroImageUrl: string | null;
+  }>
 > {
-  const atstoreDid = await getAtstoreRepoDid()
-  const t = schema.storeListings
+  const atstoreDid = await getAtstoreRepoDid();
+  const t = schema.storeListings;
   return db
     .select({
       id: t.id,
@@ -73,7 +63,7 @@ export async function findEligibleProductClaimsForDid(
     .from(t)
     .where(
       and(
-        eq(t.verificationStatus, 'verified'),
+        eq(t.verificationStatus, "verified"),
         eq(t.productAccountDid, productAccountDid),
         eq(t.repoDid, atstoreDid),
         or(
@@ -86,13 +76,13 @@ export async function findEligibleProductClaimsForDid(
         not(sqlCategorySlugsHasProtocolBrowseableSegment(t.categorySlugs)),
       ),
     )
-    .orderBy(asc(t.name))
+    .orderBy(asc(t.name));
 }
 
 export async function countEligibleProductClaimsForDid(
   db: Database,
   productAccountDid: string,
 ): Promise<number> {
-  const rows = await findEligibleProductClaimsForDid(db, productAccountDid)
-  return rows.length
+  const rows = await findEligibleProductClaimsForDid(db, productAccountDid);
+  return rows.length;
 }

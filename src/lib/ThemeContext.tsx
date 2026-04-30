@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { user } from "#/integrations/tanstack-query/api-user.functions";
 import { useCallback, useEffect, useState } from "react";
 
-import { user } from "#/integrations/tanstack-query/api-user.functions";
+import type { ThemeMode } from "./theme";
 
-import { DEFAULT_THEME_MODE, type ThemeMode } from "./theme";
+import { DEFAULT_THEME_MODE } from "./theme";
 
 export interface ThemeContextValue {
   /** The user's chosen mode (`light | dark | system`). */

@@ -51,7 +51,10 @@ export function buildFallbackOgImageUrl(input: {
     params.set("avatar", input.avatar.trim());
   }
 
-  if (typeof input.ownedProducts === "number" && Number.isFinite(input.ownedProducts)) {
+  if (
+    typeof input.ownedProducts === "number" &&
+    Number.isFinite(input.ownedProducts)
+  ) {
     params.set(
       "ownedProducts",
       String(Math.max(0, Math.floor(input.ownedProducts))),

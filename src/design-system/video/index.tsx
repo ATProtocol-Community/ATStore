@@ -1,7 +1,6 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { useEffect, useRef, useState } from "react";
 import {
   MediaCaptionsButton,
   MediaControlBar,
@@ -16,9 +15,11 @@ import {
   MediaTimeRange,
   MediaVolumeRange,
 } from "media-chrome/react";
+import { useEffect, useRef, useState } from "react";
 
 import type { StyleXComponentProps } from "../theme/types";
 
+import { animationDuration } from "../theme/animations.stylex";
 import { primaryColor, uiColor } from "../theme/color.stylex";
 import { radius } from "../theme/radius.stylex";
 import { ui } from "../theme/semantic-color.stylex";
@@ -109,34 +110,34 @@ const styles = stylex.create({
     aspectRatio,
   }),
   subtitleOverlay: (subtitleOffset: string) => ({
-    position: "absolute",
-    left: horizontalSpace["2xl"],
-    right: horizontalSpace["2xl"],
-    bottom: 0,
     display: "flex",
     justifyContent: "center",
     pointerEvents: "none",
+    position: "absolute",
     transform: `translateY(calc(-1 * ${subtitleOffset}))`,
     transitionDelay: "0.05s",
-    transitionDuration: "0.15s",
+    transitionDuration: animationDuration.default,
     transitionProperty: "transform",
     transitionTimingFunction: "linear",
     zIndex: 1,
+    bottom: 0,
+    left: horizontalSpace["2xl"],
+    right: horizontalSpace["2xl"],
   }),
   subtitleText: {
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
     borderRadius: radius.sm,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
     color: "white",
-    fontSize: size.lg,
     fontFamily: fontFamily["sans"],
+    fontSize: size.lg,
     lineHeight: 1.4,
+    textAlign: "center",
+    whiteSpace: "pre-wrap",
     maxWidth: "100%",
+    paddingBottom: verticalSpace.sm,
     paddingLeft: horizontalSpace.lg,
     paddingRight: horizontalSpace.lg,
     paddingTop: verticalSpace.sm,
-    paddingBottom: verticalSpace.sm,
-    textAlign: "center",
-    whiteSpace: "pre-wrap",
   },
 });
 
@@ -336,7 +337,7 @@ function getActiveCueText(track: TextTrack): string {
     return "";
   }
 
-  return Array.from(activeCues)
+  return [...activeCues]
     .map((cue) => {
       if ("text" in cue && typeof cue.text === "string") {
         return cue.text.trim();
@@ -364,8 +365,7 @@ function useVideoSubtitles({
   const defaultSubtitleTrackIndex = subtitleTracks.findIndex(
     (track) => track.default,
   );
-  const selectedSubtitleTrackIndex =
-    defaultSubtitleTrackIndex >= 0 ? defaultSubtitleTrackIndex : 0;
+  const selectedSubtitleTrackIndex = Math.max(defaultSubtitleTrackIndex, 0);
 
   useEffect(() => {
     setCaptionsEnabled(hasSubtitleTracks && defaultCaptionsEnabled);
@@ -490,8 +490,9 @@ function useVideoSubtitles({
     };
 
     const syncSubtitleState = () => {
-      const availableSubtitleTracks =
-        Array.from(textTracks).filter(isSubtitleTrack);
+      const availableSubtitleTracks = [...textTracks].filter((t) =>
+        isSubtitleTrack(t),
+      );
       const selectedTrack =
         captionsEnabled &&
         selectedSubtitleTrackIndex < availableSubtitleTracks.length
@@ -510,7 +511,7 @@ function useVideoSubtitles({
     const bindCueListeners = () => {
       removeCueListeners();
 
-      for (const track of Array.from(textTracks).filter(isSubtitleTrack)) {
+      for (const track of [...textTracks].filter((t) => isSubtitleTrack(t))) {
         track.addEventListener("cuechange", syncSubtitleState);
         cueListeners.set(track, syncSubtitleState);
       }

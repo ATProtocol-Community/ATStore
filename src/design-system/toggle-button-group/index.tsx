@@ -35,7 +35,6 @@ const styles = stylex.create({
     borderTopRightRadius: { ":is(:not(:last-child))  *": "0" },
   },
   verticalGroupedContents: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     borderBottomLeftWidth: { ":is(:not(:first-child))  *": "0" },
     borderBottomRightRadius: { ":is(:not(:last-child))  *": "0" },
     borderBottomWidth: { ":is(:not(:last-child))  *": "0" },

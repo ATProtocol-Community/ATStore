@@ -1,36 +1,35 @@
 "use client";
 
+import type { StyleXStyles } from "@stylexjs/stylex";
+import type { StyleXComponentProps } from "#/design-system/theme/types";
+import type { BodyProps } from "#/design-system/typography";
 import type { ComponentProps } from "react";
 import type { Components } from "react-markdown";
+import type { Options as RehypeSanitizeOptions } from "rehype-sanitize";
 
-import type { StyleXStyles } from "@stylexjs/stylex";
 import * as stylex from "@stylexjs/stylex";
-import ReactMarkdown from "react-markdown";
-import rehypeSanitize, {
-  defaultSchema as rehypeSanitizeDefaultSchema,
-  type Options as RehypeSanitizeOptions,
-} from "rehype-sanitize";
-
-import type { StyleXComponentProps } from "#/design-system/theme/types";
 import { verticalSpace } from "#/design-system/theme/semantic-spacing.stylex";
 import {
   Body,
-  type BodyProps,
   ListItem,
   OrderedList,
   SmallBody,
   UnorderedList,
 } from "#/design-system/typography";
 import { Text } from "#/design-system/typography/text";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize, {
+  defaultSchema as rehypeSanitizeDefaultSchema,
+} from "rehype-sanitize";
 
 const styles = stylex.create({
   italic: {
     fontStyle: "italic",
   },
   restrictedRoot: {
+    gap: verticalSpace["6xl"],
     display: "flex",
     flexDirection: "column",
-    gap: verticalSpace["6xl"],
     minWidth: 0,
   },
   restrictedParagraph: {

@@ -1,12 +1,16 @@
+import type { SavedHandle } from "#/utils/saved-handles";
+
 import * as stylex from "@stylexjs/stylex";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { auth } from "#/integrations/tanstack-query/api-auth.functions";
+import { buildRouteOgMeta } from "#/lib/og-meta";
+import { unauthMiddleware } from "#/middleware/auth";
+import { getSavedHandles, saveHandle } from "#/utils/saved-handles";
 import { ChevronRight, InfoIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 import { z } from "zod";
-
-import type { SavedHandle } from "#/utils/saved-handles";
 
 import { AtStoreLogo } from "../components/AtStoreLogo";
 import { UserHandleAutocomplete } from "../components/user-handle-autocomplete";
@@ -35,10 +39,6 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, InlineCode } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { auth } from "#/integrations/tanstack-query/api-auth.functions";
-import { buildRouteOgMeta } from "#/lib/og-meta";
-import { unauthMiddleware } from "#/middleware/auth";
-import { getSavedHandles, saveHandle } from "#/utils/saved-handles";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -50,8 +50,8 @@ const searchSchema = z.object({
 
 const styles = stylex.create({
   dialogDescription: {
-    paddingTop: verticalSpace["3xl"],
     paddingBottom: verticalSpace["3xl"],
+    paddingTop: verticalSpace["3xl"],
   },
   buttonContainer: {
     width: "100%",
@@ -64,13 +64,13 @@ const styles = stylex.create({
     minHeight: "100vh",
   },
   container: {
-    boxSizing: "border-box",
     padding: sizeSpace["4xl"],
-    justifyContent: "center",
     alignItems: "center",
+    boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
+    justifyContent: "center",
     height: "100%",
   },
   content: {

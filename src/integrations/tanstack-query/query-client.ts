@@ -1,6 +1,6 @@
-import { QueryClient, isServer } from '@tanstack/react-query'
+import { QueryClient, isServer } from "@tanstack/react-query";
 
-const DEFAULT_QUERY_STALE_TIME_MS = 60 * 1000
+const DEFAULT_QUERY_STALE_TIME_MS = 60 * 1000;
 
 function makeQueryClient() {
   return new QueryClient({
@@ -9,17 +9,17 @@ function makeQueryClient() {
         staleTime: DEFAULT_QUERY_STALE_TIME_MS,
       },
     },
-  })
+  });
 }
 
-let browserQueryClient: QueryClient | undefined
+let browserQueryClient: QueryClient | undefined;
 
 export function getQueryClient() {
   if (isServer) {
-    return makeQueryClient()
+    return makeQueryClient();
   }
 
-  browserQueryClient ??= makeQueryClient()
+  browserQueryClient ??= makeQueryClient();
 
-  return browserQueryClient
+  return browserQueryClient;
 }

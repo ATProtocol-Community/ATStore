@@ -4,6 +4,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import type { Size, StyleXComponentProps } from "../theme/types";
 
+import { animationDuration } from "../theme/animations.stylex";
 import { uiColor } from "../theme/color.stylex";
 import { mediaQueries } from "../theme/media-queries.stylex";
 import { radius } from "../theme/radius.stylex";
@@ -28,8 +29,7 @@ const styles = stylex.create({
     position: "relative",
   },
   shimmer: {
-    // eslint-disable-next-line @stylexjs/valid-styles
-    animationDuration: "1.7s",
+    animationDuration: animationDuration.shimmer,
     animationIterationCount: "infinite",
     animationName: {
       default: shimmer,

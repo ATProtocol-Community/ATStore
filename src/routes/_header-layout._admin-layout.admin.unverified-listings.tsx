@@ -1,11 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { formatAppTagLabel } from "#/lib/app-tag-metadata";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
-import { formatAppTagLabel } from "#/lib/app-tag-metadata";
 import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -18,12 +18,13 @@ import {
 } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Page } from "../design-system/page";
-import { shadow } from "../design-system/theme/shadow.stylex";
+import { TextArea } from "../design-system/text-area";
 import {
   gap,
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
+import { shadow } from "../design-system/theme/shadow.stylex";
 import {
   Body,
   Heading1,
@@ -32,7 +33,6 @@ import {
   UnorderedList,
 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { TextArea } from "../design-system/text-area";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 
 export const Route = createFileRoute(
@@ -62,37 +62,37 @@ const styles = stylex.create({
   previewIcon: {
     borderRadius: "12px",
     flexShrink: 0,
-    height: "64px",
     objectFit: "cover",
+    height: "64px",
     width: "64px",
   },
   productLink: {
+    gap: gap.sm,
+    textDecoration: "none",
     alignItems: "center",
     display: "inline-flex",
-    gap: gap.sm,
     paddingLeft: horizontalSpace.xs,
-    textDecoration: "none",
   },
   listStack: {
     gap: gap.xl,
   },
   appTagsRow: {
-    flexWrap: "wrap",
     gap: gap.sm,
+    flexWrap: "wrap",
   },
   screenshotsScroller: {
+    gap: gap.md,
     display: "flex",
     flexDirection: "row",
-    gap: gap.md,
     overflowX: "auto",
     paddingBottom: verticalSpace.xs,
   },
   screenshotImage: {
     borderRadius: "8px",
     flexShrink: 0,
+    objectFit: "contain",
     height: "auto",
     maxHeight: "240px",
-    objectFit: "contain",
     width: "auto",
   },
   rejectNotes: {
@@ -341,7 +341,7 @@ function UnverifiedListingsPage() {
                                 await refresh();
                                 setRejectDraft((prev) => {
                                   const next = { ...prev };
-                                  delete next[row.id];
+                                  Reflect.deleteProperty(next, row.id);
                                   return next;
                                 });
                               } finally {

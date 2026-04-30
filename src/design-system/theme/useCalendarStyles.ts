@@ -28,12 +28,8 @@ export interface CalendarProps<T extends DateValue>
 
 const styles = stylex.create({
   cell: {
-    paddingBottom: verticalSpace["xxs"],
-    paddingLeft: horizontalSpace["xxs"],
     borderRadius: radius.md,
-    paddingRight: horizontalSpace["xxs"],
     cornerShape: "squircle",
-    paddingTop: verticalSpace["xxs"],
     textDecoration: {
       ":is([data-unavailable])": "line-through",
     },
@@ -53,6 +49,10 @@ const styles = stylex.create({
     transitionProperty: "color",
     transitionTimingFunction: "ease-in-out",
     zIndex: 0,
+    paddingBottom: verticalSpace["xxs"],
+    paddingLeft: horizontalSpace["xxs"],
+    paddingRight: horizontalSpace["xxs"],
+    paddingTop: verticalSpace["xxs"],
     width: sizeSpace["3xl"],
 
     "::before": {
@@ -134,13 +134,13 @@ const styles = stylex.create({
     paddingBottom: verticalSpace["xs"],
   },
   heading: {
+    fontSize: fontSize["lg"],
+    fontWeight: fontWeight["semibold"],
+    textAlign: "center",
     marginBottom: 0,
     marginLeft: 0,
-    fontSize: fontSize["lg"],
     marginRight: 0,
-    fontWeight: fontWeight["semibold"],
     marginTop: 0,
-    textAlign: "center",
   },
   grid: {
     borderCollapse: "collapse",

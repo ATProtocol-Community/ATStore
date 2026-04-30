@@ -42,9 +42,8 @@ const styles = stylex.create({
     position: "relative",
   },
   button: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
     borderColor: "transparent",
     borderRadius: radius.lg,

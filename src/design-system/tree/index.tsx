@@ -81,7 +81,6 @@ const styles = stylex.create({
     paddingRight: 0,
     paddingTop: 0,
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       height: sizeSpace["xxs"],
       width: sizeSpace["xxs"],

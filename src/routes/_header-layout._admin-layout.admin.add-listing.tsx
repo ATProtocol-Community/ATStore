@@ -2,36 +2,17 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import {
-  ProductListingForm,
-  type ProductListingFormSubmitValues,
-} from "../components/product-listing-form";
+import type { ProductListingFormSubmitValues } from "../components/product-listing-form";
+
+import { ProductListingForm } from "../components/product-listing-form";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { blobToBase64 } from "../lib/blob-to-base64";
 
 export const Route = createFileRoute(
   "/_header-layout/_admin-layout/admin/add-listing",
 )({
   component: AdminAddListingPage,
 });
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const s = reader.result;
-      if (typeof s !== "string") {
-        reject(new Error("Could not read image."));
-        return;
-      }
-      const comma = s.indexOf(",");
-      resolve(comma >= 0 ? s.slice(comma + 1) : s);
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Could not read image."));
-    };
-    reader.readAsDataURL(blob);
-  });
-}
 
 function AdminAddListingPage() {
   const navigate = useNavigate();

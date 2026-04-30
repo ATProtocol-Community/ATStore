@@ -93,12 +93,8 @@ const styles = stylex.create({
     cursor: "text",
   },
   button: {
-    paddingBottom: 0,
-    paddingLeft: 0,
     alignItems: "center",
-    paddingRight: 0,
     aspectRatio: 1,
-    paddingTop: 0,
     display: "flex",
     flexGrow: 1,
     flexShrink: 0,
@@ -109,8 +105,11 @@ const styles = stylex.create({
     borderRightWidth: 0,
     borderTopWidth: 0,
     minHeight: 0,
+    paddingBottom: 0,
+    paddingLeft: 0,
+    paddingRight: 0,
+    paddingTop: 0,
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",

@@ -1,7 +1,6 @@
-import { and, eq } from "drizzle-orm";
-import satori, { type SatoriOptions } from "satori";
-import { createFileRoute } from "@tanstack/react-router";
+import type { SatoriOptions } from "satori";
 
+import { createFileRoute } from "@tanstack/react-router";
 import { db } from "#/db/index.server";
 import * as schema from "#/db/schema";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
@@ -10,6 +9,8 @@ import {
   OG_IMAGE_WIDTH,
   renderOg,
 } from "#/lib/render-og.server";
+import { and, eq } from "drizzle-orm";
+import satori from "satori";
 
 const OG_WIDTH = OG_IMAGE_WIDTH;
 const OG_HEIGHT = OG_IMAGE_HEIGHT;
@@ -77,18 +78,21 @@ function emojiToTwemojiCodepoints(emoji: string): string {
   const VS16 = /\uFE0F/g;
   const normalized = emoji.includes(ZWJ) ? emoji : emoji.replace(VS16, "");
 
-  const codepoints: string[] = [];
+  const codepoints: Array<string> = [];
   let highSurrogate = 0;
   for (let i = 0; i < normalized.length; i++) {
-    const c = normalized.charCodeAt(i);
+    const c = normalized.codePointAt(i);
+    if (c === undefined) continue;
     if (highSurrogate) {
       codepoints.push(
-        (0x10000 + ((highSurrogate - 0xd800) << 10) + (c - 0xdc00)).toString(
-          16,
-        ),
+        (
+          0x1_00_00 +
+          ((highSurrogate - 0xd8_00) << 10) +
+          (c - 0xdc_00)
+        ).toString(16),
       );
       highSurrogate = 0;
-    } else if (c >= 0xd800 && c <= 0xdbff) {
+    } else if (c >= 0xd8_00 && c <= 0xdb_ff) {
       highSurrogate = c;
     } else {
       codepoints.push(c.toString(16));
@@ -130,7 +134,7 @@ async function twemojiLoadAdditionalAsset(
 /** Collapse whitespace only — emoji and other characters pass through for Twemoji rendering. */
 function normalizeOgText(value: string) {
   const s = typeof value === "string" ? value : String(value ?? "");
-  return s.replace(/\s+/g, " ").trim();
+  return s.replaceAll(/\s+/g, " ").trim();
 }
 
 function truncate(value: string, maxLength: number) {
@@ -273,21 +277,21 @@ export const Route = createFileRoute("/og/review")({
 
           const profile = await fetchBlueskyPublicProfileFields(row.authorDid);
           const dbDisplay =
-            row.authorDisplayName != null
-              ? String(row.authorDisplayName).trim() || null
-              : null;
+            row.authorDisplayName == null
+              ? null
+              : String(row.authorDisplayName).trim() || null;
           const dbAvatar =
-            row.authorAvatarUrl != null
-              ? String(row.authorAvatarUrl).trim() || null
-              : null;
+            row.authorAvatarUrl == null
+              ? null
+              : String(row.authorAvatarUrl).trim() || null;
 
           const displayName =
             dbDisplay ||
-            (profile?.displayName != null
-              ? String(profile.displayName).trim() || null
-              : null);
+            (profile?.displayName == null
+              ? null
+              : String(profile.displayName).trim() || null);
           const handleFromProfile =
-            profile?.handle != null ? String(profile.handle).trim() : "";
+            profile?.handle == null ? "" : String(profile.handle).trim();
           const handleRaw = handleFromProfile.replace(/^@/, "") || null;
           const handleLabel = handleRaw ? `@${handleRaw}` : null;
 
@@ -296,14 +300,14 @@ export const Route = createFileRoute("/og/review")({
           const secondaryLine = displayName && handleLabel ? handleLabel : null;
 
           const profileAvatarTrimmed =
-            profile?.avatarUrl != null
-              ? String(profile.avatarUrl).trim() || null
-              : null;
+            profile?.avatarUrl == null
+              ? null
+              : String(profile.avatarUrl).trim() || null;
           const avatarUrlMerged = dbAvatar || profileAvatarTrimmed;
 
           const [iconImgPreloaded, avatarImgPreloaded] = await Promise.all([
             preloadOgRasterImageForSatori(
-              row.iconUrl != null ? String(row.iconUrl) : null,
+              row.iconUrl == null ? null : String(row.iconUrl),
               120,
             ),
             preloadOgRasterImageForSatori(avatarUrlMerged, AVATAR_OG_SIZE_PX),
@@ -311,19 +315,19 @@ export const Route = createFileRoute("/og/review")({
 
           const iconImgSrc =
             iconImgPreloaded ??
-            ogRemoteImgSrc(row.iconUrl != null ? String(row.iconUrl) : null);
+            ogRemoteImgSrc(row.iconUrl == null ? null : String(row.iconUrl));
           const avatarImgSrc =
             avatarImgPreloaded ?? ogRemoteImgSrc(avatarUrlMerged);
 
           const listingNameRaw =
-            row.listingName != null ? String(row.listingName).trim() : "";
+            row.listingName == null ? "" : String(row.listingName).trim();
           const listingTitle = truncate(
             normalizeOgText(listingNameRaw) || "Product",
             64,
           );
 
           const reviewRaw =
-            row.reviewText != null ? String(row.reviewText).trim() : "";
+            row.reviewText == null ? "" : String(row.reviewText).trim();
           const reviewNorm = normalizeOgText(reviewRaw);
           const hasWrittenReview = Boolean(reviewNorm);
           const reviewPlain = hasWrittenReview ? reviewNorm : "";

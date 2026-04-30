@@ -1,9 +1,7 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
-import {
-  ProductReviewsPageChrome,
-  loadProductReviewsRoute,
-} from "../lib/product-reviews-route";
+import { ProductReviewsPageChrome } from "../lib/product-reviews-route";
+import { loadProductReviewsRoute } from "../lib/product-reviews-route-loader";
 
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews",

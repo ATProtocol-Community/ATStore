@@ -103,7 +103,7 @@ const styles = stylex.create({
     backgroundColor: primaryColor.solid1,
   },
   indeterminateFillAnimation: {
-    animationDuration: "1s",
+    animationDuration: animationDuration.indeterminateCycle,
     animationIterationCount: "infinite",
     animationName: IndeterminateFillAnimation,
     animationTimingFunction: "linear",

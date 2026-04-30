@@ -1,21 +1,20 @@
 import { Client } from "@atcute/client";
-import { and, eq } from "drizzle-orm";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-
-import { AUTH_SESSION_TOKEN_COOKIE } from "#/integrations/auth/constants";
+import { db } from "#/db/index.server";
+import * as schema from "#/db/schema";
 import { atprotoOAuth } from "#/integrations/auth/atproto";
+import { AUTH_SESSION_TOKEN_COOKIE } from "#/integrations/auth/constants";
+import { ensureProfileSelfRecord } from "#/lib/atproto/repo-records";
 import {
   fetchBlueskyPublicProfileFields,
   shouldApplyBlueskyAvatarFromPublicUrl,
 } from "#/lib/bluesky-public-profile";
-import { sanitizeAuthRedirectTarget } from "#/utils/auth-redirect";
-import { db } from "#/db/index.server";
-import * as schema from "#/db/schema";
-import { ensureProfileSelfRecord } from "#/lib/atproto/repo-records";
 import {
   cookieHeaderSkipsProductClaim,
   countEligibleProductClaimsForDid,
 } from "#/lib/product-claim-eligibility";
+import { sanitizeAuthRedirectTarget } from "#/utils/auth-redirect";
+import { and, eq } from "drizzle-orm";
 
 export const Route = createFileRoute("/api/auth/atproto/callback")({
   server: {
@@ -52,11 +51,8 @@ export const Route = createFileRoute("/api/auth/atproto/callback")({
               if (n > 0) {
                 returnTo = "/product/claim";
               }
-            } catch (claimRouteErr) {
-              console.warn(
-                "Product claim eligibility check failed:",
-                claimRouteErr,
-              );
+            } catch (error) {
+              console.warn("Product claim eligibility check failed:", error);
             }
           }
 
@@ -144,11 +140,8 @@ export const Route = createFileRoute("/api/auth/atproto/callback")({
             await ensureProfileSelfRecord(atprotoClient, did, {
               displayName,
             });
-          } catch (profileErr) {
-            console.warn(
-              "Failed to ensure fyi.atstore.profile record:",
-              profileErr,
-            );
+          } catch (error) {
+            console.warn("Failed to ensure fyi.atstore.profile record:", error);
           }
 
           const isSecure = request.url.startsWith("https://");

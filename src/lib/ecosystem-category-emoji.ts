@@ -130,7 +130,10 @@ const FALLBACK_EMOJI_POOL = [
 ] as const;
 
 function stripToolSuffix(normalized: string): string {
-  return normalized.replace(/\s+tools$/, "").replace(/\s+tool$/, "").trim();
+  return normalized
+    .replace(/\s+tools$/, "")
+    .replace(/\s+tool$/, "")
+    .trim();
 }
 
 function appTagGlyphIfMapped(normalized: string): string | null {
@@ -144,7 +147,7 @@ function appTagGlyphIfMapped(normalized: string): string | null {
 function stableFallbackEmoji(normalized: string): string {
   let h = 0;
   for (let i = 0; i < normalized.length; i++) {
-    h = (Math.imul(31, h) + normalized.charCodeAt(i)) | 0;
+    h = Math.trunc(Math.imul(31, h) + (normalized.codePointAt(i) ?? 0));
   }
   const idx = Math.abs(h) % FALLBACK_EMOJI_POOL.length;
   return FALLBACK_EMOJI_POOL[idx] ?? FALLBACK_EMOJI_POOL[0];

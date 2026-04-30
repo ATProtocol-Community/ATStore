@@ -14,9 +14,8 @@ import {
 
 const styles = stylex.create({
   trim: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
   },
 

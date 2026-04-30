@@ -20,9 +20,9 @@ const styles = stylex.create({
     color: blue.solid1,
   },
   hero: {
+    fontFamily: fontFamily.sans,
     fontSize: fontSize["6xl"],
     fontWeight: fontWeight.black,
-    fontFamily: fontFamily.sans,
   },
 });
 

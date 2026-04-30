@@ -1,19 +1,19 @@
-import 'dotenv/config'
-import { defineConfig } from 'drizzle-kit'
+import "dotenv/config";
+import { defineConfig } from "drizzle-kit";
 
-const databaseUrl = process.env.DATABASE_URL
+const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required to use Drizzle Kit.')
+  throw new Error("DATABASE_URL is required to use Drizzle Kit.");
 }
 
 export default defineConfig({
-  schema: './src/db/schema.ts',
-  out: './drizzle',
-  dialect: 'postgresql',
+  schema: "./src/db/schema.ts",
+  out: "./drizzle",
+  dialect: "postgresql",
   dbCredentials: {
     url: databaseUrl,
   },
   verbose: true,
   strict: true,
-})
+});

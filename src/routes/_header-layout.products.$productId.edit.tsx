@@ -1,3 +1,5 @@
+import type { ProductListingFormSubmitValues } from "#/components/product-listing-form";
+
 import {
   useMutation,
   useQueryClient,
@@ -9,14 +11,12 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
+import { ProductListingForm } from "#/components/product-listing-form";
 import { z } from "zod";
 
-import {
-  ProductListingForm,
-  type ProductListingFormSubmitValues,
-} from "#/components/product-listing-form";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { blobToBase64 } from "../lib/blob-to-base64";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
@@ -24,32 +24,14 @@ const editListingSearchSchema = z.object({
   from: z.literal("manage").optional(),
 });
 
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const s = reader.result;
-      if (typeof s !== "string") {
-        reject(new Error("Could not read image."));
-        return;
-      }
-      const comma = s.indexOf(",");
-      resolve(comma >= 0 ? s.slice(comma + 1) : s);
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Could not read image."));
-    };
-    reader.readAsDataURL(blob);
-  });
-}
-
 function afterEditDestination(input: {
   fromManage: boolean;
   verificationStatus: string | undefined;
   productSlug: string;
-}): { to: "/products/manage" } | { to: "/products/$productId"; params: { productId: string } } {
-  const goManage =
-    input.fromManage || input.verificationStatus !== "verified";
+}):
+  | { to: "/products/manage" }
+  | { to: "/products/$productId"; params: { productId: string } } {
+  const goManage = input.fromManage || input.verificationStatus !== "verified";
   if (goManage) {
     return { to: "/products/manage" };
   }

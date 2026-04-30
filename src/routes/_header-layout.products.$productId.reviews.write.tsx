@@ -11,6 +11,8 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
+import { Form } from "#/design-system/form";
+import { TextArea } from "#/design-system/text-area";
 import { useRef, useState } from "react";
 
 import {
@@ -40,8 +42,6 @@ import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
 import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { Route as ProductReviewsRoute } from "./_header-layout.products.$productId.reviews";
-import { TextArea } from "#/design-system/text-area";
-import { Form } from "#/design-system/form";
 
 export const Route = createFileRoute(
   "/_header-layout/products/$productId/reviews/write",
@@ -85,9 +85,9 @@ const styles = stylex.create({
     height: "100%",
   },
   reviewCardBody: {
+    gap: gap["5xl"],
     display: "flex",
     flexDirection: "column",
-    gap: gap["5xl"],
     height: "100%",
     paddingBottom: verticalSpace["4xl"],
     paddingLeft: horizontalSpace["4xl"],
@@ -96,14 +96,14 @@ const styles = stylex.create({
   },
   /** Inert trigger for a controlled `AlertDialog`. */
   dialogTriggerPlaceholder: {
-    borderWidth: 0,
-    clip: "rect(0, 0, 0, 0)",
-    height: 1,
     margin: -1,
-    overflow: "hidden",
     padding: 0,
+    borderWidth: 0,
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
     position: "absolute",
     whiteSpace: "nowrap",
+    height: 1,
     width: 1,
   },
 });

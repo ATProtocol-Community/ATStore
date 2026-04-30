@@ -24,11 +24,10 @@ const styles = stylex.create({
     boxShadow: shadow["xs"],
   },
   base: {
-    textDecoration: "none",
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
+    textDecoration: "none",
 
     borderRadius: radius.md,
     borderStyle: "solid",
@@ -55,7 +54,6 @@ const styles = stylex.create({
     userSelect: "none",
     whiteSpace: "nowrap",
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",
@@ -71,7 +69,6 @@ const styles = stylex.create({
     },
     paddingRight: horizontalSpace["md"],
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",

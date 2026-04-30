@@ -43,7 +43,6 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["lg"],
     paddingTop: verticalSpace["xxs"],
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",
@@ -60,7 +59,6 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["2xl"],
     paddingTop: verticalSpace["xxs"],
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",

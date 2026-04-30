@@ -1,24 +1,25 @@
-import type { DirectoryListingCard } from '../integrations/tanstack-query/api-directory-listings.functions'
-import { getEcosystemHeroAssetPathForCategory } from './ecosystem-hero-art'
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
+
+import { getEcosystemHeroAssetPathForCategory } from "./ecosystem-hero-art";
 
 export function getListingsForCategoryBranch(
   categoryId: string,
-  listings: DirectoryListingCard[],
-): DirectoryListingCard[] {
+  listings: Array<DirectoryListingCard>,
+): Array<DirectoryListingCard> {
   return listings.filter((listing) => {
     const slugs = listing.categorySlugs?.length
       ? listing.categorySlugs
       : listing.categorySlug
         ? [listing.categorySlug]
-        : []
+        : [];
     if (slugs.length === 0) {
-      return false
+      return false;
     }
 
     return slugs.some(
       (slug) => slug === categoryId || slug.startsWith(`${categoryId}/`),
-    )
-  })
+    );
+  });
 }
 
 /**
@@ -29,11 +30,11 @@ export function getListingsForCategoryBranch(
  */
 export function pickListingImageForCategoryBranch(
   categoryId: string,
-  _listings: DirectoryListingCard[],
+  _listings: Array<DirectoryListingCard>,
 ): string | null {
-  return getEcosystemHeroAssetPathForCategory(categoryId)
+  return getEcosystemHeroAssetPathForCategory(categoryId);
 }
 
 export function formatEcosystemListingCount(count: number): string {
-  return `${count} ${count === 1 ? 'listing' : 'listings'}`
+  return `${count} ${count === 1 ? "listing" : "listings"}`;
 }

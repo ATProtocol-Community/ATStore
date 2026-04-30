@@ -1,3 +1,5 @@
+import type { ListingLink } from "#/lib/atproto/listing-record";
+
 import * as stylex from "@stylexjs/stylex";
 import {
   useMutation,
@@ -5,15 +7,18 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import {
+  Link as RouterLink,
   createFileRoute,
   createLink,
-  Link as RouterLink,
   notFound,
   redirect,
   useCanGoBack,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
+import { BlueskyIcon } from "#/components/bluesky-icon";
+import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
+import { ToggleButton } from "#/design-system/toggle-button";
 import {
   BadgeCheck,
   BookOpen,
@@ -33,6 +38,17 @@ import {
 import { useState } from "react";
 import { Link as AriaLink, Pressable } from "react-aria-components";
 
+import type {
+  DirectoryListingCard,
+  DirectoryListingDetail,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
+import type { DirectoryCategoryOption } from "../lib/directory-categories";
+
+import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
+import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
+import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
+import { HeroImage } from "../components/HeroImage";
+import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
@@ -40,53 +56,40 @@ import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
-import { Link } from "../design-system/link";
 import { Lightbox } from "../design-system/lightbox";
+import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { StarRating } from "../design-system/star-rating";
-import { fontFamily, fontSize } from "../design-system/theme/typography.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
   size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
+import { fontFamily, fontSize } from "../design-system/theme/typography.stylex";
+import { Tooltip } from "../design-system/tooltip";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
-import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
-import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
-import { HeroImage } from "../components/HeroImage";
-import {
-  directoryListingApi,
-  type DirectoryListingCard,
-  type DirectoryListingDetail,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import {
   getAppEcosystemRootCategoryId,
   getAppSegmentFromEcosystemRootCategoryId,
   getDirectoryCategoryOption,
-  type DirectoryCategoryOption,
 } from "../lib/directory-categories";
-import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
-import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
+import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import type { ListingLink } from "#/lib/atproto/listing-record";
-import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
-import { BlueskyIcon } from "#/components/bluesky-icon";
-import { ToggleButton } from "#/design-system/toggle-button";
-import { Tooltip } from "../design-system/tooltip";
-import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
+import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -198,9 +201,9 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       : [];
 
     const ogTitle =
-      listing.rating != null
-        ? `${listing.name} · ${listing.rating.toFixed(1)} ★ | at-store`
-        : `${listing.name} | at-store`;
+      listing.rating == null
+        ? `${listing.name} | at-store`
+        : `${listing.name} · ${listing.rating.toFixed(1)} ★ | at-store`;
 
     return {
       productId: listing.id,
@@ -240,22 +243,22 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
 
 const styles = stylex.create({
   header: {
-    height: size["3xl"],
-    display: "flex",
     alignItems: "center",
+    display: "flex",
+    height: size["3xl"],
   },
   iconButton: {
     height: size["4xl"],
     width: size["4xl"],
   },
   noReviews: {
-    paddingTop: verticalSpace["8xl"],
-    paddingBottom: verticalSpace["8xl"],
-    borderStyle: "dashed",
-    borderWidth: 1,
     borderColor: uiColor.border2,
     borderRadius: radius["xl"],
+    borderStyle: "dashed",
+    borderWidth: 1,
     cornerShape: "squircle",
+    paddingBottom: verticalSpace["8xl"],
+    paddingTop: verticalSpace["8xl"],
   },
   ecosystemSection: {
     marginTop: {
@@ -278,9 +281,9 @@ const styles = stylex.create({
     },
   },
   page: {
+    position: "relative",
     paddingBottom: verticalSpace["11xl"],
     paddingTop: verticalSpace["6xl"],
-    position: "relative",
   },
   backLinkRow: {
     alignItems: "center",
@@ -292,12 +295,14 @@ const styles = stylex.create({
     paddingBottom: verticalSpace["2xl"],
   },
   heroHeaderText: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   heroTitle: {
-    display: "block",
     color: uiColor.text2,
+    display: "block",
   },
   heroTagline: {
     color: uiColor.text1,
@@ -320,84 +325,18 @@ const styles = stylex.create({
   tagLink: {
     textDecoration: "none",
   },
-  ctaRow: {
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
   heroContent: {
     position: "relative",
   },
   ratingRow: {
     alignItems: "center",
   },
-  metadataGridItem: {
-    flexGrow: 1,
-    flexBasis: "240px",
-  },
-  metaCard: {
-    boxShadow: shadow.sm,
-    height: "100%",
-  },
-  metaCardBody: {
-    paddingLeft: horizontalSpace["5xl"],
-    paddingRight: horizontalSpace["5xl"],
-    paddingTop: verticalSpace["5xl"],
-    paddingBottom: verticalSpace["5xl"],
-  },
-  metaLabel: {
-    textTransform: "uppercase",
-  },
-  metaIcon: {
-    color: uiColor.text1,
-  },
-  previewsSection: {
-    gap: gap["2xl"],
-  },
-  previewGrid: {
-    display: "grid",
-    gap: gap["2xl"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
-    },
-  },
-  previewCard: {
-    boxShadow: shadow.sm,
-  },
-  previewImage: {
-    aspectRatio: "16 / 10",
-    display: "block",
-    objectFit: "cover",
-    width: "100%",
-  },
-  descriptionCard: {
-    boxShadow: shadow.sm,
-  },
   descriptionText: {
-    whiteSpace: "pre-wrap",
     fontSize: {
       default: fontSize["lg"],
       [breakpoints.sm]: fontSize["xl"],
     },
-  },
-  detailsCard: {
-    boxShadow: shadow.sm,
-  },
-  detailsBody: {
-    gap: gap["xl"],
-  },
-  detailRow: {
-    gap: gap["xl"],
-    paddingBottom: verticalSpace["lg"],
-    paddingTop: verticalSpace["lg"],
-  },
-  detailLabel: {
-    minWidth: "8rem",
-  },
-  detailValue: {
-    minWidth: 0,
-    textAlign: "right",
+    whiteSpace: "pre-wrap",
   },
   reviewsHeader: {
     paddingTop: verticalSpace["5xl"],
@@ -408,25 +347,20 @@ const styles = stylex.create({
   reviewsActions: {
     flexWrap: "wrap",
   },
-  reviewsGrid: {
-    display: "grid",
-    gap: gap["2xl"],
-    gridTemplateColumns: "1fr",
-  },
   relatedSection: {
     paddingTop: verticalSpace["6xl"],
   },
   relatedGrid: {
-    display: "grid",
     gap: gap["xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
     },
   },
   ecosystemGrid: {
-    display: "grid",
     gap: gap["2xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -441,9 +375,9 @@ const styles = stylex.create({
     flexWrap: "wrap",
   },
   relatedLink: {
+    textDecoration: "none",
     display: "block",
     height: "100%",
-    textDecoration: "none",
   },
   relatedCard: {
     boxShadow: shadow.sm,
@@ -461,7 +395,9 @@ const styles = stylex.create({
     gap: gap["2xl"],
   },
   relatedInfo: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   relatedTagline: {
@@ -474,38 +410,38 @@ const styles = stylex.create({
     paddingTop: verticalSpace["4xl"],
   },
   screenshotCarousel: {
+    gap: gap["xl"],
+    scrollSnapType: "x mandatory",
     display: "flex",
     flexDirection: "row",
-    gap: gap["xl"],
     overflowX: "auto",
     overscrollBehaviorX: "contain",
-    scrollSnapType: "x mandatory",
     width: "100%",
   },
   screenshotSlide: {
-    flexShrink: 0,
     flexBasis: "auto",
+    flexShrink: 0,
     scrollSnapAlign: "start",
   },
   screenshotButton: {
-    appearance: "none",
-    backgroundColor: "transparent",
+    margin: 0,
+    padding: 0,
     borderColor: "transparent",
     borderStyle: "solid",
     borderWidth: 0,
+    appearance: "none",
+    backgroundColor: "transparent",
     cursor: "zoom-in",
     display: "block",
-    margin: 0,
-    padding: 0,
     width: "auto",
   },
   screenshotImage: {
-    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
     borderRadius: radius["md"],
+    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
     display: "block",
+    objectFit: "contain",
     height: "auto",
     maxHeight: 180,
-    objectFit: "contain",
     width: "auto",
   },
   linksRow: {
@@ -514,26 +450,26 @@ const styles = stylex.create({
     rowGap: gap["md"],
   },
   linkChip: {
+    borderColor: uiColor.border1,
+    borderRadius: radius.full,
+    borderStyle: "solid",
+    borderWidth: 1,
+    gap: gap.sm,
+    textDecoration: "none",
     alignItems: "center",
     backgroundColor: {
       default: uiColor.component1,
       ":hover": uiColor.component2,
     },
-    borderColor: uiColor.border1,
-    borderRadius: radius.full,
-    borderStyle: "solid",
-    borderWidth: 1,
     color: uiColor.text2,
     cursor: "pointer",
     display: "inline-flex",
-    fontSize: fontSize.sm,
     fontFamily: fontFamily.mono,
-    gap: gap.sm,
+    fontSize: fontSize.sm,
     paddingBottom: verticalSpace.sm,
     paddingLeft: horizontalSpace.xl,
     paddingRight: horizontalSpace.xl,
     paddingTop: verticalSpace.sm,
-    textDecoration: "none",
   },
 });
 
@@ -585,8 +521,8 @@ function getListingLinkIcon(type: string) {
     : LISTING_LINK_ICONS.other;
 }
 
-function ListingLinksRow({ links }: { links: ListingLink[] }) {
-  if (!links.length) return null;
+function ListingLinksRow({ links }: { links: Array<ListingLink> }) {
+  if (links.length === 0) return null;
   return (
     <Flex gap="md" style={styles.linksRow} aria-label="Project links">
       {links.map((link, index) => {
@@ -609,10 +545,10 @@ function ListingLinksRow({ links }: { links: ListingLink[] }) {
 }
 
 function collectSubproductCategories(
-  categorySlugs: readonly (string | null | undefined)[],
-): DirectoryCategoryOption[] {
+  categorySlugs: ReadonlyArray<string | null | undefined>,
+): Array<DirectoryCategoryOption> {
   const seen = new Set<string>();
-  const result: DirectoryCategoryOption[] = [];
+  const result: Array<DirectoryCategoryOption> = [];
   for (const slug of categorySlugs) {
     const option = getDirectoryCategoryOption(slug);
     if (!option) continue;
@@ -697,8 +633,10 @@ function ProductPage() {
   function handleRemoveHero() {
     if (!canRemoveHero || removeHeroMutation.isPending) return;
     if (
-      typeof window !== "undefined" &&
-      !window.confirm(`Remove the hero image from "${listing.name}"?`)
+      globalThis.window !== undefined &&
+      !globalThis.window.confirm(
+        `Remove the hero image from "${listing.name}"?`,
+      )
     ) {
       return;
     }
@@ -838,7 +776,7 @@ function ProductPage() {
                     showReviewCount
                   />
                   <Text weight="semibold">
-                    {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                    {listing.rating == null ? "—" : listing.rating.toFixed(1)}
                   </Text>
                 </Flex>
               </Flex>
@@ -1011,7 +949,7 @@ function HeroSection({
           exact: true,
         });
       }
-      window.setTimeout(() => {
+      globalThis.setTimeout(() => {
         void queryClient.invalidateQueries({
           queryKey: favoriteStatusQueryOptions.queryKey,
           exact: true,
@@ -1197,7 +1135,7 @@ function ProductEcosystemSection({
 
   const { category } = data;
 
-  if (!category.children.length) {
+  if (category.children.length === 0) {
     return null;
   }
 
@@ -1242,7 +1180,7 @@ function RelatedProductsSection({
   listings,
   title = "More Apps",
 }: {
-  listings: DirectoryListingCard[];
+  listings: Array<DirectoryListingCard>;
   title?: string;
 }) {
   return (
@@ -1290,7 +1228,7 @@ function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
           <Flex justify="end" gap="xl" style={styles.relatedFooter}>
             <Flex align="center" gap="sm">
               <SmallBody variant="secondary">
-                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                {listing.rating == null ? "—" : listing.rating.toFixed(1)}
               </SmallBody>
               <StarRating
                 rating={listing.rating}
@@ -1305,19 +1243,13 @@ function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
   );
 }
 
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
-}
-
 function isProtocolCategorySlug(slug: string) {
   return slug.startsWith("protocol/") && slug.split("/").length === 2;
 }
 
-function getProtocolCategorySegment(categorySlugs: string[]) {
-  const categorySlug = categorySlugs.find(isProtocolCategorySlug);
+function getProtocolCategorySegment(categorySlugs: Array<string>) {
+  const categorySlug = categorySlugs.find((slug) =>
+    isProtocolCategorySlug(slug),
+  );
   return categorySlug ? (categorySlug.split("/")[1] ?? null) : null;
 }

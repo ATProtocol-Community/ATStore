@@ -28,16 +28,12 @@ const styles = stylex.create({
     display: "grid",
   },
   label: {
-    gridColumnEnd: 'label',
-    gridColumnStart: 'label',
-    gridRowEnd: 'label',
-    gridRowStart: 'label',
+    gridColumnEnd: "label",
+    gridColumnStart: "label",
+    gridRowEnd: "label",
+    gridRowStart: "label",
   },
   bar: {
-    gridColumnEnd: 'bar',
-    gridColumnStart: 'bar',
-    gridRowEnd: 'bar',
-    gridRowStart: 'bar',
     borderRadius: radius.full,
     overflow: "hidden",
     backgroundColor: {
@@ -54,6 +50,10 @@ const styles = stylex.create({
       ":is([data-variant=success] *)": `inset 0 0 2px 1px rgba(0,0,0,0.2)`,
       ":is([data-variant=warning] *)": `inset 0 0 2px 1px rgba(0,0,0,0.2)`,
     },
+    gridColumnEnd: "bar",
+    gridColumnStart: "bar",
+    gridRowEnd: "bar",
+    gridRowStart: "bar",
     height: {
       ":is([data-size=lg] *)": sizeSpace["xxs"],
       ":is([data-size=md] *)": sizeSpace["sm"],
@@ -63,12 +63,12 @@ const styles = stylex.create({
   },
 
   valueLabel: {
-    gridColumnEnd: 'value-label',
-    gridColumnStart: 'value-label',
-    gridRowEnd: 'value-label',
-    gridRowStart: 'value-label',
     color: uiColor.text1,
     fontVariantNumeric: "tabular-nums",
+    gridColumnEnd: "value-label",
+    gridColumnStart: "value-label",
+    gridRowEnd: "value-label",
+    gridRowStart: "value-label",
     justifySelf: "flex-end",
 
     fontSize: {

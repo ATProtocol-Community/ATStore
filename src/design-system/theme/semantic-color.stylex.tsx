@@ -12,7 +12,6 @@ import { red } from "./colors/red.stylex";
 import { yellow } from "./colors/yellow.stylex";
 import { fontFamily } from "./typography.stylex";
 
-// eslint-disable-next-line @stylexjs/enforce-extension
 export const ui = stylex.create({
   bg: { backgroundColor: uiColor.bg },
   bgSubtle: { backgroundColor: uiColor.bgSubtle },
@@ -100,7 +99,6 @@ export const ui = stylex.create({
   },
 });
 
-// eslint-disable-next-line @stylexjs/enforce-extension
 export const primary = stylex.create({
   bg: { backgroundColor: primaryColor.bg },
   bgSubtle: { backgroundColor: primaryColor.bgSubtle },
@@ -186,7 +184,6 @@ export const primary = stylex.create({
   },
 });
 
-// eslint-disable-next-line @stylexjs/enforce-extension
 export const critical = stylex.create({
   bg: { backgroundColor: criticalColor.bg },
   bgSubtle: { backgroundColor: criticalColor.bgSubtle },
@@ -272,7 +269,6 @@ export const critical = stylex.create({
   },
 });
 
-// eslint-disable-next-line @stylexjs/enforce-extension
 export const warning = stylex.create({
   bg: { backgroundColor: warningColor.bg },
   bgSubtle: { backgroundColor: warningColor.bgSubtle },
@@ -358,7 +354,6 @@ export const warning = stylex.create({
   },
 });
 
-// eslint-disable-next-line @stylexjs/enforce-extension
 export const success = stylex.create({
   bg: { backgroundColor: successColor.bg },
   bgSubtle: { backgroundColor: successColor.bgSubtle },

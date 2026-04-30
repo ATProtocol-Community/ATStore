@@ -30,12 +30,12 @@ export interface EcosystemHeroArtPromptContext {
   /** Number of verified listings in this branch (exact or descendant). */
   branchListingCount?: number;
   /** App tags that appear across listings in this branch, most common first. */
-  commonAppTags?: readonly string[];
+  commonAppTags?: ReadonlyArray<string>;
   /** A handful of representative listings in this branch (name + tagline). */
-  representativeListings?: readonly EcosystemHeroArtListingSummary[];
+  representativeListings?: ReadonlyArray<EcosystemHeroArtListingSummary>;
 }
 
-const ECOSYSTEM_HERO_ART_SPECS: EcosystemHeroArtSpec[] = [
+const ECOSYSTEM_HERO_ART_SPECS: Array<EcosystemHeroArtSpec> = [
   {
     categoryId: "apps/bluesky",
     label: "Bluesky Ecosystem",
@@ -57,7 +57,8 @@ const ECOSYSTEM_HERO_ART_SPECS: EcosystemHeroArtSpec[] = [
     categoryId: "apps/bluesky/client",
     label: "Bluesky Clients",
     assetPath: "/generated/ecosystem-heroes/bluesky-client.png",
-    palettePrompt: "electric blue, cyan, violet, white, and subtle coral accents",
+    palettePrompt:
+      "electric blue, cyan, violet, white, and subtle coral accents",
     subjectPrompt:
       "floating social app cards, clean feed columns, rounded navigation layers, polished conversation surfaces, and joyful consumer app energy",
   },
@@ -89,7 +90,8 @@ const ECOSYSTEM_HERO_ART_SPECS: EcosystemHeroArtSpec[] = [
     categoryId: "apps/bluesky/tool",
     label: "Bluesky Tools",
     assetPath: "/generated/ecosystem-heroes/bluesky-tool.png",
-    palettePrompt: "bright blue, icy cyan, mint, white, and deep indigo accents",
+    palettePrompt:
+      "bright blue, icy cyan, mint, white, and deep indigo accents",
     subjectPrompt:
       "compact helper widgets, utility panels, modular controls, polished workflow tiles, and crisp functional product shapes",
   },
@@ -121,7 +123,7 @@ export function getEcosystemHeroArtPrompt(
   spec: EcosystemHeroArtSpec,
   context?: EcosystemHeroArtPromptContext,
 ) {
-  const lines: string[] = [
+  const lines: Array<string> = [
     `Create a premium App Store-style hero illustration for the "${spec.label}" ecosystem category.`,
     `Theme: ${spec.subjectPrompt}.`,
     `Palette: ${spec.palettePrompt}.`,
@@ -147,12 +149,12 @@ export function getEcosystemHeroArtPrompt(
 
 function buildEcosystemPromptContextLines(
   context: EcosystemHeroArtPromptContext | undefined,
-): string[] {
+): Array<string> {
   if (!context) {
     return [];
   }
 
-  const lines: string[] = [];
+  const lines: Array<string> = [];
 
   if (context.appName) {
     const branch =
@@ -160,7 +162,8 @@ function buildEcosystemPromptContextLines(
         ? `, specifically the "${context.branchLabel}" sub-ecosystem`
         : "";
     const countSuffix =
-      typeof context.branchListingCount === "number" && context.branchListingCount > 0
+      typeof context.branchListingCount === "number" &&
+      context.branchListingCount > 0
         ? ` (${context.branchListingCount} verified listings)`
         : "";
     lines.push(
@@ -199,7 +202,9 @@ function buildEcosystemPromptContextLines(
         listing.tagline ? `${listing.name} — ${listing.tagline}` : listing.name,
       )
       .join("; ");
-    lines.push(`Representative listings to evoke (do not depict literally): ${formatted}.`);
+    lines.push(
+      `Representative listings to evoke (do not depict literally): ${formatted}.`,
+    );
   }
 
   if (lines.length > 0) {
@@ -216,7 +221,7 @@ function cleanAndTruncate(
   maxLength: number,
 ): string | null {
   if (!value) return null;
-  const collapsed = value.replace(/\s+/g, " ").trim();
+  const collapsed = value.replaceAll(/\s+/g, " ").trim();
   if (!collapsed) return null;
   if (collapsed.length <= maxLength) return collapsed;
   return `${collapsed.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
@@ -245,7 +250,7 @@ export interface EcosystemHeroArtContextListingRow {
  */
 export function deriveEcosystemHeroArtContext(
   categoryId: string,
-  rows: readonly EcosystemHeroArtContextListingRow[],
+  rows: ReadonlyArray<EcosystemHeroArtContextListingRow>,
 ): EcosystemHeroArtPromptContext | null {
   const parts = categoryId.trim().toLowerCase().split("/").filter(Boolean);
   if (parts[0] !== "apps" || !parts[1]) {
@@ -256,7 +261,7 @@ export function deriveEcosystemHeroArtContext(
   const branchCategoryId = parts.slice(0, 3).join("/");
   const branchPrefix = `${branchCategoryId}/`;
 
-  const branchRows: EcosystemHeroArtContextListingRow[] = [];
+  const branchRows: Array<EcosystemHeroArtContextListingRow> = [];
   let platformRow: EcosystemHeroArtContextListingRow | null = null;
 
   for (const row of rows) {
@@ -291,9 +296,8 @@ export function deriveEcosystemHeroArtContext(
   }
 
   const commonAppTags = [...tagCounts.entries()]
-    .sort(
-      (left, right) =>
-        right[1] - left[1] || left[0].localeCompare(right[0]),
+    .toSorted(
+      (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
     )
     .map(([tag]) => tag);
 
@@ -319,7 +323,7 @@ export function deriveEcosystemHeroArtContext(
   };
 }
 
-function getEcosystemBranchLabels(parts: string[]): {
+function getEcosystemBranchLabels(parts: Array<string>): {
   appName: string;
   branchLabel: string | null;
 } {
@@ -328,21 +332,17 @@ function getEcosystemBranchLabels(parts: string[]): {
     return { appName, branchLabel: null };
   }
 
-  const last = parts[parts.length - 1] ?? "";
+  const last = parts.at(-1) ?? "";
   return {
     appName,
-    branchLabel: formatSegmentTitleCase(last.replace(/-/g, " ")),
+    branchLabel: formatSegmentTitleCase(last.replaceAll("-", " ")),
   };
 }
 
 function buildDefaultEcosystemHeroArtSpec(
   categoryId: string,
 ): EcosystemHeroArtSpec | null {
-  const segments = categoryId
-    .trim()
-    .toLowerCase()
-    .split("/")
-    .filter(Boolean);
+  const segments = categoryId.trim().toLowerCase().split("/").filter(Boolean);
 
   if (segments.length < 2 || segments[0] !== "apps") {
     return null;
@@ -356,10 +356,9 @@ function buildDefaultEcosystemHeroArtSpec(
   const appName = formatSegmentTitleCase(segments[1] ?? "App");
   const branchLabel =
     segments.length > 2
-      ? formatSegmentTitleCase((segments[segments.length - 1] ?? "Category").replace(
-          /-/g,
-          " ",
-        ))
+      ? formatSegmentTitleCase(
+          (segments.at(-1) ?? "Category").replaceAll("-", " "),
+        )
       : "Ecosystem";
   const label = `${appName} ${branchLabel}`.trim();
 

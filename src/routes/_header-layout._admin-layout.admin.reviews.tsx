@@ -3,13 +3,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink } from "@tanstack/react-router";
 import { Fragment } from "react";
 
+import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { Avatar } from "../design-system/avatar";
 import { Card, CardBody, CardHeader, CardTitle } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { Separator } from "../design-system/separator";
-import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { StarRating } from "../design-system/star-rating";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
@@ -22,7 +22,7 @@ import { Body, Heading1, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { getInitials } from "../lib/product-reviews-route";
+import { getInitials } from "../lib/get-initials";
 
 export const Route = createFileRoute(
   "/_header-layout/_admin-layout/admin/reviews",
@@ -47,23 +47,23 @@ const styles = stylex.create({
     gap: gap["3xl"],
   },
   row: {
+    gap: gap.md,
     alignItems: "flex-start",
     flexWrap: "wrap",
-    gap: gap.md,
     justifyContent: "space-between",
     width: "100%",
   },
   authorRow: {
-    alignItems: "center",
     gap: gap.lg,
+    alignItems: "center",
     minWidth: 0,
   },
   authorMeta: {
     minWidth: 0,
   },
   reviewBlock: {
-    backgroundColor: uiColor.component1,
     borderRadius: radius.md,
+    backgroundColor: uiColor.component1,
     marginTop: verticalSpace.md,
     maxWidth: "100%",
     paddingBottom: verticalSpace.lg,
@@ -72,21 +72,21 @@ const styles = stylex.create({
     paddingTop: verticalSpace.lg,
   },
   listingRow: {
-    alignItems: "center",
     gap: gap.md,
+    alignItems: "center",
     minWidth: 0,
   },
   listingIcon: {
     borderRadius: "8px",
     flexShrink: 0,
-    height: "32px",
     objectFit: "cover",
+    height: "32px",
     width: "32px",
   },
   ratingActions: {
+    gap: gap.sm,
     alignItems: "center",
     flexShrink: 0,
-    gap: gap.sm,
   },
 });
 

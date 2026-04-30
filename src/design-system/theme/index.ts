@@ -4,6 +4,7 @@ export * from "./media-queries.stylex";
 export * from "./radius.stylex";
 export * from "./semantic-color.stylex";
 export * from "./semantic-spacing.stylex";
+export * from "./semantic-spacing.types";
 export * from "./shadow.stylex";
 export * from "./spacing.stylex";
 export * from "./typography.stylex";

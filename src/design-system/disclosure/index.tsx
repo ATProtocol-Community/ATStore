@@ -29,6 +29,8 @@ const styles = stylex.create({
     flexDirection: "column",
   },
   title: {
+    borderRadius: radius.lg,
+    borderWidth: 0,
     paddingBottom: {
       ":is([data-size=lg] *)": sizeSpace["md"],
       ":is([data-size=md] *)": sizeSpace["xxs"],
@@ -39,13 +41,11 @@ const styles = stylex.create({
       ":is([data-size=md] *)": sizeSpace["xxs"],
       ":is([data-size=sm] *)": sizeSpace["sm"],
     },
-    borderRadius: radius.lg,
     paddingRight: {
       ":is([data-size=lg] *)": sizeSpace["md"],
       ":is([data-size=md] *)": sizeSpace["xxs"],
       ":is([data-size=sm] *)": sizeSpace["sm"],
     },
-    borderWidth: 0,
     paddingTop: {
       ":is([data-size=lg] *)": sizeSpace["md"],
       ":is([data-size=md] *)": sizeSpace["xxs"],

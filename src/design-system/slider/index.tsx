@@ -35,13 +35,13 @@ const styles = stylex.create({
     },
   },
   track: {
-    gridColumnEnd: 'track',
-    gridColumnStart: 'track',
-    gridRowEnd: 'track',
-    gridRowStart: 'track',
     flexGrow: {
       ":is([data-orientation=vertical] *)": 1,
     },
+    gridColumnEnd: "track",
+    gridColumnStart: "track",
+    gridRowEnd: "track",
+    gridRowStart: "track",
     opacity: {
       ":is([data-disabled=true] *)": 0.5,
     },
@@ -167,21 +167,21 @@ const styles = stylex.create({
     },
   },
   valueLabel: {
-    gridColumnEnd: 'value-label',
-    gridColumnStart: 'value-label',
-    gridRowEnd: 'value-label',
-    gridRowStart: 'value-label',
     color: uiColor.text1,
     fontSize: fontSize["sm"],
     fontVariantNumeric: "tabular-nums",
+    gridColumnEnd: "value-label",
+    gridColumnStart: "value-label",
+    gridRowEnd: "value-label",
+    gridRowStart: "value-label",
     justifySelf: "flex-end",
     lineHeight: lineHeight["sm"],
   },
   label: {
-    gridColumnEnd: 'label',
-    gridColumnStart: 'label',
-    gridRowEnd: 'label',
-    gridRowStart: 'label',
+    gridColumnEnd: "label",
+    gridColumnStart: "label",
+    gridRowEnd: "label",
+    gridRowStart: "label",
   },
 });
 

@@ -2,12 +2,19 @@ import * as stylex from "@stylexjs/stylex";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
+import type {
+  DirectoryCategoryAccent,
+  DirectoryCategoryTreeNode,
+} from "../lib/directory-categories";
+
 import { Flex } from "../design-system/flex";
+import { animationDuration } from "../design-system/theme/animations.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
-import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
@@ -17,51 +24,22 @@ import {
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import type {
-  DirectoryCategoryAccent,
-  DirectoryCategoryTreeNode,
-} from "../lib/directory-categories";
-import { formatEcosystemListingCount } from "../lib/ecosystem-listings";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { getEcosystemCategoryEmoji } from "../lib/ecosystem-category-emoji";
+import { formatEcosystemListingCount } from "../lib/ecosystem-listings";
 
 const styles = stylex.create({
   cardContentLayout: {
-    position: "absolute",
     inset: 0,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    position: "absolute",
     paddingBottom: verticalSpace["2xl"],
     paddingLeft: horizontalSpace["3xl"],
     paddingRight: horizontalSpace["3xl"],
     paddingTop: verticalSpace["4xl"],
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
   },
   card: {
-    aspectRatio: {
-      default: "16 / 7",
-      [breakpoints.sm]: "16 / 9",
-    },
-    borderRadius: radius.xl,
-    borderStyle: "solid",
-    borderWidth: 1,
-    boxShadow: shadow.lg,
-    color: "white",
-    cornerShape: "squircle",
-    display: "flex",
-    flexDirection: "column",
-    gap: gap["8xl"],
-    justifyContent: "space-between",
-    overflow: "hidden",
-    position: "relative",
-    textDecoration: "none",
-    transitionProperty: "transform",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
-    transform: {
-      default: "none",
-      ":hover": "translateY(-2px)",
-    },
     /**
      * Mirrors the `AppTagCard` parallax: 0 → 1 on hover, read by each emoji slot's
      * `transform` via `calc()`. Custom properties don't interpolate without `@property`
@@ -72,6 +50,30 @@ const styles = stylex.create({
       default: 0,
       ":hover": 1,
     },
+    borderRadius: radius.xl,
+    borderStyle: "solid",
+    borderWidth: 1,
+    cornerShape: "squircle",
+    gap: gap["8xl"],
+    overflow: "hidden",
+    textDecoration: "none",
+    aspectRatio: {
+      default: "16 / 7",
+      [breakpoints.sm]: "16 / 9",
+    },
+    boxShadow: shadow.lg,
+    color: "white",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    position: "relative",
+    transform: {
+      default: "none",
+      ":hover": "translateY(-2px)",
+    },
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "transform",
+    transitionTimingFunction: "ease-in-out",
   },
   cardContent: {
     position: "relative",
@@ -85,20 +87,20 @@ const styles = stylex.create({
     marginLeft: "auto",
   },
   softBlueSurface: {
-    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
     borderColor: blue.border1,
+    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
   },
   softGreenSurface: {
-    backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
     borderColor: green.border1,
+    backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
   },
   softPinkSurface: {
-    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
     borderColor: pink.border1,
+    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
   },
   softPurpleSurface: {
-    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
     borderColor: purple.border1,
+    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
   },
   listingCount: {
     textShadow:
@@ -111,9 +113,9 @@ const styles = stylex.create({
   },
   description: {
     color: uiColor.textContrast,
-    maxWidth: "36rem",
     textShadow:
       "0 1px 2px color-mix(in srgb, black 42%, transparent), 0 6px 20px color-mix(in srgb, black 30%, transparent)",
+    maxWidth: "36rem",
   },
   eyebrow: {
     color: uiColor.textContrast,
@@ -135,8 +137,8 @@ const styles = stylex.create({
    * glyphs around them — keeping the visual mass biased to the right of the title.
    */
   emojiBackdrop: {
-    fontSize: "1rem",
     inset: 0,
+    fontSize: "1rem",
     pointerEvents: "none",
     position: "absolute",
     zIndex: 0,
@@ -148,8 +150,8 @@ const styles = stylex.create({
     lineHeight: 1,
     pointerEvents: "none",
     position: "absolute",
+    transitionDuration: animationDuration.extremelySlow,
     transitionProperty: "transform",
-    transitionDuration: "500ms",
     transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
     userSelect: "none",
     zIndex: 0,
@@ -157,34 +159,18 @@ const styles = stylex.create({
   emojiSlot1: {
     fontSize: "7em",
     opacity: 0.22,
-    right: "6%",
-    top: "12%",
     transform:
       "translate(calc(var(--emoji-hover) * 12px), calc(var(--emoji-hover) * -8px)) rotate(-12deg)",
-  },
-  emojiSlot2: {
-    bottom: "10%",
-    fontSize: "4em",
-    opacity: 0.18,
-    right: "26%",
-    transform:
-      "translate(calc(var(--emoji-hover) * 6px), calc(var(--emoji-hover) * 10px)) rotate(16deg)",
-  },
-  emojiSlot3: {
-    fontSize: "3.25em",
-    left: "42%",
-    opacity: 0.2,
-    top: "16%",
-    transform:
-      "translate(calc(var(--emoji-hover) * -7px), calc(var(--emoji-hover) * -10px)) rotate(22deg)",
+    right: "6%",
+    top: "12%",
   },
   emojiSlot4: {
-    bottom: "18%",
     fontSize: "2.5em",
     opacity: 0.24,
-    right: "44%",
     transform:
       "translate(calc(var(--emoji-hover) * 9px), calc(var(--emoji-hover) * 8px)) rotate(-18deg)",
+    bottom: "18%",
+    right: "44%",
   },
 });
 
@@ -263,12 +249,12 @@ const SLOT_COUNT = 4;
  *      anchor emoji. This makes top-level "Apps" and "Protocol Tools" — which have many
  *      grandchildren — visually rich, while small categories degrade gracefully.
  */
-function pickSlotEmojis(category: DirectoryCategoryTreeNode): string[] {
+function pickSlotEmojis(category: DirectoryCategoryTreeNode): Array<string> {
   const anchor = getEcosystemCategoryEmoji(category.label);
   const seen = new Set<string>([anchor]);
-  const pool: string[] = [anchor];
+  const pool: Array<string> = [anchor];
 
-  const visit = (nodes: DirectoryCategoryTreeNode[]) => {
+  const visit = (nodes: Array<DirectoryCategoryTreeNode>) => {
     for (const node of nodes) {
       if (pool.length >= SLOT_COUNT) return;
       const emoji = getEcosystemCategoryEmoji(node.label);

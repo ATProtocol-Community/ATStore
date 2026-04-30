@@ -1,25 +1,25 @@
+import type { ProductNotification } from "#/integrations/tanstack-query/api-notification.functions";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
 import { useCallback, useMemo } from "react";
 
-import type { ProductNotification } from "#/integrations/tanstack-query/api-notification.functions";
-import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
-
 export function countUnreadNotifications(
-  notifications: ProductNotification[],
+  notifications: Array<ProductNotification>,
   lastReadAt: string | null | undefined,
 ) {
-  const lastReadMs =
-    lastReadAt != null ? Date.parse(lastReadAt) : Number.NaN;
+  const lastReadMs = lastReadAt == null ? Number.NaN : Date.parse(lastReadAt);
   if (!Number.isFinite(lastReadMs)) {
     return notifications.length;
   }
-  return notifications.filter((item) => Date.parse(item.createdAt) > lastReadMs).length;
+  return notifications.filter((item) => Date.parse(item.createdAt) > lastReadMs)
+    .length;
 }
 
 /** Read timestamps and unread counts come from Postgres (`user.notifications_read_at`). */
 export function useNotificationReadState(
   sessionDid: string | null | undefined,
-  notifications: ProductNotification[],
+  notifications: Array<ProductNotification>,
 ) {
   const queryClient = useQueryClient();
   const { data: readState, isPending: isReadAtPending } = useQuery({
@@ -48,7 +48,7 @@ export function useNotificationReadState(
         notifications.length > 0
           ? notifications
               .map((item) => item.createdAt)
-              .sort((a, b) => Date.parse(b) - Date.parse(a))[0]
+              .toSorted((a, b) => Date.parse(b) - Date.parse(a))[0]
           : new Date().toISOString();
       await notificationApi.markNotificationsRead({
         data: { readAtIso: newestCreatedAt },

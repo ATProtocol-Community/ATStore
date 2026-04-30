@@ -119,65 +119,63 @@ const heroStyles = stylex.create({
 
 const sharedStyles = stylex.create({
   smallTitle: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
     flexGrow: 1,
     fontFamily: fontFamily["title"],
     minWidth: 0,
   },
   largeTitle: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
+    flexGrow: 1,
+    fontFamily: fontFamily["title"],
     gridColumnEnd: "title",
     gridColumnStart: "title",
     gridRowEnd: "title",
     gridRowStart: "title",
-    flexGrow: 1,
-    fontFamily: fontFamily["title"],
     minWidth: 0,
   },
   description: {
-    gridColumnEnd: "description",
-    gridColumnStart: "description",
-    gridRowEnd: "description",
-    gridRowStart: "description",
     display: {
       default: "none",
       [breakpoints.sm]: "block",
     },
+    gridColumnEnd: "description",
+    gridColumnStart: "description",
+    gridRowEnd: "description",
+    gridRowStart: "description",
   },
   smallActions: {
     gap: gap["xs"],
     flexShrink: 0,
   },
   largeActions: {
-    gridColumnEnd: "actions",
-    gridColumnStart: "actions",
-    gridRowEnd: "actions",
-    gridRowStart: "actions",
     gap: {
       default: gap["xs"],
       [breakpoints.sm]: sizeSpace["sm"],
     },
+    gridColumnEnd: "actions",
+    gridColumnStart: "actions",
+    gridRowEnd: "actions",
+    gridRowStart: "actions",
     minHeight: sizeSpace["3xl"],
   },
   icon: {
-    gridColumnEnd: "icon",
-    gridColumnStart: "icon",
-    gridRowEnd: "icon",
-    gridRowStart: "icon",
     borderRadius: radius.lg,
-    // eslint-disable-next-line @stylexjs/valid-styles, @stylexjs/sort-keys
+    // eslint-disable-next-line @stylexjs/sort-keys
     cornerShape: "squircle",
     alignItems: "center",
     backgroundColor: primaryColor.solid1,
     boxShadow: shadow["lg"],
     color: primaryColor.textContrast,
     display: "flex",
+    gridColumnEnd: "icon",
+    gridColumnStart: "icon",
+    gridRowEnd: "icon",
+    gridRowStart: "icon",
     justifyContent: "center",
     height: sizeSpace["4xl"],
     width: sizeSpace["4xl"],

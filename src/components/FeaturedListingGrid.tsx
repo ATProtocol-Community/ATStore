@@ -1,15 +1,16 @@
-import * as stylex from "@stylexjs/stylex";
+import type { StyleXComponentProps } from "#/design-system/theme";
 import type { Key, ReactNode } from "react";
+
+import * as stylex from "@stylexjs/stylex";
 
 import { Grid } from "../design-system/grid";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { gap } from "../design-system/theme/semantic-spacing.stylex";
-import type { StyleXComponentProps } from "#/design-system/theme";
 
 const styles = stylex.create({
   grid: {
-    display: "grid",
     gap: gap["2xl"],
+    display: "grid",
     gridAutoFlow: "dense",
     gridTemplateColumns: {
       default: "1fr",
@@ -21,7 +22,6 @@ const styles = stylex.create({
     minWidth: 0,
   },
   featuredItem: {
-    aspectRatio: 16 / 9,
     gridColumn: {
       default: "auto",
       [breakpoints.sm]: "span 2",
@@ -30,12 +30,13 @@ const styles = stylex.create({
       default: "auto",
       [breakpoints.sm]: "span 2",
     },
+    aspectRatio: 16 / 9,
   },
 });
 
 interface FeaturedListingGridProps<T> {
   hasFeatured?: boolean;
-  items: T[];
+  items: Array<T>;
   getKey: (item: T, index: number) => Key;
   isFeatured?: (item: T, index: number) => boolean;
   /**
@@ -97,14 +98,14 @@ function arrangeForFeaturing<T>({
   isFeatured,
   canFeature,
 }: {
-  items: T[];
+  items: Array<T>;
   hasFeatured: boolean;
   isFeatured: (item: T, index: number) => boolean;
   canFeature?: (item: T) => boolean;
-}): T[] {
+}): Array<T> {
   if (!hasFeatured || !canFeature) return items;
 
-  const arranged = items.slice();
+  const arranged = [...items];
   const featuredFlags = arranged.map((item, index) => isFeatured(item, index));
 
   let swapCursor = 0;
@@ -113,10 +114,7 @@ function arrangeForFeaturing<T>({
     if (canFeature(arranged[i])) continue;
 
     while (swapCursor < arranged.length) {
-      if (
-        !featuredFlags[swapCursor] &&
-        canFeature(arranged[swapCursor])
-      ) {
+      if (!featuredFlags[swapCursor] && canFeature(arranged[swapCursor])) {
         const tmp = arranged[i];
         arranged[i] = arranged[swapCursor];
         arranged[swapCursor] = tmp;

@@ -1,13 +1,16 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
+  Link as RouterLink,
   createFileRoute,
   createLink,
-  Link as RouterLink,
   useRouter,
 } from "@tanstack/react-router";
+import { Badge } from "#/design-system/badge";
 import { ChevronLeft } from "lucide-react";
 import { useMemo, useState } from "react";
+
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
@@ -18,6 +21,7 @@ import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
 import { Select, SelectItem } from "../design-system/select";
+import { StarRating } from "../design-system/star-rating";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
@@ -26,15 +30,11 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { StarRating } from "../design-system/star-rating";
-import {
-  directoryListingApi,
-  type DirectoryListingCard,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getInitials } from "../lib/get-initials";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { Badge } from "#/design-system/badge";
 
 const LinkLink = createLink(Link);
 
@@ -81,15 +81,9 @@ const styles = stylex.create({
   navLinks: {
     flexWrap: "wrap",
   },
-  searchSection: {
-    gap: gap["3xl"],
-  },
-  searchCopy: {
-    maxWidth: "42rem",
-  },
   searchField: {
-    maxWidth: "40rem",
     flexGrow: 1,
+    maxWidth: "40rem",
   },
   resultsHeader: {
     flexWrap: "wrap",
@@ -107,8 +101,8 @@ const styles = stylex.create({
     minWidth: "12rem",
   },
   listingGrid: {
-    display: "grid",
     gap: gap["xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -116,11 +110,11 @@ const styles = stylex.create({
     },
   },
   listingLink: {
+    gap: gap["4xl"],
+    textDecoration: "none",
     display: "flex",
     flexDirection: "column",
-    gap: gap["4xl"],
     height: "100%",
-    textDecoration: "none",
   },
   listingCard: {
     contentVisibility: "auto",
@@ -138,7 +132,9 @@ const styles = stylex.create({
     gap: gap["2xl"],
   },
   listingInfo: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   listingTagline: {
@@ -148,17 +144,19 @@ const styles = stylex.create({
     alignItems: "center",
   },
   listingMainLink: {
+    textDecoration: "none",
     color: "inherit",
     display: "flex",
-    flex: 1,
+    flexBasis: "0%",
     flexDirection: "column",
+    flexGrow: "1",
+    flexShrink: "1",
     minHeight: 0,
-    textDecoration: "none",
   },
   listingTags: {
     flexWrap: "wrap",
-    maxWidth: "100%",
     rowGap: gap.sm,
+    maxWidth: "100%",
   },
   listingFooterRating: {
     flexShrink: 0,
@@ -359,7 +357,7 @@ function AllAppsListingCard({ listing }: { listing: DirectoryListingCard }) {
           </Flex>
           <Flex align="center" gap="sm" style={styles.listingFooterRating}>
             <SmallBody variant="secondary">
-              {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+              {listing.rating == null ? "—" : listing.rating.toFixed(1)}
             </SmallBody>
             <StarRating
               rating={listing.rating}
@@ -371,14 +369,6 @@ function AllAppsListingCard({ listing }: { listing: DirectoryListingCard }) {
       </Flex>
     </Card>
   );
-}
-
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
 }
 
 function getResultsLabel(

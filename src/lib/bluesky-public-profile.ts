@@ -2,10 +2,10 @@
  * Profile fields from public.api.bsky.app (stable JSON for login flows).
  */
 export type BlueskyPublicProfileFields = {
-  handle: string | null
-  displayName: string | null
-  avatarUrl: string | null
-}
+  handle: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+};
 
 /**
  * Fetch handle, display name, and avatar URL for a DID via public Bluesky API.
@@ -15,34 +15,33 @@ export async function fetchBlueskyPublicProfileFields(
 ): Promise<BlueskyPublicProfileFields | null> {
   try {
     const url = new URL(
-      'xrpc/app.bsky.actor.getProfile',
-      'https://public.api.bsky.app',
-    )
-    url.searchParams.set('actor', did)
+      "xrpc/app.bsky.actor.getProfile",
+      "https://public.api.bsky.app",
+    );
+    url.searchParams.set("actor", did);
     const response = await fetch(url.toString(), {
-      headers: { Accept: 'application/json' },
-    })
-    if (!response.ok) return null
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return null;
     const profileData = (await response.json()) as {
-      handle?: string | null
-      displayName?: string | null
-      avatar?: string | null
-    }
-    const handle = profileData.handle?.trim()
-    const displayName = profileData.displayName?.trim()
-    const rawAvatar = profileData.avatar
+      handle?: string | null;
+      displayName?: string | null;
+      avatar?: string | null;
+    };
+    const handle = profileData.handle?.trim();
+    const displayName = profileData.displayName?.trim();
+    const rawAvatar = profileData.avatar;
     const avatarUrl =
-      typeof rawAvatar === 'string' && rawAvatar.trim() !== ''
+      typeof rawAvatar === "string" && rawAvatar.trim() !== ""
         ? rawAvatar.trim()
-        : null
+        : null;
     return {
       handle: handle && handle.length > 0 ? handle : null,
-      displayName:
-        displayName && displayName.length > 0 ? displayName : null,
+      displayName: displayName && displayName.length > 0 ? displayName : null,
       avatarUrl,
-    }
+    };
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -53,12 +52,12 @@ export function shouldApplyBlueskyAvatarFromPublicUrl(
   currentImage: string | null | undefined,
   blueskyAvatarUrl: string | null | undefined,
 ): boolean {
-  if (!blueskyAvatarUrl || blueskyAvatarUrl.trim() === '') return false
-  const cur = currentImage?.trim() ?? ''
-  if (cur === '') return true
-  if (cur.startsWith('data:image/')) return false
-  if (cur.startsWith('blob:')) return true
-  return false
+  if (!blueskyAvatarUrl || blueskyAvatarUrl.trim() === "") return false;
+  const cur = currentImage?.trim() ?? "";
+  if (cur === "") return true;
+  if (cur.startsWith("data:image/")) return false;
+  if (cur.startsWith("blob:")) return true;
+  return false;
 }
 
 /**
@@ -69,21 +68,21 @@ export async function fetchBlueskyHandleForDid(
 ): Promise<string | null> {
   try {
     const url = new URL(
-      'xrpc/app.bsky.actor.getProfile',
-      'https://public.api.bsky.app',
-    )
-    url.searchParams.set('actor', did)
+      "xrpc/app.bsky.actor.getProfile",
+      "https://public.api.bsky.app",
+    );
+    url.searchParams.set("actor", did);
     const response = await fetch(url.toString(), {
-      headers: { Accept: 'application/json' },
-    })
-    if (!response.ok) return null
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return null;
     const profileData = (await response.json()) as {
-      handle?: string | null
-    }
-    const handle = profileData.handle?.trim()
-    return handle && handle.length > 0 ? handle : null
+      handle?: string | null;
+    };
+    const handle = profileData.handle?.trim();
+    return handle && handle.length > 0 ? handle : null;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -93,29 +92,29 @@ export async function fetchBlueskyHandleForDid(
 export async function resolveBlueskyHandleToDid(
   handle: string,
 ): Promise<string | null> {
-  const trimmed = handle.trim().replace(/^@/, '')
-  if (!trimmed) return null
+  const trimmed = handle.trim().replace(/^@/, "");
+  if (!trimmed) return null;
   try {
     const url = new URL(
-      'xrpc/com.atproto.identity.resolveHandle',
-      'https://public.api.bsky.app',
-    )
-    url.searchParams.set('handle', trimmed)
+      "xrpc/com.atproto.identity.resolveHandle",
+      "https://public.api.bsky.app",
+    );
+    url.searchParams.set("handle", trimmed);
     const response = await fetch(url.toString(), {
-      headers: { Accept: 'application/json' },
-    })
-    if (!response.ok) return null
-    const data = (await response.json()) as { did?: string }
-    const did = data.did?.trim()
-    return did && did.startsWith('did:') ? did : null
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { did?: string };
+    const did = data.did?.trim();
+    return did && did.startsWith("did:") ? did : null;
   } catch {
-    return null
+    return null;
   }
 }
 
 function isPlausibleProfileDid(value: string): boolean {
-  const s = value.trim()
-  return s.startsWith('did:') && s.length >= 12 && s.length <= 2048
+  const s = value.trim();
+  return s.startsWith("did:") && s.length >= 12 && s.length <= 2048;
 }
 
 /**
@@ -123,9 +122,9 @@ function isPlausibleProfileDid(value: string): boolean {
  */
 export function normalizeProfilePathActor(raw: string): string {
   try {
-    return decodeURIComponent(raw).trim()
+    return decodeURIComponent(raw).trim();
   } catch {
-    return raw.trim()
+    return raw.trim();
   }
 }
 
@@ -136,10 +135,10 @@ export function normalizeProfilePathActor(raw: string): string {
 export async function resolveProfilePathActorToDid(
   raw: string,
 ): Promise<string | null> {
-  const normalized = normalizeProfilePathActor(raw)
-  if (!normalized) return null
-  if (normalized.startsWith('did:')) {
-    return isPlausibleProfileDid(normalized) ? normalized : null
+  const normalized = normalizeProfilePathActor(raw);
+  if (!normalized) return null;
+  if (normalized.startsWith("did:")) {
+    return isPlausibleProfileDid(normalized) ? normalized : null;
   }
-  return resolveBlueskyHandleToDid(normalized)
+  return resolveBlueskyHandleToDid(normalized);
 }

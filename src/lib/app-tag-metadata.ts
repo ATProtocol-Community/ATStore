@@ -31,13 +31,13 @@ function normalizeAppTagSlug(slug: string) {
   return slug
     .trim()
     .toLowerCase()
-    .replace(/[_\s]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replaceAll(/[_\s]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-+|-+$/g, "");
 }
 
 export function formatAppTagLabel(tag: string) {
-  return tag.replace(/\b\w/g, (character) => character.toUpperCase());
+  return tag.replaceAll(/\b\w/g, (character) => character.toUpperCase());
 }
 
 export function getAppTagDescription(tag: string) {
@@ -55,7 +55,7 @@ export function getAppTagSlug(tag: string) {
   const normalizedTag = normalizeAppTag(tag) ?? "";
   const canonicalTag = normalizedTag.replace(/ tool$/, "");
 
-  return canonicalTag.replace(/\s+/g, "-");
+  return canonicalTag.replaceAll(/\s+/g, "-");
 }
 
 export function getAppTagHref(tag: string) {

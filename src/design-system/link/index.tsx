@@ -33,7 +33,6 @@ const styles = stylex.create({
     fontWeight: fontWeight["normal"],
     position: "relative",
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       height: "1.2em",
       width: "1.2em",

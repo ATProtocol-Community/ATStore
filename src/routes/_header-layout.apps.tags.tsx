@@ -1,6 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink } from "@tanstack/react-router";
+import { ChevronLeft } from "lucide-react";
 
 import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
@@ -16,7 +17,6 @@ import {
 import { Body } from "../design-system/typography";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { ChevronLeft } from "lucide-react";
 
 const LinkLink = createLink(Link);
 
@@ -42,13 +42,9 @@ const styles = stylex.create({
   navLinks: {
     flexWrap: "wrap",
   },
-  eyebrow: {
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-  },
   categoriesGrid: {
-    display: "grid",
     gap: gap["2xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "repeat(2, minmax(0, 1fr))",
       [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",

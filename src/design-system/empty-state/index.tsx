@@ -22,7 +22,6 @@ const styles = stylex.create({
       ":is([data-empty-state-size=sm])": sizeSpace["4xl"],
     },
     gridTemplateAreas: {
-      // eslint-disable-next-line @stylexjs/valid-styles
       ":is([data-empty-state-size=md],[data-empty-state-size=lg])": {
         default: `
           "image"
@@ -36,7 +35,7 @@ const styles = stylex.create({
           "actions"
         `,
       },
-      // eslint-disable-next-line @stylexjs/valid-styles
+
       ":is([data-empty-state-size=sm])": {
         default: `
           "image title"
@@ -55,7 +54,6 @@ const styles = stylex.create({
     display: "grid",
     fontFamily: fontFamily["sans"],
     gridTemplateColumns: {
-      // eslint-disable-next-line @stylexjs/valid-styles
       ":is([data-empty-state-size=sm])": {
         default: "min-content 1fr",
         ":has([data-empty-state-actions])": "min-content 1fr max-content",
@@ -73,43 +71,43 @@ const styles = stylex.create({
     textAlign: "center",
   },
   image: {
-    gridColumnEnd: 'image',
-    gridColumnStart: 'image',
-    gridRowEnd: 'image',
-    gridRowStart: 'image',
     alignItems: "center",
     display: "flex",
+    gridColumnEnd: "image",
+    gridColumnStart: "image",
+    gridRowEnd: "image",
+    gridRowStart: "image",
     justifyContent: "center",
     objectFit: "contain",
     height: "var(--empty-state-image-size)",
     width: "var(--empty-state-image-size)",
   },
   title: {
-    gridColumnEnd: 'title',
-    gridColumnStart: 'title',
-    gridRowEnd: 'title',
-    gridRowStart: 'title',
-    marginBottom: 0,
-    marginLeft: 0,
     fontSize: {
       ":is([data-empty-state-size='lg'] *)": fontSize["2xl"],
       ":is([data-empty-state-size='md'] *)": fontSize["xl"],
       ":is([data-empty-state-size='sm'] *)": fontSize["lg"],
     },
-    marginRight: 0,
     fontWeight: fontWeight["semibold"],
+    gridColumnEnd: "title",
+    gridColumnStart: "title",
+    gridRowEnd: "title",
+    gridRowStart: "title",
+    marginBottom: 0,
+    marginLeft: 0,
+    marginRight: 0,
     marginTop: 0,
   },
   description: {
-    gridColumnEnd: 'description',
-    gridColumnStart: 'description',
-    gridRowEnd: 'description',
-    gridRowStart: 'description',
+    fontSize: fontSize["sm"],
+    fontWeight: fontWeight["normal"],
+    gridColumnEnd: "description",
+    gridColumnStart: "description",
+    gridRowEnd: "description",
+    gridRowStart: "description",
     marginBottom: 0,
     marginLeft: 0,
-    fontSize: fontSize["sm"],
     marginRight: 0,
-    fontWeight: fontWeight["normal"],
     marginTop: 0,
     maxWidth: {
       ":is([data-empty-state-size=lg])": "480px",
@@ -118,15 +116,15 @@ const styles = stylex.create({
     },
   },
   actions: {
-    gridColumnEnd: 'actions',
-    gridColumnStart: 'actions',
-    gridRowEnd: 'actions',
-    gridRowStart: 'actions',
     gap: gap["md"],
     alignItems: "center",
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
+    gridColumnEnd: "actions",
+    gridColumnStart: "actions",
+    gridRowEnd: "actions",
+    gridRowStart: "actions",
     justifyContent: "center",
 
     paddingLeft: {

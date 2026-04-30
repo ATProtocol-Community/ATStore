@@ -23,12 +23,8 @@ import { fontFamily, fontSize, fontWeight } from "../theme/typography.stylex";
 
 const styles = stylex.create({
   menuItem: {
-    paddingBottom: verticalSpace["sm"],
-    paddingLeft: horizontalSpace["sm"],
     borderRadius: radius.md,
-    paddingRight: horizontalSpace["sm"],
     textDecoration: "none",
-    paddingTop: verticalSpace["sm"],
     alignItems: "center",
     backgroundColor: {
       ":is([data-hovered=true]):not([data-pressed=true])": uiColor.component2,
@@ -41,6 +37,10 @@ const styles = stylex.create({
     transitionProperty: "background-color",
     transitionTimingFunction: "ease-in-out",
     userSelect: "none",
+    paddingBottom: verticalSpace["sm"],
+    paddingLeft: horizontalSpace["sm"],
+    paddingRight: horizontalSpace["sm"],
+    paddingTop: verticalSpace["sm"],
 
     gridTemplateAreas: {
       default: '"title"',
@@ -62,47 +62,46 @@ const styles = stylex.create({
     },
   },
   menuItemIcon: {
-    gridColumnEnd: 'icon',
-    gridColumnStart: 'icon',
-    gridRowEnd: 'icon',
-    gridRowStart: 'icon',
-    paddingBottom: verticalSpace["sm"],
-    paddingLeft: horizontalSpace["sm"],
     borderRadius: radius.md,
-    paddingRight: horizontalSpace["sm"],
     alignItems: "center",
-    paddingTop: verticalSpace["sm"],
     backgroundColor: {
       default: uiColor.component2,
       [stylex.when.ancestor(":is([data-hovered])")]: uiColor.component1,
     },
     color: uiColor.text1,
     display: "flex",
+    gridColumnEnd: "icon",
+    gridColumnStart: "icon",
+    gridRowEnd: "icon",
+    gridRowStart: "icon",
     justifyContent: "center",
     height: sizeSpace["3xl"],
+    paddingBottom: verticalSpace["sm"],
+    paddingLeft: horizontalSpace["sm"],
+    paddingRight: horizontalSpace["sm"],
+    paddingTop: verticalSpace["sm"],
     width: sizeSpace["3xl"],
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       height: sizeSpace["xl"],
       width: sizeSpace["xl"],
     },
   },
   menuItemLabel: {
-    gridColumnEnd: 'title',
-    gridColumnStart: 'title',
-    gridRowEnd: 'title',
-    gridRowStart: 'title',
     color: uiColor.text2,
     fontWeight: fontWeight["medium"],
+    gridColumnEnd: "title",
+    gridColumnStart: "title",
+    gridRowEnd: "title",
+    gridRowStart: "title",
   },
   menuItemDescription: {
-    gridColumnEnd: 'description',
-    gridColumnStart: 'description',
-    gridRowEnd: 'description',
-    gridRowStart: 'description',
     color: uiColor.text1,
     fontSize: fontSize["sm"],
+    gridColumnEnd: "description",
+    gridColumnStart: "description",
+    gridRowEnd: "description",
+    gridRowStart: "description",
   },
   menuItemDisabled: {
     opacity: 0.5,
@@ -129,7 +128,6 @@ const styles = stylex.create({
     fontWeight: fontWeight["normal"],
     position: "relative",
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       height: "1.2em",
       width: "1.2em",

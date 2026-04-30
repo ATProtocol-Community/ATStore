@@ -32,19 +32,19 @@ const styles = stylex.create({
     display: "grid",
   },
   label: {
-    gridColumnEnd: 'label',
-    gridColumnStart: 'label',
-    gridRowEnd: 'label',
-    gridRowStart: 'label',
+    gridColumnEnd: "label",
+    gridColumnStart: "label",
+    gridRowEnd: "label",
+    gridRowStart: "label",
   },
   bar: {
-    gridColumnEnd: 'bar',
-    gridColumnStart: 'bar',
-    gridRowEnd: 'bar',
-    gridRowStart: 'bar',
     borderRadius: radius.full,
     overflow: "hidden",
     backgroundColor: uiColor.component2,
+    gridColumnEnd: "bar",
+    gridColumnStart: "bar",
+    gridRowEnd: "bar",
+    gridRowStart: "bar",
     width: "100%",
 
     height: {
@@ -54,12 +54,12 @@ const styles = stylex.create({
     },
   },
   valueLabel: {
-    gridColumnEnd: 'value-label',
-    gridColumnStart: 'value-label',
-    gridRowEnd: 'value-label',
-    gridRowStart: 'value-label',
     color: uiColor.text1,
     fontVariantNumeric: "tabular-nums",
+    gridColumnEnd: "value-label",
+    gridColumnStart: "value-label",
+    gridRowEnd: "value-label",
+    gridRowStart: "value-label",
     justifySelf: "flex-end",
 
     fontSize: {
@@ -86,7 +86,7 @@ const styles = stylex.create({
     transform: `translateX(calc(${percentage.toString()}% - 100%))`,
   }),
   indeterminateFill: {
-    animationDuration: "1s",
+    animationDuration: animationDuration.indeterminateCycle,
     animationIterationCount: "infinite",
     animationName: {
       default: IndeterminateAnimation,

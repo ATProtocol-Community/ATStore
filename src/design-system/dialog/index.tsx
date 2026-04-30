@@ -66,16 +66,16 @@ const styles = stylex.create({
   /* eslint-disable @stylexjs/sort-keys -- footer layout + padding order */
   footer: {
     gap: gap["md"],
+    backgroundColor: uiColor.bg,
     display: "flex",
     justifyContent: "flex-end",
+    position: "sticky",
+    zIndex: 1,
+    bottom: 0,
     paddingBottom: verticalSpace["3xl"],
     paddingLeft: horizontalSpace["3xl"],
     paddingRight: horizontalSpace["3xl"],
-    position: "sticky",
     paddingTop: verticalSpace["3xl"],
-    zIndex: 1,
-    bottom: 0,
-    backgroundColor: uiColor.bg,
 
     borderTopColor: uiColor.border1,
     borderTopStyle: "solid",

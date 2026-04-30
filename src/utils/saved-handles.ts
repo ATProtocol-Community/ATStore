@@ -1,83 +1,83 @@
-import Cookies from 'universal-cookie'
+import Cookies from "universal-cookie";
 
-export const SAVED_HANDLES_COOKIE_NAME = 'saved-handles:v1'
+export const SAVED_HANDLES_COOKIE_NAME = "saved-handles:v1";
 
 export interface SavedHandle {
-  handle: string
-  avatar: string | null
-  lastUsed: number
+  handle: string;
+  avatar: string | null;
+  lastUsed: number;
 }
 
 /** Keep cookie under ~4KB browser limits when many avatars are CDN URLs */
-const SAVED_HANDLE_AVATAR_MAX_CHARS = 900
+const SAVED_HANDLE_AVATAR_MAX_CHARS = 900;
 
 function truncateAvatarForCookie(avatar: string | null): string | null {
   if (avatar === null) {
-    return null
+    return null;
   }
   if (avatar.length <= SAVED_HANDLE_AVATAR_MAX_CHARS) {
-    return avatar
+    return avatar;
   }
-  return avatar.slice(0, SAVED_HANDLE_AVATAR_MAX_CHARS)
+  return avatar.slice(0, SAVED_HANDLE_AVATAR_MAX_CHARS);
 }
 
 function normalizeSavedHandlesCookie(raw: unknown): Array<SavedHandle> {
   if (!raw) {
-    return []
+    return [];
   }
   if (Array.isArray(raw)) {
-    return raw as Array<SavedHandle>
+    return raw as Array<SavedHandle>;
   }
-  if (typeof raw === 'string') {
+  if (typeof raw === "string") {
     try {
-      const parsed = JSON.parse(raw) as unknown
-      return Array.isArray(parsed) ? (parsed as Array<SavedHandle>) : []
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? (parsed as Array<SavedHandle>) : [];
     } catch {
-      return []
+      return [];
     }
   }
-  return []
+  return [];
 }
 
 export function getSavedHandles(
   cookieHeader?: string | null,
 ): Array<SavedHandle> {
   try {
-    const cookies = new Cookies(cookieHeader || undefined)
-    const cookieValue = cookies.get(SAVED_HANDLES_COOKIE_NAME)
-    return normalizeSavedHandlesCookie(cookieValue)
+    const cookies = new Cookies(cookieHeader || undefined);
+    const cookieValue = cookies.get(SAVED_HANDLES_COOKIE_NAME);
+    return normalizeSavedHandlesCookie(cookieValue);
   } catch (error) {
-    console.error({ error })
-    return []
+    console.error({ error });
+    return [];
   }
 }
 
 export function saveHandle(handle: string, avatar: string | null): void {
   if (globalThis.window === undefined) {
-    return
+    return;
   }
 
   try {
-    const saved = getSavedHandles()
-    const filtered = saved.filter((h) => h.handle !== handle)
-    const storedAvatar = truncateAvatarForCookie(avatar)
+    const saved = getSavedHandles();
+    const filtered = saved.filter((h) => h.handle !== handle);
+    const storedAvatar = truncateAvatarForCookie(avatar);
     const updated = [
       { handle, avatar: storedAvatar, lastUsed: Date.now() },
       ...filtered,
     ]
-      .sort((a: SavedHandle, b: SavedHandle) => b.lastUsed - a.lastUsed)
-      .slice(0, 5)
+      .toSorted((a: SavedHandle, b: SavedHandle) => b.lastUsed - a.lastUsed)
+      .slice(0, 5);
 
-    const cookies = new Cookies()
-    const maxAge = 365 * 24 * 60 * 60
-    const isSecure = globalThis.location.protocol === 'https:'
+    const cookies = new Cookies();
+    const maxAge = 365 * 24 * 60 * 60;
+    const isSecure = globalThis.location.protocol === "https:";
 
     cookies.set(SAVED_HANDLES_COOKIE_NAME, updated, {
-      path: '/',
-      sameSite: 'lax',
+      path: "/",
+      sameSite: "lax",
       secure: isSecure,
       maxAge,
-    })
+    });
   } catch {
     // Cookies might be unavailable
   }

@@ -9,16 +9,16 @@ import { uiColor } from "../theme/color.stylex";
 
 const styles = stylex.create({
   separator: {
-    marginBottom: 0,
-    marginLeft: 0,
     borderWidth: 0,
-    marginRight: 0,
     backgroundColor: uiColor.component3,
-    marginTop: 0,
     height: {
       default: "1px",
       ":is([aria-orientation=vertical])": "100%",
     },
+    marginBottom: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginTop: 0,
     width: {
       default: "100%",
       ":is([aria-orientation=vertical])": "1px",

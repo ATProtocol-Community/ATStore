@@ -5,16 +5,18 @@
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import postgres from "postgres";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = join(__dirname, "..", "drizzle");
 
 const url = process.env.DATABASE_URL;
 if (!url) {
-  console.error("DATABASE_URL is not set. Copy .env.example to .env and set DATABASE_URL.");
+  console.error(
+    "DATABASE_URL is not set. Copy .env.example to .env and set DATABASE_URL.",
+  );
   process.exit(1);
 }
 

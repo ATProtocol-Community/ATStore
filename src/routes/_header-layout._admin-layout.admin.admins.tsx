@@ -54,34 +54,38 @@ const styles = stylex.create({
     maxWidth: "60rem",
   },
   grantForm: {
+    gap: gap.lg,
     alignItems: "flex-end",
     flexWrap: "wrap",
-    gap: gap.lg,
   },
   grantField: {
-    flex: "1 1 20rem",
+    flexBasis: "20rem",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: "16rem",
   },
   adminRow: {
+    gap: gap.lg,
     alignItems: "center",
     flexWrap: "wrap",
-    gap: gap.lg,
     justifyContent: "space-between",
   },
   adminIdentity: {
-    alignItems: "center",
-    flex: "1 1 auto",
     gap: gap.lg,
+    alignItems: "center",
+    flexBasis: "auto",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   adminListStack: {
     gap: gap.xl,
   },
   suggestionName: {
-    minWidth: 0,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+    minWidth: 0,
   },
 });
 
@@ -112,7 +116,7 @@ function AdminAdminsPage() {
 
   // Only suggest users we resolved a handle for and who aren't already admins —
   // those are the only actionable candidates for "grant admin".
-  const candidateUsers = useMemo<CandidateUser[]>(
+  const candidateUsers = useMemo<Array<CandidateUser>>(
     () =>
       signedInUsers
         .filter(

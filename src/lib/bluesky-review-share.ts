@@ -8,9 +8,9 @@ export function blueskyReviewShareIntentHref(
 ): string {
   const path = `/products/${productSlug}/reviews?review=${reviewId}`;
   const origin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : (process.env.BETTER_AUTH_URL ?? "").trim().replace(/\/+$/, "");
+    globalThis.window === undefined
+      ? (process.env.BETTER_AUTH_URL ?? "").trim().replace(/\/+$/, "")
+      : globalThis.window.location.origin;
   const absolute = origin ? `${origin}${path}` : path;
   return `https://bsky.app/intent/compose?text=${encodeURIComponent(absolute)}`;
 }

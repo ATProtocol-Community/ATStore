@@ -1,76 +1,78 @@
-import {
-  ComAtprotoRepoCreateRecord,
+import type {
   ComAtprotoRepoDeleteRecord,
   ComAtprotoRepoGetRecord,
   ComAtprotoRepoPutRecord,
-} from '@atcute/atproto'
-import type { Client } from '@atcute/client'
-import { ok } from '@atcute/client'
-import type { InferInput } from '@atcute/lexicons/validations'
-import * as TID from '@atcute/tid'
+} from "@atcute/atproto";
+import type { Client } from "@atcute/client";
+import type { InferInput } from "@atcute/lexicons/validations";
+import type { FyiAtstoreListingDetail } from "#/lib/atproto/listing-record";
 
-import { COLLECTION, NSID } from '#/lib/atproto/nsids'
-import type { FyiAtstoreListingDetail } from '#/lib/atproto/listing-record'
+import { ComAtprotoRepoCreateRecord } from "@atcute/atproto";
+import { ok } from "@atcute/client";
+import * as TID from "@atcute/tid";
+import { COLLECTION, NSID } from "#/lib/atproto/nsids";
 
 type RepoCreateRecordInput = InferInput<
-  (typeof ComAtprotoRepoCreateRecord.mainSchema.input)['schema']
->
-type RepoGetRecordParams = InferInput<typeof ComAtprotoRepoGetRecord.mainSchema.params>
+  (typeof ComAtprotoRepoCreateRecord.mainSchema.input)["schema"]
+>;
+type RepoGetRecordParams = InferInput<
+  typeof ComAtprotoRepoGetRecord.mainSchema.params
+>;
 type RepoPutRecordInput = InferInput<
-  (typeof ComAtprotoRepoPutRecord.mainSchema.input)['schema']
->
+  (typeof ComAtprotoRepoPutRecord.mainSchema.input)["schema"]
+>;
 type RepoDeleteRecordInput = InferInput<
-  (typeof ComAtprotoRepoDeleteRecord.mainSchema.input)['schema']
->
+  (typeof ComAtprotoRepoDeleteRecord.mainSchema.input)["schema"]
+>;
 
 /** Runtime values are validated by the PDS; narrow plain strings to lexicon-branded types. */
 function lexCreateRecordInput(args: {
-  repo: string
-  collection: string
-  rkey: string
-  record: unknown
+  repo: string;
+  collection: string;
+  rkey: string;
+  record: unknown;
 }): RepoCreateRecordInput {
-  return args as RepoCreateRecordInput
+  return args as RepoCreateRecordInput;
 }
 
 function lexGetRecordParams(args: {
-  repo: string
-  collection: string
-  rkey: string
+  repo: string;
+  collection: string;
+  rkey: string;
 }): RepoGetRecordParams {
-  return args as RepoGetRecordParams
+  return args as RepoGetRecordParams;
 }
 
 function lexPutRecordInput(args: {
-  repo: string
-  collection: string
-  rkey: string
-  record: Record<string, unknown>
-  swapRecord: string
+  repo: string;
+  collection: string;
+  rkey: string;
+  record: Record<string, unknown>;
+  swapRecord: string;
 }): RepoPutRecordInput {
-  return args as RepoPutRecordInput
+  return args as RepoPutRecordInput;
 }
 
 function lexDeleteRecordInput(args: {
-  repo: string
-  collection: string
-  rkey: string
+  repo: string;
+  collection: string;
+  rkey: string;
 }): RepoDeleteRecordInput {
-  return args as RepoDeleteRecordInput
+  return args as RepoDeleteRecordInput;
 }
 
 export type FyiAtstoreProfile = {
-  $type: typeof NSID.profile
-  displayName: string
-  description?: string
-  website?: string
-}
+  $type: typeof NSID.profile;
+  displayName: string;
+  description?: string;
+  website?: string;
+};
 
 export type FyiAtstoreListingFavorite = {
-  $type: typeof NSID.listingFavorite
-  subject: string
-  createdAt: string
-}
+  $type: typeof NSID.listingFavorite;
+  subject: string;
+  createdAt: string;
+};
 
 /**
  * Create a record, or replace it if one exists. `swapRecord` must be a CID, not a boolean.
@@ -78,23 +80,23 @@ export type FyiAtstoreListingFavorite = {
 async function repoUpsertRecord(
   client: Client,
   input: {
-    repo: string
-    collection: string
-    rkey: string
-    record: Record<string, unknown>
+    repo: string;
+    collection: string;
+    rkey: string;
+    record: Record<string, unknown>;
   },
 ): Promise<{ uri: string }> {
-  const existing = await client.get('com.atproto.repo.getRecord', {
+  const existing = await client.get("com.atproto.repo.getRecord", {
     params: lexGetRecordParams({
       repo: input.repo,
       collection: input.collection,
       rkey: input.rkey,
     }),
-  })
+  });
 
   if (existing.ok && existing.data?.cid) {
     const res = await ok(
-      client.post('com.atproto.repo.putRecord', {
+      client.post("com.atproto.repo.putRecord", {
         input: lexPutRecordInput({
           repo: input.repo,
           collection: input.collection,
@@ -103,8 +105,8 @@ async function repoUpsertRecord(
           swapRecord: existing.data.cid,
         }),
       }),
-    )
-    return { uri: res.uri }
+    );
+    return { uri: res.uri };
   }
 
   const res = await ok(
@@ -116,8 +118,8 @@ async function repoUpsertRecord(
         record: input.record,
       }),
     }),
-  )
-  return { uri: res.uri }
+  );
+  return { uri: res.uri };
 }
 
 export async function putProfileSelfRecord(
@@ -128,9 +130,9 @@ export async function putProfileSelfRecord(
   return repoUpsertRecord(client, {
     repo,
     collection: COLLECTION.profile,
-    rkey: 'self',
+    rkey: "self",
     record: { ...record, $type: NSID.profile },
-  })
+  });
 }
 
 /**
@@ -140,38 +142,38 @@ export async function putProfileSelfRecord(
 export async function ensureProfileSelfRecord(
   client: Client,
   repo: string,
-  defaults: Pick<FyiAtstoreProfile, 'displayName'> &
-    Partial<Pick<FyiAtstoreProfile, 'description' | 'website'>>,
+  defaults: Pick<FyiAtstoreProfile, "displayName"> &
+    Partial<Pick<FyiAtstoreProfile, "description" | "website">>,
 ): Promise<{ created: boolean }> {
-  const existing = await client.get('com.atproto.repo.getRecord', {
+  const existing = await client.get("com.atproto.repo.getRecord", {
     params: lexGetRecordParams({
       repo,
       collection: COLLECTION.profile,
-      rkey: 'self',
+      rkey: "self",
     }),
-  })
+  });
 
   if (existing.ok && existing.data?.cid) {
-    return { created: false }
+    return { created: false };
   }
 
-  const rawName = defaults.displayName.trim()
-  const displayName = rawName.slice(0, 640) || repo
+  const rawName = defaults.displayName.trim();
+  const displayName = rawName.slice(0, 640) || repo;
   const record: FyiAtstoreProfile = {
     $type: NSID.profile,
     displayName,
-  }
-  const desc = defaults.description?.trim()
+  };
+  const desc = defaults.description?.trim();
   if (desc) {
-    record.description = desc.slice(0, 4000)
+    record.description = desc.slice(0, 4000);
   }
-  const site = defaults.website?.trim()
+  const site = defaults.website?.trim();
   if (site) {
-    record.website = site.slice(0, 2048)
+    record.website = site.slice(0, 2048);
   }
 
-  await putProfileSelfRecord(client, repo, record)
-  return { created: true }
+  await putProfileSelfRecord(client, repo, record);
+  return { created: true };
 }
 
 export async function createListingDetailRecord(
@@ -188,18 +190,18 @@ export async function createListingDetailRecord(
         record,
       }),
     }),
-  )
-  return { uri: res.uri, cid: res.cid }
+  );
+  return { uri: res.uri, cid: res.cid };
 }
 
 export async function createListingReviewRecord(
   client: Client,
   repo: string,
   input: {
-    subject: string
-    rating: number
-    createdAt: string
-    text?: string | null
+    subject: string;
+    rating: number;
+    createdAt: string;
+    text?: string | null;
   },
 ): Promise<{ uri: string; cid: string }> {
   const record: Record<string, unknown> = {
@@ -207,9 +209,9 @@ export async function createListingReviewRecord(
     subject: input.subject,
     rating: input.rating,
     createdAt: input.createdAt,
-  }
-  const t = input.text?.trim()
-  if (t) record.text = t
+  };
+  const t = input.text?.trim();
+  if (t) record.text = t;
 
   const res = await ok(
     client.call(ComAtprotoRepoCreateRecord, {
@@ -220,8 +222,8 @@ export async function createListingReviewRecord(
         record,
       }),
     }),
-  )
-  return { uri: res.uri, cid: res.cid }
+  );
+  return { uri: res.uri, cid: res.cid };
 }
 
 /** Replace an existing `fyi.atstore.listing.favorite` (same rkey). */
@@ -230,22 +232,22 @@ export async function putListingFavoriteRecord(
   repo: string,
   rkey: string,
   input: {
-    subject: string
-    createdAt: string
+    subject: string;
+    createdAt: string;
   },
 ): Promise<{ uri: string }> {
   const record: FyiAtstoreListingFavorite = {
     $type: NSID.listingFavorite,
     subject: input.subject,
     createdAt: input.createdAt,
-  }
+  };
 
   return repoUpsertRecord(client, {
     repo,
     collection: COLLECTION.listingFavorite,
     rkey,
     record: record as Record<string, unknown>,
-  })
+  });
 }
 
 export async function hasListingFavoriteRecord(
@@ -253,14 +255,14 @@ export async function hasListingFavoriteRecord(
   repo: string,
   rkey: string,
 ): Promise<boolean> {
-  const existing = await client.get('com.atproto.repo.getRecord', {
+  const existing = await client.get("com.atproto.repo.getRecord", {
     params: lexGetRecordParams({
       repo,
       collection: COLLECTION.listingFavorite,
       rkey,
     }),
-  })
-  return existing.ok && existing.data?.cid != null
+  });
+  return existing.ok && existing.data?.cid != null;
 }
 
 /** Replace an existing `fyi.atstore.listing.review` (same rkey). */
@@ -269,10 +271,10 @@ export async function putListingReviewRecord(
   repo: string,
   rkey: string,
   input: {
-    subject: string
-    rating: number
-    createdAt: string
-    text?: string | null
+    subject: string;
+    rating: number;
+    createdAt: string;
+    text?: string | null;
   },
 ): Promise<{ uri: string }> {
   const record: Record<string, unknown> = {
@@ -280,16 +282,16 @@ export async function putListingReviewRecord(
     subject: input.subject,
     rating: input.rating,
     createdAt: input.createdAt,
-  }
-  const t = input.text?.trim()
-  if (t) record.text = t
+  };
+  const t = input.text?.trim();
+  if (t) record.text = t;
 
   return repoUpsertRecord(client, {
     repo,
     collection: COLLECTION.listingReview,
     rkey,
     record,
-  })
+  });
 }
 
 /**
@@ -302,20 +304,20 @@ export async function fetchListingDetailRecord(
   repo: string,
   rkey: string,
 ): Promise<{ value: FyiAtstoreListingDetail; cid: string } | null> {
-  const existing = await client.get('com.atproto.repo.getRecord', {
+  const existing = await client.get("com.atproto.repo.getRecord", {
     params: lexGetRecordParams({
       repo,
       collection: COLLECTION.listingDetail,
       rkey,
     }),
-  })
+  });
   if (!existing.ok || !existing.data?.cid || !existing.data.value) {
-    return null
+    return null;
   }
   return {
     value: existing.data.value as unknown as FyiAtstoreListingDetail,
     cid: existing.data.cid,
-  }
+  };
 }
 
 /** Replace an existing `fyi.atstore.listing.detail` (same rkey). */
@@ -330,7 +332,7 @@ export async function putListingDetailRecord(
     collection: COLLECTION.listingDetail,
     rkey,
     record: record as Record<string, unknown>,
-  })
+  });
 }
 
 export async function deleteRecord(
@@ -340,8 +342,8 @@ export async function deleteRecord(
   rkey: string,
 ): Promise<void> {
   await ok(
-    client.post('com.atproto.repo.deleteRecord', {
+    client.post("com.atproto.repo.deleteRecord", {
       input: lexDeleteRecordInput({ repo, collection, rkey }),
     }),
-  )
+  );
 }

@@ -52,7 +52,7 @@ const styles = stylex.create({
     flexDirection: {
       default: "column",
       [containerBreakpoints.sm]: "row",
-      // eslint-disable-next-line @stylexjs/valid-styles
+
       ":is([data-footer-centered] *)": "column !important",
     },
     justifyContent: "space-between",
@@ -89,14 +89,14 @@ const styles = stylex.create({
     flexDirection: "column",
   },
   sectionTitle: {
-    marginBottom: 0,
-    marginLeft: 0,
     fontSize: fontSize["sm"],
-    marginRight: 0,
     fontWeight: fontWeight["semibold"],
-    marginTop: 0,
     letterSpacing: "0.05em",
     textTransform: "uppercase",
+    marginBottom: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginTop: 0,
   },
   sectionContent: {
     gap: gap["sm"],
@@ -107,9 +107,9 @@ const styles = stylex.create({
     flexDirection: "column",
   },
   copyright: {
+    fontSize: fontSize["xs"],
     marginBottom: 0,
     marginLeft: 0,
-    fontSize: fontSize["xs"],
     marginRight: 0,
     marginTop: 0,
   },
@@ -120,7 +120,6 @@ const styles = stylex.create({
     flexDirection: "row",
   },
   socialLinkItem: {
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       height: sizeSpace["lg"],
       width: sizeSpace["lg"],
@@ -171,37 +170,37 @@ const styles = stylex.create({
     },
   },
   subscribeTitle: {
+    fontSize: fontSize["sm"],
+    fontWeight: fontWeight["semibold"],
     gridColumnEnd: "title",
     gridColumnStart: "title",
     gridRowEnd: "title",
     gridRowStart: "title",
     marginBottom: 0,
     marginLeft: 0,
-    fontSize: fontSize["sm"],
     marginRight: 0,
-    fontWeight: fontWeight["semibold"],
     marginTop: 0,
   },
   subscribeDescription: {
+    fontSize: fontSize["sm"],
     gridColumnEnd: "description",
     gridColumnStart: "description",
     gridRowEnd: "description",
     gridRowStart: "description",
-    marginLeft: 0,
-    fontSize: fontSize["sm"],
-    marginRight: 0,
     marginBottom: verticalSpace["md"],
+    marginLeft: 0,
+    marginRight: 0,
     marginTop: 0,
   },
   subscribeInput: {
-    gridColumnEnd: "input",
-    gridColumnStart: "input",
-    gridRowEnd: "input",
-    gridRowStart: "input",
     gap: gap["md"],
     alignItems: "flex-start",
     display: "flex",
     flexDirection: "row",
+    gridColumnEnd: "input",
+    gridColumnStart: "input",
+    gridRowEnd: "input",
+    gridRowStart: "input",
   },
   subscribeInputField: {
     flexGrow: 1,

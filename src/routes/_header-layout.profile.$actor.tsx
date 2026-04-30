@@ -6,15 +6,18 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
-import { Link as AriaLink } from "react-aria-components";
-import { useState } from "react";
-
 import { BlueskyIcon } from "#/components/bluesky-icon";
+import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
+import { useState } from "react";
+import { Link as AriaLink } from "react-aria-components";
+
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Page } from "../design-system/page";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
@@ -23,29 +26,26 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, Heading3 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { resolveProfilePathActorToDid } from "../lib/bluesky-public-profile";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { radius } from "../design-system/theme/radius.stylex";
-import { uiColor } from "../design-system/theme/color.stylex";
 
 const RouterLink = createLink(AriaLink);
 const FAVORITES_PREVIEW_LIMIT = 4;
 
 const styles = stylex.create({
   page: {
+    gap: gap["4xl"],
     boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
     marginLeft: "auto",
     marginRight: "auto",
     paddingBottom: verticalSpace["8xl"],
     paddingTop: verticalSpace["4xl"],
     width: "100%",
-    display: "flex",
-    flexDirection: "column",
-    gap: gap["4xl"],
   },
   hero: {
     gap: gap["2xl"],
@@ -55,9 +55,9 @@ const styles = stylex.create({
   },
   titleBlock: {
     gap: gap["xl"],
-    minWidth: 0,
     flexGrow: 1,
     flexShrink: 0,
+    minWidth: 0,
   },
   reviews: {
     paddingLeft: horizontalSpace["xl"],
@@ -77,43 +77,43 @@ const styles = stylex.create({
     },
   },
   ownedCard: {
-    alignItems: "center",
+    padding: horizontalSpace.lg,
     borderColor: "var(--ds-ui-component-2, rgba(0,0,0,0.12))",
     borderRadius: radius["lg"],
     borderStyle: "solid",
     borderWidth: 1,
-    color: uiColor.text2,
     cornerShape: "squircle",
-    display: "flex",
     gap: gap.lg,
-    minWidth: 0,
-    padding: horizontalSpace.lg,
     textDecoration: "none",
+    alignItems: "center",
     backgroundColor: {
       default: uiColor.bg,
       ":is([data-hovered])": uiColor.component2,
     },
+    color: uiColor.text2,
+    display: "flex",
+    minWidth: 0,
   },
   ownedIcon: {
     borderRadius: "10px",
     flexShrink: 0,
-    height: size["5xl"],
     objectFit: "cover",
+    height: size["5xl"],
     width: size["5xl"],
   },
   ownedTextColumn: {
     minWidth: 0,
   },
   noReviews: {
-    paddingTop: verticalSpace["6xl"],
+    borderColor: uiColor.border2,
+    borderRadius: radius["xl"],
+    borderStyle: "dashed",
+    borderWidth: 1,
+    cornerShape: "squircle",
     paddingBottom: verticalSpace["6xl"],
     paddingLeft: horizontalSpace["xl"],
     paddingRight: horizontalSpace["xl"],
-    borderStyle: "dashed",
-    borderWidth: 1,
-    borderColor: uiColor.border2,
-    borderRadius: radius["xl"],
-    cornerShape: "squircle",
+    paddingTop: verticalSpace["6xl"],
   },
   iconButton: {
     height: size["4xl"],
@@ -157,9 +157,9 @@ export const Route = createFileRoute("/_header-layout/profile/$actor")({
       did: resolvedDid,
       ogTitle: `${mainTitle} profile | at-store`,
       ogDescription:
-        handleDisplay != null
-          ? `Read reviews and discover products published by ${handleDisplay}.`
-          : "Read reviews and discover products published on at-store.",
+        handleDisplay == null
+          ? "Read reviews and discover products published on at-store."
+          : `Read reviews and discover products published by ${handleDisplay}.`,
       ogAvatar: data.avatarUrl ?? null,
       ogOwnedProducts: ownedProducts?.length ?? 0,
       ogReviews: data.reviews.length,

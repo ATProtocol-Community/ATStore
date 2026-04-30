@@ -72,7 +72,6 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["xl"],
     paddingTop: verticalSpace["md"],
 
-    /* eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles */
     ":is([data-variant=destructive] *) *": {
       color: criticalColor.text1,
     },
@@ -98,7 +97,6 @@ const styles = stylex.create({
     marginTop: `calc(${verticalSpace["sm"]} * -1)`,
     minWidth: sizeSpace["md"],
 
-    // eslint-disable-next-line @stylexjs/valid-styles, @stylexjs/no-legacy-contextual-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",
@@ -107,9 +105,8 @@ const styles = stylex.create({
     },
   },
   label: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
     gap: gap["sm"],
     display: "flex",

@@ -1,65 +1,65 @@
-import { Client, CredentialManager } from '@atcute/client'
+import type { StoreListing } from "#/db/schema";
+import type {
+  ListingDetailBlobOverrides,
+  ListingDetailDbUrls,
+  ListingDetailExistingBlobs,
+} from "#/lib/atproto/listing-record";
 
-import type { StoreListing } from '#/db/schema'
-import {
-  buildListingDetailRecordWithBlobs,
-  type ListingDetailBlobOverrides,
-  type ListingDetailDbUrls,
-  type ListingDetailExistingBlobs,
-} from '#/lib/atproto/listing-record'
-import { blobLikeToBskyCdnUrl } from '#/lib/atproto/blob-cdn-url'
+import { Client, CredentialManager } from "@atcute/client";
+import { blobLikeToBskyCdnUrl } from "#/lib/atproto/blob-cdn-url";
+import { buildListingDetailRecordWithBlobs } from "#/lib/atproto/listing-record";
 import {
   createListingDetailRecord,
   fetchListingDetailRecord,
   putListingDetailRecord,
-} from '#/lib/atproto/repo-records'
+} from "#/lib/atproto/repo-records";
 
 export async function createAtstorePublishClient(): Promise<{
-  client: Client
-  repoDid: string
+  client: Client;
+  repoDid: string;
 }> {
-  const identifier = process.env.ATSTORE_IDENTIFIER?.trim()
-  const password = process.env.ATSTORE_APP_PASSWORD?.trim()
-  const service = process.env.ATSTORE_SERVICE?.trim() || 'https://bsky.social'
+  const identifier = process.env.ATSTORE_IDENTIFIER?.trim();
+  const password = process.env.ATSTORE_APP_PASSWORD?.trim();
+  const service = process.env.ATSTORE_SERVICE?.trim() || "https://bsky.social";
   if (!identifier || !password) {
     throw new Error(
-      'Set ATSTORE_IDENTIFIER and ATSTORE_APP_PASSWORD (store account app password) to publish listing records.',
-    )
+      "Set ATSTORE_IDENTIFIER and ATSTORE_APP_PASSWORD (store account app password) to publish listing records.",
+    );
   }
-  const manager = new CredentialManager({ service })
-  await manager.login({ identifier, password })
-  const session = manager.session
+  const manager = new CredentialManager({ service });
+  await manager.login({ identifier, password });
+  const session = manager.session;
   if (!session?.did) {
-    throw new Error('AT Store login failed')
+    throw new Error("AT Store login failed");
   }
-  return { client: new Client({ handler: manager }), repoDid: session.did }
+  return { client: new Client({ handler: manager }), repoDid: session.did };
 }
 
-let atstoreRepoDidMemo: string | null = null
+let atstoreRepoDidMemo: string | null = null;
 
 /**
  * DID of the AT Store listing publisher (same account as `createAtstorePublishClient`).
  * Set `ATSTORE_REPO_DID` to avoid an extra login when checking claim eligibility.
  */
 export async function getAtstoreRepoDid(): Promise<string> {
-  const fromEnv = process.env.ATSTORE_REPO_DID?.trim()
-  if (fromEnv?.startsWith('did:')) {
-    return fromEnv
+  const fromEnv = process.env.ATSTORE_REPO_DID?.trim();
+  if (fromEnv?.startsWith("did:")) {
+    return fromEnv;
   }
   if (atstoreRepoDidMemo) {
-    return atstoreRepoDidMemo
+    return atstoreRepoDidMemo;
   }
-  const { repoDid } = await createAtstorePublishClient()
-  atstoreRepoDidMemo = repoDid
-  return repoDid
+  const { repoDid } = await createAtstorePublishClient();
+  atstoreRepoDidMemo = repoDid;
+  return repoDid;
 }
 
 function mergeListingRow(
   row: StoreListing,
   patch?: Partial<StoreListing>,
 ): StoreListing {
-  if (!patch) return row
-  return { ...row, ...patch }
+  if (!patch) return row;
+  return { ...row, ...patch };
 }
 
 /**
@@ -73,30 +73,30 @@ export async function publishDirectoryListingDetail(
   patch?: Partial<StoreListing>,
   blobOverrides?: ListingDetailBlobOverrides,
 ): Promise<{
-  uri: string
-  iconUrl: string | null
-  heroImageUrl: string | null
+  uri: string;
+  iconUrl: string | null;
+  heroImageUrl: string | null;
 }> {
-  const { client, repoDid } = await createAtstorePublishClient()
-  const merged = mergeListingRow(row, patch)
+  const { client, repoDid } = await createAtstorePublishClient();
+  const merged = mergeListingRow(row, patch);
   const { record } = await buildListingDetailRecordWithBlobs(
     client,
     merged,
     blobOverrides,
-  )
-  record.updatedAt = new Date().toISOString()
+  );
+  record.updatedAt = new Date().toISOString();
 
-  let uri: string
+  let uri: string;
   if (row.rkey && row.atUri) {
-    ;({ uri } = await putListingDetailRecord(client, repoDid, row.rkey, record))
+    ({ uri } = await putListingDetailRecord(client, repoDid, row.rkey, record));
   } else {
-    ;({ uri } = await createListingDetailRecord(client, repoDid, record))
+    ({ uri } = await createListingDetailRecord(client, repoDid, record));
   }
   return {
     uri,
     iconUrl: blobLikeToBskyCdnUrl(record.icon, repoDid),
     heroImageUrl: blobLikeToBskyCdnUrl(record.heroImage, repoDid),
-  }
+  };
 }
 
 /**
@@ -110,53 +110,62 @@ export async function publishOwnedListingDetail(
   patch?: Partial<StoreListing>,
   blobOverrides?: ListingDetailBlobOverrides,
 ): Promise<{ uri: string; dbUrls: ListingDetailDbUrls }> {
-  const repo = row.repoDid?.trim()
+  const repo = row.repoDid?.trim();
   if (repo !== ownerRepoDid) {
-    throw new Error('You can only update listings stored in your repository.')
+    throw new Error("You can only update listings stored in your repository.");
   }
-  const rk = row.rkey?.trim()
+  const rk = row.rkey?.trim();
   if (!rk) {
-    throw new Error('Listing has no record key; cannot update in place.')
+    throw new Error("Listing has no record key; cannot update in place.");
   }
-  const merged = mergeListingRow(row, patch)
-  const migrated = row.migratedFromAtUri?.trim()
+  const merged = mergeListingRow(row, patch);
+  const migrated = row.migratedFromAtUri?.trim();
 
   /**
    * Reuse the prior record's blob refs for any slot the caller didn't override. Without this,
    * every text/links edit re-downloads icon + hero + screenshots from the CDN and re-uploads them
    * as fresh blobs to the owner's PDS — slow and pollutes the repo with orphan blobs.
    */
-  let existingBlobs: ListingDetailExistingBlobs | undefined
+  let existingBlobs: ListingDetailExistingBlobs | undefined;
   try {
-    const prior = await fetchListingDetailRecord(client, ownerRepoDid, rk)
+    const prior = await fetchListingDetailRecord(client, ownerRepoDid, rk);
     if (prior) {
       existingBlobs = {
         icon: prior.value.icon,
         heroImage: prior.value.heroImage,
         screenshots: prior.value.screenshots,
-      }
+      };
     }
-  } catch (err) {
+  } catch (error) {
     console.warn(
       `[publishOwnedListingDetail] unable to fetch prior record (${ownerRepoDid}/${rk}); falling back to re-upload from CDN`,
-      err,
-    )
+      error,
+    );
   }
 
   const { record, dbUrls } = await buildListingDetailRecordWithBlobs(
     client,
     merged,
     blobOverrides,
-    migrated?.startsWith('at://') ? { migratedFromAtUri: migrated } : undefined,
+    migrated?.startsWith("at://") ? { migratedFromAtUri: migrated } : undefined,
     existingBlobs,
-  )
-  record.updatedAt = new Date().toISOString()
-  const { uri } = await putListingDetailRecord(client, ownerRepoDid, rk, record)
-  const recordIconUrl = blobLikeToBskyCdnUrl(record.icon, ownerRepoDid)
-  const recordHeroImageUrl = blobLikeToBskyCdnUrl(record.heroImage, ownerRepoDid)
-  const recordScreenshotUrls = (record.screenshots ?? [])
-    .map((blob) => blobLikeToBskyCdnUrl(blob, ownerRepoDid))
-    .filter((url): url is string => Boolean(url))
+  );
+  record.updatedAt = new Date().toISOString();
+  const { uri } = await putListingDetailRecord(
+    client,
+    ownerRepoDid,
+    rk,
+    record,
+  );
+  const recordIconUrl = blobLikeToBskyCdnUrl(record.icon, ownerRepoDid);
+  const recordHeroImageUrl = blobLikeToBskyCdnUrl(
+    record.heroImage,
+    ownerRepoDid,
+  );
+  const recordScreenshotUrls = (record.screenshots ?? []).flatMap((blob) => {
+    const url = blobLikeToBskyCdnUrl(blob, ownerRepoDid);
+    return url ? [url] : [];
+  });
   return {
     uri,
     dbUrls: {
@@ -168,5 +177,5 @@ export async function publishOwnedListingDetail(
           ? recordScreenshotUrls
           : dbUrls.screenshotUrls,
     },
-  }
+  };
 }

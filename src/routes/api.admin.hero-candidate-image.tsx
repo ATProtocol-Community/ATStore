@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-
 import { getAtprotoSessionForRequest } from "#/middleware/auth";
 
 const CANDIDATES_DIR_RELATIVE = "out/hero-candidates";

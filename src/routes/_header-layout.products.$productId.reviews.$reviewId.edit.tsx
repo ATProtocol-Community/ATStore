@@ -11,15 +11,15 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
+import { Form } from "#/design-system/form";
+import { TextArea } from "#/design-system/text-area";
 import { useLayoutEffect, useState } from "react";
 
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { Form } from "#/design-system/form";
 import { Link } from "../design-system/link";
 import { StarRatingInput } from "../design-system/star-rating";
-import { TextArea } from "#/design-system/text-area";
 import {
   gap,
   horizontalSpace,
@@ -88,9 +88,9 @@ const styles = stylex.create({
     height: "100%",
   },
   reviewCardBody: {
+    gap: gap["5xl"],
     display: "flex",
     flexDirection: "column",
-    gap: gap["5xl"],
     height: "100%",
     paddingBottom: verticalSpace["4xl"],
     paddingLeft: horizontalSpace["4xl"],
@@ -131,18 +131,6 @@ function ProductReviewEditPage() {
       });
     }
   }, [isWrongUser, navigate, productSlug]);
-
-  if (!listing) {
-    throw notFound();
-  }
-
-  if (sessionPending) {
-    return null;
-  }
-
-  if (isWrongUser) {
-    return null;
-  }
 
   const saveReview = useMutation({
     mutationFn: async () => {
@@ -187,6 +175,18 @@ function ProductReviewEditPage() {
       );
     },
   });
+
+  if (!listing) {
+    throw notFound();
+  }
+
+  if (sessionPending) {
+    return null;
+  }
+
+  if (isWrongUser) {
+    return null;
+  }
 
   return (
     <Flex direction="column" gap="5xl">

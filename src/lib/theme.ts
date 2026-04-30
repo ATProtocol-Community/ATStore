@@ -33,6 +33,8 @@ export function themeModeToDbValue(mode: ThemeMode): "light" | "dark" | null {
 }
 
 /** Convert a DB value back to a `ThemeMode` (treat unknown/null as `system`). */
-export function dbValueToThemeMode(value: string | null | undefined): ThemeMode {
+export function dbValueToThemeMode(
+  value: string | null | undefined,
+): ThemeMode {
   return value === "light" || value === "dark" ? value : "system";
 }

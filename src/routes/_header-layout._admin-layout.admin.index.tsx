@@ -1,10 +1,11 @@
+import type { LinkProps } from "@tanstack/react-router";
+
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
+  Link as RouterLink,
   createFileRoute,
   createLink,
-  Link as RouterLink,
-  type LinkProps,
 } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
@@ -12,6 +13,7 @@ import {
   PencilIcon,
   PlusIcon,
 } from "lucide-react";
+import { useHover } from "react-aria";
 
 import { Button } from "../design-system/button";
 import {
@@ -40,8 +42,6 @@ import {
 import { Body, Heading1, LabelText } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
-import { useHover } from "react-aria";
-
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 
 export const Route = createFileRoute("/_header-layout/_admin-layout/admin/")({
@@ -67,14 +67,14 @@ const styles = stylex.create({
     maxWidth: "42rem",
   },
   actionsRow: {
-    display: "flex",
-    flexWrap: "wrap",
     gap: gap.md,
     alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
   },
   kpiGrid: {
-    display: "grid",
     gap: gap.lg,
+    display: "grid",
     gridTemplateColumns: {
       default: "repeat(1, minmax(0, 1fr))",
       "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
@@ -83,28 +83,20 @@ const styles = stylex.create({
     width: "100%",
   },
   kpiCard: {
+    borderRadius: radius.lg,
+    textDecoration: "none",
     cursor: "pointer",
     position: "relative",
-    textDecoration: "none",
-    borderRadius: radius.lg,
   },
   kpiCardInner: {
     height: "100%",
-  },
-  kpiIconWrap: {
-    position: "absolute",
-    right: horizontalSpace.lg,
-    top: verticalSpace.lg,
-    color: uiColor.text1,
-    opacity: 0.65,
-    pointerEvents: "none",
   },
   kpiValue: {
     marginTop: verticalSpace.sm,
   },
   midGrid: {
-    display: "grid",
     gap: gap.xl,
+    display: "grid",
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
       "@media (min-width: 960px)": "1.4fr 1fr",
@@ -121,15 +113,15 @@ const styles = stylex.create({
     width: "100%",
   },
   legendRow: {
+    gap: gap.xl,
+    alignItems: "center",
     display: "flex",
     flexWrap: "wrap",
-    gap: gap.xl,
     marginTop: gap.lg,
-    alignItems: "center",
   },
   legendItem: {
-    alignItems: "center",
     gap: gap.sm,
+    alignItems: "center",
     display: "inline-flex",
   },
   legendSwatch: {
@@ -144,30 +136,30 @@ const styles = stylex.create({
   },
   table: {
     borderCollapse: "collapse",
-    width: "100%",
     fontSize: "0.8125rem",
+    width: "100%",
   },
   th: {
+    color: uiColor.text1,
+    fontWeight: 600,
+    textAlign: "left",
+    whiteSpace: "nowrap",
     borderBottomColor: uiColor.border1,
     borderBottomStyle: "solid",
     borderBottomWidth: 1,
-    color: uiColor.text1,
-    fontWeight: 600,
     paddingBottom: verticalSpace.md,
     paddingRight: horizontalSpace.lg,
     paddingTop: verticalSpace.sm,
-    textAlign: "left",
-    whiteSpace: "nowrap",
   },
   td: {
+    color: uiColor.text2,
+    verticalAlign: "middle",
     borderBottomColor: uiColor.border1,
     borderBottomStyle: "solid",
     borderBottomWidth: 1,
-    color: uiColor.text2,
     paddingBottom: verticalSpace.md,
     paddingRight: horizontalSpace.lg,
     paddingTop: verticalSpace.md,
-    verticalAlign: "middle",
   },
   tdMuted: {
     color: uiColor.text1,
@@ -188,12 +180,12 @@ const styles = stylex.create({
     borderWidth: 1,
     fontSize: "0.75rem",
     fontWeight: 500,
+    textTransform: "lowercase",
+    whiteSpace: "nowrap",
+    paddingBottom: 2,
     paddingLeft: horizontalSpace.md,
     paddingRight: horizontalSpace.md,
     paddingTop: 2,
-    paddingBottom: 2,
-    textTransform: "lowercase",
-    whiteSpace: "nowrap",
   },
 });
 
@@ -210,15 +202,15 @@ function formatRelativeTime(iso: string): string {
   if (absSec < 60) {
     return rtf.format(Math.round(diffMs / 1000), "second");
   }
-  const diffMin = Math.round(diffMs / 60000);
+  const diffMin = Math.round(diffMs / 60_000);
   if (Math.abs(diffMin) < 60) {
     return rtf.format(diffMin, "minute");
   }
-  const diffHr = Math.round(diffMs / 3600000);
+  const diffHr = Math.round(diffMs / 3_600_000);
   if (Math.abs(diffHr) < 48) {
     return rtf.format(diffHr, "hour");
   }
-  const diffDay = Math.round(diffMs / 86400000);
+  const diffDay = Math.round(diffMs / 86_400_000);
   return rtf.format(diffDay, "day");
 }
 
@@ -239,7 +231,7 @@ interface ClaimsPoint {
   claimedCumulative: number;
 }
 
-function ClaimsOverTimeChart({ data }: { data: ClaimsPoint[] }) {
+function ClaimsOverTimeChart({ data }: { data: Array<ClaimsPoint> }) {
   const w = 480;
   const h = 200;
   const pad = { t: 18, r: 14, b: 40, l: 44 };

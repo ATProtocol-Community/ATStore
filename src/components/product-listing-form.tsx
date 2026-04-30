@@ -1,28 +1,30 @@
+import type {
+  ListingLink,
+  ListingLinkType,
+} from "#/lib/atproto/listing-record";
+import type { DropTarget } from "react-aria-components";
+
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { ImageCropperDialog } from "#/components/image-cropper-dialog";
+import { UserHandleAutocomplete } from "#/components/user-handle-autocomplete";
+import { formatAppTagLabel } from "#/lib/app-tag-metadata";
+import { normalizeAppTag, normalizeAppTags } from "#/lib/app-tags";
+import {
+  LISTING_LINK_MAX_COUNT,
+  LISTING_LINK_TYPES,
+} from "#/lib/atproto/listing-record";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Button as AriaButton,
   DropIndicator,
   GridList,
   GridListItem,
-  type DropTarget,
   useDragAndDrop,
 } from "react-aria-components";
 
-import { ImageCropperDialog } from "#/components/image-cropper-dialog";
-import { UserHandleAutocomplete } from "#/components/user-handle-autocomplete";
-import {
-  LISTING_LINK_MAX_COUNT,
-  LISTING_LINK_TYPES,
-  type ListingLink,
-  type ListingLinkType,
-} from "#/lib/atproto/listing-record";
-import { formatAppTagLabel } from "#/lib/app-tag-metadata";
-import { normalizeAppTag, normalizeAppTags } from "#/lib/app-tags";
 import { Button } from "../design-system/button";
-import { IconButton } from "../design-system/icon-button";
 import { Card, CardBody } from "../design-system/card";
 import { ComboBox, ComboBoxItem } from "../design-system/combobox";
 import {
@@ -31,11 +33,12 @@ import {
 } from "../design-system/file-drop-zone";
 import { Flex } from "../design-system/flex";
 import { Form } from "../design-system/form";
+import { IconButton } from "../design-system/icon-button";
 import { Page } from "../design-system/page";
 import { Select, SelectItem } from "../design-system/select";
+import { Separator } from "../design-system/separator";
 import { TextArea } from "../design-system/text-area";
 import { TextField } from "../design-system/text-field";
-import { ToggleButton } from "../design-system/toggle-button";
 import { primaryColor, uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
@@ -47,16 +50,16 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { fontSize, fontWeight } from "../design-system/theme/typography.stylex";
+import { ToggleButton } from "../design-system/toggle-button";
 import { Heading1, ListItem, UnorderedList } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { Separator } from "../design-system/separator";
 
 type CategoryTreeNode = {
   id: string;
-  pathIds?: string[];
-  pathLabels?: string[];
-  children?: CategoryTreeNode[];
+  pathIds?: Array<string>;
+  pathLabels?: Array<string>;
+  children?: Array<CategoryTreeNode>;
 };
 
 type ProtocolCategoryOption = {
@@ -64,7 +67,7 @@ type ProtocolCategoryOption = {
   label: string;
 };
 
-type AppCategoryOptionsByApp = Record<string, ProtocolCategoryOption[]>;
+type AppCategoryOptionsByApp = Record<string, Array<ProtocolCategoryOption>>;
 type AppSlugOption = {
   id: string;
   label: string;
@@ -99,7 +102,7 @@ function base64ToBlob(imageBase64: string, mimeType: string): Blob {
   const binary = atob(imageBase64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
+    bytes[i] = binary.codePointAt(i) ?? 0;
   }
   return new Blob([bytes], { type: mimeType });
 }
@@ -136,14 +139,14 @@ function toLinkRow(link: ListingLink): LinkRow {
  * are nudged to fill them in. Blank URLs are filtered out in `collectLinksForSubmit`,
  * so leaving them empty is a no-op on save.
  */
-const DEFAULT_SEEDED_LINK_TYPES: ListingLinkType[] = ["privacy", "terms"];
+const DEFAULT_SEEDED_LINK_TYPES: Array<ListingLinkType> = ["privacy", "terms"];
 
 function buildInitialLinkRows(
   initialLinks: ListingLink[] | undefined,
-): LinkRow[] {
+): Array<LinkRow> {
   const existing = (initialLinks ?? [])
     .slice(0, LISTING_LINK_MAX_COUNT)
-    .map(toLinkRow);
+    .map((row) => toLinkRow(row));
   if (existing.length > 0) return existing;
   return DEFAULT_SEEDED_LINK_TYPES.map((type) => ({
     id: createLinkRowId(),
@@ -154,14 +157,14 @@ function buildInitialLinkRows(
 }
 
 function reorderScreenshotItems(
-  items: ScreenshotItem[],
+  items: Array<ScreenshotItem>,
   movedKeys: Set<React.Key>,
   target: DropTarget,
-): ScreenshotItem[] {
+): Array<ScreenshotItem> {
   if (target.type !== "item") {
     return items;
   }
-  const movingIds = new Set([...movedKeys].map((key) => String(key)));
+  const movingIds = new Set([...movedKeys].map(String));
   const movingItems = items.filter((item) => movingIds.has(item.id));
   if (movingItems.length === 0) {
     return items;
@@ -170,7 +173,7 @@ function reorderScreenshotItems(
   const targetIndex = remainingItems.findIndex(
     (item) => item.id === String(target.key),
   );
-  if (targetIndex < 0) {
+  if (targetIndex === -1) {
     return items;
   }
   const insertIndex =
@@ -183,10 +186,10 @@ function reorderScreenshotItems(
 }
 
 function collectProtocolCategoryOptions(
-  nodes: CategoryTreeNode[],
-): ProtocolCategoryOption[] {
+  nodes: Array<CategoryTreeNode>,
+): Array<ProtocolCategoryOption> {
   const seen = new Set<string>();
-  const out: ProtocolCategoryOption[] = [];
+  const out: Array<ProtocolCategoryOption> = [];
 
   const walk = (node: CategoryTreeNode) => {
     const pathIds = node.pathIds ?? node.id.split("/").filter(Boolean);
@@ -207,11 +210,11 @@ function collectProtocolCategoryOptions(
     walk(node);
   }
 
-  return out.sort((a, b) => a.label.localeCompare(b.label));
+  return out.toSorted((a, b) => a.label.localeCompare(b.label));
 }
 
 function collectAppCategoryOptionsByApp(
-  nodes: CategoryTreeNode[],
+  nodes: Array<CategoryTreeNode>,
 ): AppCategoryOptionsByApp {
   const byApp = new Map<string, Map<string, string>>();
 
@@ -242,14 +245,16 @@ function collectAppCategoryOptionsByApp(
       appSlug,
       [...categories.entries()]
         .map(([id, label]) => ({ id, label }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
     ]),
   );
 }
 
-function collectAppSlugOptions(nodes: CategoryTreeNode[]): AppSlugOption[] {
+function collectAppSlugOptions(
+  nodes: Array<CategoryTreeNode>,
+): Array<AppSlugOption> {
   const seen = new Set<string>();
-  const out: AppSlugOption[] = [];
+  const out: Array<AppSlugOption> = [];
 
   const walk = (node: CategoryTreeNode) => {
     const pathIds = node.pathIds ?? node.id.split("/").filter(Boolean);
@@ -270,47 +275,48 @@ function collectAppSlugOptions(nodes: CategoryTreeNode[]): AppSlugOption[] {
     walk(node);
   }
 
-  return out.sort((a, b) => a.label.localeCompare(b.label));
+  return out.toSorted((a, b) => a.label.localeCompare(b.label));
 }
 
 function toKebabCaseSegment(value: string): string {
   return value
     .trim()
     .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replaceAll("&", " and ")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/^-+|-+$/g, "");
 }
 
 const styles = stylex.create({
   screenshotPreviewActionButton: {
-    flexShrink: 0,
-    height: size["4xl"],
-    width: size["4xl"],
-    paddingTop: verticalSpace.xs,
-    paddingBottom: verticalSpace.xs,
-    paddingLeft: horizontalSpace.sm,
-    paddingRight: horizontalSpace.sm,
-    backgroundColor: "transparent",
     borderWidth: 0,
-    display: "flex",
     alignItems: "center",
+    backgroundColor: "transparent",
+    display: "flex",
+    flexShrink: 0,
     justifyContent: "center",
     // Let pointer events reach the draggable row (GridListItem); grip is for keyboard a11y.
     pointerEvents: "none",
+    height: size["4xl"],
+    paddingBottom: verticalSpace.xs,
+    paddingLeft: horizontalSpace.sm,
+    paddingRight: horizontalSpace.sm,
+    paddingTop: verticalSpace.xs,
+    width: size["4xl"],
   },
   list: {
-    gap: 0,
+    columnGap: 0,
+    rowGap: 0,
   },
   emptyStateMessage: {
     color: uiColor.text1,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     textAlign: "center",
-    paddingTop: verticalSpace.xl,
     paddingBottom: verticalSpace.xl,
     paddingLeft: horizontalSpace.md,
     paddingRight: horizontalSpace.md,
+    paddingTop: verticalSpace.xl,
   },
   grow: {
     flexGrow: 1,
@@ -324,10 +330,10 @@ const styles = stylex.create({
     width: "100%",
   },
   section: {
+    paddingBottom: verticalSpace["5xl"],
     paddingLeft: horizontalSpace.xl,
     paddingRight: horizontalSpace.xl,
     paddingTop: verticalSpace["5xl"],
-    paddingBottom: verticalSpace["5xl"],
   },
   card: {
     boxShadow: shadow.sm,
@@ -340,45 +346,45 @@ const styles = stylex.create({
     gap: gap["xl"],
   },
   imageAssetHeader: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: gap["md"],
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   imageGuidelinesList: {
     gap: gap.xs,
   },
   requiredLabel: {
-    alignItems: "center",
     gap: gap.xs,
+    alignItems: "center",
   },
   imagePreviewHero: {
-    aspectRatio: "16 / 9",
-    backgroundColor: uiColor.overlayBackdrop,
     borderColor: uiColor.border1,
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
     cornerShape: "squircle",
-    objectFit: "cover",
     overflow: "hidden",
+    aspectRatio: "16 / 9",
+    backgroundColor: uiColor.overlayBackdrop,
+    objectFit: "cover",
     width: "100%",
   },
   imagePreviewIcon: {
-    backgroundColor: uiColor.overlayBackdrop,
     borderColor: uiColor.border1,
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
     cornerShape: "squircle",
-    height: size["8xl"],
-    objectFit: "cover",
     overflow: "hidden",
+    backgroundColor: uiColor.overlayBackdrop,
+    objectFit: "cover",
+    height: size["8xl"],
     width: size["8xl"],
   },
   imageIconRow: {
-    alignItems: "center",
     gap: gap["2xl"],
+    alignItems: "center",
     flexWrap: "wrap",
   },
   imageDropZone: {
@@ -387,16 +393,17 @@ const styles = stylex.create({
     minHeight: 0,
   },
   imageDropZoneHero: {
-    aspectRatio: "16 / 9",
     padding: 0,
+    aspectRatio: "16 / 9",
   },
   imageDropZoneIcon: {
-    aspectRatio: "1 / 1",
     padding: 0,
     alignSelf: "flex-start",
+    aspectRatio: "1 / 1",
     width: size["9xl"],
   },
   screenshotPreviewRow: {
+    gap: gap.md,
     alignItems: "stretch",
     boxSizing: "border-box",
     display: "flex",
@@ -405,33 +412,34 @@ const styles = stylex.create({
       default: "wrap",
       [breakpoints.lg]: "nowrap",
     },
-    gap: gap.md,
     width: "100%",
   },
   /** GridList: screenshot cards in a cluster; flexGrow set inline vs. drop slot (N:1). */
   screenshotPreviewGrid: {
+    gap: gap.md,
     alignItems: "stretch",
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: gap.md,
     minHeight: 0,
     minWidth: 0,
   },
   screenshotPreviewCard: {
-    backgroundColor: uiColor.bg,
     borderColor: uiColor.border1,
     borderRadius: radius.lg,
     borderStyle: "solid",
     borderWidth: 1,
-    boxSizing: "border-box",
     cornerShape: "squircle",
+    gap: gap.sm,
+    overflow: "hidden",
+    backgroundColor: uiColor.bg,
+    boxSizing: "border-box",
     display: "flex",
-    flexDirection: "column",
     flexBasis: {
       default: "auto",
       [breakpoints.lg]: 0,
     },
+    flexDirection: "column",
     flexGrow: {
       default: 0,
       [breakpoints.lg]: 1,
@@ -440,26 +448,24 @@ const styles = stylex.create({
       default: 0,
       [breakpoints.lg]: 1,
     },
-    gap: gap.sm,
     minWidth: 0,
-    overflow: "hidden",
     width: {
       default: "220px",
       [breakpoints.lg]: "auto",
     },
   },
   screenshotPreviewImage: {
+    cornerShape: "squircle",
+    overflow: "hidden",
     backgroundColor: uiColor.overlayBackdrop,
+    display: "block",
+    flexShrink: 0,
+    objectFit: "cover",
     borderTopColor: uiColor.border1,
     borderTopStyle: "solid",
     borderTopWidth: 1,
-    cornerShape: "squircle",
-    display: "block",
-    flexShrink: 0,
     height: size["10xl"],
     maxWidth: "100%",
-    objectFit: "cover",
-    overflow: "hidden",
     width: {
       default: 200,
       [breakpoints.lg]: "100%",
@@ -476,9 +482,9 @@ const styles = stylex.create({
     minWidth: 0,
   },
   screenshotPreviewActions: {
+    padding: horizontalSpace.sm,
     alignItems: "center",
     justifyContent: "space-between",
-    padding: horizontalSpace.sm,
   },
   screenshotDropZoneContent: {
     alignItems: "center",
@@ -494,15 +500,13 @@ const styles = stylex.create({
   },
   /** Between-cards insert marker: width + flex gap would shift layout; negative margins cancel. */
   screenshotReorderDropIndicator: {
+    borderRadius: radius.lg,
     alignSelf: "stretch",
     backgroundColor: primaryColor.solid1,
-    borderRadius: radius.lg,
     boxSizing: "border-box",
     flexBasis: 6,
     flexGrow: 0,
     flexShrink: 0,
-    marginLeft: `calc((${gap.md} + 6px) / -2)`,
-    marginRight: `calc((${gap.md} + 6px) / -2)`,
     outlineColor: primaryColor.solid1,
     outlineOffset: 2,
     outlineStyle: "solid",
@@ -510,6 +514,8 @@ const styles = stylex.create({
     position: "relative",
     /** Above sibling cards (negative margins overlap them in document order). */
     zIndex: 2,
+    marginLeft: `calc((${gap.md} + 6px) / -2)`,
+    marginRight: `calc((${gap.md} + 6px) / -2)`,
     width: 6,
   },
   /** Native drag preview (system drag image): small square crop of the screenshot. */
@@ -518,21 +524,21 @@ const styles = stylex.create({
     borderRadius: radius.md,
     borderStyle: "solid",
     borderWidth: 1,
-    boxShadow: shadow.md,
     cornerShape: "squircle",
+    boxShadow: shadow.md,
     display: "block",
-    height: size["5xl"],
     objectFit: "cover",
+    height: size["5xl"],
     width: size["5xl"],
   },
   screenshotDragPreviewPlaceholder: {
-    backgroundColor: uiColor.bgSubtle,
     borderColor: uiColor.border2,
     borderRadius: radius.md,
     borderStyle: "solid",
     borderWidth: 1,
-    boxSizing: "border-box",
     cornerShape: "squircle",
+    backgroundColor: uiColor.bgSubtle,
+    boxSizing: "border-box",
     height: size["5xl"],
     width: size["5xl"],
   },
@@ -551,8 +557,8 @@ const styles = stylex.create({
     paddingRight: `calc(${horizontalSpace.md} + 1px)`,
   },
   linkRowUrlField: {
-    flexGrow: 1,
     flexBasis: "20rem",
+    flexGrow: 1,
     minWidth: 0,
   },
   linkRowLabelField: {
@@ -563,30 +569,21 @@ const styles = stylex.create({
   linkRowRemoveButton: {
     flexShrink: 0,
   },
-  linkRowRemoveButtonPlaceholder: {
-    width: size["4xl"],
-    height: size["4xl"],
-    flexShrink: 0,
-  },
-  linkAddRow: {
-    alignItems: "center",
-    gap: gap["md"],
-  },
   appTagsRow: {
-    flexWrap: "wrap",
     gap: gap["sm"],
+    flexWrap: "wrap",
   },
   customTagRow: {
     flexWrap: "wrap",
   },
   customTagInput: {
-    flexGrow: 1,
     flexBasis: "16rem",
+    flexGrow: 1,
     minWidth: 0,
   },
   imageAssetHeaderActions: {
-    alignItems: "center",
     gap: gap.md,
+    alignItems: "center",
     flexWrap: "wrap",
   },
   generationStatusRow: {
@@ -600,31 +597,31 @@ const styles = stylex.create({
     gap: gap["2xl"],
   },
   imageReviewFigure: {
+    margin: 0,
+    padding: horizontalSpace["2xl"],
+    borderRadius: radius["2xl"],
+    overflow: "hidden",
     alignItems: "center",
     backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
-    borderRadius: radius["2xl"],
     display: "flex",
     justifyContent: "center",
-    margin: 0,
     maxHeight: "min(42vh, 360px)",
-    overflow: "hidden",
-    padding: horizontalSpace["2xl"],
   },
   imageReviewHeroImg: {
     borderRadius: radius.xl,
     display: "block",
+    objectFit: "contain",
     height: "auto",
     maxHeight: "min(40vh, 340px)",
     maxWidth: "100%",
-    objectFit: "contain",
   },
   imageReviewIconImg: {
     borderRadius: radius["2xl"],
     display: "block",
+    objectFit: "contain",
     height: "auto",
     maxHeight: 192,
     maxWidth: 192,
-    objectFit: "contain",
   },
   imageReviewActions: {
     gap: gap["2xl"],
@@ -647,14 +644,14 @@ export type ProductListingFormSubmitValues = {
    */
   pendingHeroRemoval: boolean;
   pendingIconBlob: Blob | null;
-  pendingScreenshotBlobs: Blob[];
-  retainedScreenshotUrls: string[];
-  links: ListingLink[];
+  pendingScreenshotBlobs: Array<Blob>;
+  retainedScreenshotUrls: Array<string>;
+  links: Array<ListingLink>;
   /**
    * Editorial app tags for `apps/<slug>` listings. Empty for app-tool / protocol
    * categories since the lexicon only uses tags on top-level apps.
    */
-  appTags: string[];
+  appTags: Array<string>;
 };
 
 export type ProductListingFormInitialValues = {
@@ -666,9 +663,9 @@ export type ProductListingFormInitialValues = {
   categorySlug: string;
   heroImageUrl?: string | null;
   iconUrl?: string | null;
-  screenshotUrls?: string[];
-  links?: ListingLink[];
-  appTags?: string[];
+  screenshotUrls?: Array<string>;
+  links?: Array<ListingLink>;
+  appTags?: Array<string>;
 };
 
 type ProductListingFormProps = {
@@ -759,15 +756,18 @@ export function ProductListingForm({
   );
 
   const appCategoryOptionsByApp = collectAppCategoryOptionsByApp(
-    (categoryTree ?? []) as CategoryTreeNode[],
+    (categoryTree ?? []) as Array<CategoryTreeNode>,
   );
   const appSlugOptions = collectAppSlugOptions(
-    (categoryTree ?? []) as CategoryTreeNode[],
+    (categoryTree ?? []) as Array<CategoryTreeNode>,
   );
   const appSlugKey = appName.trim().toLowerCase();
   const selectedAppSlugOption =
     appSlugOptions.find((option) => option.id === appSlugKey)?.id ?? null;
-  const appCategoryOptions = appCategoryOptionsByApp[appSlugKey] ?? [];
+  const appCategoryOptions = useMemo(
+    () => appCategoryOptionsByApp[appSlugKey] ?? [],
+    [appCategoryOptionsByApp, appSlugKey],
+  );
   const selectedAppCategoryOption =
     appCategoryOptions.find((option) => option.id === appCategorySlug)?.id ??
     null;
@@ -790,7 +790,7 @@ export function ProductListingForm({
   }, [categoryKind, appCategoryOptions, appCategorySlug, appCategoryLabel]);
 
   const protocolCategoryOptions = collectProtocolCategoryOptions(
-    (categoryTree ?? []) as CategoryTreeNode[],
+    (categoryTree ?? []) as Array<CategoryTreeNode>,
   );
   const selectedProtocolCategoryOption =
     protocolCategoryOptions.find((option) => option.id === protocolCategory)
@@ -825,19 +825,20 @@ export function ProductListingForm({
   const [pendingIconPreviewUrl, setPendingIconPreviewUrl] = useState<
     string | null
   >(null);
-  const pendingScreenshotBlobsRef = useRef<Blob[]>([]);
+  const pendingScreenshotBlobsRef = useRef<Array<Blob>>([]);
   const screenshotIdCounterRef = useRef(0);
   const pendingScreenshotObjectUrlsRef = useRef<Set<string>>(new Set());
-  const [screenshotItems, setScreenshotItems] = useState<ScreenshotItem[]>(() =>
-    (initialValues.screenshotUrls ?? [])
-      .slice(0, MAX_SCREENSHOT_COUNT)
-      .map((url, index) => ({
-        id: `initial-${String(index)}-${url}`,
-        previewUrl: url,
-        blob: null,
-      })),
+  const [screenshotItems, setScreenshotItems] = useState<Array<ScreenshotItem>>(
+    () =>
+      (initialValues.screenshotUrls ?? [])
+        .slice(0, MAX_SCREENSHOT_COUNT)
+        .map((url, index) => ({
+          id: `initial-${String(index)}-${url}`,
+          previewUrl: url,
+          blob: null,
+        })),
   );
-  const [linkRows, setLinkRows] = useState<LinkRow[]>(() =>
+  const [linkRows, setLinkRows] = useState<Array<LinkRow>>(() =>
     buildInitialLinkRows(initialValues.links),
   );
 
@@ -856,7 +857,7 @@ export function ProductListingForm({
    */
   const availableAppTags = (() => {
     const seen = new Set<string>();
-    const ordered: string[] = [];
+    const ordered: Array<string> = [];
     for (const summary of allAppTagSummaries) {
       if (seen.has(summary.tag)) continue;
       seen.add(summary.tag);
@@ -901,7 +902,7 @@ export function ProductListingForm({
 
   const hasValidAppTags = categoryKind !== "app" || selectedAppTags.size > 0;
 
-  function collectAppTagsForSubmit(): string[] {
+  function collectAppTagsForSubmit(): Array<string> {
     if (categoryKind !== "app") return [];
     return normalizeAppTags([...selectedAppTags]);
   }
@@ -933,8 +934,8 @@ export function ProductListingForm({
     });
   }
 
-  function collectLinksForSubmit(): ListingLink[] {
-    const out: ListingLink[] = [];
+  function collectLinksForSubmit(): Array<ListingLink> {
+    const out: Array<ListingLink> = [];
     for (const row of linkRows) {
       const url = row.url.trim();
       if (!url) continue;
@@ -1117,11 +1118,13 @@ export function ProductListingForm({
   }, [screenshotItems]);
 
   useEffect(() => {
+    const urlsRef = pendingScreenshotObjectUrlsRef;
     return () => {
-      for (const url of pendingScreenshotObjectUrlsRef.current) {
+      const pending = urlsRef.current;
+      for (const url of pending) {
         URL.revokeObjectURL(url);
       }
-      pendingScreenshotObjectUrlsRef.current.clear();
+      pending.clear();
     };
   }, []);
 
@@ -1135,7 +1138,7 @@ export function ProductListingForm({
     setCropperOpen(true);
   }
 
-  function onPickScreenshots(files: File[]) {
+  function onPickScreenshots(files: Array<File>) {
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
     if (imageFiles.length === 0) {
       return;
@@ -1964,12 +1967,12 @@ export function ProductListingForm({
                             <Plus size={14} />
                           </IconButton>
                         </Flex>
-                        {!hasValidAppTags ? (
+                        {hasValidAppTags ? null : (
                           <Text size="sm" variant="critical">
                             Pick at least one tag. You can add your own tags,
                             but prefer using the predefined tags when possible.
                           </Text>
-                        ) : null}
+                        )}
                       </Flex>
                     </Flex>
                   ) : (

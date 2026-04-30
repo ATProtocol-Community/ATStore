@@ -95,7 +95,9 @@ const AppLink = createLink(Link);
 
 const styles = stylex.create({
   headerCopy: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   ratingRow: {
@@ -122,7 +124,7 @@ function ProductReviewsListPage() {
       return;
     }
 
-    const el = document.getElementById(`listing-review-${reviewSearchId}`);
+    const el = document.querySelector(`#listing-review-${reviewSearchId}`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [reviewSearchId]);
 
@@ -141,7 +143,7 @@ function ProductReviewsListPage() {
             <Flex gap="md" align="center" style={styles.ratingRow}>
               <Flex gap="xs">
                 <Text weight="semibold">
-                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  {listing.rating == null ? "—" : listing.rating.toFixed(1)}
                 </Text>
                 <Text size="sm" variant="secondary">
                   ({listing.reviewCount})

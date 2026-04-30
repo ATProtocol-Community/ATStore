@@ -10,8 +10,6 @@ import { lineHeight } from "../theme/typography.stylex";
 
 const styles = stylex.create({
   root: {
-    /* eslint-disable @stylexjs/valid-styles, @stylexjs/no-legacy-contextual-styles */
-
     ":is(*) > :is(:has(h1),h1)": {
       marginBottom: verticalSpace["7xl"],
       marginTop: verticalSpace["7xl"],
@@ -56,8 +54,6 @@ const styles = stylex.create({
         ":is(li *)": verticalSpace["none"],
       },
     },
-
-    /* eslint-enable @stylexjs/valid-styles, @stylexjs/no-legacy-contextual-styles */
   },
 });
 

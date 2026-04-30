@@ -1,11 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
 import { Link as RouterLink } from "@tanstack/react-router";
 
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
+
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { StarRating } from "../design-system/star-rating";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
   horizontalSpace,
@@ -13,17 +14,17 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { FeaturedListingFallbackCard } from "./FeaturedListingFallbackCard";
 import { HeroImage } from "./HeroImage";
 
 const styles = stylex.create({
   listingLink: {
+    textDecoration: "none",
     display: "block",
     height: "100%",
-    textDecoration: "none",
   },
   listingCard: {
     contentVisibility: "auto",
@@ -41,7 +42,9 @@ const styles = stylex.create({
     gap: gap["2xl"],
   },
   listingInfo: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   listingTagline: {
@@ -52,20 +55,6 @@ const styles = stylex.create({
   },
   ratingRow: {
     flexWrap: "wrap",
-  },
-  gridItem: {
-    display: "block",
-    height: "100%",
-    minWidth: 0,
-  },
-  grid: {
-    display: "grid",
-    gap: gap["xl"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
-    },
   },
 });
 
@@ -123,7 +112,7 @@ export function EcosystemListingCard({
             <Flex justify="end" gap="xl" style={styles.listingFooter}>
               <Flex align="center" gap="lg" style={styles.ratingRow}>
                 <SmallBody variant="secondary">
-                  {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                  {listing.rating == null ? "—" : listing.rating.toFixed(1)}
                 </SmallBody>
                 <StarRating
                   rating={listing.rating}
@@ -137,14 +126,4 @@ export function EcosystemListingCard({
       )}
     </RouterLink>
   );
-}
-
-export const ecosystemListingGridStyles = styles;
-
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
 }

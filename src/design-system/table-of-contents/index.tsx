@@ -41,9 +41,9 @@ const styles = stylex.create({
     width: "240px",
   },
   itemList: {
+    listStyle: "none",
     marginBottom: 0,
     marginLeft: 0,
-    listStyle: "none",
     marginRight: 0,
     marginTop: 0,
     paddingLeft: 0,

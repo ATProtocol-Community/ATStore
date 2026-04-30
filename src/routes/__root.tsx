@@ -1,3 +1,8 @@
+import type { QueryClient } from "@tanstack/react-query";
+
+import * as stylex from "@stylexjs/stylex";
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HeadContent,
   Scripts,
@@ -5,30 +10,16 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { TanStackDevtools } from "@tanstack/react-devtools";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import * as stylex from "@stylexjs/stylex";
+import { saveHandle } from "#/utils/saved-handles";
 import { useLayoutEffect } from "react";
 
-import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
-import { user } from "../integrations/tanstack-query/api-user.functions";
-import { getGeneratedBannerRecordUrlsQueryOptions } from "../integrations/tanstack-query/api-banner-record-urls.functions";
-
-import appCss from "../styles.css?url";
-
-import type { QueryClient } from "@tanstack/react-query";
-import { saveHandle } from "#/utils/saved-handles";
 import { primaryColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
+import { getGeneratedBannerRecordUrlsQueryOptions } from "../integrations/tanstack-query/api-banner-record-urls.functions";
+import { user } from "../integrations/tanstack-query/api-user.functions";
+import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import { DEFAULT_THEME_MODE } from "../lib/theme";
-
-const styles = stylex.create({
-  body: {
-    ":is(*) *": {
-      outlineColor: blue.border3,
-    },
-  },
-});
+import appCss from "../styles.css?url";
 
 const primaryColorTheme = stylex.createTheme(primaryColor, {
   bg: blue.bg,
@@ -70,11 +61,31 @@ html[data-theme="system"] { color-scheme: light; }
 `.trim();
 
 /**
+ * Inherited outline color for focused elements (matches `blue.border3`).
+ * Defined as global CSS so we do not use legacy contextual selectors under
+ * `stylex.create()` (disallowed by @stylexjs/valid-styles).
+ */
+const GLOBAL_FOCUS_OUTLINE_CSS = `
+:is(*) * {
+  outline-color: light-dark(#5eb1ef, #2870bd);
+}
+@media (color-gamut: p3) {
+  :is(*) * {
+    outline-color: light-dark(color(display-p3 0.451 0.688 0.917), color(display-p3 0.239 0.434 0.72));
+  }
+}
+`.trim();
+
+const THEME_STYLE_TAG_HTML = [COLOR_SCHEME_CSS, GLOBAL_FOCUS_OUTLINE_CSS].join(
+  "\n\n",
+);
+
+/**
  * Safely serializes a JSON object for embedding inside a `<script>` tag.
  * Escapes `</` so a stray `</script>` inside a value can't close the tag.
  */
 function safeJsonForScript(value: unknown) {
-  return JSON.stringify(value).replace(/</g, "\\u003c");
+  return JSON.stringify(value).replaceAll("<", String.raw`\u003C`);
 }
 
 /**
@@ -128,7 +139,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   head: () => ({
     meta: [
       {
-        charSet: "utf-8",
+        charSet: "utf8",
       },
       {
         name: "viewport",
@@ -220,11 +231,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme={themeMode} suppressHydrationWarning>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: COLOR_SCHEME_CSS }} />
+        <style dangerouslySetInnerHTML={{ __html: THEME_STYLE_TAG_HTML }} />
         <script dangerouslySetInnerHTML={{ __html: bannerInitScript }} />
         <HeadContent />
       </head>
-      <body {...stylex.props(primaryColorTheme, styles.body)}>
+      <body {...stylex.props(primaryColorTheme)}>
         <PersistOAuthSavedHandle />
         {children}
         <TanStackDevtools

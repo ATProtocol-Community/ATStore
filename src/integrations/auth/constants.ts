@@ -3,4 +3,4 @@
  * server-side to a `session` row, which authoritatively determines the user
  * (and therefore the DID) for the request. Never trust client-supplied DIDs.
  */
-export const AUTH_SESSION_TOKEN_COOKIE = 'atstore-auth.session_token'
+export const AUTH_SESSION_TOKEN_COOKIE = "atstore-auth.session_token";

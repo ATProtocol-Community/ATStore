@@ -29,18 +29,18 @@ const styles = stylex.create({
     flexDirection: "column",
   },
   label: {
-    gridColumnEnd: 'label',
-    gridColumnStart: 'label',
-    gridRowEnd: 'label',
-    gridRowStart: 'label',
+    gridColumnEnd: "label",
+    gridColumnStart: "label",
+    gridRowEnd: "label",
+    gridRowStart: "label",
   },
   valueLabel: {
-    gridColumnEnd: 'value-label',
-    gridColumnStart: 'value-label',
-    gridRowEnd: 'value-label',
-    gridRowStart: 'value-label',
     color: uiColor.text1,
     fontVariantNumeric: "tabular-nums",
+    gridColumnEnd: "value-label",
+    gridColumnStart: "value-label",
+    gridRowEnd: "value-label",
+    gridRowStart: "value-label",
     justifySelf: "flex-end",
 
     fontSize: {
@@ -55,12 +55,12 @@ const styles = stylex.create({
     },
   },
   track: {
-    gridColumnEnd: 'track',
-    gridColumnStart: 'track',
-    gridRowEnd: 'track',
-    gridRowStart: 'track',
     borderRadius: radius.full,
     cornerShape: "squircle",
+    gridColumnEnd: "track",
+    gridColumnStart: "track",
+    gridRowEnd: "track",
+    gridRowStart: "track",
     height: {
       ":is([data-size=lg] *)": sizeSpace["xl"],
       ":is([data-size=md] *)": sizeSpace["md"],

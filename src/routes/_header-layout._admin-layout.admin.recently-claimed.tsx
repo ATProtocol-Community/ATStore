@@ -43,38 +43,38 @@ const styles = stylex.create({
     gap: gap["3xl"],
   },
   row: {
+    gap: gap.md,
     alignItems: "flex-start",
     flexWrap: "wrap",
-    gap: gap.md,
     justifyContent: "space-between",
     width: "100%",
   },
   listingMedia: {
-    alignItems: "center",
     gap: gap.lg,
+    alignItems: "center",
     minWidth: 0,
   },
   listingIcon: {
     borderRadius: "12px",
     flexShrink: 0,
-    height: "48px",
     objectFit: "cover",
+    height: "48px",
     width: "48px",
   },
   listingMeta: {
     minWidth: 0,
   },
   externalLink: {
+    gap: gap.sm,
+    textDecoration: "none",
     alignItems: "center",
     display: "inline-flex",
-    gap: gap.sm,
     paddingLeft: horizontalSpace.xs,
-    textDecoration: "none",
   },
   claimColumn: {
+    gap: gap.xs,
     alignItems: "flex-end",
     flexShrink: 0,
-    gap: gap.xs,
   },
 });
 

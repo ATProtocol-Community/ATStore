@@ -29,15 +29,15 @@ const styles = stylex.create({
   },
   popover: {
     position: "absolute",
+    zIndex: 1000,
     left: 0,
     paddingTop: verticalSpace["xs"],
     top: "100%",
     width: "100%",
-    zIndex: 1000,
   },
   popoverContent: {
-    maxHeight: "30vh",
     overflow: "auto",
+    maxHeight: "30vh",
   },
 });
 

@@ -1,20 +1,33 @@
+import type { LucideIcon } from "lucide-react";
+
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
-  createFileRoute,
   Link as RouterLink,
-  notFound,
+  createFileRoute,
   createLink,
+  notFound,
   useRouter,
 } from "@tanstack/react-router";
+import { HeroImage } from "#/components/HeroImage";
+import { StarRating } from "#/design-system/star-rating";
 import {
-  ChevronLeft,
   AppWindow,
   BarChart3,
+  ChevronLeft,
   Code2,
   RadioTower,
-  type LucideIcon,
 } from "lucide-react";
+
+import type {
+  DirectoryCategoryPageData,
+  DirectoryListingCard,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
+import type { AppTagAccent } from "../lib/app-tag-visuals";
+import type {
+  DirectoryCategoryAccent,
+  DirectoryCategoryTreeNode,
+} from "../lib/directory-categories";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
@@ -27,39 +40,31 @@ import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { Select, SelectItem } from "../design-system/select";
+import { uiColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
 import { pink } from "../design-system/theme/colors/pink.stylex";
 import { purple } from "../design-system/theme/colors/purple.stylex";
-import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { Body, Heading1, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
-  directoryListingApi,
-  type DirectoryCategoryPageData,
-  type DirectoryListingCard,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
-import {
-  getDirectoryBrowsePath,
   getAppSegmentFromEcosystemRootCategoryId,
-  type DirectoryCategoryAccent,
-  type DirectoryCategoryTreeNode,
+  getDirectoryBrowsePath,
 } from "../lib/directory-categories";
-import type { AppTagAccent } from "../lib/app-tag-visuals";
-import { getEcosystemCategoryEmoji } from "../lib/ecosystem-category-emoji";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getEcosystemCategoryEmoji } from "../lib/ecosystem-category-emoji";
+import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
-import { StarRating } from "#/design-system/star-rating";
-import { HeroImage } from "#/components/HeroImage";
 
 const AppLink = createLink(Link);
 const sortOptions = [
@@ -140,32 +145,20 @@ const styles = stylex.create({
   navLinks: {
     flexWrap: "wrap",
   },
-  resultsHeader: {
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  resultsActions: {
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  resultCount: {
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-  },
   sortSelect: {
-    minWidth: "12rem",
     flexGrow: {
       default: 1,
       [breakpoints.sm]: 0,
     },
+    minWidth: "12rem",
   },
   eyebrow: {
     letterSpacing: "0.16em",
     textTransform: "uppercase",
   },
   childGrid: {
-    display: "grid",
     gap: gap["2xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -173,19 +166,19 @@ const styles = stylex.create({
     },
   },
   childCardLink: {
-    display: "block",
     textDecoration: "none",
+    display: "block",
   },
   childCard: {
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
+    cornerShape: "squircle",
+    gap: gap["3xl"],
     boxShadow: shadow.lg,
     color: "white",
-    cornerShape: "squircle",
     display: "flex",
     flexDirection: "column",
-    gap: gap["3xl"],
     minHeight: "12rem",
     paddingBottom: verticalSpace["4xl"],
     paddingLeft: horizontalSpace["4xl"],
@@ -193,16 +186,16 @@ const styles = stylex.create({
     paddingTop: verticalSpace["4xl"],
   },
   childIcon: {
-    alignItems: "center",
-    backdropFilter: "blur(10px)",
-    backgroundColor: `color-mix(in srgb, ${uiColor.component1} 36%, transparent)`,
     borderColor: `color-mix(in srgb, ${uiColor.border1} 65%, transparent)`,
     borderRadius: radius.md,
     borderStyle: "solid",
     borderWidth: 1,
+    alignItems: "center",
+    backdropFilter: "blur(10px)",
+    backgroundColor: `color-mix(in srgb, ${uiColor.component1} 36%, transparent)`,
     display: "inline-flex",
-    height: "2.5rem",
     justifyContent: "center",
+    height: "2.5rem",
     width: "2.5rem",
   },
   childDescription: {
@@ -218,64 +211,34 @@ const styles = stylex.create({
   relatedDescription: {
     maxWidth: "40rem",
   },
-  listingGrid: {
-    display: "grid",
-    gap: gap["2xl"],
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
-    },
-  },
   listingLink: {
-    display: "block",
-    height: "100%",
-    position: "relative",
     textDecoration: "none",
+    display: "block",
+    position: "relative",
     zIndex: 1,
+    height: "100%",
   },
   listingLinkFeatured: {
     zIndex: 0,
   },
   listingCard: {
-    height: "100%",
-    width: "100%",
+    borderRadius: radius["2xl"],
     boxSizing: "border-box",
-    paddingTop: verticalSpace["2xl"],
+    height: "100%",
     paddingBottom: verticalSpace["2xl"],
     paddingLeft: horizontalSpace["2xl"],
     paddingRight: horizontalSpace["2xl"],
-    borderRadius: radius["2xl"],
-  },
-  listingCardFeatured: {
-    borderRadius: radius["3xl"],
-    borderStyle: "solid",
-    borderWidth: 1,
-    color: uiColor.text2,
-    cornerShape: "squircle",
-    overflow: "hidden",
-    position: "relative",
-    boxShadow: shadow["2xl"],
+    paddingTop: verticalSpace["2xl"],
+    width: "100%",
   },
   listingCardBody: {
     gap: gap["4xl"],
+    position: "relative",
     height: "100%",
     paddingBottom: verticalSpace["xl"],
     paddingLeft: horizontalSpace["xl"],
     paddingRight: horizontalSpace["xl"],
     paddingTop: verticalSpace["xl"],
-    position: "relative",
-  },
-  listingCardBodyFeatured: {
-    gap: gap["3xl"],
-    height: "100%",
-    justifyContent: "flex-end",
-    paddingBottom: verticalSpace["md"],
-    paddingLeft: horizontalSpace["md"],
-    paddingRight: horizontalSpace["md"],
-    paddingTop: verticalSpace["md"],
-    position: "relative",
-    zIndex: 1,
   },
   listingHeader: {
     gap: gap["2xl"],
@@ -283,112 +246,40 @@ const styles = stylex.create({
     zIndex: 1,
   },
   listingInfo: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   listingTagline: {
     flexGrow: 1,
   },
   featuredImageFrame: {
-    height: "100%",
     inset: 0,
     objectFit: "cover",
     position: "absolute",
-    width: "100%",
-  },
-  accentOverlay: {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 12%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent) 46%, color-mix(in srgb, ${uiColor.overlayBackdrop} 100%, transparent) 100%)`,
-    inset: 0,
-    position: "absolute",
-  },
-
-  blurContainer: {
-    inset: 0,
-    overflow: "hidden",
-    position: "absolute",
-    zIndex: 0,
-  },
-  blur: {
-    backdropFilter: "blur(32px) saturate(500%)",
-    position: "absolute",
-    bottom: -48,
-    left: -48,
-    right: -48,
-    top: -48,
-  },
-  featuredInfoPanel: {
-    backdropFilter: "blur(18px) saturate(180%)",
-    backgroundColor:
-      "light-dark(rgba(255, 252, 255, 0.55), rgba(252, 252, 252, 0.4))",
-    borderColor: `color-mix(in srgb, ${uiColor.border1} 60%, transparent)`,
-    borderRadius: radius["xl"],
-    borderStyle: "solid",
-    borderWidth: 1,
-    boxShadow: `${shadow.lg}, 0 18px 48px color-mix(in srgb, ${uiColor.overlayBackdrop} 42%, transparent)`,
-    display: "flex",
-    flexDirection: "column",
-    gap: gap["4xl"],
-    height: "fit-content",
-    overflow: "hidden",
-    maxWidth: "34rem",
-    position: "relative",
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-    paddingBottom: verticalSpace["4xl"],
-  },
-  featuredAvatarContainer: {
-    height: "100%",
-    aspectRatio: 1 / 1,
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-  },
-  featuredAvatar: {
-    position: "absolute",
-    inset: 0,
     height: "100%",
     width: "100%",
-  },
-  featuredInfoContent: {
-    position: "relative",
-    zIndex: 1,
-    paddingTop: verticalSpace["4xl"],
-    paddingBottom: verticalSpace["4xl"],
-  },
-  featuredTitle: {
-    display: "block",
-    maxWidth: "18ch",
-  },
-  featuredTagline: {
-    color: uiColor.text1,
-    margin: 0,
-    maxWidth: "32rem",
-    position: "relative",
-    zIndex: 1,
-  },
-  listingFooter: {
-    alignItems: "center",
   },
   emptyState: {
     gap: gap["lg"],
     maxWidth: "40rem",
   },
   softBlueSurface: {
-    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
     borderColor: blue.border1,
+    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
   },
   softPinkSurface: {
-    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
     borderColor: pink.border1,
+    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
   },
   softPurpleSurface: {
-    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
     borderColor: purple.border1,
+    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
   },
   softGreenSurface: {
-    backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
     borderColor: green.border1,
+    backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
   },
 });
 
@@ -520,7 +411,7 @@ function CategoryPage() {
 function RelatedAppCategoriesSection({
   categories,
 }: {
-  categories: DirectoryCategoryTreeNode[];
+  categories: Array<DirectoryCategoryTreeNode>;
 }) {
   return (
     <Flex direction="column" style={styles.relatedSection}>
@@ -631,7 +522,7 @@ function CategoryListingCard({
                 </Text>
                 <Flex align="center" gap="lg">
                   <SmallBody variant="secondary">
-                    {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                    {listing.rating == null ? "—" : listing.rating.toFixed(1)}
                   </SmallBody>
                   <StarRating
                     rating={listing.rating}
@@ -673,7 +564,7 @@ function formatCount(count: number) {
 
 function getOtherAppCategories(
   pageData: DirectoryCategoryPageData,
-  categoryTree: DirectoryCategoryTreeNode[],
+  categoryTree: Array<DirectoryCategoryTreeNode>,
 ) {
   const currentCategory = pageData.category;
   if (currentCategory.pathIds[0] !== "apps") {
@@ -707,7 +598,7 @@ function getOtherAppCategories(
       seen.add(category.id);
       return true;
     })
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       if (right.count !== left.count) {
         return right.count - left.count;
       }
@@ -718,9 +609,9 @@ function getOtherAppCategories(
 }
 
 function flattenCategoryNodes(
-  nodes: DirectoryCategoryTreeNode[],
-): DirectoryCategoryTreeNode[] {
-  const flattened: DirectoryCategoryTreeNode[] = [];
+  nodes: Array<DirectoryCategoryTreeNode>,
+): Array<DirectoryCategoryTreeNode> {
+  const flattened: Array<DirectoryCategoryTreeNode> = [];
   for (const node of nodes) {
     flattened.push(node);
     flattened.push(...flattenCategoryNodes(node.children));
@@ -729,7 +620,7 @@ function flattenCategoryNodes(
 }
 
 function findCategoryNodeById(
-  nodes: DirectoryCategoryTreeNode[],
+  nodes: Array<DirectoryCategoryTreeNode>,
   categoryId: string,
 ): DirectoryCategoryTreeNode | null {
   for (const node of nodes) {
@@ -746,14 +637,6 @@ function findCategoryNodeById(
   return null;
 }
 
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
-}
-
 /**
  * Bridge `DirectoryCategoryAccent` (the 4-color accent baked into directory metadata) over
  * to the broader `AppTagAccent` palette used by `AppTagHero` / `AppTagCard`.
@@ -767,14 +650,18 @@ function mapCategoryAccentToTagAccent(
   accent: DirectoryCategoryAccent,
 ): AppTagAccent {
   switch (accent) {
-    case "blue":
+    case "blue": {
       return "blue";
-    case "pink":
+    }
+    case "pink": {
       return "pink";
-    case "purple":
+    }
+    case "purple": {
       return "purple";
-    case "green":
+    }
+    case "green": {
       return "indigo";
+    }
   }
 }
 
@@ -786,12 +673,12 @@ function mapCategoryAccentToTagAccent(
  */
 function buildCategoryHeroEmojis(
   category: DirectoryCategoryTreeNode,
-): string[] {
+): Array<string> {
   const anchor = getEcosystemCategoryEmoji(category.label);
   const seen = new Set<string>([anchor]);
-  const pool: string[] = [anchor];
+  const pool: Array<string> = [anchor];
 
-  const visit = (nodes: DirectoryCategoryTreeNode[]) => {
+  const visit = (nodes: Array<DirectoryCategoryTreeNode>) => {
     for (const node of nodes) {
       const emoji = getEcosystemCategoryEmoji(node.label);
       if (seen.has(emoji)) continue;

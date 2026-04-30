@@ -78,16 +78,8 @@ const styles = stylex.create({
     paddingTop: verticalSpace["xs"],
   },
   removeButton: {
-    marginBottom: 0,
-    marginLeft: 0,
-    marginRight: 0,
-    marginTop: 0,
-    paddingBottom: 0,
-    paddingLeft: 0,
     borderRadius: radius.full,
-    paddingRight: 0,
     borderWidth: 0,
-    paddingTop: 0,
     alignItems: "center",
     backgroundColor: {
       default: "transparent",
@@ -107,12 +99,19 @@ const styles = stylex.create({
     },
     transitionTimingFunction: "ease-in-out",
     height: sizeSpace["md"],
+    marginBottom: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginTop: 0,
+    paddingBottom: 0,
+    paddingLeft: 0,
+    paddingRight: 0,
+    paddingTop: 0,
     width: sizeSpace["md"],
   },
   tagText: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
     paddingBottom: verticalSpace["xxs"],
     paddingTop: verticalSpace["xxs"],

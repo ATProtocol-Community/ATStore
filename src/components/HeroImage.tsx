@@ -1,5 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 
@@ -18,20 +19,20 @@ const styles = stylex.create({
     position: "relative",
   },
   glowWrapFill: {
-    height: "100%",
     inset: 0,
     position: "absolute",
+    height: "100%",
     width: "100%",
   },
   glowImage: {
-    borderRadius: radius["lg"],
     inset: 0,
+    borderRadius: radius["lg"],
     objectFit: "cover",
     pointerEvents: "none",
     position: "absolute",
     transformOrigin: "center",
-    width: "100%",
     zIndex: 0,
+    width: "100%",
   },
   frame: {
     borderRadius: radius["3xl"],
@@ -44,29 +45,29 @@ const styles = stylex.create({
     aspectRatio: "16 / 9",
     display: "block",
     objectFit: "cover",
-    width: "100%",
-    transitionProperty: "transform",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
     transform: {
       default: "scale(1)",
       [stylex.when.ancestor(":hover")]: "scale(1.01)",
     },
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "transform",
+    transitionTimingFunction: "ease-in-out",
+    width: "100%",
   },
   imageFill: {
-    display: "block",
-    height: "100%",
     inset: 0,
+    display: "block",
     objectFit: "cover",
     position: "absolute",
-    width: "100%",
-    transitionProperty: "transform",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
     transform: {
       default: "scale(1)",
       [stylex.when.ancestor(":hover")]: "scale(1.01)",
     },
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "transform",
+    transitionTimingFunction: "ease-in-out",
+    height: "100%",
+    width: "100%",
   },
   overlay: {
     background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 6%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 24%, transparent) 38%, color-mix(in srgb, ${uiColor.overlayBackdrop} 92%, transparent) 100%)`,

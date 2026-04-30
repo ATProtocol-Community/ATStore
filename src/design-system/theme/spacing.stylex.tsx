@@ -40,5 +40,4 @@ export const spacing = stylex.defineVars({
   "96": "24rem",
 });
 
-// eslint-disable-next-line @stylexjs/enforce-extension
 export type Spacing = ThemeKeys<typeof spacing>;

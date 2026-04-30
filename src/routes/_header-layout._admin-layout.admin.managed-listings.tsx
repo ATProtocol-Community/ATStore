@@ -8,10 +8,9 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  ProductListingForm,
-  type ProductListingFormSubmitValues,
-} from "../components/product-listing-form";
+import type { ProductListingFormSubmitValues } from "../components/product-listing-form";
+
+import { ProductListingForm } from "../components/product-listing-form";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Card } from "../design-system/card";
@@ -29,6 +28,7 @@ import { shadow } from "../design-system/theme/shadow.stylex";
 import { Body, Heading1, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { blobToBase64 } from "../lib/blob-to-base64";
 
 export const Route = createFileRoute(
   "/_header-layout/_admin-layout/admin/managed-listings",
@@ -66,15 +66,12 @@ const styles = stylex.create({
     paddingTop: verticalSpace["3xl"],
   },
   pickerMeta: {
+    gap: gap["lg"],
     alignItems: "center",
     flexWrap: "wrap",
-    gap: gap["lg"],
   },
   pickerAvatar: {
     borderRadius: radius.xl,
-  },
-  devToolsCard: {
-    boxShadow: shadow.md,
   },
   devToolsBody: {
     gap: gap["xl"],
@@ -84,24 +81,14 @@ const styles = stylex.create({
     paddingTop: verticalSpace["3xl"],
   },
   devToolsGrid: {
-    flexWrap: "wrap",
     gap: gap["lg"],
-  },
-  devToolsFieldGroup: {
-    borderTopStyle: "solid",
-    borderTopWidth: 1,
-    borderTopColor: uiColor.border2,
-    gap: gap["md"],
-    paddingTop: verticalSpace["lg"],
-  },
-  devToolsHelp: {
-    color: uiColor.text2,
+    flexWrap: "wrap",
   },
   dangerZone: {
+    gap: gap["md"],
+    borderTopColor: uiColor.border2,
     borderTopStyle: "solid",
     borderTopWidth: 1,
-    borderTopColor: uiColor.border2,
-    gap: gap["md"],
     paddingTop: verticalSpace["lg"],
   },
 
@@ -116,56 +103,37 @@ const styles = stylex.create({
     paddingTop: verticalSpace["3xl"],
   },
   imageReviewFigure: {
+    margin: 0,
+    padding: horizontalSpace["2xl"],
+    borderRadius: radius["2xl"],
+    overflow: "hidden",
     alignItems: "center",
     backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
-    borderRadius: radius["2xl"],
     display: "flex",
     justifyContent: "center",
-    margin: 0,
     maxHeight: "min(42vh, 360px)",
-    overflow: "hidden",
-    padding: horizontalSpace["2xl"],
   },
   imageReviewHeroImg: {
     borderRadius: radius.xl,
     display: "block",
+    objectFit: "contain",
     height: "auto",
     maxHeight: "min(40vh, 340px)",
     maxWidth: "100%",
-    objectFit: "contain",
   },
   imageReviewIconImg: {
     borderRadius: radius["2xl"],
     display: "block",
+    objectFit: "contain",
     height: "auto",
     maxHeight: 192,
     maxWidth: 192,
-    objectFit: "contain",
   },
   imageReviewActions: {
     gap: gap["2xl"],
     justifyContent: "flex-end",
   },
 });
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const s = reader.result;
-      if (typeof s !== "string") {
-        reject(new Error("Could not read image."));
-        return;
-      }
-      const comma = s.indexOf(",");
-      resolve(comma >= 0 ? s.slice(comma + 1) : s);
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Could not read image."));
-    };
-    reader.readAsDataURL(blob);
-  });
-}
 
 function AdminManagedListingsPage() {
   const { data: managedListings } = useSuspenseQuery(
@@ -408,8 +376,8 @@ function ManagedListingEditor({
   async function deleteListing() {
     if (pendingListingDeletion) return;
     if (
-      typeof window !== "undefined" &&
-      !window.confirm(
+      globalThis.window !== undefined &&
+      !globalThis.window.confirm(
         `Permanently delete "${listing?.name ?? "this listing"}"? This tombstones the record on the store PDS and removes it from the directory immediately. This cannot be undone.`,
       )
     ) {

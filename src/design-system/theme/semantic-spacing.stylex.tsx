@@ -1,7 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
 
-import type { ThemeKeys } from "./types";
-
 import { spacing } from "./spacing.stylex";
 
 /**
@@ -95,12 +93,3 @@ export const size = stylex.defineVars({
   "11xl": spacing["64"],
   "12xl": spacing["72"],
 });
-
-// eslint-disable-next-line @stylexjs/enforce-extension
-export type HorizontalSpace = ThemeKeys<typeof horizontalSpace>;
-// eslint-disable-next-line @stylexjs/enforce-extension
-export type VerticalSpace = ThemeKeys<typeof verticalSpace>;
-// eslint-disable-next-line @stylexjs/enforce-extension
-export type Gap = ThemeKeys<typeof gap>;
-// eslint-disable-next-line @stylexjs/enforce-extension
-export type SizeSpace = ThemeKeys<typeof size>;

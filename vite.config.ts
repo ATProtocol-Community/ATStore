@@ -1,47 +1,44 @@
-import path from 'node:path'
-
-import { browserslistToTargets } from 'lightningcss'
-import browserslist from 'browserslist'
-import { defineConfig } from 'vite'
-import { devtools } from '@tanstack/devtools-vite'
-import stylexPlugin from '@stylexjs/unplugin'
-import tsconfigPaths from 'vite-tsconfig-paths'
+import stylexPlugin from "@stylexjs/unplugin/vite";
+import { devtools } from "@tanstack/devtools-vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import browserslist from "browserslist";
+import { browserslistToTargets } from "lightningcss";
 import { nitro } from "nitro/vite";
-
-import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-
-import viteReact from '@vitejs/plugin-react'
+import path from "node:path";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 const config = defineConfig({
   // Playwright is Node-only and pulls optional chromium-bidi paths that break esbuild pre-bundling
   // when Vite analyzes server code that dynamically imports it.
   optimizeDeps: {
-    exclude: ['playwright', 'playwright-core', 'chromium-bidi'],
+    exclude: ["playwright", "playwright-core", "chromium-bidi"],
   },
   ssr: {
     optimizeDeps: {
-      exclude: ['playwright', 'playwright-core', 'chromium-bidi'],
+      exclude: ["playwright", "playwright-core", "chromium-bidi"],
     },
-    external: ['playwright', 'playwright-core'],
+    external: ["playwright", "playwright-core"],
   },
   plugins: [
-    stylexPlugin.vite({
+    stylexPlugin({
       treeshakeCompensation: true,
-      dev: process.env.NODE_ENV !== 'production',
+      dev: process.env.NODE_ENV !== "production",
       aliases: {
-        '@/*': [path.join(__dirname, './src/*')],
-        '#/*': [path.join(__dirname, './src/*')],
+        "@/*": [path.join(__dirname, "./src/*")],
+        "#/*": [path.join(__dirname, "./src/*")],
       },
       lightningcssOptions: {
-        targets: browserslistToTargets(browserslist('baseline 2024')),
+        targets: browserslistToTargets(browserslist("baseline 2024")),
       },
     }),
     devtools(),
     nitro(),
-    tsconfigPaths({ projects: ['./tsconfig.json'] }),
+    tsconfigPaths({ projects: ["./tsconfig.json"] }),
     tanstackStart(),
     viteReact(),
   ],
-})
+});
 
-export default config
+export default config;

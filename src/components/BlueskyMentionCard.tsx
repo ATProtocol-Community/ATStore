@@ -1,10 +1,13 @@
-import * as stylex from "@stylexjs/stylex";
-import { RichText } from "@atproto/api";
-import { createLink, Link as RouterLink } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { RichText } from "@atproto/api";
+import * as stylex from "@stylexjs/stylex";
+import { Link as RouterLink, createLink } from "@tanstack/react-router";
+import { IconButton } from "#/design-system/icon-button";
+import { ExternalLink } from "lucide-react";
+
 import type { DirectoryListingMention } from "../integrations/tanstack-query/api-directory-listings.functions";
+
 import { Avatar } from "../design-system/avatar";
 import {
   Card,
@@ -13,22 +16,25 @@ import {
   CardHeaderAction,
 } from "../design-system/card";
 import { Flex } from "../design-system/flex";
+import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
+import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { getInitials } from "../lib/product-reviews-route";
-import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
-import { IconButton } from "#/design-system/icon-button";
-import { uiColor } from "../design-system/theme/color.stylex";
+import { getInitials } from "../lib/get-initials";
 
 const IconButtonLink = createLink(IconButton);
 
 const styles = stylex.create({
   mentionCard: {
     borderColor: uiColor.component2,
-    borderTopWidth: {
+    borderBottomLeftRadius: {
       default: 0,
-      ":first-child": 1,
+      ":last-child": radius.lg,
+    },
+    borderBottomRightRadius: {
+      default: 0,
+      ":last-child": radius.lg,
     },
     borderTopLeftRadius: {
       default: 0,
@@ -38,22 +44,20 @@ const styles = stylex.create({
       default: 0,
       ":first-child": radius.lg,
     },
-    borderBottomRightRadius: {
+    borderTopWidth: {
       default: 0,
-      ":last-child": radius.lg,
-    },
-    borderBottomLeftRadius: {
-      default: 0,
-      ":last-child": radius.lg,
+      ":first-child": 1,
     },
   },
   mentionProfileLink: {
     borderRadius: radius.md,
-    color: "inherit",
-    flex: 1,
-    minWidth: 0,
-    outlineOffset: 2,
     textDecoration: "none",
+    color: "inherit",
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
+    outlineOffset: 2,
+    minWidth: 0,
   },
   mentionAuthorRow: {
     minWidth: 0,
@@ -68,25 +72,25 @@ const styles = stylex.create({
     whiteSpace: "pre-wrap",
   },
   facetLink: {
-    color: uiColor.solid1,
     textDecoration: "underline",
+    color: uiColor.solid1,
   },
   embedCard: {
     borderColor: uiColor.component2,
     borderRadius: radius.md,
     borderStyle: "solid",
     borderWidth: 1,
-    color: "inherit",
     overflow: "hidden",
     textDecoration: "none",
+    color: "inherit",
     maxWidth: 400,
   },
   embedThumb: {
-    display: "block",
-    height: 120,
-    objectFit: "cover",
-    width: "100%",
     aspectRatio: 16 / 9,
+    display: "block",
+    objectFit: "cover",
+    height: 120,
+    width: "100%",
   },
   embedBody: {
     padding: verticalSpace["3xl"],
@@ -119,7 +123,7 @@ function renderPostText(mention: DirectoryListingMention) {
     facets: facets as ConstructorParameters<typeof RichText>[0]["facets"],
   });
 
-  const parts: ReactNode[] = [];
+  const parts: Array<ReactNode> = [];
   let i = 0;
   for (const segment of richText.segments()) {
     const key = `segment-${i++}`;
@@ -183,7 +187,7 @@ export function BlueskyMentionCard({
   const showHandleSubline =
     Boolean(displayName) &&
     handlePlain.length > 0 &&
-    displayName!.toLowerCase() !== handlePlain.toLowerCase();
+    (displayName ?? "").toLowerCase() !== handlePlain.toLowerCase();
   const embed = mention.postEmbed;
   return (
     <Card size="lg" style={styles.mentionCard}>

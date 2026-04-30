@@ -3,12 +3,12 @@
  */
 
 export function buildIconPolishFromSiteAssetPrompt(input: {
-  name: string
-  pageUrl: string
-  tagline: string | null
-  productType: string | null
-  domain: string | null
-  scope: string | null
+  name: string;
+  pageUrl: string;
+  tagline: string | null;
+  productType: string | null;
+  domain: string | null;
+  scope: string | null;
 }): string {
   const meta = [
     `Name: ${input.name}`,
@@ -18,8 +18,8 @@ export function buildIconPolishFromSiteAssetPrompt(input: {
     input.domain ? `Domain: ${input.domain}` : null,
     input.scope ? `Scope: ${input.scope}` : null,
   ]
-    .filter((v): v is string => Boolean(v))
-    .join('\n')
+    .filter(Boolean)
+    .join("\n");
 
   return `You are given an existing site icon, favicon, or logo image (it may be very small, pixelated, or multi-resolution .ico).
 
@@ -37,5 +37,5 @@ Constraints:
 - No new readable text; keep any text from the source only if it was already there, unchanged in wording.
 
 Listing metadata:
-${meta}`
+${meta}`;
 }

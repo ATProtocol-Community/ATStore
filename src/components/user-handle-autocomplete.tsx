@@ -2,7 +2,6 @@
 
 import * as stylex from "@stylexjs/stylex";
 import { useQuery } from "@tanstack/react-query";
-
 import { AutocompleteInput } from "#/design-system/autocomplete";
 import { Avatar } from "#/design-system/avatar";
 import { ListBoxItem } from "#/design-system/listbox";
@@ -63,10 +62,12 @@ export function UserHandleAutocomplete({
     placeholderData: (previousData) => previousData,
   });
 
-  const actors: HandleActor[] = (actorsData?.actors ?? []).map((actor) => ({
-    ...actor,
-    id: actor.handle,
-  }));
+  const actors: Array<HandleActor> = (actorsData?.actors ?? []).map(
+    (actor) => ({
+      ...actor,
+      id: actor.handle,
+    }),
+  );
 
   return (
     <AutocompleteInput

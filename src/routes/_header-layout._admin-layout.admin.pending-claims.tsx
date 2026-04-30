@@ -8,18 +8,18 @@ import { Card, CardBody, CardHeader, CardTitle } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
+import { Separator } from "../design-system/separator";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { uiColor } from "../design-system/theme/color.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
 import { Body, Heading1, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { Separator } from "../design-system/separator";
 
 export const Route = createFileRoute(
   "/_header-layout/_admin-layout/admin/pending-claims",
@@ -36,17 +36,17 @@ const styles = stylex.create({
     maxWidth: "60rem",
   },
   row: {
+    gap: gap.md,
     alignItems: "flex-start",
     flexWrap: "wrap",
-    gap: gap.md,
     justifyContent: "space-between",
   },
   listStack: {
     gap: gap["3xl"],
   },
   messageBlock: {
-    backgroundColor: uiColor.component1,
     borderRadius: radius.md,
+    backgroundColor: uiColor.component1,
     marginTop: verticalSpace.md,
     maxWidth: "100%",
     paddingBottom: verticalSpace.lg,
@@ -160,7 +160,11 @@ function PendingClaimsPage() {
                           </Button>
                         </Flex>
                       </Flex>
-                      {c.message.trim() !== "" ? (
+                      {c.message.trim() === "" ? (
+                        <Text size="sm" variant="secondary">
+                          (No message provided.)
+                        </Text>
+                      ) : (
                         <div {...stylex.props(styles.messageBlock)}>
                           <Flex direction="column" gap="xl">
                             <Text size="sm" weight="semibold">
@@ -175,10 +179,6 @@ function PendingClaimsPage() {
                             </Text>
                           </Flex>
                         </div>
-                      ) : (
-                        <Text size="sm" variant="secondary">
-                          (No message provided.)
-                        </Text>
                       )}
                     </Flex>
                     {i < data.pendingClaims.length - 1 && <Separator />}

@@ -1,10 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
 
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
+
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { radius } from "../design-system/theme/radius.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
@@ -12,18 +14,20 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { getInitials } from "../lib/get-initials";
 
 const styles = stylex.create({
   card: {
     borderRadius: radius["3xl"],
     cornerShape: "squircle",
-    height: "100%",
     backgroundColor: uiColor.component1,
+    height: "100%",
   },
   body: {
-    flex: 1,
     gap: gap["2xl"],
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     height: "100%",
     paddingBottom: verticalSpace["6xl"],
     paddingLeft: horizontalSpace["6xl"],
@@ -31,15 +35,17 @@ const styles = stylex.create({
     paddingTop: verticalSpace["6xl"],
   },
   description: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minHeight: 0,
   },
   title: {
     overflow: "hidden",
-    textOverflow: "ellipsis",
-    display: "-webkit-box",
     WebkitBoxOrient: "vertical",
     WebkitLineClamp: 2,
+    display: "-webkit-box",
+    textOverflow: "ellipsis",
   },
 });
 
@@ -74,12 +80,4 @@ export function FeaturedListingFallbackCard({
       </Flex>
     </Card>
   );
-}
-
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
 }

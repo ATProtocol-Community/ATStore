@@ -1,39 +1,39 @@
-import { and, eq, or, sql } from 'drizzle-orm'
-import { z } from 'zod'
+import type { Database } from "#/db/index.server";
 
-import type { Database } from '#/db/index.server'
-import * as schema from '#/db/schema'
-import { COLLECTION, NSID } from '#/lib/atproto/nsids'
-import { recomputeListingTrending } from '#/lib/trending/recompute-listing-trending'
+import * as schema from "#/db/schema";
+import { COLLECTION, NSID } from "#/lib/atproto/nsids";
+import { recomputeListingTrending } from "#/lib/trending/recompute-listing-trending";
+import { and, eq, or, sql } from "drizzle-orm";
+import { z } from "zod";
 
 const reviewBodySchema = z.object({
   subject: z
     .string()
     .min(1)
-    .refine((s) => s.startsWith('at://'), {
-      message: 'subject must be an at:// URI',
+    .refine((s) => s.startsWith("at://"), {
+      message: "subject must be an at:// URI",
     }),
   rating: z.number().int().min(1).max(5),
   text: z.string().max(8000).optional(),
   createdAt: z.string().min(1),
-})
+});
 
 export type FyiAtstoreListingReview = {
-  $type: typeof NSID.listingReview
-  subject: string
-  rating: number
-  text?: string
-  createdAt: string
-}
+  $type: typeof NSID.listingReview;
+  subject: string;
+  rating: number;
+  text?: string;
+  createdAt: string;
+};
 
 export type ListingReviewParseResult =
   | { ok: true; record: FyiAtstoreListingReview }
   | {
-      ok: false
-      reason: string
-      stage: 'no_body' | 'zod' | 'datetime'
-      zodError?: z.ZodError
-    }
+      ok: false;
+      reason: string;
+      stage: "no_body" | "zod" | "datetime";
+      zodError?: z.ZodError;
+    };
 
 export function tryParseListingReviewRecord(
   body: Record<string, unknown> | undefined,
@@ -41,38 +41,38 @@ export function tryParseListingReviewRecord(
   if (!body) {
     return {
       ok: false,
-      reason: 'record body is missing',
-      stage: 'no_body',
-    }
+      reason: "record body is missing",
+      stage: "no_body",
+    };
   }
 
-  const parsed = reviewBodySchema.safeParse(body)
+  const parsed = reviewBodySchema.safeParse(body);
   if (!parsed.success) {
-    const issues = parsed.error.flatten()
-    const fieldErrors = issues.fieldErrors
-    const formErrors = issues.formErrors
+    const issues = parsed.error.flatten();
+    const fieldErrors = issues.fieldErrors;
+    const formErrors = issues.formErrors;
     const detail = [
-      ...Object.entries(fieldErrors).flatMap(([k, v]) =>
-        v?.map((m) => `${k}: ${m}`) ?? [],
+      ...Object.entries(fieldErrors).flatMap(
+        ([k, v]) => v?.map((m) => `${k}: ${m}`) ?? [],
       ),
       ...(formErrors ?? []),
-    ].join('; ')
+    ].join("; ");
     return {
       ok: false,
       reason: detail || parsed.error.message,
-      stage: 'zod',
+      stage: "zod",
       zodError: parsed.error,
-    }
+    };
   }
 
-  const d = parsed.data
-  const created = new Date(d.createdAt)
+  const d = parsed.data;
+  const created = new Date(d.createdAt);
   if (Number.isNaN(created.getTime())) {
     return {
       ok: false,
-      reason: 'createdAt is not a valid datetime',
-      stage: 'datetime',
-    }
+      reason: "createdAt is not a valid datetime",
+      stage: "datetime",
+    };
   }
 
   const rec: FyiAtstoreListingReview = {
@@ -80,14 +80,14 @@ export function tryParseListingReviewRecord(
     subject: d.subject,
     rating: d.rating,
     createdAt: d.createdAt,
-  }
-  const t = d.text?.trim()
-  if (t) rec.text = t
-  return { ok: true, record: rec }
+  };
+  const t = d.text?.trim();
+  if (t) rec.text = t;
+  return { ok: true, record: rec };
 }
 
 function atUriForReview(did: string, rkey: string) {
-  return `at://${did}/${COLLECTION.listingReview}/${rkey}`
+  return `at://${did}/${COLLECTION.listingReview}/${rkey}`;
 }
 
 export async function recomputeListingReviewAggregates(
@@ -97,17 +97,19 @@ export async function recomputeListingReviewAggregates(
   const [agg] = await db
     .select({
       cnt: sql<number>`count(*)::int`,
-      avg: sql<string | null>`avg(${schema.storeListingReviews.rating}::double precision)`,
+      avg: sql<
+        string | null
+      >`avg(${schema.storeListingReviews.rating}::double precision)`,
     })
     .from(schema.storeListingReviews)
-    .where(eq(schema.storeListingReviews.storeListingId, storeListingId))
+    .where(eq(schema.storeListingReviews.storeListingId, storeListingId));
 
-  const count = Number(agg?.cnt ?? 0)
-  const avgRaw = agg?.avg
+  const count = Number(agg?.cnt ?? 0);
+  const avgRaw = agg?.avg;
   const averageRating =
-    count === 0 || avgRaw == null || avgRaw === ''
+    count === 0 || avgRaw == null || avgRaw === ""
       ? null
-      : Number.parseFloat(avgRaw)
+      : Number.parseFloat(avgRaw);
 
   await db
     .update(schema.storeListings)
@@ -116,24 +118,24 @@ export async function recomputeListingReviewAggregates(
       averageRating,
       updatedAt: new Date(),
     })
-    .where(eq(schema.storeListings.id, storeListingId))
+    .where(eq(schema.storeListings.id, storeListingId));
 
-  await recomputeListingTrending(db, storeListingId)
+  await recomputeListingTrending(db, storeListingId);
 }
 
 /**
  * Upsert `store_listing_reviews` from Tap (`fyi.atstore.listing.review`).
  */
 export async function upsertListingReviewFromTap(input: {
-  db: Database
-  did: string
-  rkey: string
-  record: FyiAtstoreListingReview
+  db: Database;
+  did: string;
+  rkey: string;
+  record: FyiAtstoreListingReview;
 }) {
-  const { db, did, rkey, record } = input
-  const atUri = atUriForReview(did, rkey)
+  const { db, did, rkey, record } = input;
+  const atUri = atUriForReview(did, rkey);
 
-  const subject = record.subject
+  const subject = record.subject;
   const [listing] = await db
     .select({ id: schema.storeListings.id })
     .from(schema.storeListings)
@@ -143,18 +145,18 @@ export async function upsertListingReviewFromTap(input: {
         eq(schema.storeListings.migratedFromAtUri, subject),
       ),
     )
-    .limit(1)
+    .limit(1);
 
   if (!listing) {
     console.warn(
       `[tap-review] skip review — no store_listings row for subject=${record.subject} did=${did} rkey=${rkey}`,
-    )
-    return
+    );
+    return;
   }
 
-  const reviewCreatedAt = new Date(record.createdAt)
+  const reviewCreatedAt = new Date(record.createdAt);
   const text =
-    record.text && record.text.trim() !== '' ? record.text.trim() : null
+    record.text && record.text.trim() !== "" ? record.text.trim() : null;
 
   await db
     .insert(schema.storeListingReviews)
@@ -181,17 +183,17 @@ export async function upsertListingReviewFromTap(input: {
         reviewCreatedAt,
         updatedAt: new Date(),
       },
-    })
+    });
 
-  await recomputeListingReviewAggregates(db, listing.id)
+  await recomputeListingReviewAggregates(db, listing.id);
 }
 
 export async function deleteListingReviewFromTap(input: {
-  db: Database
-  did: string
-  rkey: string
+  db: Database;
+  did: string;
+  rkey: string;
 }) {
-  const { db, did, rkey } = input
+  const { db, did, rkey } = input;
 
   const deleted = await db
     .delete(schema.storeListingReviews)
@@ -201,9 +203,9 @@ export async function deleteListingReviewFromTap(input: {
         eq(schema.storeListingReviews.rkey, rkey),
       ),
     )
-    .returning({ storeListingId: schema.storeListingReviews.storeListingId })
+    .returning({ storeListingId: schema.storeListingReviews.storeListingId });
 
   for (const row of deleted) {
-    await recomputeListingReviewAggregates(db, row.storeListingId)
+    await recomputeListingReviewAggregates(db, row.storeListingId);
   }
 }

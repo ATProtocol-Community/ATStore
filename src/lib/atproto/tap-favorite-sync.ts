@@ -1,35 +1,35 @@
-import { and, eq, or } from 'drizzle-orm'
-import { z } from 'zod'
+import type { Database } from "#/db/index.server";
 
-import type { Database } from '#/db/index.server'
-import * as schema from '#/db/schema'
-import { COLLECTION, NSID } from '#/lib/atproto/nsids'
-import { recomputeListingTrending } from '#/lib/trending/recompute-listing-trending'
+import * as schema from "#/db/schema";
+import { COLLECTION, NSID } from "#/lib/atproto/nsids";
+import { recomputeListingTrending } from "#/lib/trending/recompute-listing-trending";
+import { and, eq, or } from "drizzle-orm";
+import { z } from "zod";
 
 const favoriteBodySchema = z.object({
   subject: z
     .string()
     .min(1)
-    .refine((s) => s.startsWith('at://'), {
-      message: 'subject must be an at:// URI',
+    .refine((s) => s.startsWith("at://"), {
+      message: "subject must be an at:// URI",
     }),
   createdAt: z.string().min(1),
-})
+});
 
 export type FyiAtstoreListingFavorite = {
-  $type: typeof NSID.listingFavorite
-  subject: string
-  createdAt: string
-}
+  $type: typeof NSID.listingFavorite;
+  subject: string;
+  createdAt: string;
+};
 
 export type ListingFavoriteParseResult =
   | { ok: true; record: FyiAtstoreListingFavorite }
   | {
-      ok: false
-      reason: string
-      stage: 'no_body' | 'zod' | 'datetime'
-      zodError?: z.ZodError
-    }
+      ok: false;
+      reason: string;
+      stage: "no_body" | "zod" | "datetime";
+      zodError?: z.ZodError;
+    };
 
 export function tryParseListingFavoriteRecord(
   body: Record<string, unknown> | undefined,
@@ -37,38 +37,38 @@ export function tryParseListingFavoriteRecord(
   if (!body) {
     return {
       ok: false,
-      reason: 'record body is missing',
-      stage: 'no_body',
-    }
+      reason: "record body is missing",
+      stage: "no_body",
+    };
   }
 
-  const parsed = favoriteBodySchema.safeParse(body)
+  const parsed = favoriteBodySchema.safeParse(body);
   if (!parsed.success) {
-    const issues = parsed.error.flatten()
-    const fieldErrors = issues.fieldErrors
-    const formErrors = issues.formErrors
+    const issues = parsed.error.flatten();
+    const fieldErrors = issues.fieldErrors;
+    const formErrors = issues.formErrors;
     const detail = [
-      ...Object.entries(fieldErrors).flatMap(([k, v]) =>
-        v?.map((m) => `${k}: ${m}`) ?? [],
+      ...Object.entries(fieldErrors).flatMap(
+        ([k, v]) => v?.map((m) => `${k}: ${m}`) ?? [],
       ),
       ...(formErrors ?? []),
-    ].join('; ')
+    ].join("; ");
     return {
       ok: false,
       reason: detail || parsed.error.message,
-      stage: 'zod',
+      stage: "zod",
       zodError: parsed.error,
-    }
+    };
   }
 
-  const d = parsed.data
-  const created = new Date(d.createdAt)
+  const d = parsed.data;
+  const created = new Date(d.createdAt);
   if (Number.isNaN(created.getTime())) {
     return {
       ok: false,
-      reason: 'createdAt is not a valid datetime',
-      stage: 'datetime',
-    }
+      reason: "createdAt is not a valid datetime",
+      stage: "datetime",
+    };
   }
 
   return {
@@ -78,22 +78,22 @@ export function tryParseListingFavoriteRecord(
       subject: d.subject,
       createdAt: d.createdAt,
     },
-  }
+  };
 }
 
 function atUriForFavorite(did: string, rkey: string) {
-  return `at://${did}/${COLLECTION.listingFavorite}/${rkey}`
+  return `at://${did}/${COLLECTION.listingFavorite}/${rkey}`;
 }
 
 /** Upsert `store_listing_favorites` from Tap (`fyi.atstore.listing.favorite`). */
 export async function upsertListingFavoriteFromTap(input: {
-  db: Database
-  did: string
-  rkey: string
-  record: FyiAtstoreListingFavorite
+  db: Database;
+  did: string;
+  rkey: string;
+  record: FyiAtstoreListingFavorite;
 }) {
-  const { db, did, rkey, record } = input
-  const atUri = atUriForFavorite(did, rkey)
+  const { db, did, rkey, record } = input;
+  const atUri = atUriForFavorite(did, rkey);
 
   const [listing] = await db
     .select({ id: schema.storeListings.id })
@@ -104,16 +104,16 @@ export async function upsertListingFavoriteFromTap(input: {
         eq(schema.storeListings.migratedFromAtUri, record.subject),
       ),
     )
-    .limit(1)
+    .limit(1);
 
   if (!listing) {
     console.warn(
       `[tap-favorite] skip favorite - no store_listings row for subject=${record.subject} did=${did} rkey=${rkey}`,
-    )
-    return
+    );
+    return;
   }
 
-  const favoriteCreatedAt = new Date(record.createdAt)
+  const favoriteCreatedAt = new Date(record.createdAt);
   await db
     .insert(schema.storeListingFavorites)
     .values({
@@ -135,17 +135,17 @@ export async function upsertListingFavoriteFromTap(input: {
         favoriteCreatedAt,
         updatedAt: new Date(),
       },
-    })
+    });
 
-  await recomputeListingTrending(db, listing.id)
+  await recomputeListingTrending(db, listing.id);
 }
 
 export async function deleteListingFavoriteFromTap(input: {
-  db: Database
-  did: string
-  rkey: string
+  db: Database;
+  did: string;
+  rkey: string;
 }) {
-  const { db, did, rkey } = input
+  const { db, did, rkey } = input;
 
   const deleted = await db
     .delete(schema.storeListingFavorites)
@@ -155,9 +155,9 @@ export async function deleteListingFavoriteFromTap(input: {
         eq(schema.storeListingFavorites.rkey, rkey),
       ),
     )
-    .returning({ storeListingId: schema.storeListingFavorites.storeListingId })
+    .returning({ storeListingId: schema.storeListingFavorites.storeListingId });
 
   for (const row of deleted) {
-    await recomputeListingTrending(db, row.storeListingId)
+    await recomputeListingTrending(db, row.storeListingId);
   }
 }

@@ -66,7 +66,7 @@ function HomePageHeroPage() {
     directoryListingApi.getDirectoryListingAppTagAssignmentsQueryOptions,
   );
   const [busy, setBusy] = useState(false);
-  const [heroListingIds, setHeroListingIds] = useState<string[]>(() =>
+  const [heroListingIds, setHeroListingIds] = useState<Array<string>>(() =>
     Array.from({ length: HOME_HERO_SLOT_COUNT }, () => ""),
   );
   const [heroError, setHeroError] = useState<string | null>(null);

@@ -161,7 +161,7 @@ export const APP_TAG_EMOJI: Record<string, string> = {
  * mixed casing or extra whitespace.
  */
 export function normalizeAppTagKey(tag: string): string {
-  return tag.trim().toLowerCase().replace(/\s+/g, " ");
+  return tag.trim().toLowerCase().replaceAll(/\s+/g, " ");
 }
 
 export function getAppTagAccent(tag: string): AppTagAccent {

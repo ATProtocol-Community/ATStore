@@ -1,13 +1,16 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
+  Link as RouterLink,
   createFileRoute,
   createLink,
-  Link as RouterLink,
   useRouter,
 } from "@tanstack/react-router";
 import { ChevronLeft, SearchX } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useFocusRing } from "react-aria";
+
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Avatar } from "../design-system/avatar";
@@ -26,6 +29,7 @@ import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
 import { Select, SelectItem } from "../design-system/select";
 import { StarRating } from "../design-system/star-rating";
+import { blue } from "../design-system/theme/colors/blue.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
@@ -34,16 +38,12 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import {
-  directoryListingApi,
-  type DirectoryListingCard,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { formatAppTagLabel } from "../lib/app-tag-metadata";
 import { getDirectoryCategoryOption } from "../lib/directory-categories";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getInitials } from "../lib/get-initials";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { blue } from "../design-system/theme/colors/blue.stylex";
-import { useFocusRing } from "react-aria";
 
 const LinkLink = createLink(Link);
 
@@ -110,8 +110,8 @@ const styles = stylex.create({
     maxWidth: "44rem",
   },
   listingGrid: {
-    display: "grid",
     gap: gap["xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -131,30 +131,36 @@ const styles = stylex.create({
     paddingTop: verticalSpace["4xl"],
   },
   listingLink: {
+    gap: gap["4xl"],
+    outline: "none",
+    textDecoration: "none",
     color: "inherit",
     display: "flex",
-    flex: 1,
+    flexBasis: "0%",
     flexDirection: "column",
-    gap: gap["4xl"],
+    flexGrow: "1",
+    flexShrink: "1",
     minHeight: 0,
-    textDecoration: "none",
-    outline: "none",
   },
   listingCardFocus: {
     borderColor: blue.border3,
   },
   content: {
-    display: "flex",
-    flex: 1,
-    flexDirection: "column",
     gap: gap["4xl"],
+    display: "flex",
+    flexBasis: "0%",
+    flexDirection: "column",
+    flexGrow: "1",
+    flexShrink: "1",
     minHeight: 0,
   },
   listingHeader: {
     gap: gap["2xl"],
   },
   listingInfo: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
   listingTagline: {
@@ -165,11 +171,8 @@ const styles = stylex.create({
   },
   listingTags: {
     flexWrap: "wrap",
-    maxWidth: "100%",
     rowGap: gap.sm,
-  },
-  listingTagLink: {
-    textDecoration: "none",
+    maxWidth: "100%",
   },
   listingFooterRating: {
     flexShrink: 0,
@@ -376,7 +379,7 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
             </Flex>
             <Flex align="center" gap="sm" style={styles.listingFooterRating}>
               <SmallBody variant="secondary">
-                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
+                {listing.rating == null ? "—" : listing.rating.toFixed(1)}
               </SmallBody>
               <StarRating
                 rating={listing.rating}
@@ -389,14 +392,6 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
       </Card>
     </RouterLink>
   );
-}
-
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
 }
 
 function getResultsLabel(

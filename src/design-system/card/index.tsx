@@ -69,9 +69,10 @@ const styles = stylex.create({
         'description action'
       `,
     },
-    gap: "calc(var(--card-gap) * 0.5)",
     alignItems: "center",
+    columnGap: "calc(var(--card-gap) * 0.5)",
     display: "grid",
+    rowGap: "calc(var(--card-gap) * 0.5)",
   },
   headerBorder: {
     borderColor: uiColor.component2,
@@ -81,23 +82,18 @@ const styles = stylex.create({
     paddingBottom: verticalSpace["3xl"],
   },
   cardHeaderAction: {
+    gap: gap["xs"],
+    display: "flex",
     gridColumnEnd: "action",
     gridColumnStart: "action",
     gridRowEnd: "action",
     gridRowStart: "action",
-    gap: gap["xs"],
-    display: "flex",
     justifyContent: "flex-end",
   },
   cardTitle: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
-    gridColumnEnd: "title",
-    gridColumnStart: "title",
-    gridRowEnd: "title",
-    gridRowStart: "title",
     gap: gap["xl"],
     alignItems: "center",
     display: "flex",
@@ -108,26 +104,29 @@ const styles = stylex.create({
       ":is([data-card-size='sm'] *)": fontSize["base"],
     },
     fontWeight: fontWeight["bold"],
+    gridColumnEnd: "title",
+    gridColumnStart: "title",
+    gridRowEnd: "title",
+    gridRowStart: "title",
   },
   cardDescription: {
+    fontSize: fontSize["sm"],
+    fontWeight: fontWeight["normal"],
     gridColumnEnd: "description",
     gridColumnStart: "description",
     gridRowEnd: "description",
     gridRowStart: "description",
+    lineHeight: lineHeight["sm"],
     marginBottom: 0,
     marginLeft: 0,
-    fontSize: fontSize["sm"],
     marginRight: 0,
-    fontWeight: fontWeight["normal"],
     marginTop: 0,
-    lineHeight: lineHeight["sm"],
   },
   cardBody: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
-    gap: "calc(var(--card-gap) * 0.5)",
+    columnGap: "calc(var(--card-gap) * 0.5)",
     display: "flex",
     flexDirection: "column",
     fontSize: {
@@ -135,6 +134,7 @@ const styles = stylex.create({
       ":is([data-card-size='md'] *)": fontSize["base"],
       ":is([data-card-size='sm'] *)": fontSize["xs"],
     },
+    rowGap: "calc(var(--card-gap) * 0.5)",
   },
   cardFooter: {
     gap: gap["md"],

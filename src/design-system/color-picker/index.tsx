@@ -46,23 +46,23 @@ const ColorSpaceContext = createContext<ColorSpace>("hsb");
 
 const styles = stylex.create({
   button: {
+    borderWidth: 0,
+    gap: {
+      default: gap["md"],
+      ":is([data-size=sm])": sizeSpace["xxs"],
+    },
+    alignItems: "center",
+    backgroundColor: "transparent",
+    display: "flex",
+    fontSize: fontSize["sm"],
     marginBottom: 0,
     marginLeft: 0,
     marginRight: 0,
     marginTop: 0,
     paddingBottom: 0,
     paddingLeft: 0,
-    borderWidth: 0,
     paddingRight: 0,
-    gap: {
-      default: gap["md"],
-      ":is([data-size=sm])": sizeSpace["xxs"],
-    },
     paddingTop: 0,
-    alignItems: "center",
-    backgroundColor: "transparent",
-    display: "flex",
-    fontSize: fontSize["sm"],
   },
   root: {
     display: "block",

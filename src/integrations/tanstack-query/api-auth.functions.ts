@@ -1,80 +1,85 @@
-import type { ActorIdentifier } from '@atcute/lexicons'
+import type { ActorIdentifier } from "@atcute/lexicons";
 
-import { queryOptions } from '@tanstack/react-query'
-import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-import { z } from 'zod'
-
-import { atprotoOAuth } from '#/integrations/auth/atproto'
-import { sanitizeAuthRedirectTarget } from '#/utils/auth-redirect'
-import { getSavedHandles } from '#/utils/saved-handles'
+import { queryOptions } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { atprotoOAuth } from "#/integrations/auth/atproto";
+import { sanitizeAuthRedirectTarget } from "#/utils/auth-redirect";
+import { getSavedHandles } from "#/utils/saved-handles";
+import { z } from "zod";
 
 const authorizeInputSchema = z.object({
-  handle: z.string().min(1, 'Handle is required'),
+  handle: z.string().min(1, "Handle is required"),
   redirect: z.string().optional(),
-})
+});
 
-const authorize = createServerFn({ method: 'GET' })
+const authorize = createServerFn({ method: "GET" })
   .inputValidator(authorizeInputSchema)
   .handler(async ({ data }) => {
-    const request = getRequest()
-    const handle = data.handle.replace(/^@/, '').trim() as ActorIdentifier
-    const redirectTarget = sanitizeAuthRedirectTarget(data.redirect, request.url)
+    const request = getRequest();
+    const handle = data.handle.replace(/^@/, "").trim() as ActorIdentifier;
+    const redirectTarget = sanitizeAuthRedirectTarget(
+      data.redirect,
+      request.url,
+    );
 
     const { url } = await atprotoOAuth.authorize({
       target: {
-        type: 'account',
+        type: "account",
         identifier: handle,
       },
       state: {
         redirect: redirectTarget,
         handle,
       },
-    })
+    });
 
-    return { authorizationUrl: url.toString() }
-  })
+    return { authorizationUrl: url.toString() };
+  });
 
 const singupInputSchema = z.object({
   redirect: z.string().optional(),
-})
+});
 
-const singup = createServerFn({ method: 'GET' })
+const singup = createServerFn({ method: "GET" })
   .inputValidator(singupInputSchema)
   .handler(async ({ data }) => {
-    const request = getRequest()
-    const redirectTarget = sanitizeAuthRedirectTarget(data.redirect, request.url)
+    const request = getRequest();
+    const redirectTarget = sanitizeAuthRedirectTarget(
+      data.redirect,
+      request.url,
+    );
 
     const { url } = await atprotoOAuth.authorize({
-      prompt: 'create',
+      prompt: "create",
       target: {
-        type: 'pds',
-        serviceUrl: 'https://selfhosted.social/',
+        type: "pds",
+        serviceUrl: "https://selfhosted.social/",
       },
       state: {
         redirect: redirectTarget,
       },
-    })
+    });
 
-    return { authorizationUrl: url.toString() }
-  })
+    return { authorizationUrl: url.toString() };
+  });
 
-const getSavedHandlesServer = createServerFn({ method: 'GET' }).handler(() => {
-  const request = getRequest()
-  const cookieHeader = request.headers.get('cookie')
-  return getSavedHandles(cookieHeader)
-})
+const getSavedHandlesServer = createServerFn({ method: "GET" }).handler(() => {
+  const request = getRequest();
+  const cookieHeader = request.headers.get("cookie");
+  return getSavedHandles(cookieHeader);
+});
 
 const getSavedHandlesQueryOptions = queryOptions({
-  queryKey: ['savedHandles'],
+  queryKey: ["savedHandles"],
   queryFn: async () => {
-    return await getSavedHandlesServer()
+    return await getSavedHandlesServer();
   },
-})
+});
 
 export const auth = {
   authorize,
   singup,
   getSavedHandles: getSavedHandlesServer,
   getSavedHandlesQueryOptions,
-}
+};

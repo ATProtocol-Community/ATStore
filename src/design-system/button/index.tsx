@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import type { ButtonProps as AriaButtonProps } from "react-aria-components";
 
 import * as stylex from "@stylexjs/stylex";
@@ -15,9 +16,8 @@ import { useButtonStyles } from "../theme/useButtonStyles";
 
 const styles = stylex.create({
   content: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
     gap: gap["md"],
     alignItems: "center",
@@ -71,17 +71,8 @@ export const Button = ({
     onPress?.(e);
   };
 
-  const Component = isHref ? AriaLink : AriaButton;
-
-  return (
-    <Component
-      {...(props as any)}
-      onPress={handlePress}
-      {...stylex.props(buttonStyles, isHref && styles.link, style)}
-      data-size={size}
-      data-pending={isPending || undefined}
-      isDisabled={isDisabled || isPending}
-    >
+  const content = (
+    <>
       {isPending && (
         <ProgressCircle
           isIndeterminate
@@ -95,6 +86,36 @@ export const Button = ({
       >
         {children}
       </span>
-    </Component>
+    </>
+  );
+
+  const sx = stylex.props(buttonStyles, isHref && styles.link, style);
+
+  if (isHref) {
+    return (
+      <AriaLink
+        {...(props as ComponentProps<typeof AriaLink>)}
+        onPress={handlePress}
+        {...sx}
+        data-size={size}
+        data-pending={isPending || undefined}
+        isDisabled={isDisabled || isPending}
+      >
+        {content}
+      </AriaLink>
+    );
+  }
+
+  return (
+    <AriaButton
+      {...(props as ComponentProps<typeof AriaButton>)}
+      onPress={handlePress}
+      {...sx}
+      data-size={size}
+      data-pending={isPending || undefined}
+      isDisabled={isDisabled || isPending}
+    >
+      {content}
+    </AriaButton>
   );
 };

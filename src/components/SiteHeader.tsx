@@ -2,8 +2,6 @@ import * as stylex from "@stylexjs/stylex";
 import { createLink, useRouterState } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 
-import { AtStoreLogo } from "./AtStoreLogo";
-import { NavbarAuth } from "./NavbarAuth";
 import { IconButton } from "../design-system/icon-button";
 import {
   Navbar,
@@ -14,7 +12,8 @@ import {
 } from "../design-system/navbar";
 import { containerBreakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
-import { gap } from "../design-system/theme/semantic-spacing.stylex";
+import { AtStoreLogo } from "./AtStoreLogo";
+import { NavbarAuth } from "./NavbarAuth";
 
 const NavbarLogoLink = createLink(NavbarLogo);
 const NavbarLinkLink = createLink(NavbarLink);
@@ -22,11 +21,12 @@ const IconButtonLink = createLink(IconButton);
 
 const styles = stylex.create({
   logoContent: {
+    textDecoration: "none",
     alignItems: "center",
+    columnGap: "8px",
     display: "flex",
     fontSize: fontSize["2xl"],
-    gap: "8px",
-    textDecoration: "none",
+    rowGap: "8px",
   },
   mobileSearchLink: {
     display: {
@@ -39,9 +39,6 @@ const styles = stylex.create({
       default: "none",
       [containerBreakpoints.sm]: "inline-flex",
     },
-  },
-  navbarAction: {
-    gap: gap["lg"],
   },
 });
 

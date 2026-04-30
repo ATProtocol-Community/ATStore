@@ -1,10 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
 import { Monitor, Moon, Sun } from "lucide-react";
 
+import type { ThemeMode } from "../lib/theme";
+
 import { MenuItem, SubMenu } from "../design-system/menu";
 import { uiColor } from "../design-system/theme/color.stylex";
+import { isThemeMode } from "../lib/theme";
 import { useTheme } from "../lib/ThemeContext";
-import { isThemeMode, type ThemeMode } from "../lib/theme";
 
 const styles = stylex.create({
   currentMode: {

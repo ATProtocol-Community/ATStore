@@ -76,28 +76,8 @@ const styles = stylex.create({
     },
   },
   tab: {
-    paddingBottom: {
-      ":is([data-size=lg] *)": sizeSpace["md"],
-      ":is([data-size=md] *)": sizeSpace["xxs"],
-      ":is([data-size=sm] *)": sizeSpace["sm"],
-    },
-    paddingLeft: {
-      ":is([data-size=lg] *)": sizeSpace["lg"],
-      ":is([data-size=md] *)": sizeSpace["md"],
-      ":is([data-size=sm] *)": sizeSpace["xxs"],
-    },
     borderWidth: 0,
-    paddingRight: {
-      ":is([data-size=lg] *)": sizeSpace["lg"],
-      ":is([data-size=md] *)": sizeSpace["md"],
-      ":is([data-size=sm] *)": sizeSpace["xxs"],
-    },
     outline: "none",
-    paddingTop: {
-      ":is([data-size=lg] *)": sizeSpace["md"],
-      ":is([data-size=md] *)": sizeSpace["xxs"],
-      ":is([data-size=sm] *)": sizeSpace["sm"],
-    },
     alignItems: "center",
     backgroundColor: "transparent",
     color: {
@@ -124,6 +104,26 @@ const styles = stylex.create({
       [mediaQueries.reducedMotion]: "none",
     },
     transitionTimingFunction: "ease-in-out",
+    paddingBottom: {
+      ":is([data-size=lg] *)": sizeSpace["md"],
+      ":is([data-size=md] *)": sizeSpace["xxs"],
+      ":is([data-size=sm] *)": sizeSpace["sm"],
+    },
+    paddingLeft: {
+      ":is([data-size=lg] *)": sizeSpace["lg"],
+      ":is([data-size=md] *)": sizeSpace["md"],
+      ":is([data-size=sm] *)": sizeSpace["xxs"],
+    },
+    paddingRight: {
+      ":is([data-size=lg] *)": sizeSpace["lg"],
+      ":is([data-size=md] *)": sizeSpace["md"],
+      ":is([data-size=sm] *)": sizeSpace["xxs"],
+    },
+    paddingTop: {
+      ":is([data-size=lg] *)": sizeSpace["md"],
+      ":is([data-size=md] *)": sizeSpace["xxs"],
+      ":is([data-size=sm] *)": sizeSpace["sm"],
+    },
   },
   selectionIndicator: {
     backgroundColor: "transparent",
@@ -182,6 +182,12 @@ const styles = stylex.create({
     },
   },
   tabPanel: {
+    outline: "none",
+    fontSize: {
+      ":is([data-size=lg] *)": fontSize["lg"],
+      ":is([data-size=md] *)": fontSize["base"],
+      ":is([data-size=sm] *)": fontSize["sm"],
+    },
     paddingBottom: {
       ":is([data-size=lg] *)": sizeSpace["lg"],
       ":is([data-size=md] *)": sizeSpace["md"],
@@ -192,16 +198,10 @@ const styles = stylex.create({
       ":is([data-size=md] *)": sizeSpace["md"],
       ":is([data-size=sm] *)": sizeSpace["xxs"],
     },
-    outline: "none",
     paddingRight: {
       ":is([data-size=lg] *)": sizeSpace["lg"],
       ":is([data-size=md] *)": sizeSpace["md"],
       ":is([data-size=sm] *)": sizeSpace["xxs"],
-    },
-    fontSize: {
-      ":is([data-size=lg] *)": fontSize["lg"],
-      ":is([data-size=md] *)": fontSize["base"],
-      ":is([data-size=sm] *)": fontSize["sm"],
     },
     paddingTop: {
       ":is([data-size=lg] *)": sizeSpace["lg"],

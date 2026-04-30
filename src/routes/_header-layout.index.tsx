@@ -1,17 +1,19 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
+  Link as RouterLink,
   createFileRoute,
   createLink,
   useNavigate,
 } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import { Link as RouterLink } from "@tanstack/react-router";
+
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { AppTagCard } from "../components/AppTagCard";
-import { HeroImage } from "../components/HeroImage";
 import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
+import { HeroImage } from "../components/HeroImage";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
@@ -20,14 +22,21 @@ import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
+import { StarRating } from "../design-system/star-rating";
+import {
+  animationDuration,
+  animationTimingFunction,
+} from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
+import { fontSize } from "../design-system/theme/typography.stylex";
 import {
   Body,
   Heading1,
@@ -35,18 +44,11 @@ import {
   SmallBody,
 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import {
-  directoryListingApi,
-  type DirectoryListingCard,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import { fontSize } from "../design-system/theme/typography.stylex";
-import { StarRating } from "../design-system/star-rating";
-import { animationDuration } from "../design-system/theme/animations.stylex";
-import { animationTimingFunction } from "../design-system/theme/animations.stylex";
 
 export const Route = createFileRoute("/_header-layout/")({
   loader: async ({ context }) => {
@@ -74,80 +76,49 @@ const styles = stylex.create({
   sectionHeaderAction: {
     flexShrink: 0,
   },
-  protocolHeader: {
-    paddingTop: verticalSpace["8xl"],
-  },
   headerDescription: {
     maxWidth: "41rem",
   },
   bentoLink: {
     textDecoration: "none",
     display: "block",
-    height: "100%",
     position: "relative",
     zIndex: 1,
+    height: "100%",
   },
   bentoLinkFeatured: {
     zIndex: 0,
   },
   newCardLink: {
+    borderRadius: radius.lg,
+    cornerShape: "squircle",
+    textDecoration: "none",
     boxShadow: shadow.md,
     display: "block",
-    height: "100%",
-    textDecoration: "none",
-    transitionProperty: "transform",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
     transform: {
       default: "none",
       ":hover": "translateY(-2px)",
     },
-    borderRadius: radius.lg,
-    cornerShape: "squircle",
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "transform",
+    transitionTimingFunction: "ease-in-out",
+    height: "100%",
 
-    "::before": {
-      content: "''",
-      position: "absolute",
-      inset: 0,
-      boxShadow: shadow.lg,
-      borderRadius: radius.lg,
-      cornerShape: "squircle",
-      opacity: 0,
-      transitionProperty: "opacity",
-      transitionDuration: "0.2s",
-      transitionTimingFunction: "ease-in-out",
-    },
     ":hover::before": {
       opacity: 1,
     },
-  },
-  promoRatingRow: {
-    marginBottom: verticalSpace["2xl"],
-  },
-  categoryCardContent: {
-    flexGrow: 1,
-    position: "relative",
-    zIndex: 1,
-  },
-  categoryCardImage: {
-    height: "100%",
-    inset: 0,
-    objectFit: "cover",
-    opacity: 0.78,
-    position: "absolute",
-    width: "100%",
-  },
-  categoryCardOverlay: {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 18%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 46%, transparent) 48%, color-mix(in srgb, ${uiColor.overlayBackdrop} 88%, transparent) 100%)`,
-    inset: 0,
-    position: "absolute",
-  },
-  categoryCardFooter: {
-    position: "relative",
-    zIndex: 1,
-  },
-  categoryDescription: {
-    color: uiColor.textContrast,
+    "::before": {
+      inset: 0,
+      borderRadius: radius.lg,
+      cornerShape: "squircle",
+      boxShadow: shadow.lg,
+      content: "''",
+      opacity: 0,
+      position: "absolute",
+      transitionDuration: animationDuration.slow,
+      transitionProperty: "opacity",
+      transitionTimingFunction: "ease-in-out",
+    },
   },
   compactCardContentText: {
     flexGrow: 1,
@@ -166,36 +137,6 @@ const styles = stylex.create({
       [breakpoints.sm]: verticalSpace["8xl"],
     },
   },
-  shellHeader: {
-    backdropFilter: "blur(24px) saturate(180%)",
-    backgroundColor: `color-mix(in srgb, ${uiColor.bg} 82%, transparent)`,
-    borderBottomColor: `color-mix(in srgb, ${uiColor.border1} 60%, transparent)`,
-    borderBottomStyle: "solid",
-    borderBottomWidth: 1,
-    position: "sticky",
-    top: 0,
-    zIndex: 20,
-  },
-  shellHeaderContent: {
-    boxSizing: "border-box",
-    marginLeft: "auto",
-    marginRight: "auto",
-    maxWidth: "var(--page-content-max-width)",
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["2xl"],
-    width: "100%",
-  },
-  shellHeaderText: {
-    minWidth: 0,
-  },
-  shellHeaderTitle: {
-    display: "block",
-  },
-  shellHeaderDescription: {
-    maxWidth: "42rem",
-  },
   pageSections: {
     gap: {
       default: 40,
@@ -203,10 +144,10 @@ const styles = stylex.create({
     },
   },
   section: {
-    width: "100%",
+    gap: gap["2xl"],
     display: "flex",
     flexDirection: "column",
-    gap: gap["2xl"],
+    width: "100%",
   },
   accentCard: {
     borderRadius: radius["3xl"],
@@ -216,155 +157,103 @@ const styles = stylex.create({
     overflow: "hidden",
     position: "relative",
   },
-  heroCard: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "flex-end",
-    boxShadow: shadow["2xl"],
-    height: "100%",
-    borderColor: uiColor.border1,
-    borderStyle: "solid",
-    borderWidth: 2,
-  },
   spotlightCardShadow: {
-    position: "relative",
-    boxShadow: shadow.xl,
     borderRadius: radius.xl,
     cornerShape: "squircle",
+    boxShadow: shadow.xl,
+    position: "relative",
 
-    "::before": {
-      content: "''",
-      position: "absolute",
-      inset: 0,
-      boxShadow: shadow.xl,
-      borderRadius: radius.xl,
-      cornerShape: "squircle",
-      opacity: 0,
-      transitionProperty: "opacity",
-      transitionDuration: animationDuration.default,
-      transitionTimingFunction: animationTimingFunction.linear,
-    },
     ":hover::before": {
       opacity: 1,
+    },
+    "::before": {
+      inset: 0,
+      borderRadius: radius.xl,
+      cornerShape: "squircle",
+      boxShadow: shadow.xl,
+      content: "''",
+      opacity: 0,
+      position: "absolute",
+      transitionDuration: animationDuration.default,
+      transitionProperty: "opacity",
+      transitionTimingFunction: animationTimingFunction.linear,
     },
   },
   spotlightCard: {
-    boxShadow: shadow.none,
-    height: "100%",
     borderRadius: radius["xl"],
-    transitionProperty: "transform",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
+    boxShadow: shadow.none,
     transform: {
       default: "none",
       ":hover": "translateY(-2px)",
     },
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "transform",
+    transitionTimingFunction: "ease-in-out",
+    height: "100%",
   },
   promoCard: {
-    color: uiColor.text2,
-    height: "100%",
-    boxShadow: shadow.none,
+    borderColor: uiColor.component2,
     borderRadius: radius["lg"],
     borderStyle: "solid",
     borderWidth: 1,
-    borderColor: uiColor.component2,
-    transitionProperty: "transform",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
+    boxShadow: shadow.none,
+    color: uiColor.text2,
     transform: {
       default: "none",
       ":hover": "translateY(-2px)",
     },
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "transform",
+    transitionTimingFunction: "ease-in-out",
+    height: "100%",
   },
   promoCardShadow: {
-    position: "relative",
-    boxShadow: shadow.md,
     borderRadius: radius.lg,
     cornerShape: "squircle",
+    boxShadow: shadow.md,
+    position: "relative",
 
-    "::before": {
-      content: "''",
-      position: "absolute",
-      inset: 0,
-      boxShadow: shadow.lg,
-      borderRadius: radius.lg,
-      cornerShape: "squircle",
-      opacity: 0,
-      transitionProperty: "opacity",
-      transitionDuration: animationDuration.default,
-      transitionTimingFunction: animationTimingFunction.linear,
-    },
     ":hover::before": {
       opacity: 1,
     },
-  },
-  accentOverlay: {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 12%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent) 46%, color-mix(in srgb, ${uiColor.overlayBackdrop} 100%, transparent) 100%)`,
-    inset: 0,
-    position: "absolute",
-  },
-  heroOverlay: {
-    background: `linear-gradient(90deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 88%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 78%, transparent) 34%, color-mix(in srgb, ${uiColor.overlayBackdrop} 38%, transparent) 68%, color-mix(in srgb, ${uiColor.overlayBackdrop} 16%, transparent) 100%), linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 20%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 18%, transparent) 32%, color-mix(in srgb, ${uiColor.overlayBackdrop} 96%, transparent) 100%)`,
-  },
-  ambientGlow: {
-    filter: "blur(12px)",
-    opacity: 0.55,
-    position: "absolute",
-    right: "-3rem",
-    top: "-2rem",
-  },
-  ambientGlowInner: {
-    borderRadius: radius.full,
-    height: "9rem",
-    width: "9rem",
-  },
-  cardContent: {
-    display: "flex",
-    flexDirection: "column",
-    gap: gap["3xl"],
-    height: "100%",
-    justifyContent: "flex-end",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-    position: "relative",
-    zIndex: 1,
-  },
-  heroContent: {
-    maxWidth: "34rem",
-    backdropFilter: "blur(12px)",
-    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 48%, transparent)`,
-    borderRadius: radius["xl"],
-    height: "fit-content",
-    margin: verticalSpace["2xl"],
-    display: "flex",
-    flexDirection: "column",
-    gap: gap["4xl"],
+    "::before": {
+      inset: 0,
+      borderRadius: radius.lg,
+      cornerShape: "squircle",
+      boxShadow: shadow.lg,
+      content: "''",
+      opacity: 0,
+      position: "absolute",
+      transitionDuration: animationDuration.default,
+      transitionProperty: "opacity",
+      transitionTimingFunction: animationTimingFunction.linear,
+    },
   },
   compactCardContent: {
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
-    height: "100%",
     justifyContent: "flex-start",
+    position: "relative",
+    zIndex: 1,
+    height: "100%",
     paddingBottom: verticalSpace["3xl"],
     paddingLeft: horizontalSpace["3xl"],
     paddingRight: horizontalSpace["3xl"],
     paddingTop: verticalSpace["3xl"],
-    position: "relative",
-    zIndex: 1,
   },
   promoCardBody: {
     boxSizing: "border-box",
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     justifyContent: "flex-start",
+    position: "relative",
+    zIndex: 1,
     paddingBottom: verticalSpace["3xl"],
     paddingLeft: horizontalSpace["3xl"],
     paddingRight: horizontalSpace["3xl"],
     paddingTop: verticalSpace["sm"],
-    position: "relative",
-    zIndex: 1,
   },
   promoCardTagline: {
     flexGrow: 1,
@@ -373,7 +262,6 @@ const styles = stylex.create({
     letterSpacing: "0.16em",
     textTransform: "uppercase",
   },
-  heroIntro: {},
   heroTitle: {
     display: "block",
     maxWidth: "18ch",
@@ -382,141 +270,92 @@ const styles = stylex.create({
     margin: 0,
     maxWidth: "32rem",
   },
-  heroMetaRow: {
-    flexWrap: "wrap",
-  },
-  protocolLinks: {
-    flexWrap: "wrap",
-  },
   sectionHeader: {
     marginBottom: verticalSpace["3xl"],
   },
   sectionHeaderText: {
-    minWidth: 0,
+    gap: gap["2xl"],
     display: "flex",
     flexDirection: "column",
-    gap: gap["2xl"],
+    minWidth: 0,
   },
   categoriesGrid: {
-    display: "grid",
     gap: gap["2xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "repeat(2, minmax(0, 1fr))",
       [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
     },
   },
-  categoryCard: {
-    borderRadius: radius.xl,
-    borderStyle: "solid",
-    borderWidth: 1,
-    boxShadow: shadow.lg,
-    color: "white",
-    cornerShape: "squircle",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["4xl"],
-    position: "relative",
-    textDecoration: "none",
-    gap: gap["8xl"],
-    overflow: "hidden",
-  },
-  categoryIcon: {
-    alignItems: "center",
-    backdropFilter: "blur(10px)",
-    backgroundColor: `color-mix(in srgb, ${uiColor.component1} 36%, transparent)`,
-    borderColor: `color-mix(in srgb, ${uiColor.border1} 65%, transparent)`,
-    borderRadius: radius.md,
-    borderStyle: "solid",
-    borderWidth: 1,
-    display: "inline-flex",
-    height: "2.5rem",
-    justifyContent: "center",
-    width: "2.5rem",
-  },
-  categoryChevron: {
-    marginLeft: "auto",
-  },
   popularGrid: {
-    display: "grid",
     gap: gap["3xl"],
+    display: "grid",
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.lg]: "minmax(0, 1.2fr) minmax(18rem, 0.9fr)",
     },
   },
   popularList: {
-    backgroundColor: uiColor.bg,
-    borderRadius: radius.xl,
     padding: verticalSpace["2xl"],
-    cornerShape: "squircle",
+    borderColor: uiColor.component2,
+    borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
-    borderColor: uiColor.component2,
-  },
-  listCard: {
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["2xl"],
-    paddingRight: horizontalSpace["2xl"],
-    paddingTop: verticalSpace["2xl"],
+    cornerShape: "squircle",
+    backgroundColor: uiColor.bg,
   },
   listItem: {
-    boxShadow: shadow.none,
-    alignItems: "center",
     borderRadius: radius.md,
-    display: "flex",
     gap: gap["xl"],
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["2xl"],
-    paddingTop: verticalSpace["2xl"],
+    textDecoration: "none",
+    alignItems: "center",
     backgroundColor: {
       default: uiColor.bg,
       ":hover": uiColor.component2,
     },
-    textDecoration: "none",
+    boxShadow: shadow.none,
     color: uiColor.text2,
-    transitionProperty: "background-color, z-index",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
+    display: "flex",
     position: "relative",
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "background-color, z-index",
+    transitionTimingFunction: "ease-in-out",
     zIndex: {
       default: 0,
       ":hover": 1,
     },
+    paddingBottom: verticalSpace["2xl"],
+    paddingLeft: horizontalSpace["4xl"],
+    paddingRight: horizontalSpace["2xl"],
+    paddingTop: verticalSpace["2xl"],
 
-    "::after": {
-      content: "''",
-      position: "absolute",
-      inset: 0,
-      boxShadow: shadow.lg,
-      borderRadius: radius.md,
-      opacity: 0,
-      transitionProperty: "opacity",
-      transitionDuration: "0.2s",
-      transitionTimingFunction: "ease-in-out",
-    },
     ":hover::after": {
       opacity: 1,
+    },
+    "::after": {
+      inset: 0,
+      borderRadius: radius.md,
+      boxShadow: shadow.lg,
+      content: "''",
+      opacity: 0,
+      position: "absolute",
+      transitionDuration: animationDuration.slow,
+      transitionProperty: "opacity",
+      transitionTimingFunction: "ease-in-out",
     },
   },
   rankNumber: {
     minWidth: "1.25rem",
   },
   listItemText: {
-    flex: 1,
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
     minWidth: 0,
   },
-  ratingRow: {
-    alignItems: "center",
-    flexGrow: 1,
-  },
   newGrid: {
-    display: "grid",
     gap: gap["lg"],
+    display: "grid",
     gridTemplateColumns: {
       default: "1fr",
       [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
@@ -524,9 +363,9 @@ const styles = stylex.create({
     },
   },
   newCard: {
-    height: "100%",
     boxShadow: shadow.none,
     position: "relative",
+    height: "100%",
   },
   newCardContent: {
     display: "flex",
@@ -538,26 +377,9 @@ const styles = stylex.create({
     paddingTop: verticalSpace["4xl"],
   },
   spacer: {
-    flex: 1,
-  },
-  dock: {
-    backdropFilter: "blur(18px)",
-    backgroundColor: `color-mix(in srgb, ${uiColor.bg} 84%, transparent)`,
-    borderColor: `color-mix(in srgb, ${uiColor.border1} 60%, transparent)`,
-    borderRadius: radius.md,
-    borderStyle: "solid",
-    borderWidth: 1,
-    boxShadow: `${shadow.lg}, 0 18px 48px color-mix(in srgb, ${uiColor.overlayBackdrop} 42%, transparent)`,
-    marginLeft: "auto",
-    marginRight: "auto",
-    paddingBottom: verticalSpace["sm"],
-    paddingLeft: horizontalSpace["sm"],
-    paddingRight: horizontalSpace["sm"],
-    paddingTop: verticalSpace["sm"],
-    width: "fit-content",
-  },
-  dockButton: {
-    minWidth: "4.5rem",
+    flexBasis: "0%",
+    flexGrow: "1",
+    flexShrink: "1",
   },
   exploreButton: {
     borderRadius: radius.full,
@@ -600,7 +422,7 @@ function HomePage() {
             }
           >
             {claimCount === 1
-              ? `“${claimEligibility.listings[0]!.name}” is still on the store repo. Claim it to manage updates from your PDS.`
+              ? `“${(claimEligibility.listings[0]?.name ?? "").trim() || "Listing"}” is still on the store repo. Claim it to manage updates from your PDS.`
               : `You have ${String(claimCount)} listings on the store repo. Claim them to manage updates from your PDS.`}
           </Alert>
         ) : null}
@@ -715,20 +537,22 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
   let action: React.ReactNode;
 
   switch (to) {
-    case "/apps/all":
+    case "/apps/all": {
       action = (
         <AppLink to="/apps/all" search={search}>
           See All <ChevronRight />
         </AppLink>
       );
       break;
-    case "/apps/tags":
+    }
+    case "/apps/tags": {
       action = (
         <AppLink to="/apps/tags">
           See All <ChevronRight />
         </AppLink>
       );
       break;
+    }
   }
 
   return (
@@ -944,14 +768,6 @@ function StoreIcon({
   );
 }
 
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
-}
-
 function getListingMetadataLabel(listing: DirectoryListingCard) {
   const categoryLabel = formatMetadataLabel(listing.category);
   const listingName = formatMetadataLabel(listing.name);
@@ -969,7 +785,10 @@ function getListingMetadataLabel(listing: DirectoryListingCard) {
 }
 
 function formatMetadataLabel(value: string) {
-  const normalized = value.trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+  const normalized = value
+    .trim()
+    .replaceAll(/[_-]+/g, " ")
+    .replaceAll(/\s+/g, " ");
   if (normalized.length === 0) {
     return value;
   }

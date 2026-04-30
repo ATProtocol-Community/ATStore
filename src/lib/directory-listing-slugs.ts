@@ -5,8 +5,7 @@ type DirectoryListingSlugSource = {
 };
 
 const DIRECTORY_LISTING_SLUG_OVERRIDES_BY_SOURCE_URL: Record<string, string> = {
-  "https://blueskydirectory.com/utilities/byesky":
-    "byesky",
+  "https://blueskydirectory.com/utilities/byesky": "byesky",
   "https://blueskydirectory.com/utilities/byesky-6884fa611293d":
     "byesky-github",
 };
@@ -17,13 +16,13 @@ const DIRECTORY_LISTING_ID_PATTERN =
 export function slugifyDirectoryListingName(name: string) {
   const slug = name
     .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replaceAll(/[\u0300-\u036F]/g, "")
     .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replaceAll("&", " and ")
+    .replaceAll(/['’]/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-+|-+$/g, "");
 
   return slug || "product";
 }
@@ -47,7 +46,7 @@ export function getDirectoryListingHref(listing: DirectoryListingSlugSource) {
 }
 
 export function getLegacyDirectoryListingId(pathSegment: string) {
-  const normalizedValue = pathSegment.trim().replace(/^\/+|\/+$/g, "");
+  const normalizedValue = pathSegment.trim().replaceAll(/^\/+|\/+$/g, "");
 
   if (DIRECTORY_LISTING_ID_PATTERN.test(normalizedValue)) {
     return normalizedValue;

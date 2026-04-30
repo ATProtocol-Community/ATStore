@@ -1,18 +1,14 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
+  Outlet,
   createFileRoute,
   createLink,
-  Outlet,
   redirect,
 } from "@tanstack/react-router";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import type { SidebarItemProps } from "../design-system/sidebar";
 
-import {
-  Sidebar,
-  SidebarItem,
-  SidebarSection,
-  type SidebarItemProps,
-} from "../design-system/sidebar";
+import { Sidebar, SidebarItem, SidebarSection } from "../design-system/sidebar";
 import { SidebarLayout } from "../design-system/sidebar-layout";
 import { adminApi } from "../integrations/tanstack-query/api-admin.functions";
 import { user as userApi } from "../integrations/tanstack-query/api-user.functions";
@@ -42,8 +38,8 @@ export const Route = createFileRoute("/_header-layout/_admin-layout")({
 });
 
 function SidebarItemIgnoreStyleAndClassName({
-  style,
-  className,
+  style: _style,
+  className: _className,
   ...props
 }: SidebarItemProps) {
   return <SidebarItem {...props} />;

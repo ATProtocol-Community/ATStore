@@ -1,6 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
+import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
+import { user } from "#/integrations/tanstack-query/api-user.functions";
+import { useNotificationReadState } from "#/lib/notification-read-state";
 import { LogOut, Shield } from "lucide-react";
 
 import { AvatarButton } from "../design-system/avatar";
@@ -9,13 +12,9 @@ import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
 import { criticalColor } from "../design-system/theme/color.stylex";
-import { size } from "../design-system/theme/semantic-spacing.stylex";
-import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
-import { user } from "#/integrations/tanstack-query/api-user.functions";
-import { useNotificationReadState } from "#/lib/notification-read-state";
-
-import { ThemeSubMenu } from "./ThemeMenu";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { size } from "../design-system/theme/semantic-spacing.stylex";
+import { ThemeSubMenu } from "./ThemeMenu";
 
 const ButtonLink = createLink(Button);
 
@@ -25,14 +24,14 @@ const styles = stylex.create({
     position: "relative",
   },
   unreadDot: {
-    backgroundColor: criticalColor.solid1,
     borderColor: "white",
     borderRadius: "999px",
     borderStyle: "solid",
     borderWidth: 2,
-    height: size.xs,
+    backgroundColor: criticalColor.solid1,
     pointerEvents: "none",
     position: "absolute",
+    height: size.xs,
     right: "-2px",
     top: "-2px",
     width: size.xs,

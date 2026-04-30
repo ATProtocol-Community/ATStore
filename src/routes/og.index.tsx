@@ -1,11 +1,10 @@
-import satori from "satori";
 import { createFileRoute } from "@tanstack/react-router";
-
 import {
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
   renderOg,
 } from "#/lib/render-og.server";
+import satori from "satori";
 
 const OG_WIDTH = OG_IMAGE_WIDTH;
 const OG_HEIGHT = OG_IMAGE_HEIGHT;
@@ -72,9 +71,9 @@ function getQueryText(
  */
 function stripEmoji(value: string) {
   const withoutEmoji = value
-    .replace(/\p{Extended_Pictographic}/gu, "")
-    .replace(/\p{Emoji_Component}/gu, "");
-  const collapsedWhitespace = withoutEmoji.replace(/\s+/g, " ").trim();
+    .replaceAll(/\p{Extended_Pictographic}/gu, "")
+    .replaceAll(/\p{Emoji_Component}/gu, "");
+  const collapsedWhitespace = withoutEmoji.replaceAll(/\s+/g, " ").trim();
   return collapsedWhitespace || "ATStore";
 }
 
@@ -172,7 +171,7 @@ export const Route = createFileRoute("/og/")({
                   ATStore
                 </div>
               </div>
-              {!titleIsBrand ? (
+              {titleIsBrand ? null : (
                 <div
                   style={{
                     color: "white",
@@ -188,7 +187,7 @@ export const Route = createFileRoute("/og/")({
                 >
                   {title}
                 </div>
-              ) : null}
+              )}
               <div
                 style={{
                   color: "rgba(255, 255, 255, 0.92)",

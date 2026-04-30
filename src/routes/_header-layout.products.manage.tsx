@@ -14,9 +14,6 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Badge } from "../design-system/badge";
-import { Button } from "../design-system/button";
-import { IconButton } from "../design-system/icon-button";
 import {
   AlertDialog,
   AlertDialogActionButton,
@@ -25,8 +22,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from "../design-system/alert-dialog";
+import { Badge } from "../design-system/badge";
+import { Button } from "../design-system/button";
 import { Card, CardBody } from "../design-system/card";
 import { Flex } from "../design-system/flex";
+import { IconButton } from "../design-system/icon-button";
 import { Menu, MenuItem } from "../design-system/menu";
 import { Page } from "../design-system/page";
 import {
@@ -63,19 +63,19 @@ const styles = stylex.create({
   },
   section: {
     boxSizing: "border-box",
+    maxWidth: "48rem",
+    paddingBottom: verticalSpace["5xl"],
     paddingLeft: horizontalSpace.xl,
     paddingRight: horizontalSpace.xl,
     paddingTop: verticalSpace["5xl"],
-    paddingBottom: verticalSpace["5xl"],
-    maxWidth: "48rem",
     width: "100%",
   },
   listStack: {
     gap: gap.xl,
   },
   rowTop: {
-    alignItems: "flex-start",
     gap: gap.xl,
+    alignItems: "flex-start",
     justifyContent: "space-between",
     width: "100%",
   },
@@ -87,20 +87,20 @@ const styles = stylex.create({
   icon: {
     borderRadius: "10px",
     flexShrink: 0,
-    height: "48px",
     objectFit: "cover",
+    height: "48px",
     width: "48px",
   },
   /** Inert trigger so `AlertDialog` can be opened only via `isOpen` (e.g. from the menu). */
   dialogTriggerPlaceholder: {
-    borderWidth: 0,
-    clip: "rect(0, 0, 0, 0)",
-    height: 1,
     margin: -1,
-    overflow: "hidden",
     padding: 0,
+    borderWidth: 0,
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
     position: "absolute",
     whiteSpace: "nowrap",
+    height: 1,
     width: 1,
   },
 });
@@ -112,22 +112,26 @@ function statusBadgeVariant(status: string): "warning" | "critical" {
 
 function verificationLabel(status: string) {
   switch (status) {
-    case "verified":
+    case "verified": {
       return "Live";
-    case "unverified":
+    }
+    case "unverified": {
       return "Pending review";
-    case "rejected":
+    }
+    case "rejected": {
       return "Rejected";
-    default:
+    }
+    default: {
       return status;
+    }
   }
 }
 
 function splitListingsByVerification<T extends { verificationStatus: string }>(
-  rows: T[],
-): { live: T[]; pendingOrRejected: T[] } {
-  const live: T[] = [];
-  const pendingOrRejected: T[] = [];
+  rows: Array<T>,
+): { live: Array<T>; pendingOrRejected: Array<T> } {
+  const live: Array<T> = [];
+  const pendingOrRejected: Array<T> = [];
   for (const row of rows) {
     if (row.verificationStatus === "verified") {
       live.push(row);

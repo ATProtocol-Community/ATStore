@@ -2,7 +2,15 @@ import * as stylex from "@stylexjs/stylex";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
+import type { DirectoryAppTagSummary } from "../integrations/tanstack-query/api-directory-listings.functions";
+import type { AppTagAccent } from "../lib/app-tag-visuals";
+
 import { Flex } from "../design-system/flex";
+import {
+  animationDuration,
+  animationTimingFunction,
+} from "../design-system/theme/animations.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
 import { amber } from "../design-system/theme/colors/amber.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { bronze } from "../design-system/theme/colors/bronze.stylex";
@@ -21,7 +29,6 @@ import { sky } from "../design-system/theme/colors/sky.stylex";
 import { teal } from "../design-system/theme/colors/teal.stylex";
 import { tomato } from "../design-system/theme/colors/tomato.stylex";
 import { violet } from "../design-system/theme/colors/violet.stylex";
-import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
@@ -30,54 +37,45 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { Text } from "../design-system/typography/text";
-import { type DirectoryAppTagSummary } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   formatAppTagCount,
   formatAppTagLabel,
   getAppTagSlug,
 } from "../lib/app-tag-metadata";
-import {
-  type AppTagAccent,
-  getAppTagAccent,
-  getAppTagEmoji,
-} from "../lib/app-tag-visuals";
-import {
-  animationDuration,
-  animationTimingFunction,
-} from "../design-system/theme/animations.stylex";
+import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
 
 const styles = stylex.create({
   cardLink: {
+    borderRadius: radius["2xl"],
+    cornerShape: "squircle",
     textDecoration: "none",
+    boxShadow: shadow.md,
     display: "flex",
     flexDirection: "column",
-    transitionProperty: "transform",
-    transitionDuration: "0.2s",
-    transitionTimingFunction: "ease-in-out",
     transform: {
       default: "none",
       ":hover": "translateY(-2px)",
     },
-    boxShadow: shadow.md,
-    borderRadius: radius["2xl"],
-    cornerShape: "squircle",
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "transform",
+    transitionTimingFunction: "ease-in-out",
   },
   card: {
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
-    color: "white",
     cornerShape: "squircle",
+    gap: gap["8xl"],
+    color: "white",
     display: "flex",
     flexDirection: "column",
-    gap: gap["8xl"],
+    flexGrow: 1,
     justifyContent: "space-between",
     position: "relative",
     paddingBottom: verticalSpace["2xl"],
     paddingLeft: horizontalSpace["3xl"],
     paddingRight: horizontalSpace["3xl"],
     paddingTop: verticalSpace["4xl"],
-    flexGrow: 1,
 
     /**
      * Drives the emoji-scatter parallax: 0 → 1 on hover. Each emoji's `transform` reads this
@@ -94,20 +92,20 @@ const styles = stylex.create({
   cardShadow: {
     position: "relative",
 
-    "::before": {
-      content: "''",
-      position: "absolute",
-      inset: 0,
-      borderRadius: radius.xl,
-      boxShadow: shadow["xl"],
-      cornerShape: "squircle",
-      opacity: 0,
-      transitionProperty: "opacity",
-      transitionDuration: animationDuration.default,
-      transitionTimingFunction: animationTimingFunction.linear,
-    },
     ":hover::before": {
       opacity: 1,
+    },
+    "::before": {
+      inset: 0,
+      borderRadius: radius.xl,
+      cornerShape: "squircle",
+      boxShadow: shadow["xl"],
+      content: "''",
+      opacity: 0,
+      position: "absolute",
+      transitionDuration: animationDuration.default,
+      transitionProperty: "opacity",
+      transitionTimingFunction: animationTimingFunction.linear,
     },
   },
   cardContent: {
@@ -119,99 +117,86 @@ const styles = stylex.create({
     position: "relative",
     zIndex: 1,
   },
-  cardImage: {
-    height: "100%",
-    inset: 0,
-    objectFit: "cover",
-    opacity: 0.64,
-    position: "absolute",
-    width: "100%",
-  },
-  cardOverlay: {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${uiColor.overlayBackdrop} 34%, transparent) 0%, color-mix(in srgb, ${uiColor.overlayBackdrop} 62%, transparent) 48%, color-mix(in srgb, ${uiColor.overlayBackdrop} 92%, transparent) 100%)`,
-    inset: 0,
-    position: "absolute",
-  },
   footerText: {
     color: uiColor.textContrast,
     textShadow: "0 1px 2px rgb(0 0 0 / 0.45)",
   },
   chevron: {
     color: uiColor.textContrast,
-    marginLeft: "auto",
     filter: "drop-shadow(0 1px 2px rgb(0 0 0 / 0.45))",
+    marginLeft: "auto",
   },
   softAmberSurface: {
-    backgroundImage: `linear-gradient(135deg, ${amber.border2} 0%, ${amber.solid1} 100%)`,
     borderColor: amber.border1,
+    backgroundImage: `linear-gradient(135deg, ${amber.border2} 0%, ${amber.solid1} 100%)`,
   },
   softBlueSurface: {
-    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
     borderColor: blue.border1,
+    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
   },
   softBronzeSurface: {
-    backgroundImage: `linear-gradient(135deg, ${bronze.border2} 0%, ${bronze.solid1} 100%)`,
     borderColor: bronze.border1,
+    backgroundImage: `linear-gradient(135deg, ${bronze.border2} 0%, ${bronze.solid1} 100%)`,
   },
   softCrimsonSurface: {
-    backgroundImage: `linear-gradient(135deg, ${crimson.border2} 0%, ${crimson.solid1} 100%)`,
     borderColor: crimson.border1,
+    backgroundImage: `linear-gradient(135deg, ${crimson.border2} 0%, ${crimson.solid1} 100%)`,
   },
   softCyanSurface: {
-    backgroundImage: `linear-gradient(135deg, ${cyan.border2} 0%, ${cyan.solid1} 100%)`,
     borderColor: cyan.border1,
+    backgroundImage: `linear-gradient(135deg, ${cyan.border2} 0%, ${cyan.solid1} 100%)`,
   },
   softGrassSurface: {
-    backgroundImage: `linear-gradient(135deg, ${grass.border2} 0%, ${grass.solid1} 100%)`,
     borderColor: grass.border1,
+    backgroundImage: `linear-gradient(135deg, ${grass.border2} 0%, ${grass.solid1} 100%)`,
   },
   softIndigoSurface: {
-    backgroundImage: `linear-gradient(135deg, ${indigo.border2} 0%, ${indigo.solid1} 100%)`,
     borderColor: indigo.border1,
+    backgroundImage: `linear-gradient(135deg, ${indigo.border2} 0%, ${indigo.solid1} 100%)`,
   },
   softIrisSurface: {
-    backgroundImage: `linear-gradient(135deg, ${iris.border2} 0%, ${iris.solid1} 100%)`,
     borderColor: iris.border1,
+    backgroundImage: `linear-gradient(135deg, ${iris.border2} 0%, ${iris.solid1} 100%)`,
   },
   softJadeSurface: {
-    backgroundImage: `linear-gradient(135deg, ${jade.border2} 0%, ${jade.solid1} 100%)`,
     borderColor: jade.border1,
+    backgroundImage: `linear-gradient(135deg, ${jade.border2} 0%, ${jade.solid1} 100%)`,
   },
   softOrangeSurface: {
-    backgroundImage: `linear-gradient(135deg, ${orange.border2} 0%, ${orange.solid1} 100%)`,
     borderColor: orange.border1,
+    backgroundImage: `linear-gradient(135deg, ${orange.border2} 0%, ${orange.solid1} 100%)`,
   },
   softPinkSurface: {
-    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
     borderColor: pink.border1,
+    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
   },
   softPlumSurface: {
-    backgroundImage: `linear-gradient(135deg, ${plum.border2} 0%, ${plum.solid1} 100%)`,
     borderColor: plum.border1,
+    backgroundImage: `linear-gradient(135deg, ${plum.border2} 0%, ${plum.solid1} 100%)`,
   },
   softPurpleSurface: {
-    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
     borderColor: purple.border1,
+    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
   },
   softRubySurface: {
-    backgroundImage: `linear-gradient(135deg, ${ruby.border2} 0%, ${ruby.solid1} 100%)`,
     borderColor: ruby.border1,
+    backgroundImage: `linear-gradient(135deg, ${ruby.border2} 0%, ${ruby.solid1} 100%)`,
   },
   softSkySurface: {
-    backgroundImage: `linear-gradient(135deg, ${sky.border2} 0%, ${sky.solid1} 100%)`,
     borderColor: sky.border1,
+    backgroundImage: `linear-gradient(135deg, ${sky.border2} 0%, ${sky.solid1} 100%)`,
   },
   softTealSurface: {
-    backgroundImage: `linear-gradient(135deg, ${teal.border2} 0%, ${teal.solid1} 100%)`,
     borderColor: teal.border1,
+    backgroundImage: `linear-gradient(135deg, ${teal.border2} 0%, ${teal.solid1} 100%)`,
   },
   softTomatoSurface: {
-    backgroundImage: `linear-gradient(135deg, ${tomato.border2} 0%, ${tomato.solid1} 100%)`,
     borderColor: tomato.border1,
+    backgroundImage: `linear-gradient(135deg, ${tomato.border2} 0%, ${tomato.solid1} 100%)`,
   },
   softVioletSurface: {
-    backgroundImage: `linear-gradient(135deg, ${violet.border2} 0%, ${violet.solid1} 100%)`,
     borderColor: violet.border1,
+    backgroundImage: `linear-gradient(135deg, ${violet.border2} 0%, ${violet.solid1} 100%)`,
   },
   title: {
     color: uiColor.textContrast,
@@ -232,8 +217,8 @@ const styles = stylex.create({
     lineHeight: 1,
     pointerEvents: "none",
     position: "absolute",
+    transitionDuration: animationDuration.extremelySlow,
     transitionProperty: "transform",
-    transitionDuration: "500ms",
     transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
     userSelect: "none",
     zIndex: 0,
@@ -256,27 +241,27 @@ const styles = stylex.create({
    */
   emojiSlot1: {
     fontSize: "4.25em",
-    left: "36%",
     opacity: 0.22,
-    top: "12%",
     transform:
       "translate(calc(var(--emoji-hover) * 3px), calc(var(--emoji-hover) * -11px)) rotate(-16deg)",
+    left: "36%",
+    top: "12%",
   },
   emojiSlot2: {
     fontSize: "5.5em",
     opacity: 0.18,
-    right: "-1.6rem",
-    top: "38%",
     transform:
       "translate(calc(var(--emoji-hover) * 13px), calc(var(--emoji-hover) * -3px)) rotate(11deg)",
+    right: "-1.6rem",
+    top: "38%",
   },
   emojiSlot3: {
-    bottom: "16%",
     fontSize: "3em",
-    left: "22%",
     opacity: 0.24,
     transform:
       "translate(calc(var(--emoji-hover) * -9px), calc(var(--emoji-hover) * 9px)) rotate(24deg)",
+    bottom: "16%",
+    left: "22%",
   },
   /**
    * Slots 4 + 5 are only mounted on featured (2×2) cards — the extra real estate would otherwise
@@ -286,31 +271,31 @@ const styles = stylex.create({
    */
   emojiSlot4: {
     fontSize: "3.75em",
-    left: "4%",
     opacity: 0.2,
-    top: "26%",
     transform:
       "translate(calc(var(--emoji-hover) * -8px), calc(var(--emoji-hover) * -7px)) rotate(18deg)",
+    left: "4%",
+    top: "26%",
   },
   emojiSlot5: {
-    bottom: "28%",
     fontSize: "2.5em",
     opacity: 0.26,
-    right: "30%",
     transform:
       "translate(calc(var(--emoji-hover) * 7px), calc(var(--emoji-hover) * 11px)) rotate(-22deg)",
+    bottom: "28%",
+    right: "30%",
   },
   /**
    * Wrapper that establishes the `em` reference for slot sizes and is the single knob to scale
    * the whole scatter (featured cards bump this).
    */
   emojiBackdrop: {
-    fontSize: "1rem",
     inset: 0,
+    overflow: "hidden",
+    fontSize: "1rem",
     pointerEvents: "none",
     position: "absolute",
     zIndex: 0,
-    overflow: "hidden",
   },
   emojiBackdropFeatured: {
     fontSize: "1.5rem",
@@ -407,41 +392,59 @@ export function AppTagCard({ tag, isFeatured }: AppTagCardProps) {
 
 function getSoftAccentSurface(accent: AppTagAccent) {
   switch (accent) {
-    case "amber":
+    case "amber": {
       return styles.softAmberSurface;
-    case "blue":
+    }
+    case "blue": {
       return styles.softBlueSurface;
-    case "bronze":
+    }
+    case "bronze": {
       return styles.softBronzeSurface;
-    case "crimson":
+    }
+    case "crimson": {
       return styles.softCrimsonSurface;
-    case "cyan":
+    }
+    case "cyan": {
       return styles.softCyanSurface;
-    case "grass":
+    }
+    case "grass": {
       return styles.softGrassSurface;
-    case "indigo":
+    }
+    case "indigo": {
       return styles.softIndigoSurface;
-    case "iris":
+    }
+    case "iris": {
       return styles.softIrisSurface;
-    case "jade":
+    }
+    case "jade": {
       return styles.softJadeSurface;
-    case "orange":
+    }
+    case "orange": {
       return styles.softOrangeSurface;
-    case "pink":
+    }
+    case "pink": {
       return styles.softPinkSurface;
-    case "plum":
+    }
+    case "plum": {
       return styles.softPlumSurface;
-    case "purple":
+    }
+    case "purple": {
       return styles.softPurpleSurface;
-    case "ruby":
+    }
+    case "ruby": {
       return styles.softRubySurface;
-    case "sky":
+    }
+    case "sky": {
       return styles.softSkySurface;
-    case "teal":
+    }
+    case "teal": {
       return styles.softTealSurface;
-    case "tomato":
+    }
+    case "tomato": {
       return styles.softTomatoSurface;
-    case "violet":
+    }
+    case "violet": {
       return styles.softVioletSurface;
+    }
   }
 }

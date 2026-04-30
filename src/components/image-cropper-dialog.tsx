@@ -1,10 +1,8 @@
 "use client";
 
-import * as stylex from "@stylexjs/stylex";
-import { ZoomInIcon, ZoomOutIcon } from "lucide-react";
-import { useState } from "react";
-
 import type { ImageCropperRootProps } from "#/design-system/image-cropper";
+
+import * as stylex from "@stylexjs/stylex";
 import { Button } from "#/design-system/button";
 import {
   Dialog,
@@ -21,26 +19,28 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "#/design-system/theme/semantic-spacing.stylex";
+import { ZoomInIcon, ZoomOutIcon } from "lucide-react";
+import { useState } from "react";
 
 const hiddenTriggerStyles = stylex.create({
   trigger: {
-    borderStyle: "none",
-    clip: "rect(0, 0, 0, 0)",
-    height: 1,
     margin: -1,
-    overflow: "hidden",
     padding: 0,
+    borderStyle: "none",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
     position: "fixed",
+    height: 1,
     width: 1,
   },
 });
 
 const styles = stylex.create({
   body: {
+    gap: gapSpace["2xl"],
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
-    gap: gapSpace["2xl"],
     marginTop: 0,
     minHeight: 0,
   },

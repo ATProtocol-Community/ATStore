@@ -10,10 +10,14 @@ import { ChevronLeft, SearchX } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppTagHero } from "../components/AppTagHero";
+import { ecosystemListingGridStyles } from "../components/ecosystem-listing-grid.styles";
+import { EcosystemListingCard } from "../components/EcosystemListingCard";
 import {
-  EcosystemListingCard,
-  ecosystemListingGridStyles,
-} from "../components/EcosystemListingCard";
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateImage,
+  EmptyStateTitle,
+} from "../design-system/empty-state";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
@@ -35,12 +39,6 @@ import {
   pickListingImageForCategoryBranch,
 } from "../lib/ecosystem-listings";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import {
-  EmptyState,
-  EmptyStateDescription,
-  EmptyStateImage,
-  EmptyStateTitle,
-} from "../design-system/empty-state";
 
 const AppLink = createLink(Link);
 const sortOptions = [

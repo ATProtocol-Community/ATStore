@@ -129,6 +129,10 @@ export const animationDuration = stylex.defineConsts({
   slow: "200ms",
   verySlow: "300ms",
   extremelySlow: "500ms",
+  /** Skeleton row shimmer (intentionally slower than UI transitions). */
+  shimmer: "1.7s",
+  /** Progress bar/circle indeterminate sweep cycle. */
+  indeterminateCycle: "1s",
 });
 
 export const animationTimingFunction = stylex.defineConsts({

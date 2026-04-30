@@ -1,12 +1,11 @@
+import type { ProductListingFormSubmitValues } from "#/components/product-listing-form";
+
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { ProductListingForm } from "#/components/product-listing-form";
 import { useState } from "react";
 
-import {
-  ProductListingForm,
-  type ProductListingFormSubmitValues,
-} from "#/components/product-listing-form";
 import { Alert } from "../design-system/alert";
 import {
   AlertDialog,
@@ -25,6 +24,7 @@ import { Blockquote, Heading1 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
+import { blobToBase64 } from "../lib/blob-to-base64";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 const styles = stylex.create({
@@ -37,36 +37,12 @@ const styles = stylex.create({
     width: "100%",
   },
   section: {
+    paddingBottom: verticalSpace["5xl"],
     paddingLeft: horizontalSpace.xl,
     paddingRight: horizontalSpace.xl,
     paddingTop: verticalSpace["5xl"],
-    paddingBottom: verticalSpace["5xl"],
-  },
-  copy: {},
-  alert: {
-    maxWidth: "36rem",
-    width: "100%",
   },
 });
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const s = reader.result;
-      if (typeof s !== "string") {
-        reject(new Error("Could not read image."));
-        return;
-      }
-      const comma = s.indexOf(",");
-      resolve(comma >= 0 ? s.slice(comma + 1) : s);
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Could not read image."));
-    };
-    reader.readAsDataURL(blob);
-  });
-}
 
 export const Route = createFileRoute("/_header-layout/products/create")({
   loader: async ({ context }) => {

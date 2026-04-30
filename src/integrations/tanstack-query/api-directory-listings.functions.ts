@@ -1,6 +1,58 @@
-import { queryOptions } from '@tanstack/react-query'
-import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
+import type { Database } from "#/db/index.server";
+import type { StoreListing } from "#/db/schema";
+import type { ListingLink } from "#/lib/atproto/listing-record";
+import type { SQL } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+
+import { queryOptions } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import * as dbSchema from "#/db/schema";
+import { parseAtUriParts } from "#/lib/atproto/at-uri";
+import {
+  LISTING_LINK_LABEL_MAX_LENGTH,
+  LISTING_LINK_MAX_COUNT,
+  LISTING_LINK_URL_MAX_LENGTH,
+  buildListingDetailRecordWithBlobs,
+  normalizeListingLinks,
+} from "#/lib/atproto/listing-record";
+import { COLLECTION, NSID } from "#/lib/atproto/nsids";
+import { protocolRecordImageUrlOrNull } from "#/lib/atproto/protocol-record-image-url";
+import {
+  createAtstorePublishClient,
+  getAtstoreRepoDid,
+  publishDirectoryListingDetail,
+  publishOwnedListingDetail,
+} from "#/lib/atproto/publish-directory-listing";
+import {
+  createListingDetailRecord,
+  createListingReviewRecord,
+  deleteRecord,
+  fetchListingDetailRecord,
+  putListingFavoriteRecord,
+  putListingReviewRecord,
+} from "#/lib/atproto/repo-records";
+import { resolveUrlToImageBytes } from "#/lib/atproto/resolve-image-bytes";
+import { upsertListingReviewFromTap } from "#/lib/atproto/tap-review-sync";
+import {
+  fetchBlueskyHandleForDid,
+  fetchBlueskyPublicProfileFields,
+  resolveBlueskyHandleToDid,
+} from "#/lib/bluesky-public-profile";
+import { bskyAppPostUrlFromAtUri } from "#/lib/bsky-app-urls";
+import { geminiFlashGenerateImageFromPromptAndImage } from "#/lib/gemini-flash-image-gen";
+import { buildIconPolishFromSiteAssetPrompt } from "#/lib/listing-icon-prompts";
+import { captureListingPageScreenshotForGeneration } from "#/lib/listing-page-screenshot";
+import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
+import {
+  discoverSiteBrandIconAsset,
+  rasterizeBrandIconForGeminiInput,
+} from "#/lib/site-brand-icon";
+import { trendingScoreSortEnabled } from "#/lib/trending/config";
+import {
+  adminFnMiddleware,
+  getAtprotoSessionForRequest,
+} from "#/middleware/auth";
 import {
   and,
   asc,
@@ -13,554 +65,515 @@ import {
   ne,
   or,
   sql,
-} from 'drizzle-orm'
-import type { SQL } from 'drizzle-orm'
-import type { AnyPgColumn } from 'drizzle-orm/pg-core'
-import { z } from 'zod'
+} from "drizzle-orm";
+import { z } from "zod";
 
+import type {
+  DirectoryCategoryAccent,
+  DirectoryCategoryTreeNode,
+} from "../../lib/directory-categories";
+
+import {
+  findAppTagBySlug,
+  formatAppTagLabel,
+} from "../../lib/app-tag-metadata";
 import {
   normalizeAppTags,
   popularTagsFromAllAssignments,
   suggestAppTagsFromListing,
   suggestedTagsForListing,
-} from '../../lib/app-tags'
-import { findAppTagBySlug, formatAppTagLabel } from '../../lib/app-tag-metadata'
+} from "../../lib/app-tags";
+import { resolveBannerRecordUrl } from "../../lib/banner-record-url";
 import {
   buildDirectoryCategoryTree,
-  flattenDirectoryCategoryTree,
   findDirectoryCategoryNode,
+  flattenDirectoryCategoryTree,
   getDirectoryCategoryDescendantIds,
   getDirectoryCategoryOption,
   primaryCategorySlug,
   shouldOmitUrlMentionsForBlueskyPlatformListing,
-  type DirectoryCategoryAccent,
-  type DirectoryCategoryTreeNode,
-} from '../../lib/directory-categories'
-import { findProtocolCategoryBySlugParam } from '../../lib/protocol-category-metadata'
-import {
-  sanitizeListingDescription,
-  sanitizeListingTagline,
-} from '../../lib/listing-copy'
+} from "../../lib/directory-categories";
 import {
   buildDirectoryListingSlug,
   getLegacyDirectoryListingId,
-} from '../../lib/directory-listing-slugs'
-import { resolveBannerRecordUrl } from '../../lib/banner-record-url'
+} from "../../lib/directory-listing-slugs";
 import {
   discoverOgImageUrlFromPage,
   getListingExternalPageUrl,
-} from '../../lib/discover-external-og-image'
-import { buildFallbackOgImageUrl } from '../../lib/og-meta'
+} from "../../lib/discover-external-og-image";
 import {
-  adminFnMiddleware,
-  getAtprotoSessionForRequest,
-} from '#/middleware/auth'
-import { dbMiddleware } from './db-middleware'
-import type { Database } from '#/db/index.server'
-import type { StoreListing } from '#/db/schema'
-import * as dbSchema from '#/db/schema'
-import { COLLECTION, NSID } from '#/lib/atproto/nsids'
-import { parseAtUriParts } from '#/lib/atproto/at-uri'
-import {
-  LISTING_LINK_LABEL_MAX_LENGTH,
-  LISTING_LINK_MAX_COUNT,
-  LISTING_LINK_URL_MAX_LENGTH,
-  buildListingDetailRecordWithBlobs,
-  normalizeListingLinks,
-  type ListingLink,
-} from '#/lib/atproto/listing-record'
-import { resolveUrlToImageBytes } from '#/lib/atproto/resolve-image-bytes'
-import {
-  createAtstorePublishClient,
-  getAtstoreRepoDid,
-  publishDirectoryListingDetail,
-  publishOwnedListingDetail,
-} from '#/lib/atproto/publish-directory-listing'
-import { upsertListingReviewFromTap } from '#/lib/atproto/tap-review-sync'
-import {
-  createListingDetailRecord,
-  createListingReviewRecord,
-  deleteRecord,
-  fetchListingDetailRecord,
-  putListingFavoriteRecord,
-  putListingReviewRecord,
-} from '#/lib/atproto/repo-records'
-import { geminiFlashGenerateImageFromPromptAndImage } from '#/lib/gemini-flash-image-gen'
-import { buildIconPolishFromSiteAssetPrompt } from '#/lib/listing-icon-prompts'
-import { captureListingPageScreenshotForGeneration } from '#/lib/listing-page-screenshot'
-import {
-  discoverSiteBrandIconAsset,
-  rasterizeBrandIconForGeminiInput,
-} from '#/lib/site-brand-icon'
-import {
-  fetchBlueskyHandleForDid,
-  fetchBlueskyPublicProfileFields,
-  resolveBlueskyHandleToDid,
-} from '#/lib/bluesky-public-profile'
-import { findEligibleProductClaimsForDid } from '#/lib/product-claim-eligibility'
-import { protocolRecordImageUrlOrNull } from '#/lib/atproto/protocol-record-image-url'
-import { bskyAppPostUrlFromAtUri } from '#/lib/bsky-app-urls'
-import { trendingScoreSortEnabled } from '#/lib/trending/config'
+  sanitizeListingDescription,
+  sanitizeListingTagline,
+} from "../../lib/listing-copy";
+import { buildFallbackOgImageUrl } from "../../lib/og-meta";
+import { findProtocolCategoryBySlugParam } from "../../lib/protocol-category-metadata";
+import { dbMiddleware } from "./db-middleware";
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
-  rawCategoryHint: sql<string | null>`null::text`.as('rawCategoryHint'),
-  scope: sql<string | null>`null::text`.as('scope'),
-  productType: sql<string | null>`null::text`.as('productType'),
-  domain: sql<string | null>`null::text`.as('domain'),
-  vertical: sql<string | null>`null::text`.as('vertical'),
-  classificationReason: sql<string | null>`null::text`.as('classificationReason'),
-}
+  rawCategoryHint: sql<string | null>`null::text`.as("rawCategoryHint"),
+  scope: sql<string | null>`null::text`.as("scope"),
+  productType: sql<string | null>`null::text`.as("productType"),
+  domain: sql<string | null>`null::text`.as("domain"),
+  vertical: sql<string | null>`null::text`.as("vertical"),
+  classificationReason: sql<string | null>`null::text`.as(
+    "classificationReason",
+  ),
+};
 
-function listingPublicWhere(
-  table: typeof dbSchema.storeListings,
-  extra?: SQL,
-) {
-  const pub = eq(table.verificationStatus, 'verified')
-  return extra ? and(pub, extra) : pub
+function listingPublicWhere(table: typeof dbSchema.storeListings, extra?: SQL) {
+  const pub = eq(table.verificationStatus, "verified");
+  return extra ? and(pub, extra) : pub;
 }
 
 /** "Popular" / trending ordering — uses `trending_score` when enabled, else legacy `updatedAt`. */
 function orderByPopularListingSort(table: typeof dbSchema.storeListings) {
   if (!trendingScoreSortEnabled()) {
-    return [desc(table.updatedAt), desc(table.createdAt)]
+    return [desc(table.updatedAt), desc(table.createdAt)];
   }
   return [
     sql`${table.trendingScore} DESC NULLS LAST`,
     desc(table.updatedAt),
     desc(table.createdAt),
-  ]
+  ];
 }
 
 /** Listing has a two-segment path under `apps/…` or `protocol/…` (e.g. `apps/bluesky`). */
 function sqlCategorySlugsHasRootTwoSegment(
   col: AnyPgColumn,
-  prefix: 'apps' | 'protocol',
+  prefix: "apps" | "protocol",
 ): SQL {
-  const pattern = `${prefix}/%`
+  const pattern = `${prefix}/%`;
   return sql<boolean>`exists (
     select 1 from unnest(${col}) as u(slug)
     where cardinality(string_to_array(trim(both from u.slug::text), '/')) = 2
       and trim(both from u.slug::text) like ${pattern}
-  )`
+  )`;
 }
 
 function sqlCategorySlugsMatchesLike(col: AnyPgColumn, pattern: string): SQL {
   return sql<boolean>`exists (
     select 1 from unnest(${col}) as u(slug) where trim(both from u.slug::text) like ${pattern}
-  )`
+  )`;
 }
 
-function categorySlugsOverlap(a: string[], b: string[]): boolean {
+function categorySlugsOverlap(a: Array<string>, b: Array<string>): boolean {
   if (a.length === 0 || b.length === 0) {
-    return false
+    return false;
   }
-  const bs = new Set(b)
+  const bs = new Set(b);
   for (const x of a) {
     if (bs.has(x)) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 type DirectoryListingRow = {
-  id: string
-  name: string
-  slug: string | null
-  iconUrl: string | null
+  id: string;
+  name: string;
+  slug: string | null;
+  iconUrl: string | null;
   /** Dedicated hero/cover from `store_listings.hero_image_url` (Tap / publish). */
-  heroImageUrl: string | null
-  screenshotUrls: string[]
-  tagline: string | null
-  fullDescription: string | null
-  scope: string | null
-  productType: string | null
-  domain: string | null
-  categorySlugs: string[]
+  heroImageUrl: string | null;
+  screenshotUrls: Array<string>;
+  tagline: string | null;
+  fullDescription: string | null;
+  scope: string | null;
+  productType: string | null;
+  domain: string | null;
+  categorySlugs: Array<string>;
   /** Present when selected from DB; omitted in some test/mocked rows. */
-  appTags?: string[] | null
-  reviewCount: number
-  averageRating: number | null
-  productAccountHandle: string | null
-}
+  appTags?: string[] | null;
+  reviewCount: number;
+  averageRating: number | null;
+  productAccountHandle: string | null;
+};
 
-type CategoryAccent = DirectoryCategoryAccent
+type CategoryAccent = DirectoryCategoryAccent;
 
 export interface DirectoryListingCard {
-  id: string
-  name: string
-  slug?: string | null
-  tagline: string
-  description: string
-  iconUrl: string | null
+  id: string;
+  name: string;
+  slug?: string | null;
+  tagline: string;
+  description: string;
+  iconUrl: string | null;
   /** Resolved hero for cards: `store_listings.hero_image_url`, else first screenshot. */
-  heroImageUrl: string | null
+  heroImageUrl: string | null;
   /** Primary path (first of `categorySlugs`); used for ecosystem/category UI. */
-  categorySlug: string | null
-  categorySlugs: string[]
-  category: string
-  accent: CategoryAccent
+  categorySlug: string | null;
+  categorySlugs: Array<string>;
+  category: string;
+  accent: CategoryAccent;
   /** Mean star rating when there is at least one review; otherwise null. */
-  rating: number | null
-  reviewCount: number
-  priceLabel: string
+  rating: number | null;
+  reviewCount: number;
+  priceLabel: string;
   /** Official product Bluesky handle when set (Postgres mirror of resolved DID). */
-  productAccountHandle: string | null
+  productAccountHandle: string | null;
   /** Editorial app tags (e.g. developer tool, social). */
-  appTags: string[]
+  appTags: Array<string>;
 }
 
 export interface DirectoryListingDetail extends DirectoryListingCard {
   /** Canonical AT URI for `fyi.atstore.listing.detail` when Tap-synced; needed to publish reviews. */
-  atUri: string | null
+  atUri: string | null;
   /**
    * True when the listing record is hosted on the at-store publisher repo (or
    * is not yet on AT proto at all). False once an account other than at-store
    * has claimed the listing and now hosts the record themselves.
    */
-  isStoreManaged: boolean
+  isStoreManaged: boolean;
   /** Official product Bluesky DID (`fyi.atstore.listing.detail`). */
-  productAccountDid: string | null
+  productAccountDid: string | null;
   /** Raw `store_listings.tagline` for owner edit forms (display tagline may fall back to description). */
-  sourceTagline: string | null
+  sourceTagline: string | null;
   /** Raw `store_listings.full_description` for owner edit forms (display `description` is sanitized). */
-  sourceFullDescription: string | null
-  screenshots: string[]
-  externalUrl: string | null
-  sourceUrl: string | null
-  rawCategoryHint: string | null
-  scope: string | null
-  productType: string | null
-  domain: string | null
-  vertical: string | null
-  classificationReason: string | null
-  categoryPathLabel: string | null
-  appTags: string[]
-  createdAt: string | null
-  updatedAt: string | null
+  sourceFullDescription: string | null;
+  screenshots: Array<string>;
+  externalUrl: string | null;
+  sourceUrl: string | null;
+  rawCategoryHint: string | null;
+  scope: string | null;
+  productType: string | null;
+  domain: string | null;
+  vertical: string | null;
+  classificationReason: string | null;
+  categoryPathLabel: string | null;
+  appTags: Array<string>;
+  createdAt: string | null;
+  updatedAt: string | null;
   /** Trust/compliance/support/project links (see `fyi.atstore.listing.detail#link`). */
-  links: ListingLink[]
+  links: Array<ListingLink>;
   /**
    * Only set by `getDirectoryListingDetailForOwnerEdit` — sync with Postgres
    * `verification_status` for routing (e.g. back to Manage when not live).
    */
-  verificationStatus?: string
+  verificationStatus?: string;
 }
 
 export interface DirectoryListingReview {
-  id: string
-  authorDid: string
-  rating: number
-  text: string | null
-  reviewCreatedAt: string
-  authorDisplayName: string | null
-  authorAvatarUrl: string | null
+  id: string;
+  authorDid: string;
+  rating: number;
+  text: string | null;
+  reviewCreatedAt: string;
+  authorDisplayName: string | null;
+  authorAvatarUrl: string | null;
 }
 
 /** Bluesky post stored from Jetstream mention matching. */
 export interface DirectoryListingMention {
-  id: string
-  postUri: string
-  bskyPostUrl: string | null
-  authorDid: string
+  id: string;
+  postUri: string;
+  bskyPostUrl: string | null;
+  authorDid: string;
   /** Resolved from DB and/or public Bluesky profile API. */
-  authorHandle: string | null
+  authorHandle: string | null;
   /** From `app.bsky.actor.getProfile` when available. */
-  authorDisplayName: string | null
-  authorAvatarUrl: string | null
-  postText: string | null
-  postFacets: DirectoryListingPostFacet[] | null
-  postCreatedAt: string
-  matchType: string
-  matchConfidence: number
-  matchEvidence: Record<string, {}> | null
-  postEmbed: DirectoryListingPostEmbed | null
+  authorDisplayName: string | null;
+  authorAvatarUrl: string | null;
+  postText: string | null;
+  postFacets: DirectoryListingPostFacet[] | null;
+  postCreatedAt: string;
+  matchType: string;
+  matchConfidence: number;
+  matchEvidence: Record<string, {}> | null;
+  postEmbed: DirectoryListingPostEmbed | null;
 }
 
 export interface DirectoryListingMentionsResult {
-  mentions: DirectoryListingMention[]
-  total: number
+  mentions: Array<DirectoryListingMention>;
+  total: number;
 }
 
 export interface DirectoryListingPostEmbed {
-  type: 'external_link'
-  uri: string
-  title: string | null
-  description: string | null
-  thumbUrl: string | null
+  type: "external_link";
+  uri: string;
+  title: string | null;
+  description: string | null;
+  thumbUrl: string | null;
 }
 
 export interface DirectoryListingPostFacet {
-  index: { byteStart: number; byteEnd: number }
+  index: { byteStart: number; byteEnd: number };
   features: Array<{
-    $type: string
-    uri?: string
-    did?: string
-    tag?: string
-  }>
+    $type: string;
+    uri?: string;
+    did?: string;
+    tag?: string;
+  }>;
 }
 
 function asNonEmptyString(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const t = value.trim()
-  return t.length > 0 ? t : null
+  if (typeof value !== "string") return null;
+  const t = value.trim();
+  return t.length > 0 ? t : null;
 }
 
 function extractExternalEmbedFromUnknown(
   node: unknown,
 ): DirectoryListingPostEmbed | null {
-  if (!node || typeof node !== 'object') return null
-  const obj = node as Record<string, unknown>
-  const ext = obj.external
-  if (ext && typeof ext === 'object' && !Array.isArray(ext)) {
-    const extObj = ext as Record<string, unknown>
-    const uri = asNonEmptyString(extObj.uri)
+  if (!node || typeof node !== "object") return null;
+  const obj = node as Record<string, unknown>;
+  const ext = obj.external;
+  if (ext && typeof ext === "object" && !Array.isArray(ext)) {
+    const extObj = ext as Record<string, unknown>;
+    const uri = asNonEmptyString(extObj.uri);
     if (uri) {
       return {
-        type: 'external_link',
+        type: "external_link",
         uri,
         title: asNonEmptyString(extObj.title),
         description: asNonEmptyString(extObj.description),
         thumbUrl: asNonEmptyString(extObj.thumb),
-      }
+      };
     }
   }
   return (
     extractExternalEmbedFromUnknown(obj.media) ??
     extractExternalEmbedFromUnknown(obj.embed) ??
     null
-  )
+  );
 }
 
-async function fetchBlueskyPostEmbedsByUri(
-  postUris: string[],
-): Promise<
+async function fetchBlueskyPostEmbedsByUri(postUris: Array<string>): Promise<
   Map<
     string,
     {
-      embed: DirectoryListingPostEmbed | null
-      text: string | null
-      facets: DirectoryListingPostFacet[] | null
+      embed: DirectoryListingPostEmbed | null;
+      text: string | null;
+      facets: DirectoryListingPostFacet[] | null;
     }
   >
 > {
-  const uniqueUris = [...new Set(postUris.map((u) => u.trim()).filter(Boolean))]
-  if (uniqueUris.length === 0) return new Map()
-  const chunks: string[][] = []
+  const uniqueUris = [
+    ...new Set(postUris.map((u) => u.trim()).filter(Boolean)),
+  ];
+  if (uniqueUris.length === 0) return new Map();
+  const chunks: Array<Array<string>> = [];
   for (let i = 0; i < uniqueUris.length; i += 25) {
-    chunks.push(uniqueUris.slice(i, i + 25))
+    chunks.push(uniqueUris.slice(i, i + 25));
   }
   const out = new Map<
     string,
     {
-      embed: DirectoryListingPostEmbed | null
-      text: string | null
-      facets: DirectoryListingPostFacet[] | null
+      embed: DirectoryListingPostEmbed | null;
+      text: string | null;
+      facets: DirectoryListingPostFacet[] | null;
     }
-  >()
+  >();
   try {
     for (const chunk of chunks) {
       const url = new URL(
-        'xrpc/app.bsky.feed.getPosts',
-        'https://public.api.bsky.app',
-      )
+        "xrpc/app.bsky.feed.getPosts",
+        "https://public.api.bsky.app",
+      );
       for (const uri of chunk) {
-        url.searchParams.append('uris', uri)
+        url.searchParams.append("uris", uri);
       }
       const response = await fetch(url.toString(), {
-        headers: { Accept: 'application/json' },
-      })
-      if (!response.ok) continue
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) continue;
       const json = (await response.json()) as {
-        posts?: Array<{ uri?: string; embed?: unknown; record?: unknown }>
-      }
+        posts?: Array<{ uri?: string; embed?: unknown; record?: unknown }>;
+      };
       for (const post of json.posts ?? []) {
-        const uri = asNonEmptyString(post.uri)
-        if (!uri) continue
-        const embed = extractExternalEmbedFromUnknown(post.embed)
+        const uri = asNonEmptyString(post.uri);
+        if (!uri) continue;
+        const embed = extractExternalEmbedFromUnknown(post.embed);
         const record =
-          post.record && typeof post.record === 'object'
+          post.record && typeof post.record === "object"
             ? (post.record as Record<string, unknown>)
-            : null
-        const text = asNonEmptyString(record?.text) ?? null
+            : null;
+        const text = asNonEmptyString(record?.text) ?? null;
         const facetsRaw = Array.isArray(record?.facets)
-          ? (record.facets as unknown[])
-          : null
+          ? (record.facets as Array<unknown>)
+          : null;
         const facets =
           facetsRaw
             ?.map((facet) => {
-              if (!facet || typeof facet !== 'object') return null
-              const f = facet as Record<string, unknown>
+              if (!facet || typeof facet !== "object") return null;
+              const f = facet as Record<string, unknown>;
               const idx =
-                f.index && typeof f.index === 'object'
+                f.index && typeof f.index === "object"
                   ? (f.index as Record<string, unknown>)
-                  : null
+                  : null;
               const byteStart =
-                typeof idx?.byteStart === 'number' ? idx.byteStart : null
-              const byteEnd = typeof idx?.byteEnd === 'number' ? idx.byteEnd : null
+                typeof idx?.byteStart === "number" ? idx.byteStart : null;
+              const byteEnd =
+                typeof idx?.byteEnd === "number" ? idx.byteEnd : null;
               const featuresRaw = Array.isArray(f.features)
-                ? (f.features as unknown[])
-                : null
-              if (byteStart == null || byteEnd == null || !featuresRaw) return null
+                ? (f.features as Array<unknown>)
+                : null;
+              if (byteStart == null || byteEnd == null || !featuresRaw)
+                return null;
               const features = featuresRaw
                 .map((feature) => {
-                  if (!feature || typeof feature !== 'object') return null
-                  const x = feature as Record<string, unknown>
-                  const $type = asNonEmptyString(x.$type)
-                  if (!$type) return null
+                  if (!feature || typeof feature !== "object") return null;
+                  const x = feature as Record<string, unknown>;
+                  const $type = asNonEmptyString(x.$type);
+                  if (!$type) return null;
                   return {
                     $type,
                     uri: asNonEmptyString(x.uri) ?? undefined,
                     did: asNonEmptyString(x.did) ?? undefined,
                     tag: asNonEmptyString(x.tag) ?? undefined,
-                  }
+                  };
                 })
-                .filter((v): v is NonNullable<typeof v> => v != null)
-              if (features.length === 0) return null
-              return { index: { byteStart, byteEnd }, features }
+                .filter((v): v is NonNullable<typeof v> => v != null);
+              if (features.length === 0) return null;
+              return { index: { byteStart, byteEnd }, features };
             })
-            .filter((v): v is NonNullable<typeof v> => v != null) ?? null
+            .filter((v): v is NonNullable<typeof v> => v != null) ?? null;
         out.set(uri, {
           embed,
           text,
           facets: facets && facets.length > 0 ? facets : null,
-        })
+        });
       }
     }
-    return out
+    return out;
   } catch {
-    return out
+    return out;
   }
 }
 
 /** Listing summary embedded in a review shown on a user profile. */
 export interface DirectoryUserReviewListing {
-  id: string
-  name: string
-  slug: string
-  sourceUrl: string
-  iconUrl: string | null
-  tagline: string | null
+  id: string;
+  name: string;
+  slug: string;
+  sourceUrl: string;
+  iconUrl: string | null;
+  tagline: string | null;
 }
 
 export interface DirectoryUserReview extends DirectoryListingReview {
-  listing: DirectoryUserReviewListing
+  listing: DirectoryUserReviewListing;
 }
 
 export interface UserProfileReviewsPageData {
-  did: string
-  displayName: string | null
-  handle: string | null
-  avatarUrl: string | null
-  reviews: DirectoryUserReview[]
+  did: string;
+  displayName: string | null;
+  handle: string | null;
+  avatarUrl: string | null;
+  reviews: Array<DirectoryUserReview>;
 }
 
 export interface DirectoryUserFavoriteListing {
-  id: string
-  name: string
-  slug: string | null
-  iconUrl: string | null
-  tagline: string | null
-  favoritedAt: string
+  id: string;
+  name: string;
+  slug: string | null;
+  iconUrl: string | null;
+  tagline: string | null;
+  favoritedAt: string;
 }
 
 export interface DirectoryListingFavoriteStatus {
-  isFavorited: boolean
+  isFavorited: boolean;
 }
 
 export interface DirectoryCategorySummary {
-  id: string
-  label: string
-  description: string
-  accent: CategoryAccent
-  count: number
-  pathLabels: string[]
+  id: string;
+  label: string;
+  description: string;
+  accent: CategoryAccent;
+  count: number;
+  pathLabels: Array<string>;
 }
 
 export interface DirectoryCategoryPageData {
-  category: DirectoryCategoryTreeNode
-  listings: DirectoryListingCard[]
+  category: DirectoryCategoryTreeNode;
+  listings: Array<DirectoryListingCard>;
 }
 
 export interface DirectoryAppTagGroup {
-  tag: string
-  count: number
-  listings: DirectoryListingCard[]
+  tag: string;
+  count: number;
+  listings: Array<DirectoryListingCard>;
 }
 
 export interface DirectoryAppTagSummary {
-  tag: string
-  count: number
+  tag: string;
+  count: number;
 }
 
 export interface DirectoryProtocolCategoryGroup {
   /** Full path e.g. `protocol/pds`. */
-  categoryId: string
+  categoryId: string;
   /** Second path segment; used in URLs `/protocol/$segment`. */
-  segment: string
-  label: string
-  description: string
-  count: number
-  listings: DirectoryListingCard[]
+  segment: string;
+  label: string;
+  description: string;
+  count: number;
+  listings: Array<DirectoryListingCard>;
 }
 
 export interface DirectoryProtocolCategorySummary {
-  segment: string
-  label: string
-  count: number
+  segment: string;
+  label: string;
+  count: number;
 }
 
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isUuid(value: string) {
-  return UUID_PATTERN.test(value)
+  return UUID_PATTERN.test(value);
 }
 
 export interface DirectoryListingCategoryAssignment {
-  id: string
-  name: string
-  iconUrl: string | null
-  tagline: string
-  description: string
-  externalUrl: string | null
-  categorySlug: string | null
-  categorySlugs: string[]
-  categoryPathLabel: string | null
-  legacyCategoryHint: string
+  id: string;
+  name: string;
+  iconUrl: string | null;
+  tagline: string;
+  description: string;
+  externalUrl: string | null;
+  categorySlug: string | null;
+  categorySlugs: Array<string>;
+  categoryPathLabel: string | null;
+  legacyCategoryHint: string;
 }
 
 export interface DirectoryListingAppTagAssignment {
-  id: string
-  name: string
-  iconUrl: string | null
-  tagline: string
-  description: string
-  externalUrl: string | null
-  appTags: string[]
-  suggestedTags: string[]
-  categorySlug: string | null
-  categorySlugs: string[]
-  scope: string | null
-  productType: string | null
-  domain: string | null
-  vertical: string | null
-  rawCategoryHint: string | null
+  id: string;
+  name: string;
+  iconUrl: string | null;
+  tagline: string;
+  description: string;
+  externalUrl: string | null;
+  appTags: Array<string>;
+  suggestedTags: Array<string>;
+  categorySlug: string | null;
+  categorySlugs: Array<string>;
+  scope: string | null;
+  productType: string | null;
+  domain: string | null;
+  vertical: string | null;
+  rawCategoryHint: string | null;
 }
 
 export interface DirectoryHomePageData {
-  featured: DirectoryListingCard
-  spotlights: DirectoryListingCard[]
-  popular: DirectoryListingCard[]
-  fresh: DirectoryListingCard[]
-  tags: DirectoryAppTagSummary[]
-  protocolFeatured: DirectoryListingCard
-  protocolSpotlights: DirectoryListingCard[]
-  protocolCategories: DirectoryProtocolCategorySummary[]
+  featured: DirectoryListingCard;
+  spotlights: Array<DirectoryListingCard>;
+  popular: Array<DirectoryListingCard>;
+  fresh: Array<DirectoryListingCard>;
+  tags: Array<DirectoryAppTagSummary>;
+  protocolFeatured: DirectoryListingCard;
+  protocolSpotlights: Array<DirectoryListingCard>;
+  protocolCategories: Array<DirectoryProtocolCategorySummary>;
 }
 
-const CATEGORY_ACCENTS: CategoryAccent[] = ['blue', 'pink', 'purple', 'green']
+const CATEGORY_ACCENTS: Array<CategoryAccent> = [
+  "blue",
+  "pink",
+  "purple",
+  "green",
+];
 
 const listDirectoryListingsInput = z.object({
   limit: z.number().int().min(1).max(24).default(12),
@@ -574,29 +587,29 @@ const listDirectoryListingsInput = z.object({
    * or listing record lives in the user’s repo). Used by `/product/claim` manual search.
    */
   excludeOwnedListingsForSession: z.boolean().optional().default(false),
-})
+});
 
 const listingSortInput = z
-  .enum(['popular', 'newest', 'alphabetical'])
-  .default('popular')
+  .enum(["popular", "newest", "alphabetical"])
+  .default("popular");
 
 const getDirectoryCategoryPageInput = z.object({
   categoryId: z.string().trim().min(1),
   sort: listingSortInput,
-})
+});
 
 const updateDirectoryListingCategoryAssignmentInput = z.object({
   id: z.string().min(1),
   categorySlug: z.string().trim().min(1).nullable(),
-})
+});
 
 const deleteDirectoryListingInput = z.object({
   id: z.string().min(1),
-})
+});
 
 const regenerateDirectoryListingContentInput = z.object({
   id: z.string().min(1),
-})
+});
 
 const commitGeneratedListingImageInput = z.object({
   id: z.string().min(1),
@@ -604,102 +617,107 @@ const commitGeneratedListingImageInput = z.object({
     .string()
     .min(1)
     .max(128)
-    .refine((s) => s.trim().toLowerCase().startsWith('image/'), {
-      message: 'mimeType must be an image/* type',
+    .refine((s) => s.trim().toLowerCase().startsWith("image/"), {
+      message: "mimeType must be an image/* type",
     }),
   imageBase64: z.string().min(1).max(25_000_000),
-})
+});
 
 const updateDirectoryListingAppTagsInput = z.object({
   id: z.string().min(1),
   appTags: z.array(z.string()).max(64),
-})
+});
 
 const getAppsByTagPageInput = z.object({
   tag: z.string().trim().min(1),
   sort: listingSortInput,
-})
+});
 
 const getProtocolCategoryPageInput = z.object({
   category: z.string().trim().min(1),
   sort: listingSortInput,
-})
+});
 
 const getRelatedDirectoryListingsInput = z.object({
   id: z.string().trim().min(1),
   limit: z.number().int().min(1).max(8).default(4),
-})
+});
 
 const getDirectoryListingReviewsInput = z.object({
   id: z.string().min(1),
-})
+});
 
 const getDirectoryListingMentionsInput = z.object({
   id: z.string().min(1),
   limit: z.number().int().min(1).max(50).default(12),
-})
+});
 
 const createDirectoryListingReviewInput = z.object({
   listingId: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
   text: z.string().max(8000).optional().nullable(),
-})
+});
 
 const updateDirectoryListingReviewInput = z.object({
   reviewId: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
   text: z.string().max(8000).optional().nullable(),
-})
+});
 
 const deleteDirectoryListingReviewInput = z.object({
   reviewId: z.string().uuid(),
-})
+});
 
 const getUserProfileReviewsPageDataInput = z.object({
   did: z.string().trim().min(1).max(2048),
-})
+});
 
 const getProfileFavoriteListingsInput = z.object({
   did: z.string().trim().min(1).max(2048),
-})
+});
 
 const listingFavoriteInput = z.object({
   listingId: z.string().uuid(),
-})
+});
 
 function isPlausiblePublicDid(value: string) {
-  const s = value.trim()
-  return s.startsWith('did:') && s.length >= 12 && s.length <= 2048
+  const s = value.trim();
+  return s.startsWith("did:") && s.length >= 12 && s.length <= 2048;
 }
 
-const fallbackCategoryIds = ['apps', 'protocol']
+const fallbackCategoryIds = ["apps", "protocol"];
 
 function formatMetadataLabel(value: string) {
-  const normalized = value.trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ')
+  const normalized = value
+    .trim()
+    .replaceAll(/[_-]+/g, " ")
+    .replaceAll(/\s+/g, " ");
   if (normalized.length === 0) {
-    return 'Utility'
+    return "Utility";
   }
 
   const shouldTitleCase =
-    /[_-]/.test(value) || value === value.toLowerCase() || value === value.toUpperCase()
+    /[_-]/.test(value) ||
+    value === value.toLowerCase() ||
+    value === value.toUpperCase();
 
   if (!shouldTitleCase) {
-    return normalized
+    return normalized;
   }
 
   return normalized
-    .split(' ')
+    .split(" ")
     .map((word) => word[0]?.toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
+    .join(" ");
 }
 
 function toDirectoryCategorySummary(input: {
-  id: string
-  label: string
-  description: string
-  accent: CategoryAccent
-  count: number
-  pathLabels: string[]
+  id: string;
+  label: string;
+  description: string;
+  accent: CategoryAccent;
+  count: number;
+  pathLabels: Array<string>;
 }) {
   return {
     id: input.id,
@@ -708,62 +726,78 @@ function toDirectoryCategorySummary(input: {
     accent: input.accent,
     count: input.count,
     pathLabels: input.pathLabels,
-  } satisfies DirectoryCategorySummary
+  } satisfies DirectoryCategorySummary;
 }
 
-function getListingCategory(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
-  return getDirectoryCategoryOption(primaryCategorySlug(row.categorySlugs))
+function getListingCategory(row: Pick<DirectoryListingRow, "categorySlugs">) {
+  return getDirectoryCategoryOption(primaryCategorySlug(row.categorySlugs));
 }
 
 function getCategoryLabel(
-  row: Pick<DirectoryListingRow, 'scope' | 'productType' | 'domain' | 'categorySlugs'>,
+  row: Pick<
+    DirectoryListingRow,
+    "scope" | "productType" | "domain" | "categorySlugs"
+  >,
 ) {
-  const assignedCategory = getListingCategory(row)
+  const assignedCategory = getListingCategory(row);
   if (assignedCategory) {
-    return assignedCategory.pathLabels.slice(1).join(' ') || assignedCategory.label
+    return (
+      assignedCategory.pathLabels.slice(1).join(" ") || assignedCategory.label
+    );
   }
 
-  return formatMetadataLabel(row.productType || row.domain || row.scope || 'Utility')
+  return formatMetadataLabel(
+    row.productType || row.domain || row.scope || "Utility",
+  );
 }
 
 function getCardAccent(input: string): CategoryAccent {
   const index =
-    Array.from(input).reduce((sum, character) => sum + character.charCodeAt(0), 0) %
-    CATEGORY_ACCENTS.length
+    [...input].reduce(
+      (sum, character) => sum + (character.codePointAt(0) ?? 0),
+      0,
+    ) % CATEGORY_ACCENTS.length;
 
-  return CATEGORY_ACCENTS[index]
+  return CATEGORY_ACCENTS[index];
 }
 
-function getListingAccent(row: Pick<DirectoryListingRow, 'name' | 'categorySlugs' | 'scope' | 'productType' | 'domain'>) {
-  const assignedCategory = getListingCategory(row)
+function getListingAccent(
+  row: Pick<
+    DirectoryListingRow,
+    "name" | "categorySlugs" | "scope" | "productType" | "domain"
+  >,
+) {
+  const assignedCategory = getListingCategory(row);
   if (assignedCategory) {
-    return assignedCategory.accent
+    return assignedCategory.accent;
   }
 
-  return getCardAccent(`${row.name}-${getCategoryLabel(row)}`)
+  return getCardAccent(`${row.name}-${getCategoryLabel(row)}`);
 }
 
 function getListingDescription(row: DirectoryListingRow) {
   return (
     sanitizeListingDescription(row.fullDescription) ||
     sanitizeListingTagline(row.tagline) ||
-    'Discover a polished tool for your Bluesky workflow.'
-  )
+    "Discover a polished tool for your Bluesky workflow."
+  );
 }
 
 function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
-  const category = getCategoryLabel(row)
+  const category = getCategoryLabel(row);
   const tagline =
     sanitizeListingTagline(row.tagline) ||
     sanitizeListingTagline(row.fullDescription) ||
-    'Discover a polished Bluesky tool.'
-  const slugs = row.categorySlugs ?? []
-  const reviewCount = row.reviewCount ?? 0
-  const averageRating = row.averageRating
+    "Discover a polished Bluesky tool.";
+  const slugs = row.categorySlugs ?? [];
+  const reviewCount = row.reviewCount ?? 0;
+  const averageRating = row.averageRating;
   const rating =
-    reviewCount > 0 && averageRating != null && !Number.isNaN(Number(averageRating))
+    reviewCount > 0 &&
+    averageRating != null &&
+    !Number.isNaN(Number(averageRating))
       ? Number(Number(averageRating).toFixed(1))
-      : null
+      : null;
 
   return {
     id: row.id,
@@ -779,57 +813,57 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     accent: getListingAccent(row),
     rating,
     reviewCount,
-    priceLabel: 'GET',
+    priceLabel: "GET",
     productAccountHandle: row.productAccountHandle ?? null,
     appTags: normalizeAppTags(row.appTags ?? []),
-  }
+  };
 }
 
 type DirectoryListingDetailRow = DirectoryListingRow & {
-  atUri: string | null
-  repoDid: string | null
-  productAccountDid: string | null
-  productAccountHandle: string | null
-  sourceUrl: string
-  externalUrl: string | null
-  rawCategoryHint: string | null
-  vertical: string | null
-  classificationReason: string | null
-  appTags: string[]
-  links: ListingLink[] | null
-  createdAt: Date
-  updatedAt: Date
-}
+  atUri: string | null;
+  repoDid: string | null;
+  productAccountDid: string | null;
+  productAccountHandle: string | null;
+  sourceUrl: string;
+  externalUrl: string | null;
+  rawCategoryHint: string | null;
+  vertical: string | null;
+  classificationReason: string | null;
+  appTags: Array<string>;
+  links: ListingLink[] | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 type DirectoryListingGenerationCandidate = {
-  id: string
-  name: string
-  sourceUrl: string
-  externalUrl: string | null
-  screenshotUrls: string[]
-  tagline: string | null
-  fullDescription: string | null
-  rawCategoryHint: string | null
-  scope: string | null
-  productType: string | null
-  domain: string | null
-}
+  id: string;
+  name: string;
+  sourceUrl: string;
+  externalUrl: string | null;
+  screenshotUrls: Array<string>;
+  tagline: string | null;
+  fullDescription: string | null;
+  rawCategoryHint: string | null;
+  scope: string | null;
+  productType: string | null;
+  domain: string | null;
+};
 
 type ExtractedPageCopy = {
-  finalUrl: string
-  title: string | null
-  metaDescription: string | null
-  ogDescription: string | null
-  headings: string[]
-  paragraphs: string[]
-}
+  finalUrl: string;
+  title: string | null;
+  metaDescription: string | null;
+  ogDescription: string | null;
+  headings: Array<string>;
+  paragraphs: Array<string>;
+};
 
 function toListingDetail(
   row: DirectoryListingDetailRow,
   options: { isStoreManaged: boolean },
 ): DirectoryListingDetail {
-  const primary = primaryCategorySlug(row.categorySlugs)
-  const assignedCategory = getDirectoryCategoryOption(primary)
+  const primary = primaryCategorySlug(row.categorySlugs);
+  const assignedCategory = getDirectoryCategoryOption(primary);
 
   return {
     ...toListingCard(row),
@@ -856,240 +890,260 @@ function toListingDetail(
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     links: normalizeListingLinks(row.links ?? null),
-  }
+  };
 }
 
-function dedupeListings(rows: DirectoryListingRow[]) {
-  const seen = new Set<string>()
+function dedupeListings(rows: Array<DirectoryListingRow>) {
+  const seen = new Set<string>();
 
   return rows.filter((row) => {
     if (seen.has(row.id)) {
-      return false
+      return false;
     }
 
-    seen.add(row.id)
-    return true
-  })
+    seen.add(row.id);
+    return true;
+  });
 }
 
 function requireCards(
-  cards: DirectoryListingCard[],
+  cards: Array<DirectoryListingCard>,
   desiredCount: number,
   label: string,
 ) {
   if (cards.length < desiredCount) {
-    throw new Error(`Expected ${desiredCount} ${label}, found ${cards.length}`)
+    throw new Error(`Expected ${desiredCount} ${label}, found ${cards.length}`);
   }
 
-  return cards.slice(0, desiredCount)
+  return cards.slice(0, desiredCount);
 }
 
 function resolveConfiguredHomeHeroRows(input: {
-  configuredRows: DirectoryListingRow[]
-  fallbackRows: DirectoryListingRow[]
-  desiredCount: number
+  configuredRows: Array<DirectoryListingRow>;
+  fallbackRows: Array<DirectoryListingRow>;
+  desiredCount: number;
 }) {
   if (input.configuredRows.length >= input.desiredCount) {
-    return input.configuredRows.slice(0, input.desiredCount)
+    return input.configuredRows.slice(0, input.desiredCount);
   }
 
-  return input.fallbackRows.slice(0, input.desiredCount)
+  return input.fallbackRows.slice(0, input.desiredCount);
 }
 
-function buildCategories(rows: DirectoryListingRow[], limit = 4) {
+function buildCategories(rows: Array<DirectoryListingRow>, limit = 4) {
   const tree = buildDirectoryCategoryTree(
     rows.flatMap((row) => row.categorySlugs ?? []),
-  )
+  );
   const assignedCategories = flattenDirectoryCategoryTree(tree)
     .filter((node) => node.depth > 0 && node.count > 0)
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       if (right.count !== left.count) {
-        return right.count - left.count
+        return right.count - left.count;
       }
 
       if (right.depth !== left.depth) {
-        return right.depth - left.depth
+        return right.depth - left.depth;
       }
 
-      return left.pathLabels.join(' / ').localeCompare(right.pathLabels.join(' / '))
-    })
+      return left.pathLabels
+        .join(" / ")
+        .localeCompare(right.pathLabels.join(" / "));
+    });
 
   if (assignedCategories.length > 0) {
-    return assignedCategories.slice(0, limit).map((category) =>
-      toDirectoryCategorySummary(category),
-    )
+    return assignedCategories
+      .slice(0, limit)
+      .map((category) => toDirectoryCategorySummary(category));
   }
 
   return fallbackCategoryIds
     .map((categoryId) => getDirectoryCategoryOption(categoryId))
-    .filter((category): category is NonNullable<typeof category> => category !== null)
+    .filter(
+      (category): category is NonNullable<typeof category> => category !== null,
+    )
     .map((category) =>
       toDirectoryCategorySummary({
         ...category,
         count: 0,
       }),
     )
-    .slice(0, limit)
+    .slice(0, limit);
 }
 
 type DirectoryListingAppTagRow = DirectoryListingRow & {
-  appTags: string[] | null
-}
+  appTags: string[] | null;
+};
 
-function isBrowseableAppRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
+function isBrowseableAppRow(row: Pick<DirectoryListingRow, "categorySlugs">) {
   return row.categorySlugs.some(
-    (slug) =>
-      slug.startsWith('apps/') && slug.split('/').length === 2,
-  )
+    (slug) => slug.startsWith("apps/") && slug.split("/").length === 2,
+  );
 }
 
 function buildAppTagGroups(
-  rows: DirectoryListingAppTagRow[],
+  rows: Array<DirectoryListingAppTagRow>,
   options?: { preserveListingOrder?: boolean },
 ) {
-  const preserveListingOrder = options?.preserveListingOrder ?? false
-  const groups = new Map<string, DirectoryListingCard[]>()
+  const preserveListingOrder = options?.preserveListingOrder ?? false;
+  const groups = new Map<string, Array<DirectoryListingCard>>();
 
   for (const row of rows) {
     if (!isBrowseableAppRow(row)) {
-      continue
+      continue;
     }
 
-    const card = toListingCard(row)
+    const card = toListingCard(row);
 
     for (const tag of normalizeAppTags(row.appTags ?? [])) {
-      const listings = groups.get(tag)
+      const listings = groups.get(tag);
       if (listings) {
-        listings.push(card)
-        continue
+        listings.push(card);
+        continue;
       }
 
-      groups.set(tag, [card])
+      groups.set(tag, [card]);
     }
   }
 
   return [...groups.entries()]
-    .map(([tag, listings]) => ({
-      tag,
-      count: listings.length,
-      listings: preserveListingOrder
-        ? [...listings]
-        : [...listings].sort((left, right) => left.name.localeCompare(right.name)),
-    }) satisfies DirectoryAppTagGroup)
-    .sort((left, right) => {
+    .map(
+      ([tag, listings]) =>
+        ({
+          tag,
+          count: listings.length,
+          listings: preserveListingOrder
+            ? [...listings]
+            : [...listings].toSorted((left, right) =>
+                left.name.localeCompare(right.name),
+              ),
+        }) satisfies DirectoryAppTagGroup,
+    )
+    .toSorted((left, right) => {
       if (right.count !== left.count) {
-        return right.count - left.count
+        return right.count - left.count;
       }
 
-      return left.tag.localeCompare(right.tag)
-    })
+      return left.tag.localeCompare(right.tag);
+    });
 }
 
-function buildAllApps(rows: DirectoryListingRow[]) {
-  return dedupeListings(rows.filter(isBrowseableAppRow))
-    .map(toListingCard)
+function buildAllApps(rows: Array<DirectoryListingRow>) {
+  return dedupeListings(rows.filter((row) => isBrowseableAppRow(row))).map(
+    (row) => toListingCard(row),
+  );
 }
 
-function isHomePageFeaturedAppRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
+function isHomePageFeaturedAppRow(
+  row: Pick<DirectoryListingRow, "categorySlugs">,
+) {
   return row.categorySlugs.some(
-    (slug) =>
-      slug.startsWith('apps/') && slug.split('/').length === 2,
-  )
+    (slug) => slug.startsWith("apps/") && slug.split("/").length === 2,
+  );
 }
 
-function isBrowseableProtocolRow(row: Pick<DirectoryListingRow, 'categorySlugs'>) {
-  return row.categorySlugs.some((slug) => getRootProtocolCategoryId(slug) !== null)
+function isBrowseableProtocolRow(
+  row: Pick<DirectoryListingRow, "categorySlugs">,
+) {
+  return row.categorySlugs.some(
+    (slug) => getRootProtocolCategoryId(slug) !== null,
+  );
 }
 
 function getRootProtocolCategoryId(slug: string): string | null {
-  const parts = slug.split('/')
-  if (parts[0] !== 'protocol') {
-    return null
+  const parts = slug.split("/");
+  if (parts[0] !== "protocol") {
+    return null;
   }
 
-  const rootSegment = parts[1]
+  const rootSegment = parts[1];
   if (!rootSegment) {
-    return null
+    return null;
   }
 
-  return `protocol/${rootSegment}`
+  return `protocol/${rootSegment}`;
 }
 
 function buildProtocolCategoryGroups(
-  rows: DirectoryListingRow[],
+  rows: Array<DirectoryListingRow>,
   options?: { preserveListingOrder?: boolean },
-): DirectoryProtocolCategoryGroup[] {
-  const preserveListingOrder = options?.preserveListingOrder ?? false
-  const groups = new Map<string, DirectoryListingCard[]>()
+): Array<DirectoryProtocolCategoryGroup> {
+  const preserveListingOrder = options?.preserveListingOrder ?? false;
+  const groups = new Map<string, Array<DirectoryListingCard>>();
 
   for (const row of rows) {
-    const protocolIds = new Set<string>()
+    const protocolIds = new Set<string>();
     for (const slug of row.categorySlugs) {
-      const categoryId = getRootProtocolCategoryId(slug)
+      const categoryId = getRootProtocolCategoryId(slug);
       if (!categoryId) {
-        continue
+        continue;
       }
 
-      protocolIds.add(categoryId)
+      protocolIds.add(categoryId);
     }
 
     if (protocolIds.size === 0) {
-      continue
+      continue;
     }
 
-    const card = toListingCard(row)
+    const card = toListingCard(row);
     for (const categoryId of protocolIds) {
-      const listings = groups.get(categoryId)
+      const listings = groups.get(categoryId);
       if (listings) {
-        listings.push(card)
-        continue
+        listings.push(card);
+        continue;
       }
 
-      groups.set(categoryId, [card])
+      groups.set(categoryId, [card]);
     }
   }
 
   return [...groups.entries()]
     .map(([categoryId, listings]) => {
-      const option = getDirectoryCategoryOption(categoryId)
-      const segment = categoryId.split('/')[1] ?? categoryId
+      const option = getDirectoryCategoryOption(categoryId);
+      const segment = categoryId.split("/")[1] ?? categoryId;
 
       return {
         categoryId,
         segment,
         label: option?.label ?? segment,
-        description: option?.description ?? '',
+        description: option?.description ?? "",
         count: listings.length,
         listings: preserveListingOrder
           ? [...listings]
-          : [...listings].sort((left, right) => left.name.localeCompare(right.name)),
-      } satisfies DirectoryProtocolCategoryGroup
+          : [...listings].toSorted((left, right) =>
+              left.name.localeCompare(right.name),
+            ),
+      } satisfies DirectoryProtocolCategoryGroup;
     })
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       if (right.count !== left.count) {
-        return right.count - left.count
+        return right.count - left.count;
       }
 
-      return left.label.localeCompare(right.label)
-    })
+      return left.label.localeCompare(right.label);
+    });
 }
 
-function buildAllProtocolListings(rows: DirectoryListingRow[]) {
-  return dedupeListings(rows.filter(isBrowseableProtocolRow))
-    .map(toListingCard)
+function buildAllProtocolListings(rows: Array<DirectoryListingRow>) {
+  return dedupeListings(rows.filter((row) => isBrowseableProtocolRow(row))).map(
+    (row) => toListingCard(row),
+  );
 }
 
 function buildHomePageTagSummaries(
-  rows: DirectoryListingAppTagRow[],
+  rows: Array<DirectoryListingAppTagRow>,
   limit = 4,
-): DirectoryAppTagSummary[] {
-  const groups = buildAppTagGroups(rows)
+): Array<DirectoryAppTagSummary> {
+  const groups = buildAppTagGroups(rows);
 
   if (groups.length > 0) {
-    return groups.slice(0, limit).map(({ tag, count }) => ({ tag, count }))
+    return groups.slice(0, limit).map(({ tag, count: listingCount }) => ({
+      tag,
+      count: listingCount,
+    }));
   }
 
-  throw new Error('No app tag summaries found')
+  throw new Error("No app tag summaries found");
 }
 
 /** Public listing card projection — never include `claim_pending_for_did` (server-only). */
@@ -1103,20 +1157,20 @@ function getListingSelect(table: typeof dbSchema.storeListings) {
     screenshotUrls: table.screenshotUrls,
     tagline: table.tagline,
     fullDescription: table.fullDescription,
-    scope: sql<string | null>`null::text`.as('scope'),
-    productType: sql<string | null>`null::text`.as('productType'),
-    domain: sql<string | null>`null::text`.as('domain'),
+    scope: sql<string | null>`null::text`.as("scope"),
+    productType: sql<string | null>`null::text`.as("productType"),
+    domain: sql<string | null>`null::text`.as("domain"),
     categorySlugs: table.categorySlugs,
     appTags: table.appTags,
     reviewCount: table.reviewCount,
     averageRating: table.averageRating,
     productAccountHandle: table.productAccountHandle,
-  }
+  };
 }
 
 function assertDevelopmentOnly() {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('This action is only available in development.')
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("This action is only available in development.");
   }
 }
 
@@ -1124,90 +1178,94 @@ async function getFullDirectoryListing(
   context: { db: Database; schema: typeof dbSchema },
   id: string,
 ): Promise<StoreListing> {
-  const table = context.schema.storeListings
+  const table = context.schema.storeListings;
   const [row] = await context.db
     .select()
     .from(table)
     .where(eq(table.id, id))
-    .limit(1)
+    .limit(1);
   if (!row) {
-    throw new Error(`Listing not found: ${id}`)
+    throw new Error(`Listing not found: ${id}`);
   }
-  return row
+  return row;
 }
 
 function getListingGenerationUrl(listing: DirectoryListingGenerationCandidate) {
-  return listing.externalUrl || listing.sourceUrl || null
+  return listing.externalUrl || listing.sourceUrl || null;
 }
 
-function normalizeGeneratedText(value: string | null | undefined): string | null {
+function normalizeGeneratedText(
+  value: string | null | undefined,
+): string | null {
   if (!value) {
-    return null
+    return null;
   }
 
   const cleaned = value
-    .replace(/\u00a0/g, ' ')
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+    .replaceAll("\u00A0", " ")
+    .replaceAll(/[ \t]{2,}/g, " ")
+    .replaceAll(/\n{3,}/g, "\n\n")
+    .trim();
 
-  return cleaned.length > 0 ? cleaned : null
+  return cleaned.length > 0 ? cleaned : null;
 }
 
-function dedupeGeneratedStrings(values: Array<string | null | undefined>): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
+function dedupeGeneratedStrings(
+  values: Array<string | null | undefined>,
+): Array<string> {
+  const seen = new Set<string>();
+  const out: Array<string> = [];
 
   for (const value of values) {
-    const cleaned = normalizeGeneratedText(value)
-    if (!cleaned) continue
+    const cleaned = normalizeGeneratedText(value);
+    if (!cleaned) continue;
 
-    const key = cleaned.toLowerCase()
-    if (seen.has(key)) continue
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
 
-    seen.add(key)
-    out.push(cleaned)
+    seen.add(key);
+    out.push(cleaned);
   }
 
-  return out
+  return out;
 }
 
 function shortenToSentence(value: string, maxLength = 160): string {
-  const cleaned = normalizeGeneratedText(value) ?? value.trim()
+  const cleaned = normalizeGeneratedText(value) ?? value.trim();
   if (cleaned.length <= maxLength) {
-    return cleaned
+    return cleaned;
   }
 
-  const sentenceMatch = cleaned.match(/^(.{30,200}?[.!?])(?:\s|$)/)
+  const sentenceMatch = cleaned.match(/^(.{30,200}?[.!?])(?:\s|$)/);
   if (sentenceMatch?.[1] && sentenceMatch[1].length <= maxLength) {
-    return sentenceMatch[1].trim()
+    return sentenceMatch[1].trim();
   }
 
-  return `${cleaned.slice(0, maxLength - 1).trimEnd()}…`
+  return `${cleaned.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
 function isLikelyBoilerplateText(value: string) {
-  const normalized = value.trim().toLowerCase()
+  const normalized = value.trim().toLowerCase();
   if (normalized.length < 30) {
-    return true
+    return true;
   }
 
   return (
-    normalized.includes('cookie') ||
-    normalized.includes('privacy policy') ||
-    normalized.includes('terms of service') ||
-    normalized.includes('all rights reserved') ||
-    normalized.includes('sign in') ||
-    normalized.includes('log in') ||
-    normalized.includes('create account')
-  )
+    normalized.includes("cookie") ||
+    normalized.includes("privacy policy") ||
+    normalized.includes("terms of service") ||
+    normalized.includes("all rights reserved") ||
+    normalized.includes("sign in") ||
+    normalized.includes("log in") ||
+    normalized.includes("create account")
+  );
 }
 
 async function extractPageCopy(url: string): Promise<ExtractedPageCopy> {
-  const { chromium } = await import(/* @vite-ignore */ 'playwright')
+  const { chromium } = await import(/* @vite-ignore */ "playwright");
   const browser = await chromium.launch({
     headless: true,
-  })
+  });
 
   try {
     const page = await browser.newPage({
@@ -1215,48 +1273,58 @@ async function extractPageCopy(url: string): Promise<ExtractedPageCopy> {
         width: 1440,
         height: 960,
       },
-    })
+    });
 
     await page.goto(url, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: "domcontentloaded",
       timeout: 30_000,
-    })
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.waitForTimeout(2_500)
+    });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.waitForTimeout(2500);
 
-    const [title, finalUrl, metaDescription, ogDescription, headings, paragraphs] =
-      await Promise.all([
-        page.title(),
-        page.url(),
-        page
-          .locator('meta[name="description"]')
-          .first()
-          .getAttribute('content')
-          .catch(() => null),
-        page
-          .locator('meta[property="og:description"]')
-          .first()
-          .getAttribute('content')
-          .catch(() => null),
-        page
-          .locator('main h1, main h2, main h3, article h1, article h2, article h3, [role="main"] h1, [role="main"] h2, [role="main"] h3, body h1, body h2, body h3')
-          .evaluateAll((nodes) =>
-            nodes
-              .map((node) => node.textContent ?? '')
-              .map((value) => value.replace(/\s+/g, ' ').trim())
-              .filter((value) => value.length > 0)
-              .slice(0, 10),
-          ),
-        page
-          .locator('main p, main li, article p, article li, [role="main"] p, [role="main"] li, body p, body li')
-          .evaluateAll((nodes) =>
-            nodes
-              .map((node) => node.textContent ?? '')
-              .map((value) => value.replace(/\s+/g, ' ').trim())
-              .filter((value) => value.length >= 30)
-              .slice(0, 24),
-          ),
-      ])
+    const [
+      title,
+      finalUrl,
+      metaDescription,
+      ogDescription,
+      headings,
+      paragraphs,
+    ] = await Promise.all([
+      page.title(),
+      page.url(),
+      page
+        .locator('meta[name="description"]')
+        .first()
+        .getAttribute("content")
+        .catch(() => null),
+      page
+        .locator('meta[property="og:description"]')
+        .first()
+        .getAttribute("content")
+        .catch(() => null),
+      page
+        .locator(
+          'main h1, main h2, main h3, article h1, article h2, article h3, [role="main"] h1, [role="main"] h2, [role="main"] h3, body h1, body h2, body h3',
+        )
+        .evaluateAll((nodes) =>
+          nodes
+            .map((node) => node.textContent ?? "")
+            .map((value) => value.replaceAll(/\s+/g, " ").trim())
+            .filter((value) => value.length > 0)
+            .slice(0, 10),
+        ),
+      page
+        .locator(
+          'main p, main li, article p, article li, [role="main"] p, [role="main"] li, body p, body li',
+        )
+        .evaluateAll((nodes) =>
+          nodes
+            .map((node) => node.textContent ?? "")
+            .map((value) => value.replaceAll(/\s+/g, " ").trim())
+            .filter((value) => value.length >= 30)
+            .slice(0, 24),
+        ),
+    ]);
 
     return {
       finalUrl,
@@ -1265,9 +1333,9 @@ async function extractPageCopy(url: string): Promise<ExtractedPageCopy> {
       ogDescription,
       headings: dedupeGeneratedStrings(headings),
       paragraphs: dedupeGeneratedStrings(paragraphs),
-    }
+    };
   } finally {
-    await browser.close()
+    await browser.close();
   }
 }
 
@@ -1278,80 +1346,88 @@ function chooseSiteTagline(extracted: ExtractedPageCopy): string | null {
     extracted.headings[1],
     extracted.paragraphs[0],
     extracted.title,
-  ])
+  ]);
 
   for (const candidate of candidates) {
-    if (isLikelyBoilerplateText(candidate)) continue
-    if (candidate.length < 24) continue
+    if (isLikelyBoilerplateText(candidate)) continue;
+    if (candidate.length < 24) continue;
 
-    return shortenToSentence(candidate, 140)
+    return shortenToSentence(candidate, 140);
   }
 
-  return null
+  return null;
 }
 
 function chooseSiteDescription(extracted: ExtractedPageCopy): string | null {
-  const parts: string[] = []
+  const parts: Array<string> = [];
 
   for (const paragraph of extracted.paragraphs) {
-    if (isLikelyBoilerplateText(paragraph)) continue
-    if (parts.some((existing) => existing.toLowerCase() === paragraph.toLowerCase())) {
-      continue
+    if (isLikelyBoilerplateText(paragraph)) continue;
+    if (
+      parts.some(
+        (existing) => existing.toLowerCase() === paragraph.toLowerCase(),
+      )
+    ) {
+      continue;
     }
 
-    parts.push(paragraph)
-    if (parts.join('\n\n').length >= 420) {
-      break
+    parts.push(paragraph);
+    if (parts.join("\n\n").length >= 420) {
+      break;
     }
   }
 
-  const joined = normalizeGeneratedText(parts.join('\n\n'))
+  const joined = normalizeGeneratedText(parts.join("\n\n"));
   if (joined && joined.length >= 80) {
-    return joined
+    return joined;
   }
 
-  return dedupeGeneratedStrings([
-    extracted.metaDescription,
-    extracted.ogDescription,
-    extracted.paragraphs[0],
-  ])[0] ?? null
+  return (
+    dedupeGeneratedStrings([
+      extracted.metaDescription,
+      extracted.ogDescription,
+      extracted.paragraphs[0],
+    ])[0] ?? null
+  );
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {
   const cleaned = text
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim()
-  const start = cleaned.indexOf('{')
-  const end = cleaned.lastIndexOf('}')
-  const slice = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned
-  const parsed: unknown = JSON.parse(slice)
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  const slice =
+    start !== -1 && end > start ? cleaned.slice(start, end + 1) : cleaned;
+  const parsed: unknown = JSON.parse(slice);
 
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Expected JSON object from model')
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Expected JSON object from model");
   }
 
-  return parsed as Record<string, unknown>
+  return parsed as Record<string, unknown>;
 }
 
 async function generateListingCopyField(input: {
-  field: 'tagline' | 'description'
-  listing: DirectoryListingGenerationCandidate
-  extracted: ExtractedPageCopy
-  preferredTagline: string | null
-  preferredDescription: string | null
+  field: "tagline" | "description";
+  listing: DirectoryListingGenerationCandidate;
+  extracted: ExtractedPageCopy;
+  preferredTagline: string | null;
+  preferredDescription: string | null;
 }): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_KEY ?? ''
+  const apiKey =
+    process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_KEY ?? "";
   if (!apiKey) {
     throw new Error(
-      'Missing ANTHROPIC_API_KEY or ANTHROPIC_KEY in the environment for copy generation.',
-    )
+      "Missing ANTHROPIC_API_KEY or ANTHROPIC_KEY in the environment for copy generation.",
+    );
   }
 
-  const { default: Anthropic } = await import('@anthropic-ai/sdk')
-  const client = new Anthropic({ apiKey })
-  const model = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514'
-  const responseKey = input.field === 'tagline' ? 'tagline' : 'description'
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const client = new Anthropic({ apiKey });
+  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514";
+  const responseKey = input.field === "tagline" ? "tagline" : "description";
   const payload = {
     name: input.listing.name,
     url: input.extracted.finalUrl,
@@ -1361,7 +1437,9 @@ async function generateListingCopyField(input: {
     productType: input.listing.productType,
     domain: input.listing.domain,
     currentTagline: sanitizeListingTagline(input.listing.tagline),
-    currentDescription: sanitizeListingDescription(input.listing.fullDescription),
+    currentDescription: sanitizeListingDescription(
+      input.listing.fullDescription,
+    ),
     preferredTagline: input.preferredTagline,
     preferredDescription: input.preferredDescription,
     pageTitle: input.extracted.title,
@@ -1369,14 +1447,14 @@ async function generateListingCopyField(input: {
     ogDescription: input.extracted.ogDescription,
     headings: input.extracted.headings.slice(0, 8),
     paragraphs: input.extracted.paragraphs.slice(0, 10),
-  }
+  };
 
   const message = await client.messages.create({
     model,
     max_tokens: 400,
     temperature: 0.2,
     system:
-      input.field === 'tagline'
+      input.field === "tagline"
         ? `You write concise, accurate software directory taglines.
 
 Rules:
@@ -1398,60 +1476,60 @@ Rules:
 - Return JSON only with the key "description".`,
     messages: [
       {
-        role: 'user',
+        role: "user",
         content: [
           {
-            type: 'text',
+            type: "text",
             text: JSON.stringify(payload),
           },
         ],
       },
     ],
-  })
+  });
 
   const text = message.content
-    .filter((block) => block.type === 'text')
-    .map((block) => ('text' in block ? block.text : ''))
-    .join('')
-    .trim()
-  const parsed = parseJsonObject(text)
-  const value = String(parsed[responseKey] ?? '')
+    .filter((block) => block.type === "text")
+    .map((block) => ("text" in block ? block.text : ""))
+    .join("")
+    .trim();
+  const parsed = parseJsonObject(text);
+  const value = String(parsed[responseKey] ?? "");
 
-  if (input.field === 'tagline') {
-    const tagline = sanitizeListingTagline(value)
+  if (input.field === "tagline") {
+    const tagline = sanitizeListingTagline(value);
     if (!tagline) {
-      throw new Error('Model returned an empty tagline')
+      throw new Error("Model returned an empty tagline");
     }
 
-    return tagline
+    return tagline;
   }
 
-  const description = sanitizeListingDescription(value)
+  const description = sanitizeListingDescription(value);
   if (!description) {
-    throw new Error('Model returned an empty description')
+    throw new Error("Model returned an empty description");
   }
 
-  return description
+  return description;
 }
 
 async function generateListingTextField(input: {
-  field: 'tagline' | 'description'
-  listing: DirectoryListingGenerationCandidate
-}): Promise<{ value: string; source: 'website' | 'model' }> {
-  const pageUrl = getListingGenerationUrl(input.listing)
+  field: "tagline" | "description";
+  listing: DirectoryListingGenerationCandidate;
+}): Promise<{ value: string; source: "website" | "model" }> {
+  const pageUrl = getListingGenerationUrl(input.listing);
   if (!pageUrl) {
-    throw new Error(`Missing URL for ${input.listing.name}`)
+    throw new Error(`Missing URL for ${input.listing.name}`);
   }
 
-  const extracted = await extractPageCopy(pageUrl)
-  const siteTagline = chooseSiteTagline(extracted)
-  const siteDescription = chooseSiteDescription(extracted)
+  const extracted = await extractPageCopy(pageUrl);
+  const siteTagline = chooseSiteTagline(extracted);
+  const siteDescription = chooseSiteDescription(extracted);
 
-  if (input.field === 'tagline' && siteTagline) {
+  if (input.field === "tagline" && siteTagline) {
     return {
       value: siteTagline,
-      source: 'website',
-    }
+      source: "website",
+    };
   }
 
   return {
@@ -1462,15 +1540,15 @@ async function generateListingTextField(input: {
       preferredTagline: siteTagline,
       preferredDescription: siteDescription,
     }),
-    source: 'model',
-  }
+    source: "model",
+  };
 }
 
 async function getDirectoryListingGenerationCandidate(
   context: { db: Database; schema: typeof dbSchema },
   id: string,
 ): Promise<DirectoryListingGenerationCandidate> {
-  const table = context.schema.storeListings
+  const table = context.schema.storeListings;
   const [listing] = await context.db
     .select({
       id: table.id,
@@ -1480,20 +1558,20 @@ async function getDirectoryListingGenerationCandidate(
       screenshotUrls: table.screenshotUrls,
       tagline: table.tagline,
       fullDescription: table.fullDescription,
-      rawCategoryHint: sql<string | null>`null::text`.as('rawCategoryHint'),
-      scope: sql<string | null>`null::text`.as('scope'),
-      productType: sql<string | null>`null::text`.as('productType'),
-      domain: sql<string | null>`null::text`.as('domain'),
+      rawCategoryHint: sql<string | null>`null::text`.as("rawCategoryHint"),
+      scope: sql<string | null>`null::text`.as("scope"),
+      productType: sql<string | null>`null::text`.as("productType"),
+      domain: sql<string | null>`null::text`.as("domain"),
     })
     .from(table)
     .where(eq(table.id, id))
-    .limit(1)
+    .limit(1);
 
   if (!listing) {
-    throw new Error(`Listing not found: ${id}`)
+    throw new Error(`Listing not found: ${id}`);
   }
 
-  return listing
+  return listing;
 }
 
 function buildListingGenerationMetadata(
@@ -1507,18 +1585,20 @@ function buildListingGenerationMetadata(
     listing.productType ? `Product type: ${listing.productType}` : null,
     listing.domain ? `Domain: ${listing.domain}` : null,
     listing.scope ? `Scope: ${listing.scope}` : null,
-    listing.rawCategoryHint ? `Category hint: ${listing.rawCategoryHint}` : null,
+    listing.rawCategoryHint
+      ? `Category hint: ${listing.rawCategoryHint}`
+      : null,
     listing.fullDescription ? `Description: ${listing.fullDescription}` : null,
   ]
-    .filter((value): value is string => Boolean(value))
-    .join('\n')
+    .filter(Boolean)
+    .join("\n");
 }
 
 function buildMarketingPrompt(
   listing: DirectoryListingGenerationCandidate,
   pageUrl: string,
 ) {
-  const metadata = buildListingGenerationMetadata(listing, pageUrl)
+  const metadata = buildListingGenerationMetadata(listing, pageUrl);
 
   return `Create a polished product-marketing image for this software listing using the provided website screenshot as reference.
 
@@ -1546,14 +1626,14 @@ Fallback style (DO NOT USE IF THE LISTING HAS BRANDING):
 - Show layered foreground, midground, and background depth with abstract shapes and energy—still no marketing CTA text or conversion-style hero strips.
 
 Listing metadata:
-${metadata}`
+${metadata}`;
 }
 
 function buildIconPrompt(
   listing: DirectoryListingGenerationCandidate,
   pageUrl: string,
 ) {
-  const metadata = buildListingGenerationMetadata(listing, pageUrl)
+  const metadata = buildListingGenerationMetadata(listing, pageUrl);
 
   return `Create a polished product icon for this software listing using the provided website screenshot as reference.
 
@@ -1579,36 +1659,41 @@ Constraints:
 - Keep edges clean; readable on light or dark backgrounds.
 
 Listing metadata:
-${metadata}`
+${metadata}`;
 }
 
 async function generateImageFromScreenshot(input: {
-  screenshot: Buffer
-  prompt: string
+  screenshot: Buffer;
+  prompt: string;
 }): Promise<{ buffer: Buffer; mimeType: string }> {
   return geminiFlashGenerateImageFromPromptAndImage({
     prompt: input.prompt,
     imageBytes: input.screenshot,
-    imageMimeType: 'image/png',
-  })
+    imageMimeType: "image/png",
+  });
 }
 
-const getHomePageData = createServerFn({ method: 'GET' })
+const getHomePageData = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.storeListings
-    const homeHeroTable = context.schema.homePageHeroListings
-    const listingSelect = getListingSelect(table)
+    const table = context.schema.storeListings;
+    const homeHeroTable = context.schema.homePageHeroListings;
+    const listingSelect = getListingSelect(table);
 
-    const [recentRows, newestRows, tagRows, protocolRows, configuredHomeHeroRows] =
-      await Promise.all([
+    const [
+      recentRows,
+      newestRows,
+      tagRows,
+      protocolRows,
+      configuredHomeHeroRows,
+    ] = await Promise.all([
       context.db
         .select(listingSelect)
         .from(table)
         .where(
           listingPublicWhere(
             table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
           ),
         )
         .orderBy(...orderByPopularListingSort(table))
@@ -1619,7 +1704,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
         .where(
           listingPublicWhere(
             table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
           ),
         )
         .orderBy(desc(table.createdAt))
@@ -1630,7 +1715,7 @@ const getHomePageData = createServerFn({ method: 'GET' })
         .where(
           listingPublicWhere(
             table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
           ),
         )
         .orderBy(...orderByPopularListingSort(table)),
@@ -1640,23 +1725,23 @@ const getHomePageData = createServerFn({ method: 'GET' })
         .where(
           listingPublicWhere(
             table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'protocol'),
+            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "protocol"),
           ),
         )
         .orderBy(...orderByPopularListingSort(table)),
-      (async (): Promise<DirectoryListingRow[]> => {
+      (async (): Promise<Array<DirectoryListingRow>> => {
         const configured = await context.db
           .select({
             listingId: homeHeroTable.storeListingId,
           })
           .from(homeHeroTable)
-          .orderBy(asc(homeHeroTable.position))
+          .orderBy(asc(homeHeroTable.position));
 
         if (configured.length === 0) {
-          return [] as DirectoryListingRow[]
+          return [] as Array<DirectoryListingRow>;
         }
 
-        const configuredListingIds = configured.map((row) => row.listingId)
+        const configuredListingIds = configured.map((row) => row.listingId);
         const configuredListingRows = (await context.db
           .select(listingSelect)
           .from(table)
@@ -1665,100 +1750,104 @@ const getHomePageData = createServerFn({ method: 'GET' })
               table,
               and(
                 inArray(table.id, configuredListingIds),
-                sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, 'apps'),
+                sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
               ),
             ),
-          )) as DirectoryListingRow[]
+          )) as Array<DirectoryListingRow>;
 
-        const rowsById = new Map(configuredListingRows.map((row) => [row.id, row]))
+        const rowsById = new Map(
+          configuredListingRows.map((row) => [row.id, row]),
+        );
         return configuredListingIds
           .map((id) => rowsById.get(id) ?? null)
-          .filter((row): row is DirectoryListingRow => row !== null)
+          .filter((row): row is DirectoryListingRow => row !== null);
       })(),
-    ])
+    ]);
 
     if (recentRows.length === 0) {
-      throw new Error('No recent rows found')
+      throw new Error("No recent rows found");
     }
 
-    const dedupedRecentRows = dedupeListings(recentRows)
-    const dedupedRecentAppRows = dedupedRecentRows.filter(isHomePageFeaturedAppRow)
+    const dedupedRecentRows = dedupeListings(recentRows);
+    const dedupedRecentAppRows = dedupedRecentRows.filter((row) =>
+      isHomePageFeaturedAppRow(row),
+    );
     const fallbackFeaturedSource =
       dedupedRecentAppRows.find(
         (row) =>
-          row.heroImageUrl ||
-          row.screenshotUrls.length > 0 ||
-          row.iconUrl,
-      ) || dedupedRecentAppRows[0]
+          row.heroImageUrl || row.screenshotUrls.length > 0 || row.iconUrl,
+      ) || dedupedRecentAppRows[0];
 
     const heroRows = resolveConfiguredHomeHeroRows({
       configuredRows: dedupeListings(configuredHomeHeroRows),
       fallbackRows: dedupedRecentAppRows,
       desiredCount: 3,
-    })
-    const featuredSource = heroRows[0] ?? fallbackFeaturedSource
+    });
+    const featuredSource = heroRows[0] ?? fallbackFeaturedSource;
 
     if (!featuredSource) {
-      throw new Error('No homepage featured listing found')
+      throw new Error("No homepage featured listing found");
     }
 
-    const featured = toListingCard(featuredSource)
-    const remainingAppRows = heroRows.length > 1
-      ? heroRows.slice(1)
-      : dedupedRecentAppRows.filter((row) => row.id !== featuredSource.id)
+    const featured = toListingCard(featuredSource);
+    const remainingAppRows =
+      heroRows.length > 1
+        ? heroRows.slice(1)
+        : dedupedRecentAppRows.filter((row) => row.id !== featuredSource.id);
 
     const spotlights = requireCards(
-      remainingAppRows.slice(0, 2).map(toListingCard),
+      remainingAppRows.slice(0, 2).map((row) => toListingCard(row)),
       2,
-      'homepage spotlights',
-    )
+      "homepage spotlights",
+    );
 
     const popular = requireCards(
       dedupedRecentRows
         .filter((row) => row.id !== featuredSource.id)
         .slice(0, 6)
-        .map(toListingCard),
+        .map((row) => toListingCard(row)),
       6,
-      'homepage popular listings',
-    )
+      "homepage popular listings",
+    );
 
     const fresh = requireCards(
       dedupeListings(newestRows)
         .filter((row) => row.id !== featuredSource.id)
         .slice(0, 3)
-        .map(toListingCard),
+        .map((row) => toListingCard(row)),
       3,
-      'homepage fresh listings',
-    )
+      "homepage fresh listings",
+    );
 
-    const tags = buildHomePageTagSummaries(tagRows, 9)
-    const dedupedProtocolRows = dedupeListings(protocolRows)
+    const tags = buildHomePageTagSummaries(tagRows, 9);
+    const dedupedProtocolRows = dedupeListings(protocolRows);
     const protocolFeaturedSource =
-      dedupedProtocolRows.find((row) => row.screenshotUrls.length > 0 || row.iconUrl) ||
-      dedupedProtocolRows[0]
+      dedupedProtocolRows.find(
+        (row) => row.screenshotUrls.length > 0 || row.iconUrl,
+      ) || dedupedProtocolRows[0];
     if (!protocolFeaturedSource) {
-      throw new Error('No homepage protocol featured listing found')
+      throw new Error("No homepage protocol featured listing found");
     }
 
-    const protocolFeatured = toListingCard(protocolFeaturedSource)
+    const protocolFeatured = toListingCard(protocolFeaturedSource);
     const protocolSpotlights = requireCards(
       dedupedProtocolRows
         .filter((row) => row.id !== protocolFeaturedSource?.id)
         .slice(0, 2)
-        .map(toListingCard),
+        .map((row) => toListingCard(row)),
       2,
-      'homepage protocol spotlights',
-    )
+      "homepage protocol spotlights",
+    );
 
-    const protocolGroups = buildProtocolCategoryGroups(protocolRows)
-    const protocolCategories: DirectoryProtocolCategorySummary[] =
+    const protocolGroups = buildProtocolCategoryGroups(protocolRows);
+    const protocolCategories: Array<DirectoryProtocolCategorySummary> =
       protocolGroups.length > 0
-        ? protocolGroups.slice(0, 8 ).map(({ segment, label, count }) => ({
+        ? protocolGroups.slice(0, 8).map(({ segment, label, count: n }) => ({
             segment,
             label,
-            count,
+            count: n,
           }))
-        : []
+        : [];
 
     return {
       featured,
@@ -1769,129 +1858,131 @@ const getHomePageData = createServerFn({ method: 'GET' })
       protocolFeatured,
       protocolSpotlights,
       protocolCategories,
-    } satisfies DirectoryHomePageData
-  })
+    } satisfies DirectoryHomePageData;
+  });
 
 const getHomePageQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'home'],
+  queryKey: ["storeListings", "home"],
   queryFn: async () => getHomePageData(),
-})
+});
 
-const getDirectoryCategories = createServerFn({ method: 'GET' })
+const getDirectoryCategories = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(listingPublicWhere(table))
       .orderBy(...orderByPopularListingSort(table))
-      .limit(500)
+      .limit(500);
 
-    return buildCategories(rows, 12)
-  })
+    return buildCategories(rows, 12);
+  });
 
 const getDirectoryCategoriesQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'categories'],
+  queryKey: ["storeListings", "categories"],
   queryFn: async () => getDirectoryCategories(),
-})
+});
 
-const getDirectoryCategoryTree = createServerFn({ method: 'GET' })
+const getDirectoryCategoryTree = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select({
         categorySlugs: table.categorySlugs,
       })
       .from(table)
-      .where(listingPublicWhere(table))
+      .where(listingPublicWhere(table));
 
     return buildDirectoryCategoryTree(
       rows.flatMap((row) => row.categorySlugs ?? []),
-    )
-  })
+    );
+  });
 
 const getDirectoryCategoryTreeQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'categoryTree'],
+  queryKey: ["storeListings", "categoryTree"],
   queryFn: async () => getDirectoryCategoryTree(),
-})
+});
 
-const getDirectoryCategoryPage = createServerFn({ method: 'GET' })
+const getDirectoryCategoryPage = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryCategoryPageInput)
   .handler(async ({ data, context }) => {
-    const input = getDirectoryCategoryPageInput.parse(data)
-    const table = context.schema.storeListings
+    const input = getDirectoryCategoryPageInput.parse(data);
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(listingPublicWhere(table))
       .orderBy(
-        ...(input.sort === 'newest'
+        ...(input.sort === "newest"
           ? [desc(table.createdAt)]
-          : input.sort === 'alphabetical'
+          : input.sort === "alphabetical"
             ? [asc(table.name)]
-          : orderByPopularListingSort(table)),
-      )
+            : orderByPopularListingSort(table)),
+      );
 
     const tree = buildDirectoryCategoryTree(
       rows.flatMap((row) => row.categorySlugs ?? []),
-    )
-    const category = findDirectoryCategoryNode(tree, input.categoryId)
+    );
+    const category = findDirectoryCategoryNode(tree, input.categoryId);
 
     if (!category) {
-      return null
+      return null;
     }
 
-    const descendantIds = new Set(getDirectoryCategoryDescendantIds(tree, category.id))
+    const descendantIds = new Set(
+      getDirectoryCategoryDescendantIds(tree, category.id),
+    );
     const listings = rows
       .filter((row) =>
         (row.categorySlugs ?? []).some((slug: string) =>
           descendantIds.has(slug),
         ),
       )
-      .map(toListingCard)
+      .map((row) => toListingCard(row));
 
     return {
       category,
       listings,
-    } satisfies DirectoryCategoryPageData
-  })
+    } satisfies DirectoryCategoryPageData;
+  });
 
 function getDirectoryCategoryPageQueryOptions(
   input: z.input<typeof getDirectoryCategoryPageInput>,
 ) {
-  const normalizedInput = getDirectoryCategoryPageInput.parse(input)
+  const normalizedInput = getDirectoryCategoryPageInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'categoryPage', normalizedInput],
+    queryKey: ["storeListings", "categoryPage", normalizedInput],
     queryFn: async () => getDirectoryCategoryPage({ data: normalizedInput }),
-  })
+  });
 }
 
-const getAppsByTag = createServerFn({ method: 'GET' })
+const getAppsByTag = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(
         listingPublicWhere(
           table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "apps/%"),
         ),
       )
-      .orderBy(...orderByPopularListingSort(table))
+      .orderBy(...orderByPopularListingSort(table));
 
-    return buildAppTagGroups(rows, { preserveListingOrder: true })
-  })
+    return buildAppTagGroups(rows, { preserveListingOrder: true });
+  });
 
 const getAppsByTagQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'appsByTag'],
+  queryKey: ["storeListings", "appsByTag"],
   queryFn: async () => getAppsByTag(),
-})
+});
 
 /**
  * Distinct app tags currently assigned to top-level `apps/<slug>` listings,
@@ -1904,268 +1995,275 @@ const getAppsByTagQueryOptions = queryOptions({
  * any tags lingering on sub-app rows are stale data and must not leak into
  * the picker.
  */
-const getAllDirectoryListingAppTags = createServerFn({ method: 'GET' })
+const getAllDirectoryListingAppTags = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select({ appTags: table.appTags, categorySlugs: table.categorySlugs })
-      .from(table)
+      .from(table);
 
-    const counts = new Map<string, number>()
+    const counts = new Map<string, number>();
     for (const row of rows) {
-      const hasTopLevelAppCategory = (row.categorySlugs ?? []).some(
-        isEditableAppCategorySlug,
-      )
-      if (!hasTopLevelAppCategory) continue
+      const hasTopLevelAppCategory = (row.categorySlugs ?? []).some((slug) =>
+        isEditableAppCategorySlug(slug),
+      );
+      if (!hasTopLevelAppCategory) continue;
       for (const tag of normalizeAppTags(row.appTags ?? [])) {
-        counts.set(tag, (counts.get(tag) ?? 0) + 1)
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
       }
     }
 
     return [...counts.entries()]
-      .map(([tag, count]): DirectoryAppTagSummary => ({ tag, count }))
-      .sort((left, right) => {
-        if (right.count !== left.count) return right.count - left.count
-        return left.tag.localeCompare(right.tag)
-      })
-  })
+      .map(
+        ([tag, listingCount]): DirectoryAppTagSummary => ({
+          tag,
+          count: listingCount,
+        }),
+      )
+      .toSorted((left, right) => {
+        if (right.count !== left.count) return right.count - left.count;
+        return left.tag.localeCompare(right.tag);
+      });
+  });
 
 const getAllDirectoryListingAppTagsQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'allAppTags'] as const,
+  queryKey: ["storeListings", "allAppTags"] as const,
   queryFn: async () => getAllDirectoryListingAppTags(),
-})
+});
 
 const getAllAppsInput = z.object({
   sort: listingSortInput,
-})
+});
 
-const getAllApps = createServerFn({ method: 'GET' })
+const getAllApps = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getAllAppsInput)
   .handler(async ({ data, context }) => {
-    const input = getAllAppsInput.parse(data)
-    const table = context.schema.storeListings
+    const input = getAllAppsInput.parse(data);
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(
         listingPublicWhere(
           table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "apps/%"),
         ),
       )
       .orderBy(
-        ...(input.sort === 'newest'
+        ...(input.sort === "newest"
           ? [desc(table.createdAt)]
-          : input.sort === 'alphabetical'
+          : input.sort === "alphabetical"
             ? [asc(table.name)]
-          : orderByPopularListingSort(table)),
-      )
+            : orderByPopularListingSort(table)),
+      );
 
-    return buildAllApps(rows)
-  })
+    return buildAllApps(rows);
+  });
 
 function getAllAppsQueryOptions(input: z.input<typeof getAllAppsInput> = {}) {
-  const normalizedInput = getAllAppsInput.parse(input)
+  const normalizedInput = getAllAppsInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'allApps', normalizedInput],
+    queryKey: ["storeListings", "allApps", normalizedInput],
     queryFn: async () => getAllApps({ data: normalizedInput }),
-  })
+  });
 }
 
-const getAppsByTagPage = createServerFn({ method: 'GET' })
+const getAppsByTagPage = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getAppsByTagPageInput)
   .handler(async ({ data, context }) => {
-    const input = getAppsByTagPageInput.parse(data)
-    const table = context.schema.storeListings
+    const input = getAppsByTagPageInput.parse(data);
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(
         listingPublicWhere(
           table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, 'apps/%'),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "apps/%"),
         ),
       )
       .orderBy(
-        ...(input.sort === 'newest'
+        ...(input.sort === "newest"
           ? [desc(table.createdAt)]
-          : input.sort === 'alphabetical'
+          : input.sort === "alphabetical"
             ? [asc(table.name)]
-          : orderByPopularListingSort(table)),
-      )
+            : orderByPopularListingSort(table)),
+      );
 
-    const groups = buildAppTagGroups(rows, { preserveListingOrder: true })
+    const groups = buildAppTagGroups(rows, { preserveListingOrder: true });
     const tag = findAppTagBySlug(
       groups.map((group) => group.tag),
       input.tag,
-    )
+    );
 
     if (!tag) {
-      return null
+      return null;
     }
 
-    return groups.find((group) => group.tag === tag) ?? null
-  })
+    return groups.find((group) => group.tag === tag) ?? null;
+  });
 
-function getAppsByTagPageQueryOptions(input: z.input<typeof getAppsByTagPageInput>) {
-  const normalizedInput = getAppsByTagPageInput.parse(input)
+function getAppsByTagPageQueryOptions(
+  input: z.input<typeof getAppsByTagPageInput>,
+) {
+  const normalizedInput = getAppsByTagPageInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'appsByTagPage', normalizedInput],
+    queryKey: ["storeListings", "appsByTagPage", normalizedInput],
     queryFn: async () => getAppsByTagPage({ data: normalizedInput }),
-  })
+  });
 }
 
-const getProtocolCategories = createServerFn({ method: 'GET' })
+const getProtocolCategories = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(
         listingPublicWhere(
           table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%"),
         ),
       )
-      .orderBy(...orderByPopularListingSort(table))
+      .orderBy(...orderByPopularListingSort(table));
 
-    return buildProtocolCategoryGroups(rows, { preserveListingOrder: true })
-  })
+    return buildProtocolCategoryGroups(rows, { preserveListingOrder: true });
+  });
 
 const getProtocolCategoriesQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'protocolCategories'],
+  queryKey: ["storeListings", "protocolCategories"],
   queryFn: async () => getProtocolCategories(),
-})
+});
 
-const getProtocolCategoryPage = createServerFn({ method: 'GET' })
+const getProtocolCategoryPage = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getProtocolCategoryPageInput)
   .handler(async ({ data, context }) => {
-    const input = getProtocolCategoryPageInput.parse(data)
-    const table = context.schema.storeListings
+    const input = getProtocolCategoryPageInput.parse(data);
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(
         listingPublicWhere(
           table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%"),
         ),
       )
       .orderBy(
-        ...(input.sort === 'newest'
+        ...(input.sort === "newest"
           ? [desc(table.createdAt)]
-          : input.sort === 'alphabetical'
+          : input.sort === "alphabetical"
             ? [asc(table.name)]
-          : orderByPopularListingSort(table)),
-      )
+            : orderByPopularListingSort(table)),
+      );
 
     const groups = buildProtocolCategoryGroups(rows, {
       preserveListingOrder: true,
-    })
-    return findProtocolCategoryBySlugParam(groups, input.category) ?? null
-  })
+    });
+    return findProtocolCategoryBySlugParam(groups, input.category) ?? null;
+  });
 
 function getProtocolCategoryPageQueryOptions(
   input: z.input<typeof getProtocolCategoryPageInput>,
 ) {
-  const normalizedInput = getProtocolCategoryPageInput.parse(input)
+  const normalizedInput = getProtocolCategoryPageInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'protocolCategoryPage', normalizedInput],
+    queryKey: ["storeListings", "protocolCategoryPage", normalizedInput],
     queryFn: async () => getProtocolCategoryPage({ data: normalizedInput }),
-  })
+  });
 }
 
 const getAllProtocolListingsInput = z.object({
   sort: listingSortInput,
-})
+});
 
-const getAllProtocolListings = createServerFn({ method: 'GET' })
+const getAllProtocolListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getAllProtocolListingsInput)
   .handler(async ({ data, context }) => {
-    const input = getAllProtocolListingsInput.parse(data)
-    const table = context.schema.storeListings
+    const input = getAllProtocolListingsInput.parse(data);
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(
         listingPublicWhere(
           table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%'),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%"),
         ),
       )
       .orderBy(
-        ...(input.sort === 'newest'
+        ...(input.sort === "newest"
           ? [desc(table.createdAt)]
-          : input.sort === 'alphabetical'
+          : input.sort === "alphabetical"
             ? [asc(table.name)]
-          : orderByPopularListingSort(table)),
-      )
+            : orderByPopularListingSort(table)),
+      );
 
-    return buildAllProtocolListings(rows)
-  })
+    return buildAllProtocolListings(rows);
+  });
 
 function getAllProtocolListingsQueryOptions(
   input: z.input<typeof getAllProtocolListingsInput> = {},
 ) {
-  const normalizedInput = getAllProtocolListingsInput.parse(input)
+  const normalizedInput = getAllProtocolListingsInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'allProtocol', normalizedInput],
+    queryKey: ["storeListings", "allProtocol", normalizedInput],
     queryFn: async () => getAllProtocolListings({ data: normalizedInput }),
-  })
+  });
 }
 
 const getAllListingsInput = z.object({
   sort: listingSortInput,
-})
+});
 
-const getAllListings = createServerFn({ method: 'GET' })
+const getAllListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getAllListingsInput)
   .handler(async ({ data, context }) => {
-    const input = getAllListingsInput.parse(data)
-    const table = context.schema.storeListings
+    const input = getAllListingsInput.parse(data);
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select(getListingSelect(table))
       .from(table)
       .where(
         listingPublicWhere(
           table,
-          sql`not (${sqlCategorySlugsMatchesLike(table.categorySlugs, 'protocol/%')})`,
+          sql`not (${sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%")})`,
         ),
       )
       .orderBy(
-        ...(input.sort === 'newest'
+        ...(input.sort === "newest"
           ? [desc(table.createdAt)]
-          : input.sort === 'alphabetical'
+          : input.sort === "alphabetical"
             ? [asc(table.name)]
-          : orderByPopularListingSort(table)),
-      )
+            : orderByPopularListingSort(table)),
+      );
 
-    return rows.map(toListingCard)
-  })
+    return rows.map((row) => toListingCard(row));
+  });
 
 function getAllListingsQueryOptions(
   input: z.input<typeof getAllListingsInput> = {},
 ) {
-  const normalizedInput = getAllListingsInput.parse(input)
+  const normalizedInput = getAllListingsInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'allListings', normalizedInput],
+    queryKey: ["storeListings", "allListings", normalizedInput],
     queryFn: async () => getAllListings({ data: normalizedInput }),
-  })
+  });
 }
 
-const getDirectoryListingDetail = createServerFn({ method: 'GET' })
+const getDirectoryListingDetail = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(
     z.object({
@@ -2173,7 +2271,7 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data, context }) => {
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     /** Explicit columns only — never `claim_pending_for_did`. */
     const [row] = await context.db
       .select({
@@ -2203,18 +2301,18 @@ const getDirectoryListingDetail = createServerFn({ method: 'GET' })
       })
       .from(table)
       .where(listingPublicWhere(table, eq(table.id, data.id)))
-      .limit(1)
+      .limit(1);
 
     if (!row) {
-      return null
+      return null;
     }
 
     return toListingDetail(row, {
       isStoreManaged: await computeIsStoreManaged(row),
-    })
-  })
+    });
+  });
 
-const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
+const getDirectoryListingDetailBySlug = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(
     z.object({
@@ -2222,7 +2320,7 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
     }),
   )
   .handler(async ({ data, context }) => {
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     /** Explicit columns only — never `claim_pending_for_did`. */
     const [row] = await context.db
       .select({
@@ -2252,16 +2350,16 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
       })
       .from(table)
       .where(listingPublicWhere(table, eq(table.slug, data.slug)))
-      .limit(1)
+      .limit(1);
 
     if (!row) {
-      return null
+      return null;
     }
 
     return toListingDetail(row, {
       isStoreManaged: await computeIsStoreManaged(row),
-    })
-  })
+    });
+  });
 
 /**
  * Determines whether a listing's AT proto record is hosted by the at-store
@@ -2275,51 +2373,51 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: 'GET' })
  * (and is rolled back on failure), so it's our truthful "claim happened" signal.
  */
 async function computeIsStoreManaged(row: {
-  atUri: string | null
-  repoDid: string | null
-  migratedFromAtUri: string | null
+  atUri: string | null;
+  repoDid: string | null;
+  migratedFromAtUri: string | null;
 }): Promise<boolean> {
-  const atUri = row.atUri?.trim()
-  if (!atUri) return true
-  const repoDid = row.repoDid?.trim()
-  if (!repoDid) return true
-  const atstoreDid = await getAtstoreRepoDid()
-  if (repoDid !== atstoreDid) return false
-  return !row.migratedFromAtUri?.trim()
+  const atUri = row.atUri?.trim();
+  if (!atUri) return true;
+  const repoDid = row.repoDid?.trim();
+  if (!repoDid) return true;
+  const atstoreDid = await getAtstoreRepoDid();
+  if (repoDid !== atstoreDid) return false;
+  return !row.migratedFromAtUri?.trim();
 }
 
 function getDirectoryListingDetailQueryOptions(id: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'detail', id],
+    queryKey: ["storeListings", "detail", id],
     queryFn: async () => getDirectoryListingDetail({ data: { id } }),
-  })
+  });
 }
 
 function getDirectoryListingDetailBySlugQueryOptions(slug: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'detailBySlug', slug],
+    queryKey: ["storeListings", "detailBySlug", slug],
     queryFn: async () => getDirectoryListingDetailBySlug({ data: { slug } }),
-  })
+  });
 }
 
 const getDirectoryListingDetailForOwnerEditInput = z.object({
   productId: z.string().min(1),
-})
+});
 
 /** Owner or public-verified listings only — hides non-listed drafts from strangers. */
 const getDirectoryListingDetailForOwnerEdit = createServerFn({
-  method: 'GET',
+  method: "GET",
 })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryListingDetailForOwnerEditInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      return null
+      return null;
     }
 
-    const legacyListingId = getLegacyDirectoryListingId(data.productId)
-    const table = context.schema.storeListings
+    const legacyListingId = getLegacyDirectoryListingId(data.productId);
+    const table = context.schema.storeListings;
     const [row] = await context.db
       .select({
         id: table.id,
@@ -2353,61 +2451,61 @@ const getDirectoryListingDetailForOwnerEdit = createServerFn({
           ? eq(table.id, legacyListingId)
           : eq(table.slug, data.productId.trim()),
       )
-      .limit(1)
+      .limit(1);
 
     if (!row) {
-      return null
+      return null;
     }
 
-    const verified = row.verificationStatus === 'verified'
+    const verified = row.verificationStatus === "verified";
     const isOwner =
       row.productAccountDid?.trim() === session.did &&
-      row.repoDid?.trim() === session.did
+      row.repoDid?.trim() === session.did;
 
     if (!verified && !isOwner) {
-      return null
+      return null;
     }
 
-    const { verificationStatus: _removed, ...detailRow } = row
+    const { verificationStatus: _removed, ...detailRow } = row;
 
     return {
       ...toListingDetail(detailRow as DirectoryListingDetailRow, {
         isStoreManaged: await computeIsStoreManaged(row),
       }),
       verificationStatus: row.verificationStatus,
-    }
-  })
+    };
+  });
 
 function getDirectoryListingDetailForOwnerEditQueryOptions(productId: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'detailForOwnerEdit', productId] as const,
+    queryKey: ["storeListings", "detailForOwnerEdit", productId] as const,
     queryFn: async () =>
       getDirectoryListingDetailForOwnerEdit({
         data: { productId },
       }),
-  })
+  });
 }
 
-const getDirectoryListingReviews = createServerFn({ method: 'GET' })
+const getDirectoryListingReviews = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryListingReviewsInput)
   .handler(async ({ data, context }) => {
     if (!isUuid(data.id)) {
-      return []
+      return [];
     }
 
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const [listing] = await context.db
       .select({ id: table.id })
       .from(table)
       .where(listingPublicWhere(table, eq(table.id, data.id)))
-      .limit(1)
+      .limit(1);
 
     if (!listing) {
-      return []
+      return [];
     }
 
-    const rev = context.schema.storeListingReviews
+    const rev = context.schema.storeListingReviews;
     const rows = await context.db
       .select({
         id: rev.id,
@@ -2420,18 +2518,18 @@ const getDirectoryListingReviews = createServerFn({ method: 'GET' })
       })
       .from(rev)
       .where(eq(rev.storeListingId, listing.id))
-      .orderBy(desc(rev.reviewCreatedAt))
+      .orderBy(desc(rev.reviewCreatedAt));
 
-    const enriched: DirectoryListingReview[] = await Promise.all(
+    const enriched: Array<DirectoryListingReview> = await Promise.all(
       rows.map(async (row) => {
-        const profile = await fetchBlueskyPublicProfileFields(row.authorDid)
+        const profile = await fetchBlueskyPublicProfileFields(row.authorDid);
         const displayName =
           row.authorDisplayName?.trim() ||
           profile?.displayName?.trim() ||
           profile?.handle ||
-          null
+          null;
         const avatarUrl =
-          row.authorAvatarUrl?.trim() || profile?.avatarUrl || null
+          row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
 
         return {
           id: row.id,
@@ -2441,52 +2539,54 @@ const getDirectoryListingReviews = createServerFn({ method: 'GET' })
           reviewCreatedAt: row.reviewCreatedAt.toISOString(),
           authorDisplayName: displayName,
           authorAvatarUrl: avatarUrl,
-        }
+        };
       }),
-    )
+    );
 
-    return enriched
-  })
+    return enriched;
+  });
 
 function getDirectoryListingReviewsQueryOptions(id: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'reviews', id],
+    queryKey: ["storeListings", "reviews", id],
     queryFn: async () => getDirectoryListingReviews({ data: { id } }),
-  })
+  });
 }
 
-const getDirectoryListingMentions = createServerFn({ method: 'GET' })
+const getDirectoryListingMentions = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryListingMentionsInput)
   .handler(async ({ data, context }) => {
     if (!isUuid(data.id)) {
-      return { mentions: [], total: 0 }
+      return { mentions: [], total: 0 };
     }
 
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const [listing] = await context.db
       .select({ id: table.id, categorySlugs: table.categorySlugs })
       .from(table)
       .where(listingPublicWhere(table, eq(table.id, data.id)))
-      .limit(1)
+      .limit(1);
 
     if (!listing) {
-      return { mentions: [], total: 0 }
+      return { mentions: [], total: 0 };
     }
 
     const omitUrl = shouldOmitUrlMentionsForBlueskyPlatformListing(
       listing.categorySlugs,
-    )
-    const m = context.schema.storeListingMentions
-    const mentionWhere: SQL = omitUrl
-      ? and(eq(m.storeListingId, listing.id), ne(m.matchType, 'url'))!
-      : eq(m.storeListingId, listing.id)
+    );
+    const m = context.schema.storeListingMentions;
+    const mentionWhere = (
+      omitUrl
+        ? and(eq(m.storeListingId, listing.id), ne(m.matchType, "url"))
+        : eq(m.storeListingId, listing.id)
+    ) as SQL;
 
     const [{ total: mentionCount }] = await context.db
       .select({ total: count() })
       .from(m)
-      .where(mentionWhere)
-    const total = Number(mentionCount ?? 0)
+      .where(mentionWhere);
+    const total = Number(mentionCount ?? 0);
 
     const rows = await context.db
       .select({
@@ -2503,33 +2603,33 @@ const getDirectoryListingMentions = createServerFn({ method: 'GET' })
       .from(m)
       .where(mentionWhere)
       .orderBy(desc(m.postCreatedAt))
-      .limit(data.limit)
+      .limit(data.limit);
 
     const postDataByPostUri = await fetchBlueskyPostEmbedsByUri(
       rows.map((row) => row.postUri),
-    )
+    );
 
     const profileByDid = new Map<
       string,
       Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>
-    >()
+    >();
 
     async function profileForDid(
       did: string,
     ): Promise<Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>> {
-      if (profileByDid.has(did)) return profileByDid.get(did) ?? null
-      const p = await fetchBlueskyPublicProfileFields(did)
-      profileByDid.set(did, p)
-      return p
+      if (profileByDid.has(did)) return profileByDid.get(did) ?? null;
+      const p = await fetchBlueskyPublicProfileFields(did);
+      profileByDid.set(did, p);
+      return p;
     }
 
-    const enriched: DirectoryListingMention[] = await Promise.all(
+    const enriched: Array<DirectoryListingMention> = await Promise.all(
       rows.map(async (row) => {
-        const profile = await profileForDid(row.authorDid)
+        const profile = await profileForDid(row.authorDid);
         const handle =
-          row.authorHandle?.trim() || profile?.handle?.trim() || null
-        const authorDisplayName = profile?.displayName?.trim() || null
-        const authorAvatarUrl = profile?.avatarUrl ?? null
+          row.authorHandle?.trim() || profile?.handle?.trim() || null;
+        const authorDisplayName = profile?.displayName?.trim() || null;
+        const authorAvatarUrl = profile?.avatarUrl ?? null;
 
         return {
           id: row.id,
@@ -2546,45 +2646,45 @@ const getDirectoryListingMentions = createServerFn({ method: 'GET' })
           matchConfidence: row.matchConfidence,
           matchEvidence:
             row.matchEvidence &&
-            typeof row.matchEvidence === 'object' &&
+            typeof row.matchEvidence === "object" &&
             !Array.isArray(row.matchEvidence)
               ? (row.matchEvidence as Record<string, {}>)
               : null,
           postEmbed: postDataByPostUri.get(row.postUri)?.embed ?? null,
-        }
+        };
       }),
-    )
+    );
 
-    return { mentions: enriched, total }
-  })
+    return { mentions: enriched, total };
+  });
 
 function getDirectoryListingMentionsQueryOptions(
   id: string,
   limit: number = 12,
 ) {
-  const normalized = getDirectoryListingMentionsInput.parse({ id, limit })
+  const normalized = getDirectoryListingMentionsInput.parse({ id, limit });
   return queryOptions({
-    queryKey: ['storeListings', 'mentions', normalized.id, normalized.limit],
+    queryKey: ["storeListings", "mentions", normalized.id, normalized.limit],
     queryFn: async () =>
       getDirectoryListingMentions({
         data: { id: normalized.id, limit: normalized.limit },
       }),
-  })
+  });
 }
 
-const getUserProfileReviewsPageData = createServerFn({ method: 'GET' })
+const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getUserProfileReviewsPageDataInput)
   .handler(async ({ data, context }) => {
-    const did = data.did.trim()
+    const did = data.did.trim();
     if (!isPlausiblePublicDid(did)) {
-      return null
+      return null;
     }
 
-    const profile = await fetchBlueskyPublicProfileFields(did)
+    const profile = await fetchBlueskyPublicProfileFields(did);
 
-    const rev = context.schema.storeListingReviews
-    const list = context.schema.storeListings
+    const rev = context.schema.storeListingReviews;
+    const list = context.schema.storeListings;
 
     const rows = await context.db
       .select({
@@ -2605,16 +2705,16 @@ const getUserProfileReviewsPageData = createServerFn({ method: 'GET' })
       .from(rev)
       .innerJoin(list, eq(rev.storeListingId, list.id))
       .where(and(eq(rev.authorDid, did), listingPublicWhere(list)))
-      .orderBy(desc(rev.reviewCreatedAt))
+      .orderBy(desc(rev.reviewCreatedAt));
 
-    const enriched: DirectoryUserReview[] = rows.map((row) => {
+    const enriched: Array<DirectoryUserReview> = rows.map((row) => {
       const displayName =
         row.authorDisplayName?.trim() ||
         profile?.displayName?.trim() ||
         profile?.handle ||
-        null
+        null;
       const avatarUrl =
-        row.authorAvatarUrl?.trim() || profile?.avatarUrl || null
+        row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
 
       return {
         id: row.id,
@@ -2629,11 +2729,13 @@ const getUserProfileReviewsPageData = createServerFn({ method: 'GET' })
           name: row.listingName,
           slug: row.listingSlug,
           sourceUrl: row.listingSourceUrl,
-          iconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl?.trim() || null),
+          iconUrl: protocolRecordImageUrlOrNull(
+            row.listingIconUrl?.trim() || null,
+          ),
           tagline: row.listingTagline?.trim() || null,
         },
-      }
-    })
+      };
+    });
 
     return {
       did,
@@ -2643,28 +2745,30 @@ const getUserProfileReviewsPageData = createServerFn({ method: 'GET' })
         null,
       handle: profile?.handle ?? null,
       avatarUrl:
-        profile?.avatarUrl?.trim() || enriched[0]?.authorAvatarUrl?.trim() || null,
+        profile?.avatarUrl?.trim() ||
+        enriched[0]?.authorAvatarUrl?.trim() ||
+        null,
       reviews: enriched,
-    } satisfies UserProfileReviewsPageData
-  })
+    } satisfies UserProfileReviewsPageData;
+  });
 
 function getUserProfileReviewsPageDataQueryOptions(did: string) {
   return queryOptions({
-    queryKey: ['userProfileReviews', did],
+    queryKey: ["userProfileReviews", did],
     queryFn: async () => getUserProfileReviewsPageData({ data: { did } }),
-  })
+  });
 }
 
-const getProfileFavoriteListings = createServerFn({ method: 'GET' })
+const getProfileFavoriteListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getProfileFavoriteListingsInput)
   .handler(async ({ data, context }) => {
-    const did = data.did.trim()
+    const did = data.did.trim();
     if (!isPlausiblePublicDid(did)) {
-      return []
+      return [];
     }
-    const fav = context.schema.storeListingFavorites
-    const list = context.schema.storeListings
+    const fav = context.schema.storeListingFavorites;
+    const list = context.schema.storeListings;
     const rows = await context.db
       .select({
         id: list.id,
@@ -2677,7 +2781,7 @@ const getProfileFavoriteListings = createServerFn({ method: 'GET' })
       .from(fav)
       .innerJoin(list, eq(fav.storeListingId, list.id))
       .where(and(eq(fav.authorDid, did), listingPublicWhere(list)))
-      .orderBy(desc(fav.favoriteCreatedAt))
+      .orderBy(desc(fav.favoriteCreatedAt));
 
     return rows.map((row) => ({
       id: row.id,
@@ -2686,65 +2790,71 @@ const getProfileFavoriteListings = createServerFn({ method: 'GET' })
       iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
       tagline: row.tagline?.trim() || null,
       favoritedAt: row.favoritedAt.toISOString(),
-    })) satisfies DirectoryUserFavoriteListing[]
-  })
+    })) satisfies Array<DirectoryUserFavoriteListing>;
+  });
 
 function getProfileFavoriteListingsQueryOptions(did: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'profileFavorites', did] as const,
+    queryKey: ["storeListings", "profileFavorites", did] as const,
     queryFn: async () => getProfileFavoriteListings({ data: { did } }),
-  })
+  });
 }
 
-const getDirectoryListingFavoriteStatus = createServerFn({ method: 'GET' })
+const getDirectoryListingFavoriteStatus = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(listingFavoriteInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session) {
-      return { isFavorited: false } satisfies DirectoryListingFavoriteStatus
+      return { isFavorited: false } satisfies DirectoryListingFavoriteStatus;
     }
 
-    const list = context.schema.storeListings
+    const list = context.schema.storeListings;
     const [listing] = await context.db
       .select({ id: list.id })
       .from(list)
       .where(listingPublicWhere(list, eq(list.id, data.listingId)))
-      .limit(1)
+      .limit(1);
 
     if (!listing) {
-      return { isFavorited: false } satisfies DirectoryListingFavoriteStatus
+      return { isFavorited: false } satisfies DirectoryListingFavoriteStatus;
     }
 
-    const fav = context.schema.storeListingFavorites
+    const fav = context.schema.storeListingFavorites;
     const [favorite] = await context.db
       .select({ id: fav.id })
       .from(fav)
-      .where(and(eq(fav.storeListingId, data.listingId), eq(fav.authorDid, session.did)))
-      .limit(1)
+      .where(
+        and(
+          eq(fav.storeListingId, data.listingId),
+          eq(fav.authorDid, session.did),
+        ),
+      )
+      .limit(1);
 
     return {
       isFavorited: Boolean(favorite),
-    } satisfies DirectoryListingFavoriteStatus
-  })
+    } satisfies DirectoryListingFavoriteStatus;
+  });
 
 function getDirectoryListingFavoriteStatusQueryOptions(listingId: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'favoriteStatus', listingId] as const,
-    queryFn: async () => getDirectoryListingFavoriteStatus({ data: { listingId } }),
-  })
+    queryKey: ["storeListings", "favoriteStatus", listingId] as const,
+    queryFn: async () =>
+      getDirectoryListingFavoriteStatus({ data: { listingId } }),
+  });
 }
 
-const favoriteDirectoryListing = createServerFn({ method: 'POST' })
+const favoriteDirectoryListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(listingFavoriteInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session) {
-      throw new Error('Sign in to favorite products.')
+      throw new Error("Sign in to favorite products.");
     }
 
-    const t = context.schema.storeListings
+    const t = context.schema.storeListings;
     const [listing] = await context.db
       .select({
         id: t.id,
@@ -2752,41 +2862,48 @@ const favoriteDirectoryListing = createServerFn({ method: 'POST' })
       })
       .from(t)
       .where(listingPublicWhere(t, eq(t.id, data.listingId)))
-      .limit(1)
+      .limit(1);
     if (!listing) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
-    const subject = listing.atUri?.trim()
+    const subject = listing.atUri?.trim();
     if (!subject) {
-      throw new Error('This listing cannot be favorited until it is published on AT Protocol.')
+      throw new Error(
+        "This listing cannot be favorited until it is published on AT Protocol.",
+      );
     }
 
-    const createdAt = new Date().toISOString()
-    await putListingFavoriteRecord(session.client, session.did, data.listingId, {
-      subject,
-      createdAt,
-    })
-    return { ok: true as const }
-  })
+    const createdAt = new Date().toISOString();
+    await putListingFavoriteRecord(
+      session.client,
+      session.did,
+      data.listingId,
+      {
+        subject,
+        createdAt,
+      },
+    );
+    return { ok: true as const };
+  });
 
-const unfavoriteDirectoryListing = createServerFn({ method: 'POST' })
+const unfavoriteDirectoryListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(listingFavoriteInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session) {
-      throw new Error('Sign in to manage favorites.')
+      throw new Error("Sign in to manage favorites.");
     }
 
-    const t = context.schema.storeListings
+    const t = context.schema.storeListings;
     const [listing] = await context.db
       .select({ id: t.id })
       .from(t)
       .where(listingPublicWhere(t, eq(t.id, data.listingId)))
-      .limit(1)
+      .limit(1);
     if (!listing) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
     await deleteRecord(
@@ -2794,20 +2911,20 @@ const unfavoriteDirectoryListing = createServerFn({ method: 'POST' })
       session.did,
       COLLECTION.listingFavorite,
       data.listingId,
-    )
-    return { ok: true as const }
-  })
+    );
+    return { ok: true as const };
+  });
 
-const createDirectoryListingReview = createServerFn({ method: 'POST' })
+const createDirectoryListingReview = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(createDirectoryListingReviewInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session) {
-      throw new Error('Sign in to post a review.')
+      throw new Error("Sign in to post a review.");
     }
 
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const [listing] = await context.db
       .select({
         id: table.id,
@@ -2815,63 +2932,64 @@ const createDirectoryListingReview = createServerFn({ method: 'POST' })
       })
       .from(table)
       .where(listingPublicWhere(table, eq(table.id, data.listingId)))
-      .limit(1)
+      .limit(1);
 
     if (!listing) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
-    const atUri = listing.atUri?.trim()
+    const atUri = listing.atUri?.trim();
     if (!atUri) {
       throw new Error(
-        'This listing has no AT Protocol URI yet; reviews are unavailable until it is published to the network.',
-      )
+        "This listing has no AT Protocol URI yet; reviews are unavailable until it is published to the network.",
+      );
     }
 
-    const rev = context.schema.storeListingReviews
+    const rev = context.schema.storeListingReviews;
     const [existing] = await context.db
       .select({ id: rev.id })
       .from(rev)
       .where(
-        and(
-          eq(rev.storeListingId, listing.id),
-          eq(rev.authorDid, session.did),
-        ),
+        and(eq(rev.storeListingId, listing.id), eq(rev.authorDid, session.did)),
       )
-      .limit(1)
+      .limit(1);
 
     if (existing) {
-      throw new Error('You already reviewed this listing.')
+      throw new Error("You already reviewed this listing.");
     }
 
-    const createdAt = new Date().toISOString()
-    const { uri } = await createListingReviewRecord(session.client, session.did, {
-      subject: atUri,
-      rating: data.rating,
-      createdAt,
-      text: data.text,
-    })
+    const createdAt = new Date().toISOString();
+    const { uri } = await createListingReviewRecord(
+      session.client,
+      session.did,
+      {
+        subject: atUri,
+        rating: data.rating,
+        createdAt,
+        text: data.text,
+      },
+    );
 
-    const { repo, rkey } = parseAtUriParts(uri)
+    const { repo, rkey } = parseAtUriParts(uri);
     if (repo !== session.did) {
-      throw new Error('Unexpected review record repo DID.')
+      throw new Error("Unexpected review record repo DID.");
     }
 
     const record: {
-      $type: typeof NSID.listingReview
-      subject: string
-      rating: number
-      createdAt: string
-      text?: string
+      $type: typeof NSID.listingReview;
+      subject: string;
+      rating: number;
+      createdAt: string;
+      text?: string;
     } = {
       $type: NSID.listingReview,
       subject: atUri,
       rating: data.rating,
       createdAt,
-    }
-    const trimmed = data.text?.trim()
+    };
+    const trimmed = data.text?.trim();
     if (trimmed) {
-      record.text = trimmed
+      record.text = trimmed;
     }
 
     await upsertListingReviewFromTap({
@@ -2879,32 +2997,34 @@ const createDirectoryListingReview = createServerFn({ method: 'POST' })
       did: repo,
       rkey,
       record,
-    })
+    });
 
     const [reviewRow] = await context.db
       .select({ id: rev.id })
       .from(rev)
       .where(eq(rev.atUri, uri))
-      .limit(1)
+      .limit(1);
 
     if (!reviewRow) {
-      throw new Error('Review was created on the network but could not be mirrored locally.')
+      throw new Error(
+        "Review was created on the network but could not be mirrored locally.",
+      );
     }
 
-    return { uri, reviewId: reviewRow.id }
-  })
+    return { uri, reviewId: reviewRow.id };
+  });
 
-const updateDirectoryListingReview = createServerFn({ method: 'POST' })
+const updateDirectoryListingReview = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(updateDirectoryListingReviewInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session) {
-      throw new Error('Sign in to edit your review.')
+      throw new Error("Sign in to edit your review.");
     }
 
-    const revTable = context.schema.storeListingReviews
-    const listTable = context.schema.storeListings
+    const revTable = context.schema.storeListingReviews;
+    const listTable = context.schema.storeListings;
 
     const [revRow] = await context.db
       .select({
@@ -2919,12 +3039,12 @@ const updateDirectoryListingReview = createServerFn({ method: 'POST' })
           eq(revTable.authorDid, session.did),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!revRow) {
       throw new Error(
-        'Review not found or you do not have permission to edit it.',
-      )
+        "Review not found or you do not have permission to edit it.",
+      );
     }
 
     const [listing] = await context.db
@@ -2933,22 +3053,19 @@ const updateDirectoryListingReview = createServerFn({ method: 'POST' })
       })
       .from(listTable)
       .where(
-        listingPublicWhere(
-          listTable,
-          eq(listTable.id, revRow.storeListingId),
-        ),
+        listingPublicWhere(listTable, eq(listTable.id, revRow.storeListingId)),
       )
-      .limit(1)
+      .limit(1);
 
     if (!listing) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
-    const atUri = listing.atUri?.trim()
+    const atUri = listing.atUri?.trim();
     if (!atUri) {
       throw new Error(
-        'This listing has no AT Protocol URI yet; reviews cannot be updated until it is published to the network.',
-      )
+        "This listing has no AT Protocol URI yet; reviews cannot be updated until it is published to the network.",
+      );
     }
 
     await putListingReviewRecord(session.client, session.did, revRow.rkey, {
@@ -2956,21 +3073,21 @@ const updateDirectoryListingReview = createServerFn({ method: 'POST' })
       rating: data.rating,
       createdAt: revRow.reviewCreatedAt.toISOString(),
       text: data.text,
-    })
+    });
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
-const deleteDirectoryListingReview = createServerFn({ method: 'POST' })
+const deleteDirectoryListingReview = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(deleteDirectoryListingReviewInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session) {
-      throw new Error('Sign in to delete your review.')
+      throw new Error("Sign in to delete your review.");
     }
 
-    const revTable = context.schema.storeListingReviews
+    const revTable = context.schema.storeListingReviews;
     const [revRow] = await context.db
       .select({
         rkey: revTable.rkey,
@@ -2982,12 +3099,12 @@ const deleteDirectoryListingReview = createServerFn({ method: 'POST' })
           eq(revTable.authorDid, session.did),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!revRow) {
       throw new Error(
-        'Review not found or you do not have permission to delete it.',
-      )
+        "Review not found or you do not have permission to delete it.",
+      );
     }
 
     await deleteRecord(
@@ -2995,21 +3112,21 @@ const deleteDirectoryListingReview = createServerFn({ method: 'POST' })
       session.did,
       COLLECTION.listingReview,
       revRow.rkey,
-    )
+    );
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
-const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
+const getRelatedDirectoryListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getRelatedDirectoryListingsInput)
   .handler(async ({ data, context }) => {
     if (!isUuid(data.id)) {
-      return []
+      return [];
     }
 
-    const table = context.schema.storeListings
-    const listingSelect = getListingSelect(table)
+    const table = context.schema.storeListings;
+    const listingSelect = getListingSelect(table);
 
     const [currentRow, candidateRows] = await Promise.all([
       context.db
@@ -3032,30 +3149,30 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
         .where(listingPublicWhere(table, ne(table.id, data.id)))
         .orderBy(...orderByPopularListingSort(table))
         .limit(128),
-    ])
+    ]);
 
     if (!currentRow) {
-      return []
+      return [];
     }
 
-    const currentTags = new Set(normalizeAppTags(currentRow.appTags ?? []))
+    const currentTags = new Set(normalizeAppTags(currentRow.appTags ?? []));
     if (currentTags.size === 0) {
-      return []
+      return [];
     }
 
     return candidateRows
       .map((row) => {
-        const tags = normalizeAppTags(row.appTags ?? [])
-        let overlapCount = 0
+        const tags = normalizeAppTags(row.appTags ?? []);
+        let overlapCount = 0;
 
         for (const tag of tags) {
           if (currentTags.has(tag)) {
-            overlapCount += 1
+            overlapCount += 1;
           }
         }
 
         if (overlapCount === 0) {
-          return null
+          return null;
         }
 
         return {
@@ -3067,52 +3184,54 @@ const getRelatedDirectoryListings = createServerFn({ method: 'GET' })
           ),
           updatedAt: row.updatedAt,
           createdAt: row.createdAt,
-        }
+        };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((left, right) => {
+      .toSorted((left, right) => {
         if (right.overlapCount !== left.overlapCount) {
-          return right.overlapCount - left.overlapCount
+          return right.overlapCount - left.overlapCount;
         }
 
         if (left.sameCategory !== right.sameCategory) {
-          return left.sameCategory ? -1 : 1
+          return left.sameCategory ? -1 : 1;
         }
 
-        const updatedDelta = right.updatedAt.getTime() - left.updatedAt.getTime()
+        const updatedDelta =
+          right.updatedAt.getTime() - left.updatedAt.getTime();
         if (updatedDelta !== 0) {
-          return updatedDelta
+          return updatedDelta;
         }
 
-        const createdDelta = right.createdAt.getTime() - left.createdAt.getTime()
+        const createdDelta =
+          right.createdAt.getTime() - left.createdAt.getTime();
         if (createdDelta !== 0) {
-          return createdDelta
+          return createdDelta;
         }
 
-        return left.card.name.localeCompare(right.card.name)
+        return left.card.name.localeCompare(right.card.name);
       })
       .slice(0, data.limit)
-      .map((item) => item.card)
-  })
+      .map((item) => item.card);
+  });
 
 function getRelatedDirectoryListingsQueryOptions(
   input: z.input<typeof getRelatedDirectoryListingsInput>,
 ) {
-  const normalizedInput = getRelatedDirectoryListingsInput.parse(input)
+  const normalizedInput = getRelatedDirectoryListingsInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'related', normalizedInput],
+    queryKey: ["storeListings", "related", normalizedInput],
     queryFn: async () => getRelatedDirectoryListings({ data: normalizedInput }),
-  })
+  });
 }
 
-const listDirectoryListings = createServerFn({ method: 'GET' })
+const listDirectoryListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(listDirectoryListingsInput)
   .handler(async ({ data, context }) => {
-    const table = context.schema.storeListings
-    const search = data.query?.trim()
-    const listingSelect = getListingSelect(table)
+    const table = context.schema.storeListings;
+    const search = data.query?.trim();
+    const listingSelect = getListingSelect(table);
 
     const searchClause = search
       ? or(
@@ -3128,31 +3247,36 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
             `%${search}%`,
           ),
         )
-      : undefined
+      : undefined;
 
     const noProductHandleClause = data.withoutProductAccountHandleOnly
       ? sql`coalesce(trim(${table.productAccountHandle}), '') = ''`
-      : undefined
+      : undefined;
 
     let filterExtra: SQL | undefined =
       searchClause && noProductHandleClause
         ? and(searchClause, noProductHandleClause)
-        : (searchClause ?? noProductHandleClause)
+        : (searchClause ?? noProductHandleClause);
 
     if (data.excludeOwnedListingsForSession) {
-      const session = await getAtprotoSessionForRequest(getRequest())
-      const did = session?.did?.trim()
+      const session = await getAtprotoSessionForRequest(getRequest());
+      const did = session?.did?.trim();
       if (did) {
         const notAlreadyProductAccount = or(
           isNull(table.productAccountDid),
           ne(table.productAccountDid, did),
-        )
+        );
         const notPublishedInClaimantRepo = or(
           isNull(table.repoDid),
           ne(table.repoDid, did),
-        )
-        const excludeOwned = and(notAlreadyProductAccount, notPublishedInClaimantRepo)
-        filterExtra = filterExtra ? and(filterExtra, excludeOwned) : excludeOwned
+        );
+        const excludeOwned = and(
+          notAlreadyProductAccount,
+          notPublishedInClaimantRepo,
+        );
+        filterExtra = filterExtra
+          ? and(filterExtra, excludeOwned)
+          : excludeOwned;
       }
     }
 
@@ -3161,28 +3285,28 @@ const listDirectoryListings = createServerFn({ method: 'GET' })
       .from(table)
       .where(listingPublicWhere(table, filterExtra))
       .orderBy(...orderByPopularListingSort(table))
-      .limit(data.limit)
+      .limit(data.limit);
 
-    return rows.map(toListingCard)
-  })
+    return rows.map((row) => toListingCard(row));
+  });
 
 function getListDirectoryListingsQueryOptions(
   input: z.input<typeof listDirectoryListingsInput> = {},
 ) {
-  const normalizedInput = listDirectoryListingsInput.parse(input)
+  const normalizedInput = listDirectoryListingsInput.parse(input);
 
   return queryOptions({
-    queryKey: ['storeListings', 'list', normalizedInput],
+    queryKey: ["storeListings", "list", normalizedInput],
     queryFn: async () => listDirectoryListings({ data: normalizedInput }),
-  })
+  });
 }
 
-const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
+const getDirectoryListingCategoryAssignments = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly()
+    assertDevelopmentOnly();
 
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select({
         id: table.id,
@@ -3192,26 +3316,26 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
         fullDescription: table.fullDescription,
         externalUrl: table.externalUrl,
         categorySlugs: table.categorySlugs,
-        scope: sql<string | null>`null::text`.as('scope'),
-        productType: sql<string | null>`null::text`.as('productType'),
-        domain: sql<string | null>`null::text`.as('domain'),
+        scope: sql<string | null>`null::text`.as("scope"),
+        productType: sql<string | null>`null::text`.as("productType"),
+        domain: sql<string | null>`null::text`.as("domain"),
         updatedAt: table.updatedAt,
       })
       .from(table)
-      .orderBy(...orderByPopularListingSort(table))
+      .orderBy(...orderByPopularListingSort(table));
 
     return rows
       .map((row) => {
-        const slugs = row.categorySlugs ?? []
-        const primary = primaryCategorySlug(slugs)
-        const assignedCategory = getDirectoryCategoryOption(primary)
+        const slugs = row.categorySlugs ?? [];
+        const primary = primaryCategorySlug(slugs);
+        const assignedCategory = getDirectoryCategoryOption(primary);
         const legacyCategoryHint = [
           row.scope ? formatMetadataLabel(row.scope) : null,
           row.productType ? formatMetadataLabel(row.productType) : null,
           row.domain ? formatMetadataLabel(row.domain) : null,
         ]
-          .filter((value): value is string => Boolean(value))
-          .join(' / ')
+          .filter(Boolean)
+          .join(" / ");
 
         return {
           id: row.id,
@@ -3220,44 +3344,42 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: 'GET' })
           tagline:
             sanitizeListingTagline(row.tagline) ||
             sanitizeListingTagline(row.fullDescription) ||
-            'No tagline yet.',
+            "No tagline yet.",
           description:
             sanitizeListingDescription(row.fullDescription) ||
             sanitizeListingTagline(row.tagline) ||
-            'No description yet.',
+            "No description yet.",
           externalUrl: row.externalUrl,
           categorySlugs: slugs,
           categorySlug: primary,
           categoryPathLabel: assignedCategory?.pathLabel || null,
-          legacyCategoryHint: legacyCategoryHint || 'Unclassified',
-        } satisfies DirectoryListingCategoryAssignment
+          legacyCategoryHint: legacyCategoryHint || "Unclassified",
+        } satisfies DirectoryListingCategoryAssignment;
       })
-      .sort((left, right) => {
+      .toSorted((left, right) => {
         if (left.categorySlug === null && right.categorySlug !== null) {
-          return -1
+          return -1;
         }
 
         if (left.categorySlug !== null && right.categorySlug === null) {
-          return 1
+          return 1;
         }
 
-        return left.name.localeCompare(right.name)
-      })
-  })
+        return left.name.localeCompare(right.name);
+      });
+  });
 
 const getDirectoryListingCategoryAssignmentsQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'categoryAssignments'],
+  queryKey: ["storeListings", "categoryAssignments"],
   queryFn: async () => getDirectoryListingCategoryAssignments(),
-})
+});
 
-
-
-const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
+const getDirectoryListingAppTagAssignments = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly()
+    assertDevelopmentOnly();
 
-    const table = context.schema.storeListings
+    const table = context.schema.storeListings;
     const rows = await context.db
       .select({
         id: table.id,
@@ -3268,191 +3390,198 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: 'GET' })
         externalUrl: table.externalUrl,
         appTags: table.appTags,
         categorySlugs: table.categorySlugs,
-        scope: sql<string | null>`null::text`.as('scope'),
-        productType: sql<string | null>`null::text`.as('productType'),
-        domain: sql<string | null>`null::text`.as('domain'),
-        vertical: sql<string | null>`null::text`.as('vertical'),
-        rawCategoryHint: sql<string | null>`null::text`.as('rawCategoryHint'),
+        scope: sql<string | null>`null::text`.as("scope"),
+        productType: sql<string | null>`null::text`.as("productType"),
+        domain: sql<string | null>`null::text`.as("domain"),
+        vertical: sql<string | null>`null::text`.as("vertical"),
+        rawCategoryHint: sql<string | null>`null::text`.as("rawCategoryHint"),
       })
       .from(table)
-      .orderBy(...orderByPopularListingSort(table))
+      .orderBy(...orderByPopularListingSort(table));
 
     const popular = popularTagsFromAllAssignments(
       rows.map((row) => row.appTags ?? []),
       80,
-    )
+    );
 
-    const assignments: DirectoryListingAppTagAssignment[] = rows.map((row) => {
-      const assigned = normalizeAppTags(row.appTags ?? [])
-      const slugs = row.categorySlugs ?? []
-      const primary = primaryCategorySlug(slugs)
-      const metadataSuggestions = suggestAppTagsFromListing({
-        scope: row.scope,
-        productType: row.productType,
-        domain: row.domain,
-        vertical: row.vertical,
-        rawCategoryHint: row.rawCategoryHint,
-        categorySlug: primary,
+    const assignments: Array<DirectoryListingAppTagAssignment> = rows.map(
+      (row) => {
+        const assigned = normalizeAppTags(row.appTags ?? []);
+        const slugs = row.categorySlugs ?? [];
+        const primary = primaryCategorySlug(slugs);
+        const metadataSuggestions = suggestAppTagsFromListing({
+          scope: row.scope,
+          productType: row.productType,
+          domain: row.domain,
+          vertical: row.vertical,
+          rawCategoryHint: row.rawCategoryHint,
+          categorySlug: primary,
+        });
+
+        return {
+          id: row.id,
+          name: row.name,
+          iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+          tagline:
+            sanitizeListingTagline(row.tagline) ||
+            sanitizeListingTagline(row.fullDescription) ||
+            "No tagline yet.",
+          description:
+            sanitizeListingDescription(row.fullDescription) ||
+            sanitizeListingTagline(row.tagline) ||
+            "No description yet.",
+          externalUrl: row.externalUrl,
+          appTags: assigned,
+          suggestedTags: suggestedTagsForListing(
+            assigned,
+            metadataSuggestions,
+            popular,
+            24,
+          ),
+          categorySlugs: slugs,
+          categorySlug: primary,
+          scope: row.scope,
+          productType: row.productType,
+          domain: row.domain,
+          vertical: row.vertical,
+          rawCategoryHint: row.rawCategoryHint,
+        } satisfies DirectoryListingAppTagAssignment;
+      },
+    );
+
+    return assignments
+      .toSorted((left, right) => {
+        if (left.appTags.length === 0 && right.appTags.length > 0) {
+          return -1;
+        }
+
+        if (left.appTags.length > 0 && right.appTags.length === 0) {
+          return 1;
+        }
+
+        return left.name.localeCompare(right.name);
       })
-
-      return {
-        id: row.id,
-        name: row.name,
-        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
-        tagline:
-          sanitizeListingTagline(row.tagline) ||
-          sanitizeListingTagline(row.fullDescription) ||
-          'No tagline yet.',
-        description:
-          sanitizeListingDescription(row.fullDescription) ||
-          sanitizeListingTagline(row.tagline) ||
-          'No description yet.',
-        externalUrl: row.externalUrl,
-        appTags: assigned,
-        suggestedTags: suggestedTagsForListing(assigned, metadataSuggestions, popular, 24),
-        categorySlugs: slugs,
-        categorySlug: primary,
-        scope: row.scope,
-        productType: row.productType,
-        domain: row.domain,
-        vertical: row.vertical,
-        rawCategoryHint: row.rawCategoryHint,
-      } satisfies DirectoryListingAppTagAssignment
-    })
-
-    return assignments.sort((left, right) => {
-      if (left.appTags.length === 0 && right.appTags.length > 0) {
-        return -1
-      }
-
-      if (left.appTags.length > 0 && right.appTags.length === 0) {
-        return 1
-      }
-
-      return left.name.localeCompare(right.name)
-    })
-    .filter((listing) =>
-      listing.categorySlugs.some(
-        (cs) => cs.split('/').length === 2 && !cs.startsWith('protocol/'),
-      ),
-    )
-
-  })
+      .filter((listing) =>
+        listing.categorySlugs.some(
+          (cs) => cs.split("/").length === 2 && !cs.startsWith("protocol/"),
+        ),
+      );
+  });
 
 const getDirectoryListingAppTagAssignmentsQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'appTagAssignments'],
+  queryKey: ["storeListings", "appTagAssignments"],
   queryFn: async () => getDirectoryListingAppTagAssignments(),
-})
+});
 
-const updateDirectoryListingAppTags = createServerFn({ method: 'POST' })
+const updateDirectoryListingAppTags = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(updateDirectoryListingAppTagsInput)
   .handler(async ({ data, context }) => {
-    const nextTags = normalizeAppTags(data.appTags)
-    const full = await getFullDirectoryListing(context, data.id)
-    const cs = primaryCategorySlug(full.categorySlugs)
-    if (
-      !cs ||
-      cs.startsWith('protocol/') ||
-      cs.split('/').length !== 2
-    ) {
+    const nextTags = normalizeAppTags(data.appTags);
+    const full = await getFullDirectoryListing(context, data.id);
+    const cs = primaryCategorySlug(full.categorySlugs);
+    if (!cs || cs.startsWith("protocol/") || cs.split("/").length !== 2) {
       throw new Error(
-        'App tags can only be edited for listings in an allowed Apps sub-branch, not Protocol.',
-      )
+        "App tags can only be edited for listings in an allowed Apps sub-branch, not Protocol.",
+      );
     }
 
-    await publishDirectoryListingDetail(full, { appTags: nextTags })
+    await publishDirectoryListingDetail(full, { appTags: nextTags });
 
     return {
       id: data.id,
       appTags: nextTags,
-    }
-  })
+    };
+  });
 
-const updateDirectoryListingCategoryAssignment = createServerFn({ method: 'POST' })
+const updateDirectoryListingCategoryAssignment = createServerFn({
+  method: "POST",
+})
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(updateDirectoryListingCategoryAssignmentInput)
   .handler(async ({ data, context }) => {
-    const nextCategorySlug = data.categorySlug?.trim() || null
-    const full = await getFullDirectoryListing(context, data.id)
-    const effective = nextCategorySlug ?? 'misc'
+    const nextCategorySlug = data.categorySlug?.trim() || null;
+    const full = await getFullDirectoryListing(context, data.id);
+    const effective = nextCategorySlug ?? "misc";
 
-    await publishDirectoryListingDetail(full, { categorySlugs: [effective] })
+    await publishDirectoryListingDetail(full, { categorySlugs: [effective] });
 
     return {
       id: data.id,
       categorySlug: nextCategorySlug,
-    }
-  })
+    };
+  });
 
-const deleteDirectoryListing = createServerFn({ method: 'POST' })
+const deleteDirectoryListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(deleteDirectoryListingInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
+    assertDevelopmentOnly();
 
-    const full = await getFullDirectoryListing(context, data.id)
+    const full = await getFullDirectoryListing(context, data.id);
     if (!full.rkey) {
       throw new Error(
-        'Listing has no ATProto record (missing rkey). Nothing to delete on the PDS.',
-      )
+        "Listing has no ATProto record (missing rkey). Nothing to delete on the PDS.",
+      );
     }
 
-    const { client, repoDid } = await createAtstorePublishClient()
-    await deleteRecord(client, repoDid, COLLECTION.listingDetail, full.rkey)
+    const { client, repoDid } = await createAtstorePublishClient();
+    await deleteRecord(client, repoDid, COLLECTION.listingDetail, full.rkey);
 
     return {
       id: data.id,
-    }
-  })
+    };
+  });
 
-const previewDirectoryListingHeroImage = createServerFn({ method: 'POST' })
+const previewDirectoryListingHeroImage = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
-    const pageUrl = getListingGenerationUrl(listing)
+    const listing = await getDirectoryListingGenerationCandidate(
+      context,
+      data.id,
+    );
+    const pageUrl = getListingGenerationUrl(listing);
 
     if (!pageUrl) {
-      throw new Error(`Missing URL for ${listing.name}`)
+      throw new Error(`Missing URL for ${listing.name}`);
     }
 
-    const screenshot =
-      await captureListingPageScreenshotForGeneration(pageUrl)
+    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
     const generatedImage = await generateImageFromScreenshot({
       screenshot,
       prompt: buildMarketingPrompt(listing, pageUrl),
-    })
+    });
 
     return {
       id: data.id,
       mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString('base64'),
-    }
-  })
+      imageBase64: generatedImage.buffer.toString("base64"),
+    };
+  });
 
-const commitDirectoryListingHeroImage = createServerFn({ method: 'POST' })
+const commitDirectoryListingHeroImage = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(commitGeneratedListingImageInput)
   .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.id)
-    const raw = Buffer.from(data.imageBase64, 'base64')
+    const full = await getFullDirectoryListing(context, data.id);
+    const raw = Buffer.from(data.imageBase64, "base64");
     const { uri } = await publishDirectoryListingDetail(full, undefined, {
       heroImage: {
         bytes: Uint8Array.from(raw),
         mimeType: data.mimeType.trim(),
       },
-    })
+    });
 
     return {
       id: data.id,
       listingDetailUri: uri,
-    }
-  })
+    };
+  });
 
 const removeStoreManagedListingHeroInput = z.object({
   id: z.string().min(1),
-})
+});
 
 /**
  * Clear the hero image for an AtStore-managed listing: republish without a `heroImage` blob
@@ -3462,32 +3591,32 @@ const removeStoreManagedListingHeroInput = z.object({
  * DB-only clears are not enough: Tap ingest mirrors the chain record and would restore `heroImageUrl`
  * from the blob on the next event.
  */
-const removeStoreManagedListingHero = createServerFn({ method: 'POST' })
+const removeStoreManagedListingHero = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(removeStoreManagedListingHeroInput)
   .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.id)
-    const atstoreRepoDid = await getAtstoreRepoDid()
+    const full = await getFullDirectoryListing(context, data.id);
+    const atstoreRepoDid = await getAtstoreRepoDid();
     if (full.repoDid?.trim() !== atstoreRepoDid) {
       throw new Error(
-        'Only AtStore-managed listings can have their hero image removed by an admin.',
-      )
+        "Only AtStore-managed listings can have their hero image removed by an admin.",
+      );
     }
 
-    await publishDirectoryListingDetail(full, undefined, { clearHero: true })
+    await publishDirectoryListingDetail(full, undefined, { clearHero: true });
 
-    const t = context.schema.storeListings
+    const t = context.schema.storeListings;
     await context.db
       .update(t)
       .set({ heroImageUrl: null, updatedAt: new Date() })
-      .where(eq(t.id, data.id))
+      .where(eq(t.id, data.id));
 
-    return { id: data.id }
-  })
+    return { id: data.id };
+  });
 
 const deleteStoreManagedListingInput = z.object({
   id: z.string().min(1),
-})
+});
 
 /**
  * Admin: permanently delete an AtStore-managed directory listing.
@@ -3496,62 +3625,62 @@ const deleteStoreManagedListingInput = z.object({
  * so the directory updates immediately. Tap ingest will eventually see the tombstone too;
  * `markListingRemovedFromTap` is idempotent on a missing row so the double-delete is safe.
  */
-const deleteStoreManagedListing = createServerFn({ method: 'POST' })
+const deleteStoreManagedListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(deleteStoreManagedListingInput)
   .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.id)
-    const atstoreRepoDid = await getAtstoreRepoDid()
+    const full = await getFullDirectoryListing(context, data.id);
+    const atstoreRepoDid = await getAtstoreRepoDid();
     if (full.repoDid?.trim() !== atstoreRepoDid) {
       throw new Error(
-        'Only AtStore-managed listings can be deleted from this admin page.',
-      )
+        "Only AtStore-managed listings can be deleted from this admin page.",
+      );
     }
     if (!full.rkey) {
       throw new Error(
-        'Listing has no ATProto record (missing rkey). Nothing to delete on the PDS.',
-      )
+        "Listing has no ATProto record (missing rkey). Nothing to delete on the PDS.",
+      );
     }
 
-    const { client, repoDid } = await createAtstorePublishClient()
-    await deleteRecord(client, repoDid, COLLECTION.listingDetail, full.rkey)
+    const { client, repoDid } = await createAtstorePublishClient();
+    await deleteRecord(client, repoDid, COLLECTION.listingDetail, full.rkey);
 
-    const t = context.schema.storeListings
-    await context.db.delete(t).where(eq(t.id, data.id))
+    const t = context.schema.storeListings;
+    await context.db.delete(t).where(eq(t.id, data.id));
 
-    return { id: data.id }
-  })
+    return { id: data.id };
+  });
 
 const deleteOwnedProductListingInput = z.object({
   listingId: z.string().uuid(),
-})
+});
 
 /** Delete a listing hosted on the signed-in user's PDS and remove the Postgres mirror row. */
-const deleteOwnedProductListing = createServerFn({ method: 'POST' })
+const deleteOwnedProductListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(deleteOwnedProductListingInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to delete your listing.')
+      throw new Error("Sign in to delete your listing.");
     }
 
-    const full = await getFullDirectoryListing(context, data.listingId)
+    const full = await getFullDirectoryListing(context, data.listingId);
 
     if (full.repoDid?.trim() !== session.did) {
       throw new Error(
-        'Only the account that hosts the listing record can delete it.',
-      )
+        "Only the account that hosts the listing record can delete it.",
+      );
     }
 
     if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error('This listing is not associated with your account.')
+      throw new Error("This listing is not associated with your account.");
     }
 
     if (!full.rkey?.trim()) {
       throw new Error(
-        'Listing has no AT Proto record (missing rkey). Nothing to delete.',
-      )
+        "Listing has no AT Proto record (missing rkey). Nothing to delete.",
+      );
     }
 
     await deleteRecord(
@@ -3559,32 +3688,35 @@ const deleteOwnedProductListing = createServerFn({ method: 'POST' })
       session.did,
       COLLECTION.listingDetail,
       full.rkey.trim(),
-    )
+    );
 
-    const t = context.schema.storeListings
-    await context.db.delete(t).where(eq(t.id, data.listingId))
+    const t = context.schema.storeListings;
+    await context.db.delete(t).where(eq(t.id, data.listingId));
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
-const previewDirectoryListingIcon = createServerFn({ method: 'POST' })
+const previewDirectoryListingIcon = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
-    const pageUrl = getListingGenerationUrl(listing)
+    const listing = await getDirectoryListingGenerationCandidate(
+      context,
+      data.id,
+    );
+    const pageUrl = getListingGenerationUrl(listing);
 
     if (!pageUrl) {
-      throw new Error(`Missing URL for ${listing.name}`)
+      throw new Error(`Missing URL for ${listing.name}`);
     }
 
-    const discovered = await discoverSiteBrandIconAsset(pageUrl)
+    const discovered = await discoverSiteBrandIconAsset(pageUrl);
     if (discovered) {
       try {
         const pngIn = await rasterizeBrandIconForGeminiInput(
           discovered.bytes,
           discovered.contentType,
-        )
+        );
         const polished = await geminiFlashGenerateImageFromPromptAndImage({
           prompt: buildIconPolishFromSiteAssetPrompt({
             name: listing.name,
@@ -3595,124 +3727,129 @@ const previewDirectoryListingIcon = createServerFn({ method: 'POST' })
             scope: listing.scope,
           }),
           imageBytes: pngIn,
-          imageMimeType: 'image/png',
-        })
+          imageMimeType: "image/png",
+        });
         return {
           id: data.id,
           mimeType: polished.mimeType,
-          imageBase64: polished.buffer.toString('base64'),
-          previewSource: 'site_asset' as const,
-        }
+          imageBase64: polished.buffer.toString("base64"),
+          previewSource: "site_asset" as const,
+        };
       } catch {
         /* Raster or Gemini failed — fall back to full-page screenshot */
       }
     }
 
-    const screenshot =
-      await captureListingPageScreenshotForGeneration(pageUrl)
+    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
     const generatedImage = await generateImageFromScreenshot({
       screenshot,
       prompt: buildIconPrompt(listing, pageUrl),
-    })
+    });
 
     return {
       id: data.id,
       mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString('base64'),
-      previewSource: 'model' as const,
-    }
-  })
+      imageBase64: generatedImage.buffer.toString("base64"),
+      previewSource: "model" as const,
+    };
+  });
 
-const commitDirectoryListingIcon = createServerFn({ method: 'POST' })
+const commitDirectoryListingIcon = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(commitGeneratedListingImageInput)
   .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.id)
-    const raw = Buffer.from(data.imageBase64, 'base64')
+    const full = await getFullDirectoryListing(context, data.id);
+    const raw = Buffer.from(data.imageBase64, "base64");
     const { uri } = await publishDirectoryListingDetail(full, undefined, {
       icon: {
         bytes: Uint8Array.from(raw),
         mimeType: data.mimeType.trim(),
       },
-    })
+    });
 
     return {
       id: data.id,
       listingDetailUri: uri,
-    }
-  })
+    };
+  });
 
-const regenerateDirectoryListingTagline = createServerFn({ method: 'POST' })
+const regenerateDirectoryListingTagline = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
+    const listing = await getDirectoryListingGenerationCandidate(
+      context,
+      data.id,
+    );
     const nextTagline = await generateListingTextField({
-      field: 'tagline',
+      field: "tagline",
       listing,
-    })
-    const full = await getFullDirectoryListing(context, data.id)
+    });
+    const full = await getFullDirectoryListing(context, data.id);
 
-    await publishDirectoryListingDetail(full, { tagline: nextTagline.value })
+    await publishDirectoryListingDetail(full, { tagline: nextTagline.value });
 
     return {
       id: data.id,
       tagline: nextTagline.value,
       source: nextTagline.source,
-    }
-  })
+    };
+  });
 
-const regenerateDirectoryListingDescription = createServerFn({ method: 'POST' })
+const regenerateDirectoryListingDescription = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
   .handler(async ({ data, context }) => {
-    const listing = await getDirectoryListingGenerationCandidate(context, data.id)
+    const listing = await getDirectoryListingGenerationCandidate(
+      context,
+      data.id,
+    );
     const nextDescription = await generateListingTextField({
-      field: 'description',
+      field: "description",
       listing,
-    })
-    const full = await getFullDirectoryListing(context, data.id)
+    });
+    const full = await getFullDirectoryListing(context, data.id);
 
     await publishDirectoryListingDetail(full, {
       fullDescription: nextDescription.value,
-    })
+    });
 
     return {
       id: data.id,
       description: nextDescription.value,
       source: nextDescription.source,
-    }
-  })
+    };
+  });
 
 const confirmProductAccountCandidateInput = z.object({
   candidateId: z.string().uuid(),
-})
+});
 
 const rejectProductAccountCandidateInput = z.object({
   candidateId: z.string().uuid(),
-})
+});
 
 export type ProductAccountCandidateQueueItem = {
-  candidateId: string
-  storeListingId: string
-  candidateDid: string
-  candidateHandle: string | null
-  source: string
-  createdAt: string
-  listingName: string
-  listingSlug: string
-  iconUrl: string | null
-  externalUrl: string | null
-  sourceUrl: string
-}
+  candidateId: string;
+  storeListingId: string;
+  candidateDid: string;
+  candidateHandle: string | null;
+  source: string;
+  createdAt: string;
+  listingName: string;
+  listingSlug: string;
+  iconUrl: string | null;
+  externalUrl: string | null;
+  sourceUrl: string;
+};
 
-const getNextProductAccountCandidate = createServerFn({ method: 'GET' })
+const getNextProductAccountCandidate = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly()
+    assertDevelopmentOnly();
 
-    const c = context.schema.storeListingProductAccountCandidates
-    const l = context.schema.storeListings
+    const c = context.schema.storeListingProductAccountCandidates;
+    const l = context.schema.storeListings;
     const [row] = await context.db
       .select({
         candidateId: c.id,
@@ -3729,30 +3866,30 @@ const getNextProductAccountCandidate = createServerFn({ method: 'GET' })
       })
       .from(c)
       .innerJoin(l, eq(c.storeListingId, l.id))
-      .where(eq(c.status, 'pending'))
+      .where(eq(c.status, "pending"))
       .orderBy(asc(c.createdAt))
-      .limit(1)
+      .limit(1);
 
-    if (!row) return null
+    if (!row) return null;
     return {
       ...row,
       iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
       createdAt: row.createdAt.toISOString(),
-    } satisfies ProductAccountCandidateQueueItem
-  })
+    } satisfies ProductAccountCandidateQueueItem;
+  });
 
 const getNextProductAccountCandidateQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'dev', 'nextProductAccountCandidate'],
+  queryKey: ["storeListings", "dev", "nextProductAccountCandidate"],
   queryFn: async () => getNextProductAccountCandidate(),
-})
+});
 
-const getPendingProductAccountCandidates = createServerFn({ method: 'GET' })
+const getPendingProductAccountCandidates = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly()
+    assertDevelopmentOnly();
 
-    const c = context.schema.storeListingProductAccountCandidates
-    const l = context.schema.storeListings
+    const c = context.schema.storeListingProductAccountCandidates;
+    const l = context.schema.storeListings;
     const rows = await context.db
       .select({
         candidateId: c.id,
@@ -3769,45 +3906,47 @@ const getPendingProductAccountCandidates = createServerFn({ method: 'GET' })
       })
       .from(c)
       .innerJoin(l, eq(c.storeListingId, l.id))
-      .where(eq(c.status, 'pending'))
-      .orderBy(asc(c.createdAt))
+      .where(eq(c.status, "pending"))
+      .orderBy(asc(c.createdAt));
 
     return rows.map((row) => ({
       ...row,
       iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
       createdAt: row.createdAt.toISOString(),
-    })) satisfies ProductAccountCandidateQueueItem[]
-  })
+    })) satisfies Array<ProductAccountCandidateQueueItem>;
+  });
 
 const getPendingProductAccountCandidatesQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'dev', 'pendingProductAccountCandidates'],
+  queryKey: ["storeListings", "dev", "pendingProductAccountCandidates"],
   queryFn: async () => getPendingProductAccountCandidates(),
-})
+});
 
 /** Listings with no usable Bluesky handle in DB (shows as @unknown on /apps/tags). */
 export type ListingMissingProductAccountHandleItem = {
-  id: string
-  slug: string
-  name: string
-  iconUrl: string | null
-  externalUrl: string | null
-  productAccountDid: string | null
-  productAccountHandleIgnoredAt: string | null
-}
+  id: string;
+  slug: string;
+  name: string;
+  iconUrl: string | null;
+  externalUrl: string | null;
+  productAccountDid: string | null;
+  productAccountHandleIgnoredAt: string | null;
+};
 
 const getListingsMissingProductAccountHandleInput = z.object({
   includeIgnored: z.boolean().optional().default(false),
-})
+});
 
-const getListingsMissingProductAccountHandle = createServerFn({ method: 'GET' })
+const getListingsMissingProductAccountHandle = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getListingsMissingProductAccountHandleInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-    const t = context.schema.storeListings
-    const conditions = [sql`coalesce(trim(${t.productAccountHandle}), '') = ''`]
+    assertDevelopmentOnly();
+    const t = context.schema.storeListings;
+    const conditions = [
+      sql`coalesce(trim(${t.productAccountHandle}), '') = ''`,
+    ];
     if (!data.includeIgnored) {
-      conditions.push(sql`${t.productAccountHandleIgnoredAt} is null`)
+      conditions.push(sql`${t.productAccountHandleIgnoredAt} is null`);
     }
     const rows = await context.db
       .select({
@@ -3821,103 +3960,109 @@ const getListingsMissingProductAccountHandle = createServerFn({ method: 'GET' })
       })
       .from(t)
       .where(and(...conditions))
-      .orderBy(asc(t.name))
+      .orderBy(asc(t.name));
 
     return rows.map((row) => ({
       ...row,
       iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
       productAccountHandleIgnoredAt:
         row.productAccountHandleIgnoredAt?.toISOString() ?? null,
-    })) satisfies ListingMissingProductAccountHandleItem[]
-  })
+    })) satisfies Array<ListingMissingProductAccountHandleItem>;
+  });
 
 function getListingsMissingProductAccountHandleQueryOptions(
   input: z.input<typeof getListingsMissingProductAccountHandleInput> = {},
 ) {
-  const normalizedInput = getListingsMissingProductAccountHandleInput.parse(input)
+  const normalizedInput =
+    getListingsMissingProductAccountHandleInput.parse(input);
   return queryOptions({
     queryKey: [
-      'storeListings',
-      'dev',
-      'listingsMissingProductAccountHandle',
+      "storeListings",
+      "dev",
+      "listingsMissingProductAccountHandle",
       normalizedInput,
     ],
     queryFn: async () =>
       getListingsMissingProductAccountHandle({ data: normalizedInput }),
-  })
+  });
 }
 
 function normalizeManualProductAccountHandle(raw: string): string {
-  const s = raw.trim().replace(/^@+/, '')
+  const s = raw.trim().replace(/^@+/, "");
   if (!s) {
-    throw new Error('Handle is required.')
+    throw new Error("Handle is required.");
   }
   if (/\s/.test(s)) {
-    throw new Error('Handle cannot contain whitespace.')
+    throw new Error("Handle cannot contain whitespace.");
   }
-  return s
+  return s;
 }
 
 function normalizeManualProductAccountDid(raw: string): string {
-  const s = raw.trim()
+  const s = raw.trim();
   if (!s) {
-    throw new Error('DID is required.')
+    throw new Error("DID is required.");
   }
   if (/\s/.test(s)) {
-    throw new Error('DID cannot contain whitespace.')
+    throw new Error("DID cannot contain whitespace.");
   }
-  if (!s.startsWith('did:')) {
-    throw new Error('DID must start with "did:".')
+  if (!s.startsWith("did:")) {
+    throw new Error('DID must start with "did:".');
   }
-  return s
+  return s;
 }
 
-const setProductAccountHandleDevInput = z.object({
-  listingId: z.string().uuid(),
-  handle: z.string().min(1).max(300).optional(),
-  did: z.string().min(1).max(300).optional(),
-}).refine((value) => value.handle?.trim() || value.did?.trim(), {
-  message: 'Either handle or DID is required.',
-})
+const setProductAccountHandleDevInput = z
+  .object({
+    listingId: z.string().uuid(),
+    handle: z.string().min(1).max(300).optional(),
+    did: z.string().min(1).max(300).optional(),
+  })
+  .refine((value) => value.handle?.trim() || value.did?.trim(), {
+    message: "Either handle or DID is required.",
+  });
 
-const setProductAccountHandleDev = createServerFn({ method: 'POST' })
+const setProductAccountHandleDev = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(setProductAccountHandleDevInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-    const t = context.schema.storeListings
+    assertDevelopmentOnly();
+    const t = context.schema.storeListings;
 
     const [found] = await context.db
       .select({ id: t.id })
       .from(t)
       .where(eq(t.id, data.listingId))
-      .limit(1)
+      .limit(1);
 
     if (!found) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
-    const updates: { productAccountHandle?: string; productAccountDid?: string } = {}
+    const updates: {
+      productAccountHandle?: string;
+      productAccountDid?: string;
+    } = {};
     const normalizedHandle = data.handle?.trim()
       ? normalizeManualProductAccountHandle(data.handle)
-      : null
+      : null;
     if (normalizedHandle) {
-      updates.productAccountHandle = normalizedHandle
+      updates.productAccountHandle = normalizedHandle;
     }
     if (data.did?.trim()) {
-      updates.productAccountDid = normalizeManualProductAccountDid(data.did)
+      updates.productAccountDid = normalizeManualProductAccountDid(data.did);
     } else if (normalizedHandle) {
-      const resolvedDid = await resolveBlueskyHandleToDid(normalizedHandle)
+      const resolvedDid = await resolveBlueskyHandleToDid(normalizedHandle);
       if (!resolvedDid) {
-        throw new Error('Could not resolve that handle to a DID.')
+        throw new Error("Could not resolve that handle to a DID.");
       }
-      updates.productAccountDid = resolvedDid
+      updates.productAccountDid = resolvedDid;
     }
     if (!updates.productAccountHandle && !updates.productAccountDid) {
-      throw new Error('Either handle or DID is required.')
+      throw new Error("Either handle or DID is required.");
     }
 
-    const now = new Date()
+    const now = new Date();
     await context.db
       .update(t)
       .set({
@@ -3925,107 +4070,109 @@ const setProductAccountHandleDev = createServerFn({ method: 'POST' })
         productAccountHandleIgnoredAt: null,
         updatedAt: now,
       })
-      .where(eq(t.id, data.listingId))
+      .where(eq(t.id, data.listingId));
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
 const ignoreMissingProductAccountHandleDevInput = z.object({
   listingId: z.string().uuid(),
-})
+});
 
-const ignoreMissingProductAccountHandleDev = createServerFn({ method: 'POST' })
+const ignoreMissingProductAccountHandleDev = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(ignoreMissingProductAccountHandleDevInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-    const t = context.schema.storeListings
+    assertDevelopmentOnly();
+    const t = context.schema.storeListings;
 
     const [found] = await context.db
       .select({ id: t.id })
       .from(t)
       .where(eq(t.id, data.listingId))
-      .limit(1)
+      .limit(1);
 
     if (!found) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
-    const now = new Date()
+    const now = new Date();
     await context.db
       .update(t)
       .set({
         productAccountHandleIgnoredAt: now,
         updatedAt: now,
       })
-      .where(eq(t.id, data.listingId))
+      .where(eq(t.id, data.listingId));
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
 const unignoreMissingProductAccountHandleDevInput = z.object({
   listingId: z.string().uuid(),
-})
+});
 
-const unignoreMissingProductAccountHandleDev = createServerFn({ method: 'POST' })
+const unignoreMissingProductAccountHandleDev = createServerFn({
+  method: "POST",
+})
   .middleware([dbMiddleware])
   .inputValidator(unignoreMissingProductAccountHandleDevInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-    const t = context.schema.storeListings
+    assertDevelopmentOnly();
+    const t = context.schema.storeListings;
 
     const [found] = await context.db
       .select({ id: t.id })
       .from(t)
       .where(eq(t.id, data.listingId))
-      .limit(1)
+      .limit(1);
 
     if (!found) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
-    const now = new Date()
+    const now = new Date();
     await context.db
       .update(t)
       .set({
         productAccountHandleIgnoredAt: null,
         updatedAt: now,
       })
-      .where(eq(t.id, data.listingId))
+      .where(eq(t.id, data.listingId));
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
 async function runConfirmProductAccountCandidate(
   context: { db: Database; schema: typeof dbSchema },
   candidateId: string,
 ) {
-  const c = context.schema.storeListingProductAccountCandidates
-  const t = context.schema.storeListings
+  const c = context.schema.storeListingProductAccountCandidates;
+  const t = context.schema.storeListings;
   const [candidate] = await context.db
     .select()
     .from(c)
     .where(eq(c.id, candidateId))
-    .limit(1)
+    .limit(1);
 
-  if (!candidate || candidate.status !== 'pending') {
-    throw new Error('Candidate not found or not pending.')
+  if (!candidate || candidate.status !== "pending") {
+    throw new Error("Candidate not found or not pending.");
   }
 
-  const full = await getFullDirectoryListing(context, candidate.storeListingId)
-  const did = candidate.candidateDid.trim()
-  if (!did.startsWith('did:')) {
-    throw new Error('Invalid candidate DID.')
+  const full = await getFullDirectoryListing(context, candidate.storeListingId);
+  const did = candidate.candidateDid.trim();
+  if (!did.startsWith("did:")) {
+    throw new Error("Invalid candidate DID.");
   }
 
-  await publishDirectoryListingDetail(full, { productAccountDid: did })
+  await publishDirectoryListingDetail(full, { productAccountDid: did });
 
-  const profile = await fetchBlueskyPublicProfileFields(did)
+  const profile = await fetchBlueskyPublicProfileFields(did);
   const handle =
     profile?.handle?.trim() && profile.handle.length > 0
       ? profile.handle.trim()
-      : null
-  const now = new Date()
+      : null;
+  const now = new Date();
 
   await context.db
     .update(t)
@@ -4034,47 +4181,47 @@ async function runConfirmProductAccountCandidate(
       productAccountHandle: handle,
       updatedAt: now,
     })
-    .where(eq(t.id, candidate.storeListingId))
+    .where(eq(t.id, candidate.storeListingId));
 
   await context.db
     .update(c)
-    .set({ status: 'verified', resolvedAt: now, updatedAt: now })
-    .where(eq(c.id, candidate.id))
+    .set({ status: "verified", resolvedAt: now, updatedAt: now })
+    .where(eq(c.id, candidate.id));
 
   await context.db
     .update(c)
-    .set({ status: 'superseded', updatedAt: now })
+    .set({ status: "superseded", updatedAt: now })
     .where(
       and(
         eq(c.storeListingId, candidate.storeListingId),
-        eq(c.status, 'pending'),
+        eq(c.status, "pending"),
         ne(c.id, candidate.id),
       ),
-    )
+    );
 }
 
-const confirmProductAccountCandidate = createServerFn({ method: 'POST' })
+const confirmProductAccountCandidate = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(confirmProductAccountCandidateInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
-    await runConfirmProductAccountCandidate(context, data.candidateId)
-    return { ok: true as const }
-  })
+    assertDevelopmentOnly();
+    await runConfirmProductAccountCandidate(context, data.candidateId);
+    return { ok: true as const };
+  });
 
 const applyProductAccountCandidatesBatchInput = z.object({
   /** Checked rows: one winning candidate per listing (last in list order wins duplicates). */
   confirmCandidateIds: z.array(z.string().uuid()),
-})
+});
 
-const applyProductAccountCandidatesBatch = createServerFn({ method: 'POST' })
+const applyProductAccountCandidatesBatch = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(applyProductAccountCandidatesBatchInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
+    assertDevelopmentOnly();
 
-    const c = context.schema.storeListingProductAccountCandidates
-    const l = context.schema.storeListings
+    const c = context.schema.storeListingProductAccountCandidates;
+    const l = context.schema.storeListings;
 
     const rows = await context.db
       .select({
@@ -4083,102 +4230,102 @@ const applyProductAccountCandidatesBatch = createServerFn({ method: 'POST' })
       })
       .from(c)
       .innerJoin(l, eq(c.storeListingId, l.id))
-      .where(eq(c.status, 'pending'))
-      .orderBy(asc(c.createdAt))
+      .where(eq(c.status, "pending"))
+      .orderBy(asc(c.createdAt));
 
-    const confirmSet = new Set(data.confirmCandidateIds)
-    const winningByListing = new Map<string, string>()
+    const confirmSet = new Set(data.confirmCandidateIds);
+    const winningByListing = new Map<string, string>();
     for (const row of rows) {
       if (confirmSet.has(row.candidateId)) {
-        winningByListing.set(row.storeListingId, row.candidateId)
+        winningByListing.set(row.storeListingId, row.candidateId);
       }
     }
-    const toConfirm = [...winningByListing.values()]
+    const toConfirm = [...winningByListing.values()];
 
-    let confirmed = 0
+    let confirmed = 0;
     for (const candidateId of toConfirm) {
       try {
-        await runConfirmProductAccountCandidate(context, candidateId)
-        confirmed += 1
-      } catch (e) {
+        await runConfirmProductAccountCandidate(context, candidateId);
+        confirmed += 1;
+      } catch (error) {
         console.warn(
           `[applyProductAccountCandidatesBatch] skip confirm ${candidateId}:`,
-          e,
-        )
+          error,
+        );
       }
     }
 
-    const now = new Date()
+    const now = new Date();
     const stillPending = await context.db
       .select({ id: c.id })
       .from(c)
-      .where(eq(c.status, 'pending'))
+      .where(eq(c.status, "pending"));
 
-    let rejected = 0
+    let rejected = 0;
     for (const { id } of stillPending) {
-      if (toConfirm.includes(id)) continue
+      if (toConfirm.includes(id)) continue;
       const result = await context.db
         .update(c)
-        .set({ status: 'rejected', resolvedAt: now, updatedAt: now })
-        .where(and(eq(c.id, id), eq(c.status, 'pending')))
-        .returning({ id: c.id })
-      if (result.length > 0) rejected += 1
+        .set({ status: "rejected", resolvedAt: now, updatedAt: now })
+        .where(and(eq(c.id, id), eq(c.status, "pending")))
+        .returning({ id: c.id });
+      if (result.length > 0) rejected += 1;
     }
 
-    return { ok: true as const, confirmed, rejected }
-  })
+    return { ok: true as const, confirmed, rejected };
+  });
 
-const rejectProductAccountCandidate = createServerFn({ method: 'POST' })
+const rejectProductAccountCandidate = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(rejectProductAccountCandidateInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly()
+    assertDevelopmentOnly();
 
-    const c = context.schema.storeListingProductAccountCandidates
-    const now = new Date()
+    const c = context.schema.storeListingProductAccountCandidates;
+    const now = new Date();
     const result = await context.db
       .update(c)
-      .set({ status: 'rejected', resolvedAt: now, updatedAt: now })
-      .where(and(eq(c.id, data.candidateId), eq(c.status, 'pending')))
-      .returning({ id: c.id })
+      .set({ status: "rejected", resolvedAt: now, updatedAt: now })
+      .where(and(eq(c.id, data.candidateId), eq(c.status, "pending")))
+      .returning({ id: c.id });
 
     if (result.length === 0) {
-      throw new Error('Candidate not found.')
+      throw new Error("Candidate not found.");
     }
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
 const claimProductListingToPdsInput = z.object({
   listingId: z.string().uuid(),
-})
+});
 
 const getProfileOwnedProductListingsInput = z.object({
   did: z.string().trim().min(1).max(2048),
-})
+});
 
-const getProductClaimEligibility = createServerFn({ method: 'GET' })
+const getProductClaimEligibility = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      return { eligible: false as const, listings: [] }
+      return { eligible: false as const, listings: [] };
     }
     const listings = await findEligibleProductClaimsForDid(
       context.db,
       session.did,
-    )
+    );
     return {
       eligible: listings.length > 0,
       listings,
-    }
-  })
+    };
+  });
 
 function getProductClaimEligibilityQueryOptions() {
   return queryOptions({
-    queryKey: ['storeListings', 'productClaimEligibility'] as const,
+    queryKey: ["storeListings", "productClaimEligibility"] as const,
     queryFn: async () => getProductClaimEligibility(),
-  })
+  });
 }
 
 const submitProductListingClaimInput = z.object({
@@ -4188,51 +4335,51 @@ const submitProductListingClaimInput = z.object({
     .trim()
     .min(
       20,
-      'Please add more detail so we can verify your request (at least 20 characters).',
+      "Please add more detail so we can verify your request (at least 20 characters).",
     )
     .max(8000),
-})
+});
 
-const submitProductListingClaim = createServerFn({ method: 'POST' })
+const submitProductListingClaim = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(submitProductListingClaimInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to request a listing claim.')
+      throw new Error("Sign in to request a listing claim.");
     }
 
-    const full = await getFullDirectoryListing(context, data.listingId)
-    if (full.verificationStatus !== 'verified') {
-      throw new Error('Only verified listings can be claimed.')
+    const full = await getFullDirectoryListing(context, data.listingId);
+    if (full.verificationStatus !== "verified") {
+      throw new Error("Only verified listings can be claimed.");
     }
     if (isBrowseableProtocolRow({ categorySlugs: full.categorySlugs ?? [] })) {
-      throw new Error('Protocol listings cannot be claimed through this flow.')
+      throw new Error("Protocol listings cannot be claimed through this flow.");
     }
 
-    const atstoreDid = await getAtstoreRepoDid()
+    const atstoreDid = await getAtstoreRepoDid();
     if (full.repoDid?.trim() !== atstoreDid) {
       throw new Error(
-        'This listing is not on the store account anymore, so it cannot be claimed here.',
-      )
+        "This listing is not on the store account anymore, so it cannot be claimed here.",
+      );
     }
     if (!full.atUri?.trim() || !full.rkey?.trim()) {
-      throw new Error('This listing is missing ATProto coordinates.')
+      throw new Error("This listing is missing ATProto coordinates.");
     }
 
     if (full.productAccountDid?.trim() === session.did) {
       throw new Error(
-        'This listing is already associated with your account. Use the claim option above.',
-      )
+        "This listing is already associated with your account. Use the claim option above.",
+      );
     }
 
     if (full.productAccountHandle?.trim()) {
       throw new Error(
-        'This listing already has a Bluesky product account. Log in with that handle and use the claim option above.',
-      )
+        "This listing already has a Bluesky product account. Log in with that handle and use the claim option above.",
+      );
     }
 
-    const claimTable = context.schema.listingClaims
+    const claimTable = context.schema.listingClaims;
     const [existingPending] = await context.db
       .select({ id: claimTable.id })
       .from(claimTable)
@@ -4240,39 +4387,39 @@ const submitProductListingClaim = createServerFn({ method: 'POST' })
         and(
           eq(claimTable.storeListingId, data.listingId),
           eq(claimTable.claimantDid, session.did),
-          eq(claimTable.status, 'pending'),
+          eq(claimTable.status, "pending"),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (existingPending) {
-      throw new Error('You already have a pending claim for this listing.')
+      throw new Error("You already have a pending claim for this listing.");
     }
 
-    const claimantHandle = await fetchBlueskyHandleForDid(session.did)
+    const claimantHandle = await fetchBlueskyHandleForDid(session.did);
 
     await context.db.insert(claimTable).values({
       storeListingId: data.listingId,
       claimantDid: session.did,
       message: data.message,
       claimantHandle: claimantHandle ?? null,
-      status: 'pending',
+      status: "pending",
       updatedAt: new Date(),
-    })
+    });
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
-const getUserProductListingClaimRequests = createServerFn({ method: 'GET' })
+const getUserProductListingClaimRequests = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      return []
+      return [];
     }
 
-    const c = context.schema.listingClaims
-    const l = context.schema.storeListings
+    const c = context.schema.listingClaims;
+    const l = context.schema.storeListings;
 
     const rows = await context.db
       .select({
@@ -4289,34 +4436,34 @@ const getUserProductListingClaimRequests = createServerFn({ method: 'GET' })
       .from(c)
       .innerJoin(l, eq(c.storeListingId, l.id))
       .where(eq(c.claimantDid, session.did))
-      .orderBy(desc(c.createdAt))
+      .orderBy(desc(c.createdAt));
 
     return rows.map((row) => ({
       ...row,
       listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
-    }))
-  })
+    }));
+  });
 
 function getUserProductListingClaimRequestsQueryOptions() {
   return queryOptions({
-    queryKey: ['storeListings', 'userProductListingClaims'] as const,
+    queryKey: ["storeListings", "userProductListingClaims"] as const,
     queryFn: async () => getUserProductListingClaimRequests(),
-  })
+  });
 }
 
 const listingExternalUrlSchema = z
   .string()
   .trim()
-  .min(1, 'URL is required')
+  .min(1, "URL is required")
   .max(2048)
   .refine((s) => {
     try {
-      const u = new URL(s)
-      return u.protocol === 'https:' || u.protocol === 'http:'
+      const u = new URL(s);
+      return u.protocol === "https:" || u.protocol === "http:";
     } catch {
-      return false
+      return false;
     }
-  }, 'Enter a valid http(s) URL')
+  }, "Enter a valid http(s) URL");
 
 /**
  * App tags only apply to top-level app listings (`apps/<slug>`). App-tool
@@ -4324,24 +4471,24 @@ const listingExternalUrlSchema = z
  * enforced by `updateDirectoryListingAppTags`.
  */
 function isEditableAppCategorySlug(categorySlug: string): boolean {
-  const parts = categorySlug.split('/').filter(Boolean)
-  return parts.length === 2 && parts[0] === 'apps'
+  const parts = categorySlug.split("/").filter(Boolean);
+  return parts.length === 2 && parts[0] === "apps";
 }
 
 function normalizeEditableListingCategorySlug(value: string): string {
-  const raw = value.trim().replace(/^app\//i, 'apps/')
-  const option = getDirectoryCategoryOption(raw)
-  const ids = option?.pathIds ?? []
+  const raw = value.trim().replace(/^app\//i, "apps/");
+  const option = getDirectoryCategoryOption(raw);
+  const ids = option?.pathIds ?? [];
 
-  const isProtocolLeaf = ids[0] === 'protocol' && ids.length === 2
-  const isAppLeaf = ids[0] === 'apps' && (ids.length === 2 || ids.length === 3)
+  const isProtocolLeaf = ids[0] === "protocol" && ids.length === 2;
+  const isAppLeaf = ids[0] === "apps" && (ids.length === 2 || ids.length === 3);
   if (!isProtocolLeaf && !isAppLeaf) {
     throw new Error(
-      'Category must be `protocol/<category>`, `apps/<app>`, or `apps/<app>/<category>`.',
-    )
+      "Category must be `protocol/<category>`, `apps/<app>`, or `apps/<app>/<category>`.",
+    );
   }
 
-  return ids.join('/')
+  return ids.join("/");
 }
 
 const listingLinkInputSchema = z.object({
@@ -4353,13 +4500,13 @@ const listingLinkInputSchema = z.object({
     .max(LISTING_LINK_LABEL_MAX_LENGTH)
     .optional()
     .transform((s) => (s && s.length > 0 ? s : undefined)),
-})
+});
 
 const updateOwnedProductListingInput = z.object({
   listingId: z.string().uuid(),
   name: z.string().trim().min(1).max(640),
   tagline: z.string().max(2000),
-  fullDescription: z.string().max(20000),
+  fullDescription: z.string().max(20_000),
   externalUrl: listingExternalUrlSchema,
   categorySlug: z.string().trim().min(1).max(256),
   productHandle: z.string().max(300),
@@ -4369,12 +4516,12 @@ const updateOwnedProductListingInput = z.object({
     .optional()
     .default([]),
   appTags: z.array(z.string()).max(64).optional().default([]),
-})
+});
 
 const createOwnedProductListingInput = z.object({
   name: z.string().trim().min(1).max(640),
   tagline: z.string().max(2000),
-  fullDescription: z.string().max(20000),
+  fullDescription: z.string().max(20_000),
   externalUrl: listingExternalUrlSchema,
   categorySlug: z.string().trim().min(1).max(256),
   productHandle: z.string().max(300),
@@ -4406,11 +4553,11 @@ const createOwnedProductListingInput = z.object({
     .optional()
     .default([]),
   appTags: z.array(z.string()).max(64).optional().default([]),
-})
+});
 
 const getProductListingEditAccessInput = z.object({
   listingId: z.string().uuid(),
-})
+});
 
 /**
  * Stable, human-readable URL slug (same rules as curated listings via
@@ -4422,40 +4569,40 @@ async function allocateUniqueStoreListingSlug(
   name: string,
   sourceUrl: string,
 ): Promise<string> {
-  const base = buildDirectoryListingSlug({ name, sourceUrl })
-  const t = dbSchema.storeListings
-  let candidate = base
-  let suffix = 2
+  const base = buildDirectoryListingSlug({ name, sourceUrl });
+  const t = dbSchema.storeListings;
+  let candidate = base;
+  let suffix = 2;
   for (let attempt = 0; attempt < 5000; attempt++) {
     const [row] = await db
       .select({ id: t.id })
       .from(t)
       .where(eq(t.slug, candidate))
-      .limit(1)
-    if (!row) return candidate
-    candidate = `${base}-${suffix}`
-    suffix += 1
+      .limit(1);
+    if (!row) return candidate;
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
   }
-  throw new Error('Could not allocate a unique listing slug.')
+  throw new Error("Could not allocate a unique listing slug.");
 }
 
-const getProductListingEditAccess = createServerFn({ method: 'GET' })
+const getProductListingEditAccess = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getProductListingEditAccessInput)
   .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.listingId)
+    const full = await getFullDirectoryListing(context, data.listingId);
 
     if (!full.rkey?.trim() || !full.atUri?.trim()) {
       return {
         canEdit: false as const,
         needsClaim: false as const,
         isStoreManaged: false as const,
-      }
+      };
     }
 
-    const atstoreDid = await getAtstoreRepoDid()
-    const repo = full.repoDid?.trim()
-    const productDid = full.productAccountDid?.trim()
+    const atstoreDid = await getAtstoreRepoDid();
+    const repo = full.repoDid?.trim();
+    const productDid = full.productAccountDid?.trim();
     /**
      * Once a listing has been migrated via `claimProductListingToPds`,
      * `migratedFromAtUri` is non-null even when the claimant *is* at-store
@@ -4463,74 +4610,77 @@ const getProductListingEditAccess = createServerFn({ method: 'GET' })
      * as still store-managed and trigger a redundant claim CTA).
      */
     const isStoreManaged =
-      repo === atstoreDid && !full.migratedFromAtUri?.trim()
+      repo === atstoreDid && !full.migratedFromAtUri?.trim();
 
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
       return {
         canEdit: false as const,
         needsClaim: false as const,
         isStoreManaged,
-      }
+      };
     }
 
-    const needsClaim = Boolean(productDid === session.did && isStoreManaged)
+    const needsClaim = Boolean(productDid === session.did && isStoreManaged);
 
-    const canEdit = Boolean(
-      repo === session.did && productDid === session.did,
-    )
+    const canEdit = Boolean(repo === session.did && productDid === session.did);
 
-    return { canEdit, needsClaim, isStoreManaged }
-  })
+    return { canEdit, needsClaim, isStoreManaged };
+  });
 
 function getProductListingEditAccessQueryOptions(listingId: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'productListingEditAccess', listingId] as const,
+    queryKey: ["storeListings", "productListingEditAccess", listingId] as const,
     queryFn: async () => getProductListingEditAccess({ data: { listingId } }),
-  })
+  });
 }
 
-const updateOwnedProductListing = createServerFn({ method: 'POST' })
+const updateOwnedProductListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(updateOwnedProductListingInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to edit your listing.')
+      throw new Error("Sign in to edit your listing.");
     }
 
-    const full = await getFullDirectoryListing(context, data.listingId)
+    const full = await getFullDirectoryListing(context, data.listingId);
 
     if (full.repoDid?.trim() !== session.did) {
       throw new Error(
-        'Only the account that hosts the listing record can edit it. Claim the listing first if it is still on the store publisher.',
-      )
+        "Only the account that hosts the listing record can edit it. Claim the listing first if it is still on the store publisher.",
+      );
     }
 
     if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error('This listing is not associated with your account.')
+      throw new Error("This listing is not associated with your account.");
     }
 
-    const name = data.name.trim().slice(0, 640)
-    const taglineClean = sanitizeListingTagline(data.tagline)
-    const descClean = sanitizeListingDescription(data.fullDescription)
-    const externalUrl = data.externalUrl.trim()
-    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
-    const productHandleInput = data.productHandle.trim()
+    const name = data.name.trim().slice(0, 640);
+    const taglineClean = sanitizeListingTagline(data.tagline);
+    const descClean = sanitizeListingDescription(data.fullDescription);
+    const externalUrl = data.externalUrl.trim();
+    const categorySlug = normalizeEditableListingCategorySlug(
+      data.categorySlug,
+    );
+    const productHandleInput = data.productHandle.trim();
 
-    let productAccountHandle: string | null = null
+    let productAccountHandle: string | null = null;
     if (productHandleInput.length > 0) {
-      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
-      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      productAccountHandle =
+        normalizeManualProductAccountHandle(productHandleInput);
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle);
       if (!resolvedDid) {
-        throw new Error('Could not resolve that handle to a DID.')
+        throw new Error("Could not resolve that handle to a DID.");
       }
       if (resolvedDid !== session.did) {
-        throw new Error('That handle does not belong to your signed-in account.')
+        throw new Error(
+          "That handle does not belong to your signed-in account.",
+        );
       }
     }
 
-    const links = normalizeListingLinks(data.links as ListingLink[])
+    const links = normalizeListingLinks(data.links as Array<ListingLink>);
 
     /**
      * Only `apps/<slug>` listings surface app tags; clear them otherwise so we don't
@@ -4539,7 +4689,7 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
      */
     const appTags = isEditableAppCategorySlug(categorySlug)
       ? normalizeAppTags(data.appTags ?? [])
-      : []
+      : [];
 
     const patch: Partial<StoreListing> = {
       name,
@@ -4550,17 +4700,17 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
       productAccountDid: session.did,
       links,
       appTags,
-    }
+    };
 
     const { uri } = await publishOwnedListingDetail(
       session.client,
       session.did,
       full,
       patch,
-    )
+    );
 
-    const now = new Date()
-    const t = context.schema.storeListings
+    const now = new Date();
+    const t = context.schema.storeListings;
     await context.db
       .update(t)
       .set({
@@ -4576,46 +4726,51 @@ const updateOwnedProductListing = createServerFn({ method: 'POST' })
         appTags,
         updatedAt: now,
       })
-      .where(eq(t.id, full.id))
+      .where(eq(t.id, full.id));
 
-    return { slug: full.slug }
-  })
+    return { slug: full.slug };
+  });
 
-const createOwnedProductListing = createServerFn({ method: 'POST' })
+const createOwnedProductListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(createOwnedProductListingInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to create a listing.')
+      throw new Error("Sign in to create a listing.");
     }
 
-    const name = data.name.trim().slice(0, 640)
-    const taglineClean = sanitizeListingTagline(data.tagline)
-    const descClean = sanitizeListingDescription(data.fullDescription)
-    const externalUrl = data.externalUrl.trim()
-    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
+    const name = data.name.trim().slice(0, 640);
+    const taglineClean = sanitizeListingTagline(data.tagline);
+    const descClean = sanitizeListingDescription(data.fullDescription);
+    const externalUrl = data.externalUrl.trim();
+    const categorySlug = normalizeEditableListingCategorySlug(
+      data.categorySlug,
+    );
     const slug = await allocateUniqueStoreListingSlug(
       context.db,
       name,
       externalUrl,
-    )
-    const productHandleInput = data.productHandle.trim()
+    );
+    const productHandleInput = data.productHandle.trim();
 
-    let productAccountHandle: string | null = null
+    let productAccountHandle: string | null = null;
     if (productHandleInput.length > 0) {
-      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
-      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      productAccountHandle =
+        normalizeManualProductAccountHandle(productHandleInput);
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle);
       if (!resolvedDid) {
-        throw new Error('Could not resolve that handle to a DID.')
+        throw new Error("Could not resolve that handle to a DID.");
       }
       if (resolvedDid !== session.did) {
-        throw new Error('That handle does not belong to your signed-in account.')
+        throw new Error(
+          "That handle does not belong to your signed-in account.",
+        );
       }
     }
 
-    const now = new Date()
-    const links = normalizeListingLinks(data.links as ListingLink[])
+    const now = new Date();
+    const links = normalizeListingLinks(data.links as Array<ListingLink>);
     /**
      * Only `apps/<slug>` listings carry app tags in the lexicon; other category kinds
      * drop them so we don't pin editorial tags onto protocol/app-tool records (mirrors
@@ -4623,7 +4778,7 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
      */
     const appTags = isEditableAppCategorySlug(categorySlug)
       ? normalizeAppTags(data.appTags ?? [])
-      : []
+      : [];
     const draftRow: StoreListing = {
       id: crypto.randomUUID(),
       sourceUrl: externalUrl,
@@ -4641,7 +4796,7 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       repoDid: session.did,
       rkey: null,
       heroImageUrl: null,
-      verificationStatus: 'unverified',
+      verificationStatus: "unverified",
       sourceAccountDid: session.did,
       claimedByDid: null,
       claimedAt: null,
@@ -4659,61 +4814,70 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       trendingUpdatedAt: null,
       createdAt: now,
       updatedAt: now,
-    }
+    };
 
     let blobOverrides:
       | {
-          heroImage?: { bytes: Uint8Array; mimeType: string }
-          icon?: { bytes: Uint8Array; mimeType: string }
-          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>
+          heroImage?: { bytes: Uint8Array; mimeType: string };
+          icon?: { bytes: Uint8Array; mimeType: string };
+          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>;
         }
-      | undefined
+      | undefined;
 
-    if (data.heroImage || data.iconImage || (data.screenshotImages?.length ?? 0) > 0) {
-      blobOverrides = {}
+    if (
+      data.heroImage ||
+      data.iconImage ||
+      (data.screenshotImages?.length ?? 0) > 0
+    ) {
+      blobOverrides = {};
       if (data.heroImage) {
-        const heroMime = data.heroImage.mimeType.trim().toLowerCase()
-        if (!heroMime.startsWith('image/')) {
-          throw new Error('Hero image must be an image.')
+        const heroMime = data.heroImage.mimeType.trim().toLowerCase();
+        if (!heroMime.startsWith("image/")) {
+          throw new Error("Hero image must be an image.");
         }
-        const heroRaw = Buffer.from(data.heroImage.imageBase64, 'base64')
+        const heroRaw = Buffer.from(data.heroImage.imageBase64, "base64");
         if (heroRaw.length === 0 || heroRaw.length > 12_000_000) {
-          throw new Error('Hero image must be at most 12 MB.')
+          throw new Error("Hero image must be at most 12 MB.");
         }
         blobOverrides.heroImage = {
           bytes: Uint8Array.from(heroRaw),
           mimeType: heroMime,
-        }
+        };
       }
       if (data.iconImage) {
-        const iconMime = data.iconImage.mimeType.trim().toLowerCase()
-        if (!iconMime.startsWith('image/')) {
-          throw new Error('Icon image must be an image.')
+        const iconMime = data.iconImage.mimeType.trim().toLowerCase();
+        if (!iconMime.startsWith("image/")) {
+          throw new Error("Icon image must be an image.");
         }
-        const iconRaw = Buffer.from(data.iconImage.imageBase64, 'base64')
+        const iconRaw = Buffer.from(data.iconImage.imageBase64, "base64");
         if (iconRaw.length === 0) {
-          throw new Error('Icon image must be an image.')
+          throw new Error("Icon image must be an image.");
         }
         blobOverrides.icon = {
           bytes: Uint8Array.from(iconRaw),
           mimeType: iconMime,
-        }
+        };
       }
       if (data.screenshotImages && data.screenshotImages.length > 0) {
-        blobOverrides.screenshots = data.screenshotImages.map((screenshot, index) => {
-          const screenshotMime = screenshot.mimeType.trim().toLowerCase()
-          if (!screenshotMime.startsWith('image/')) {
-            throw new Error(`Screenshot ${index + 1} must be an image.`)
-          }
-          const screenshotRaw = Buffer.from(screenshot.imageBase64, 'base64')
-          if (screenshotRaw.length === 0 || screenshotRaw.length > 12_000_000) {
-            throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
-          }
-          return {
-            bytes: Uint8Array.from(screenshotRaw),
-            mimeType: screenshotMime,
-          }
-        })
+        blobOverrides.screenshots = data.screenshotImages.map(
+          (screenshot, index) => {
+            const screenshotMime = screenshot.mimeType.trim().toLowerCase();
+            if (!screenshotMime.startsWith("image/")) {
+              throw new Error(`Screenshot ${index + 1} must be an image.`);
+            }
+            const screenshotRaw = Buffer.from(screenshot.imageBase64, "base64");
+            if (
+              screenshotRaw.length === 0 ||
+              screenshotRaw.length > 12_000_000
+            ) {
+              throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`);
+            }
+            return {
+              bytes: Uint8Array.from(screenshotRaw),
+              mimeType: screenshotMime,
+            };
+          },
+        );
       }
     }
 
@@ -4721,21 +4885,25 @@ const createOwnedProductListing = createServerFn({ method: 'POST' })
       session.client,
       draftRow,
       blobOverrides,
-    )
-    const createdAt = now.toISOString()
-    record.createdAt = createdAt
-    record.updatedAt = createdAt
+    );
+    const createdAt = now.toISOString();
+    record.createdAt = createdAt;
+    record.updatedAt = createdAt;
 
-    const { uri } = await createListingDetailRecord(session.client, session.did, record)
-    return { uri, slug }
-  })
+    const { uri } = await createListingDetailRecord(
+      session.client,
+      session.did,
+      record,
+    );
+    return { uri, slug };
+  });
 
 const updateOwnedProductListingImageInput = z.object({
   listingId: z.string().uuid(),
-  kind: z.enum(['hero', 'icon']),
+  kind: z.enum(["hero", "icon"]),
   mimeType: z.string().min(3).max(128),
   imageBase64: z.string().min(1),
-})
+});
 
 const updateOwnedProductListingScreenshotsInput = z.object({
   listingId: z.string().uuid(),
@@ -4748,116 +4916,118 @@ const updateOwnedProductListingScreenshotsInput = z.object({
       }),
     )
     .max(4),
-})
+});
 
-const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
+const updateOwnedProductListingImage = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(updateOwnedProductListingImageInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to update images.')
+      throw new Error("Sign in to update images.");
     }
 
-    const mime = data.mimeType.trim().toLowerCase()
-    if (!mime.startsWith('image/')) {
-      throw new Error('File must be an image.')
+    const mime = data.mimeType.trim().toLowerCase();
+    if (!mime.startsWith("image/")) {
+      throw new Error("File must be an image.");
     }
 
-    const full = await getFullDirectoryListing(context, data.listingId)
+    const full = await getFullDirectoryListing(context, data.listingId);
 
     if (full.repoDid?.trim() !== session.did) {
       throw new Error(
-        'Only the account that hosts the listing record can edit it.',
-      )
+        "Only the account that hosts the listing record can edit it.",
+      );
     }
 
     if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error('This listing is not associated with your account.')
+      throw new Error("This listing is not associated with your account.");
     }
 
-    let raw: Buffer
+    let raw: Buffer;
     try {
-      raw = Buffer.from(data.imageBase64, 'base64')
+      raw = Buffer.from(data.imageBase64, "base64");
     } catch {
-      throw new Error('Invalid image data.')
+      throw new Error("Invalid image data.");
     }
-    const maxBytes = data.kind === 'hero' ? 12_000_000 : 2_000_000
+    const maxBytes = data.kind === "hero" ? 12_000_000 : 2_000_000;
     if (raw.length === 0) {
       throw new Error(
-        data.kind === 'hero'
-          ? 'Hero image must be at most 12 MB.'
-          : 'Icon image must be at most 2 MB.',
-      )
+        data.kind === "hero"
+          ? "Hero image must be at most 12 MB."
+          : "Icon image must be at most 2 MB.",
+      );
     }
 
-    let finalRaw = raw
-    let finalMime = mime
-    if (data.kind === 'icon' && raw.length > maxBytes) {
-      const { default: sharp } = await import('sharp')
-      const scales = [1, 0.9, 0.8, 0.7, 0.6] as const
-      const qualities = [90, 80, 70, 60, 50, 40] as const
-      let bestBuffer: Buffer | null = null
+    let finalRaw = raw;
+    let finalMime = mime;
+    if (data.kind === "icon" && raw.length > maxBytes) {
+      const { default: sharp } = await import("sharp");
+      const scales = [1, 0.9, 0.8, 0.7, 0.6] as const;
+      const qualities = [90, 80, 70, 60, 50, 40] as const;
+      let bestBuffer: Buffer | null = null;
 
       for (const scale of scales) {
-        let pipeline = sharp(raw, { failOn: 'none' }).rotate()
+        let pipeline = sharp(raw, { failOn: "none" }).rotate();
         if (scale < 1) {
-          const meta = await pipeline.metadata()
-          const width = meta.width ?? 0
-          const height = meta.height ?? 0
+          const meta = await pipeline.metadata();
+          const width = meta.width ?? 0;
+          const height = meta.height ?? 0;
           if (width > 0 && height > 0) {
             pipeline = pipeline.resize({
               width: Math.max(1, Math.floor(width * scale)),
               height: Math.max(1, Math.floor(height * scale)),
-              fit: 'inside',
+              fit: "inside",
               withoutEnlargement: true,
-            })
+            });
           }
         }
 
         for (const quality of qualities) {
-          const webpBuffer = await pipeline.clone().webp({ quality }).toBuffer()
+          const webpBuffer = await pipeline
+            .clone()
+            .webp({ quality })
+            .toBuffer();
           if (!bestBuffer || webpBuffer.length < bestBuffer.length) {
-            bestBuffer = webpBuffer
+            bestBuffer = webpBuffer;
           }
           if (webpBuffer.length <= maxBytes) {
-            finalRaw = webpBuffer
-            finalMime = 'image/webp'
-            break
+            finalRaw = webpBuffer;
+            finalMime = "image/webp";
+            break;
           }
 
           const jpegBuffer = await pipeline
             .clone()
             .jpeg({ quality, mozjpeg: true })
-            .toBuffer()
+            .toBuffer();
           if (!bestBuffer || jpegBuffer.length < bestBuffer.length) {
-            bestBuffer = jpegBuffer
+            bestBuffer = jpegBuffer;
           }
           if (jpegBuffer.length <= maxBytes) {
-            finalRaw = jpegBuffer
-            finalMime = 'image/jpeg'
-            break
+            finalRaw = jpegBuffer;
+            finalMime = "image/jpeg";
+            break;
           }
         }
 
         if (finalRaw.length <= maxBytes) {
-          break
+          break;
         }
       }
-
     }
 
     if (finalRaw.length > maxBytes) {
       throw new Error(
-        data.kind === 'hero'
-          ? 'Hero image must be at most 12 MB.'
-          : 'Icon image must be at most 2 MB.',
-      )
+        data.kind === "hero"
+          ? "Hero image must be at most 12 MB."
+          : "Icon image must be at most 2 MB.",
+      );
     }
 
-    const bytes = Uint8Array.from(finalRaw)
+    const bytes = Uint8Array.from(finalRaw);
     const blobOverrides =
-      data.kind === 'hero'
+      data.kind === "hero"
         ? {
             heroImage: {
               bytes,
@@ -4869,7 +5039,7 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
               bytes,
               mimeType: finalMime,
             },
-          }
+          };
 
     const { uri, dbUrls } = await publishOwnedListingDetail(
       session.client,
@@ -4877,12 +5047,12 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
       full,
       undefined,
       blobOverrides,
-    )
+    );
 
-    const now = new Date()
-    const t = context.schema.storeListings
+    const now = new Date();
+    const t = context.schema.storeListings;
 
-    if (data.kind === 'hero') {
+    if (data.kind === "hero") {
       await context.db
         .update(t)
         .set({
@@ -4890,7 +5060,7 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
           atUri: uri,
           updatedAt: now,
         })
-        .where(eq(t.id, full.id))
+        .where(eq(t.id, full.id));
     } else {
       await context.db
         .update(t)
@@ -4899,15 +5069,15 @@ const updateOwnedProductListingImage = createServerFn({ method: 'POST' })
           atUri: uri,
           updatedAt: now,
         })
-        .where(eq(t.id, full.id))
+        .where(eq(t.id, full.id));
     }
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
 const removeOwnedProductListingHeroImageInput = z.object({
   listingId: z.string().uuid(),
-})
+});
 
 /**
  * Owner-side counterpart to `removeStoreManagedListingHero`. Republishes the
@@ -4916,25 +5086,25 @@ const removeOwnedProductListingHeroImageInput = z.object({
  * directory stops rendering the hero immediately. Tap ingest reconciles back to
  * a record without a hero, so this stays clean across re-syncs.
  */
-const removeOwnedProductListingHeroImage = createServerFn({ method: 'POST' })
+const removeOwnedProductListingHeroImage = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(removeOwnedProductListingHeroImageInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to update images.')
+      throw new Error("Sign in to update images.");
     }
 
-    const full = await getFullDirectoryListing(context, data.listingId)
+    const full = await getFullDirectoryListing(context, data.listingId);
 
     if (full.repoDid?.trim() !== session.did) {
       throw new Error(
-        'Only the account that hosts the listing record can edit it.',
-      )
+        "Only the account that hosts the listing record can edit it.",
+      );
     }
 
     if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error('This listing is not associated with your account.')
+      throw new Error("This listing is not associated with your account.");
     }
 
     const { uri } = await publishOwnedListingDetail(
@@ -4943,10 +5113,10 @@ const removeOwnedProductListingHeroImage = createServerFn({ method: 'POST' })
       full,
       undefined,
       { clearHero: true },
-    )
+    );
 
-    const now = new Date()
-    const t = context.schema.storeListings
+    const now = new Date();
+    const t = context.schema.storeListings;
     await context.db
       .update(t)
       .set({
@@ -4954,104 +5124,108 @@ const removeOwnedProductListingHeroImage = createServerFn({ method: 'POST' })
         atUri: uri,
         updatedAt: now,
       })
-      .where(eq(t.id, full.id))
+      .where(eq(t.id, full.id));
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
-const updateOwnedProductListingScreenshots = createServerFn({ method: 'POST' })
+const updateOwnedProductListingScreenshots = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(updateOwnedProductListingScreenshotsInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to update images.')
+      throw new Error("Sign in to update images.");
     }
 
-    const full = await getFullDirectoryListing(context, data.listingId)
+    const full = await getFullDirectoryListing(context, data.listingId);
 
     if (full.repoDid?.trim() !== session.did) {
       throw new Error(
-        'Only the account that hosts the listing record can edit it.',
-      )
+        "Only the account that hosts the listing record can edit it.",
+      );
     }
 
     if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error('This listing is not associated with your account.')
+      throw new Error("This listing is not associated with your account.");
     }
 
     const retainedExistingScreenshotUrls = data.retainedExistingScreenshotUrls
       .map((url) => url.trim())
       .filter((url) => url.length > 0)
-      .slice(0, 4)
+      .slice(0, 4);
 
     const uploadedScreenshots = data.screenshots.map((screenshot, index) => {
-      const mimeType = screenshot.mimeType.trim().toLowerCase()
-      if (!mimeType.startsWith('image/')) {
-        throw new Error(`Screenshot ${index + 1} must be an image.`)
+      const mimeType = screenshot.mimeType.trim().toLowerCase();
+      if (!mimeType.startsWith("image/")) {
+        throw new Error(`Screenshot ${index + 1} must be an image.`);
       }
-      let raw: Buffer
+      let raw: Buffer;
       try {
-        raw = Buffer.from(screenshot.imageBase64, 'base64')
+        raw = Buffer.from(screenshot.imageBase64, "base64");
       } catch {
-        throw new Error(`Screenshot ${index + 1} has invalid image data.`)
+        throw new Error(`Screenshot ${index + 1} has invalid image data.`);
       }
       if (raw.length === 0 || raw.length > 12_000_000) {
-        throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
+        throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`);
       }
       return {
         bytes: Uint8Array.from(raw),
         mimeType,
-      }
-    })
+      };
+    });
 
     const keepExistingScreenshotsAsBlobs =
-      retainedExistingScreenshotUrls.length > 0 && uploadedScreenshots.length > 0
+      retainedExistingScreenshotUrls.length > 0 &&
+      uploadedScreenshots.length > 0
         ? await Promise.all(
             retainedExistingScreenshotUrls.map(async (url, index) => {
-              const existingIndex = index + 1
-              let resolved
+              const existingIndex = index + 1;
+              let resolved;
               try {
-                resolved = await resolveUrlToImageBytes(url)
+                resolved = await resolveUrlToImageBytes(url);
               } catch {
                 throw new Error(
                   `Could not keep existing screenshot ${existingIndex}; please re-upload it.`,
-                )
+                );
               }
               if (
-                !resolved.mimeType.startsWith('image/') ||
+                !resolved.mimeType.startsWith("image/") ||
                 resolved.bytes.length === 0 ||
                 resolved.bytes.length > 12_000_000
               ) {
                 throw new Error(
                   `Existing screenshot ${existingIndex} is invalid; please re-upload it.`,
-                )
+                );
               }
-              return resolved
+              return resolved;
             }),
           )
-        : []
+        : [];
 
     const finalScreenshotOverrides =
       retainedExistingScreenshotUrls.length === 0 &&
       uploadedScreenshots.length === 0
         ? []
         : uploadedScreenshots.length > 0
-          ? [...keepExistingScreenshotsAsBlobs, ...uploadedScreenshots].slice(0, 4)
-          : undefined
+          ? [...keepExistingScreenshotsAsBlobs, ...uploadedScreenshots].slice(
+              0,
+              4,
+            )
+          : undefined;
 
     const { uri, dbUrls } = await publishOwnedListingDetail(
       session.client,
       session.did,
       full,
       { screenshotUrls: retainedExistingScreenshotUrls },
-      finalScreenshotOverrides !== undefined
-        ? { screenshots: finalScreenshotOverrides }
-        : undefined,
-    )
+      finalScreenshotOverrides === undefined
+        ? undefined
+        : { screenshots: finalScreenshotOverrides },
+    );
 
-    const now = new Date()
-    const t = context.schema.storeListings
+    const now = new Date();
+    const t = context.schema.storeListings;
     await context.db
       .update(t)
       .set({
@@ -5059,51 +5233,51 @@ const updateOwnedProductListingScreenshots = createServerFn({ method: 'POST' })
         atUri: uri,
         updatedAt: now,
       })
-      .where(eq(t.id, full.id))
+      .where(eq(t.id, full.id));
 
-    return { ok: true as const }
-  })
+    return { ok: true as const };
+  });
 
-const claimProductListingToPds = createServerFn({ method: 'POST' })
+const claimProductListingToPds = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(claimProductListingToPdsInput)
   .handler(async ({ data, context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      throw new Error('Sign in to claim your product listing.')
+      throw new Error("Sign in to claim your product listing.");
     }
 
-    const full = await getFullDirectoryListing(context, data.listingId)
-    const atstoreDid = await getAtstoreRepoDid()
+    const full = await getFullDirectoryListing(context, data.listingId);
+    const atstoreDid = await getAtstoreRepoDid();
 
     if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error('This listing is not associated with your account.')
+      throw new Error("This listing is not associated with your account.");
     }
     if (full.repoDid?.trim() !== atstoreDid) {
-      throw new Error('This listing is not published on the store account.')
+      throw new Error("This listing is not published on the store account.");
     }
 
     if (isBrowseableProtocolRow({ categorySlugs: full.categorySlugs ?? [] })) {
       throw new Error(
-        'Protocol directory listings cannot be claimed to a product PDS.',
-      )
+        "Protocol directory listings cannot be claimed to a product PDS.",
+      );
     }
 
-    const oldAtUri = full.atUri?.trim()
-    const oldRkey = full.rkey?.trim()
-    if (!oldAtUri?.startsWith('at://') || !oldRkey) {
-      throw new Error('Listing is missing ATProto coordinates.')
+    const oldAtUri = full.atUri?.trim();
+    const oldRkey = full.rkey?.trim();
+    if (!oldAtUri?.startsWith("at://") || !oldRkey) {
+      throw new Error("Listing is missing ATProto coordinates.");
     }
 
     /**
      * Must match `atUriFor()` in tap-listing-sync so `markListingRemovedFromTap` can correlate
      * delete events when Tap processes the store-repo tombstone before the claim finishes.
      */
-    const canonicalOldAtUri = `at://${atstoreDid}/${COLLECTION.listingDetail}/${oldRkey}`
+    const canonicalOldAtUri = `at://${atstoreDid}/${COLLECTION.listingDetail}/${oldRkey}`;
 
-    const { client } = session
-    const t = context.schema.storeListings
-    const claimStartedAt = new Date()
+    const { client } = session;
+    const t = context.schema.storeListings;
+    const claimStartedAt = new Date();
 
     /**
      * Set lineage + pending claimant DID *before* PDS writes:
@@ -5121,7 +5295,7 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
         claimPendingForDid: session.did,
         updatedAt: claimStartedAt,
       })
-      .where(eq(t.id, full.id))
+      .where(eq(t.id, full.id));
 
     try {
       /**
@@ -5134,13 +5308,15 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
         client,
         atstoreDid,
         oldRkey,
-      )
+      );
       const inheritedSlug =
-        priorOnStore?.value.slug?.trim() || full.slug?.trim() || ''
+        priorOnStore?.value.slug?.trim() || full.slug?.trim() || "";
       if (!inheritedSlug) {
-        throw new Error('This listing has no stable slug; cannot complete the claim.')
+        throw new Error(
+          "This listing has no stable slug; cannot complete the claim.",
+        );
       }
-      const rowForClaim: StoreListing = { ...full, slug: inheritedSlug }
+      const rowForClaim: StoreListing = { ...full, slug: inheritedSlug };
 
       const { record } = await buildListingDetailRecordWithBlobs(
         client,
@@ -5149,17 +5325,17 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
         {
           migratedFromAtUri: canonicalOldAtUri,
         },
-      )
-      record.updatedAt = new Date().toISOString()
+      );
+      record.updatedAt = new Date().toISOString();
 
       const { uri: newUri } = await createListingDetailRecord(
         client,
         session.did,
         record,
-      )
-      const { rkey: newRkey } = parseAtUriParts(newUri)
+      );
+      const { rkey: newRkey } = parseAtUriParts(newUri);
 
-      const now = new Date()
+      const now = new Date();
       await context.db
         .update(t)
         .set({
@@ -5168,7 +5344,7 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
           repoDid: session.did,
           rkey: newRkey,
           migratedFromAtUri: canonicalOldAtUri,
-          verificationStatus: 'verified',
+          verificationStatus: "verified",
           /** Handshake satisfied — clear so the marker cannot gate a future re-publish. */
           claimPendingForDid: null,
           /**
@@ -5179,10 +5355,10 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
           claimedByDid: session.did,
           updatedAt: now,
         })
-        .where(eq(t.id, full.id))
+        .where(eq(t.id, full.id));
 
-      return { slug: inheritedSlug }
-    } catch (err) {
+      return { slug: inheritedSlug };
+    } catch (error) {
       await context.db
         .update(t)
         .set({
@@ -5190,21 +5366,21 @@ const claimProductListingToPds = createServerFn({ method: 'POST' })
           claimPendingForDid: null,
           updatedAt: new Date(),
         })
-        .where(eq(t.id, full.id))
-      throw err
+        .where(eq(t.id, full.id));
+      throw error;
     }
-  })
+  });
 
-const getProfileOwnedProductListings = createServerFn({ method: 'GET' })
+const getProfileOwnedProductListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getProfileOwnedProductListingsInput)
   .handler(async ({ data, context }) => {
-    const did = data.did.trim()
+    const did = data.did.trim();
     if (!isPlausiblePublicDid(did)) {
-      return null
+      return null;
     }
 
-    const t = context.schema.storeListings
+    const t = context.schema.storeListings;
     const rows = await context.db
       .select({
         id: t.id,
@@ -5218,34 +5394,34 @@ const getProfileOwnedProductListings = createServerFn({ method: 'GET' })
       })
       .from(t)
       .where(listingPublicWhere(t, eq(t.productAccountDid, did)))
-      .orderBy(asc(t.name))
+      .orderBy(asc(t.name));
 
     return rows.map((row) => ({
       ...row,
       iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
       heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
-    }))
-  })
+    }));
+  });
 
 function getProfileOwnedProductListingsQueryOptions(did: string) {
   return queryOptions({
-    queryKey: ['storeListings', 'profileOwnedProducts', did] as const,
+    queryKey: ["storeListings", "profileOwnedProducts", did] as const,
     queryFn: async () => getProfileOwnedProductListings({ data: { did } }),
-  })
+  });
 }
 
 /** Signed-in user's listings (every verification status) with rejection history — for /products/manage */
-const getMyProductListings = createServerFn({ method: 'GET' })
+const getMyProductListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const session = await getAtprotoSessionForRequest(getRequest())
+    const session = await getAtprotoSessionForRequest(getRequest());
     if (!session?.did) {
-      return []
+      return [];
     }
 
-    const did = session.did
-    const t = context.schema.storeListings
-    const rej = context.schema.storeListingRejectionEvents
+    const did = session.did;
+    const t = context.schema.storeListings;
+    const rej = context.schema.storeListingRejectionEvents;
 
     const rows = await context.db
       .select({
@@ -5258,13 +5434,13 @@ const getMyProductListings = createServerFn({ method: 'GET' })
       })
       .from(t)
       .where(eq(t.productAccountDid, did))
-      .orderBy(desc(t.updatedAt))
+      .orderBy(desc(t.updatedAt));
 
     if (rows.length === 0) {
-      return []
+      return [];
     }
 
-    const ids = rows.map((r) => r.id)
+    const ids = rows.map((r) => r.id);
     const events = await context.db
       .select({
         storeListingId: rej.storeListingId,
@@ -5273,14 +5449,17 @@ const getMyProductListings = createServerFn({ method: 'GET' })
       })
       .from(rej)
       .where(inArray(rej.storeListingId, ids))
-      .orderBy(asc(rej.createdAt))
+      .orderBy(asc(rej.createdAt));
 
-    const byListing = new Map<string, { createdAt: Date; reason: string }[]>()
+    const byListing = new Map<
+      string,
+      Array<{ createdAt: Date; reason: string }>
+    >();
 
     for (const e of events) {
-      const list = byListing.get(e.storeListingId) ?? []
-      list.push({ createdAt: e.createdAt, reason: e.reason })
-      byListing.set(e.storeListingId, list)
+      const list = byListing.get(e.storeListingId) ?? [];
+      list.push({ createdAt: e.createdAt, reason: e.reason });
+      byListing.set(e.storeListingId, list);
     }
 
     return rows.map((row) => ({
@@ -5295,38 +5474,38 @@ const getMyProductListings = createServerFn({ method: 'GET' })
           createdAt: h.createdAt.toISOString(),
           reason: h.reason,
         })) ?? [],
-    }))
-  })
+    }));
+  });
 
 function getMyProductListingsQueryOptions() {
   return queryOptions({
-    queryKey: ['storeListings', 'mine'] as const,
+    queryKey: ["storeListings", "mine"] as const,
     queryFn: async () => getMyProductListings(),
-  })
+  });
 }
 
 export type StoreManagedListingSummary = {
-  id: string
-  slug: string
-  name: string
-  iconUrl: string | null
-  externalUrl: string | null
-  categorySlug: string | null
-  verificationStatus: string
-  productAccountHandle: string | null
-  updatedAt: string | null
-}
+  id: string;
+  slug: string;
+  name: string;
+  iconUrl: string | null;
+  externalUrl: string | null;
+  categorySlug: string | null;
+  verificationStatus: string;
+  productAccountHandle: string | null;
+  updatedAt: string | null;
+};
 
 /**
  * Admin-only: lists every `store_listings` row still published on the store
  * account (i.e. `repo_did = atstoreDid`). These are the listings an admin can
  * freely edit via `updateStoreManagedListing` and the regenerate/preview tooling.
  */
-const getStoreManagedListings = createServerFn({ method: 'GET' })
+const getStoreManagedListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
-    const atstoreDid = await getAtstoreRepoDid()
-    const t = context.schema.storeListings
+    const atstoreDid = await getAtstoreRepoDid();
+    const t = context.schema.storeListings;
     const rows = await context.db
       .select({
         id: t.id,
@@ -5341,52 +5520,54 @@ const getStoreManagedListings = createServerFn({ method: 'GET' })
       })
       .from(t)
       .where(eq(t.repoDid, atstoreDid))
-      .orderBy(asc(t.name))
+      .orderBy(asc(t.name));
 
-    return rows.map((row): StoreManagedListingSummary => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
-      externalUrl: row.externalUrl,
-      categorySlug: primaryCategorySlug(row.categorySlugs ?? []),
-      verificationStatus: row.verificationStatus,
-      productAccountHandle: row.productAccountHandle,
-      updatedAt: row.updatedAt?.toISOString() ?? null,
-    }))
-  })
+    return rows.map(
+      (row): StoreManagedListingSummary => ({
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+        externalUrl: row.externalUrl,
+        categorySlug: primaryCategorySlug(row.categorySlugs ?? []),
+        verificationStatus: row.verificationStatus,
+        productAccountHandle: row.productAccountHandle,
+        updatedAt: row.updatedAt?.toISOString() ?? null,
+      }),
+    );
+  });
 
 const getStoreManagedListingsQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'storeManagedListings'] as const,
+  queryKey: ["storeListings", "storeManagedListings"] as const,
   queryFn: async () => getStoreManagedListings(),
-})
+});
 
 export type AdminListingHeroReviewRow = {
-  id: string
-  name: string
-  productSlug: string
-  heroImageUrl: string | null
+  id: string;
+  name: string;
+  productSlug: string;
+  heroImageUrl: string | null;
   /** Resolved catalog hero URL (e.g. imgproxy for `/generated/…`), when present. */
-  ogShareImageFromHero: string | null
+  ogShareImageFromHero: string | null;
   /** `/og?…` card used for Open Graph when there is no hero. */
-  ogFallbackImagePath: string
+  ogFallbackImagePath: string;
   /** Relative URL: resolved hero if set, otherwise the fallback `/og` card. */
-  effectiveOgImagePath: string
+  effectiveOgImagePath: string;
   /** Product site URL used to scrape `og:image` (external link, else source URL). */
-  externalPageUrl: string | null
+  externalPageUrl: string | null;
   /** `repo_did` is the store publisher — hero can be cleared only when one exists (`canRemoveHero`). */
-  isStorePublished: boolean
-  canRemoveHero: boolean
-}
+  isStorePublished: boolean;
+  canRemoveHero: boolean;
+};
 
 /**
  * Admin-only: every verified listing with fields needed to review on-page hero vs social preview.
  */
-const getAdminListingHeroReview = createServerFn({ method: 'GET' })
+const getAdminListingHeroReview = createServerFn({ method: "GET" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
-    const atstoreDid = await getAtstoreRepoDid()
-    const t = context.schema.storeListings
+    const atstoreDid = await getAtstoreRepoDid();
+    const t = context.schema.storeListings;
     const rows = await context.db
       .select({
         id: t.id,
@@ -5402,31 +5583,31 @@ const getAdminListingHeroReview = createServerFn({ method: 'GET' })
       })
       .from(t)
       .where(listingPublicWhere(t))
-      .orderBy(asc(t.name))
+      .orderBy(asc(t.name));
 
     return rows.map((row): AdminListingHeroReviewRow => {
-      const heroImageUrl = protocolRecordImageUrlOrNull(row.heroImageUrl)
+      const heroImageUrl = protocolRecordImageUrlOrNull(row.heroImageUrl);
       const tagline =
         sanitizeListingTagline(row.tagline) ||
         sanitizeListingTagline(row.fullDescription) ||
-        'Discover a polished Bluesky tool.'
+        "Discover a polished Bluesky tool.";
       const primaryTag = row.appTags?.[0]
         ? formatAppTagLabel(row.appTags[0])
-        : null
+        : null;
       const ogDescription = primaryTag
         ? `${tagline} Tag: ${primaryTag}.`
-        : tagline
-      const ogTitle = `${row.name} | at-store`
-      const resolvedHero = resolveBannerRecordUrl(heroImageUrl)
+        : tagline;
+      const ogTitle = `${row.name} | at-store`;
+      const resolvedHero = resolveBannerRecordUrl(heroImageUrl);
       const ogFallbackImagePath = buildFallbackOgImageUrl({
         title: ogTitle,
         description: ogDescription,
-      })
-      const effectiveOgImagePath = resolvedHero ?? ogFallbackImagePath
+      });
+      const effectiveOgImagePath = resolvedHero ?? ogFallbackImagePath;
       const productSlug =
-        row.slug?.trim() || buildDirectoryListingSlug({ name: row.name })
-      const rawHero = row.heroImageUrl?.trim()
-      const isStorePublished = row.repoDid?.trim() === atstoreDid
+        row.slug?.trim() || buildDirectoryListingSlug({ name: row.name });
+      const rawHero = row.heroImageUrl?.trim();
+      const isStorePublished = row.repoDid?.trim() === atstoreDid;
 
       return {
         id: row.id,
@@ -5442,24 +5623,24 @@ const getAdminListingHeroReview = createServerFn({ method: 'GET' })
         }),
         isStorePublished,
         canRemoveHero: isStorePublished && Boolean(rawHero),
-      }
-    })
-  })
+      };
+    });
+  });
 
 const getAdminListingHeroReviewQueryOptions = queryOptions({
-  queryKey: ['storeListings', 'adminListingHeroReview'] as const,
+  queryKey: ["storeListings", "adminListingHeroReview"] as const,
   queryFn: async () => getAdminListingHeroReview(),
-})
+});
 
 const fetchListingExternalOgImageInput = z.object({
   id: z.string().uuid(),
-})
+});
 
-const fetchListingExternalOgImage = createServerFn({ method: 'POST' })
+const fetchListingExternalOgImage = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(fetchListingExternalOgImageInput)
   .handler(async ({ data, context }) => {
-    const t = context.schema.storeListings
+    const t = context.schema.storeListings;
     const [row] = await context.db
       .select({
         externalUrl: t.externalUrl,
@@ -5467,81 +5648,81 @@ const fetchListingExternalOgImage = createServerFn({ method: 'POST' })
       })
       .from(t)
       .where(and(listingPublicWhere(t), eq(t.id, data.id)))
-      .limit(1)
+      .limit(1);
 
     if (!row) {
-      throw new Error('Listing not found.')
+      throw new Error("Listing not found.");
     }
 
     const pageUrl = getListingExternalPageUrl({
       externalUrl: row.externalUrl,
       sourceUrl: row.sourceUrl,
-    })
+    });
 
     if (!pageUrl) {
       return {
         ogImageUrl: null as string | null,
         pageUrl: null as string | null,
-      }
+      };
     }
 
-    const ogImageUrl = await discoverOgImageUrlFromPage(pageUrl)
-    return { ogImageUrl, pageUrl }
-  })
+    const ogImageUrl = await discoverOgImageUrlFromPage(pageUrl);
+    return { ogImageUrl, pageUrl };
+  });
 
 function getFetchListingExternalOgImageQueryOptions(listingId: string) {
-  const id = fetchListingExternalOgImageInput.parse({ id: listingId }).id
+  const id = fetchListingExternalOgImageInput.parse({ id: listingId }).id;
   return queryOptions({
-    queryKey: ['storeListings', 'adminExternalOg', id] as const,
+    queryKey: ["storeListings", "adminExternalOg", id] as const,
     queryFn: async () => fetchListingExternalOgImage({ data: { id } }),
     staleTime: 60 * 60 * 1000,
-  })
+  });
 }
 
 const applyListingHeroFromExternalOgInput = z.object({
   id: z.string().uuid(),
-})
+});
 
 /**
  * Re-fetch og:image from the listing product URL, upload as a new hero blob on the store
  * record, and mirror the CDN URL into `hero_image_url` (same constraints as remove hero).
  */
-const applyListingHeroFromExternalOg = createServerFn({ method: 'POST' })
+const applyListingHeroFromExternalOg = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(applyListingHeroFromExternalOgInput)
   .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.id)
-    const atstoreRepoDid = await getAtstoreRepoDid()
+    const full = await getFullDirectoryListing(context, data.id);
+    const atstoreRepoDid = await getAtstoreRepoDid();
     if (full.repoDid?.trim() !== atstoreRepoDid) {
       throw new Error(
-        'Only listings published from the store account can set hero from site OG.',
-      )
+        "Only listings published from the store account can set hero from site OG.",
+      );
     }
 
     const pageUrl = getListingExternalPageUrl({
       externalUrl: full.externalUrl,
       sourceUrl: full.sourceUrl,
-    })
+    });
     if (!pageUrl?.trim()) {
-      throw new Error('Listing has no product URL to scrape for og:image.')
+      throw new Error("Listing has no product URL to scrape for og:image.");
     }
 
-    const ogUrl = await discoverOgImageUrlFromPage(pageUrl)
+    const ogUrl = await discoverOgImageUrlFromPage(pageUrl);
     if (!ogUrl) {
       throw new Error(
-        'No og:image (or Twitter image) meta tag found on the product page.',
-      )
+        "No og:image (or Twitter image) meta tag found on the product page.",
+      );
     }
 
-    const { bytes, mimeType } = await resolveUrlToImageBytes(ogUrl)
-    if (!mimeType.startsWith('image/')) {
-      throw new Error(`og:image resolved to non-image content: ${mimeType}`)
+    const { bytes, mimeType } = await resolveUrlToImageBytes(ogUrl);
+    if (!mimeType.startsWith("image/")) {
+      throw new Error(`og:image resolved to non-image content: ${mimeType}`);
     }
-    const maxBytes = 12_000_000
+    const maxBytes = 12_000_000;
     if (bytes.byteLength > maxBytes) {
       throw new Error(
         `og:image is too large (${bytes.byteLength} bytes); max ${maxBytes}.`,
-      )
+      );
     }
 
     const { heroImageUrl: publishedHero } = await publishDirectoryListingDetail(
@@ -5553,29 +5734,29 @@ const applyListingHeroFromExternalOg = createServerFn({ method: 'POST' })
           mimeType,
         },
       },
-    )
+    );
 
-    const t = context.schema.storeListings
+    const t = context.schema.storeListings;
     await context.db
       .update(t)
       .set({
         heroImageUrl: publishedHero ?? null,
         updatedAt: new Date(),
       })
-      .where(eq(t.id, data.id))
+      .where(eq(t.id, data.id));
 
     return {
       id: data.id,
       heroImageUrl: publishedHero ?? null,
       ogSourceUrl: ogUrl,
-    }
-  })
+    };
+  });
 
 const updateStoreManagedListingInput = z.object({
   listingId: z.string().uuid(),
   name: z.string().trim().min(1).max(640),
   tagline: z.string().max(2000),
-  fullDescription: z.string().max(20000),
+  fullDescription: z.string().max(20_000),
   externalUrl: listingExternalUrlSchema,
   categorySlug: z.string().trim().min(1).max(256),
   productHandle: z.string().max(300),
@@ -5612,20 +5793,20 @@ const updateStoreManagedListingInput = z.object({
     .max(4)
     .optional()
     .default([]),
-})
+});
 
 async function assertStoreManagedListing(
   context: { db: Database; schema: typeof dbSchema },
   listingId: string,
 ): Promise<StoreListing> {
-  const full = await getFullDirectoryListing(context, listingId)
-  const atstoreDid = await getAtstoreRepoDid()
+  const full = await getFullDirectoryListing(context, listingId);
+  const atstoreDid = await getAtstoreRepoDid();
   if (full.repoDid?.trim() !== atstoreDid) {
     throw new Error(
-      'This listing is not published from the store account and cannot be edited here.',
-    )
+      "This listing is not published from the store account and cannot be edited here.",
+    );
   }
-  return full
+  return full;
 }
 
 /**
@@ -5634,73 +5815,76 @@ async function assertStoreManagedListing(
  * session-based ownership checks. Only works for listings whose `repo_did`
  * matches the store DID.
  */
-const updateStoreManagedListing = createServerFn({ method: 'POST' })
+const updateStoreManagedListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(updateStoreManagedListingInput)
   .handler(async ({ data, context }) => {
-    const full = await assertStoreManagedListing(context, data.listingId)
+    const full = await assertStoreManagedListing(context, data.listingId);
 
-    const name = data.name.trim().slice(0, 640)
-    const taglineClean = sanitizeListingTagline(data.tagline)
-    const descClean = sanitizeListingDescription(data.fullDescription)
-    const externalUrl = data.externalUrl.trim()
-    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
-    const productHandleInput = data.productHandle.trim()
+    const name = data.name.trim().slice(0, 640);
+    const taglineClean = sanitizeListingTagline(data.tagline);
+    const descClean = sanitizeListingDescription(data.fullDescription);
+    const externalUrl = data.externalUrl.trim();
+    const categorySlug = normalizeEditableListingCategorySlug(
+      data.categorySlug,
+    );
+    const productHandleInput = data.productHandle.trim();
 
-    let productAccountHandle: string | null = null
-    let productAccountDid: string | null = full.productAccountDid ?? null
+    let productAccountHandle: string | null = null;
+    let productAccountDid: string | null = full.productAccountDid ?? null;
     if (productHandleInput.length > 0) {
-      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
-      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      productAccountHandle =
+        normalizeManualProductAccountHandle(productHandleInput);
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle);
       if (!resolvedDid) {
-        throw new Error('Could not resolve that handle to a DID.')
+        throw new Error("Could not resolve that handle to a DID.");
       }
-      productAccountDid = resolvedDid
+      productAccountDid = resolvedDid;
     }
 
-    const links = normalizeListingLinks(data.links as ListingLink[])
+    const links = normalizeListingLinks(data.links as Array<ListingLink>);
     const appTags = isEditableAppCategorySlug(categorySlug)
       ? normalizeAppTags(data.appTags ?? [])
-      : []
+      : [];
 
     let blobOverrides:
       | {
-          heroImage?: { bytes: Uint8Array; mimeType: string }
-          icon?: { bytes: Uint8Array; mimeType: string }
-          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>
+          heroImage?: { bytes: Uint8Array; mimeType: string };
+          icon?: { bytes: Uint8Array; mimeType: string };
+          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>;
         }
-      | undefined
+      | undefined;
 
     if (data.heroImage) {
-      const heroMime = data.heroImage.mimeType.trim().toLowerCase()
-      if (!heroMime.startsWith('image/')) {
-        throw new Error('Hero image must be an image.')
+      const heroMime = data.heroImage.mimeType.trim().toLowerCase();
+      if (!heroMime.startsWith("image/")) {
+        throw new Error("Hero image must be an image.");
       }
-      const heroRaw = Buffer.from(data.heroImage.imageBase64, 'base64')
+      const heroRaw = Buffer.from(data.heroImage.imageBase64, "base64");
       if (heroRaw.length === 0 || heroRaw.length > 12_000_000) {
-        throw new Error('Hero image must be at most 12 MB.')
+        throw new Error("Hero image must be at most 12 MB.");
       }
-      blobOverrides = blobOverrides ?? {}
+      blobOverrides = blobOverrides ?? {};
       blobOverrides.heroImage = {
         bytes: Uint8Array.from(heroRaw),
         mimeType: heroMime,
-      }
+      };
     }
 
     if (data.iconImage) {
-      const iconMime = data.iconImage.mimeType.trim().toLowerCase()
-      if (!iconMime.startsWith('image/')) {
-        throw new Error('Icon image must be an image.')
+      const iconMime = data.iconImage.mimeType.trim().toLowerCase();
+      if (!iconMime.startsWith("image/")) {
+        throw new Error("Icon image must be an image.");
       }
-      const iconRaw = Buffer.from(data.iconImage.imageBase64, 'base64')
+      const iconRaw = Buffer.from(data.iconImage.imageBase64, "base64");
       if (iconRaw.length === 0 || iconRaw.length > 2_000_000) {
-        throw new Error('Icon image must be at most 2 MB.')
+        throw new Error("Icon image must be at most 2 MB.");
       }
-      blobOverrides = blobOverrides ?? {}
+      blobOverrides = blobOverrides ?? {};
       blobOverrides.icon = {
         bytes: Uint8Array.from(iconRaw),
         mimeType: iconMime,
-      }
+      };
     }
 
     const retainedExistingScreenshotUrls = (
@@ -5708,55 +5892,55 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
     )
       .map((url) => url.trim())
       .filter((url) => url.length > 0)
-      .slice(0, 4)
+      .slice(0, 4);
     const newScreenshots = (data.screenshotImages ?? []).map(
       (screenshot, index) => {
-        const mime = screenshot.mimeType.trim().toLowerCase()
-        if (!mime.startsWith('image/')) {
-          throw new Error(`Screenshot ${index + 1} must be an image.`)
+        const mime = screenshot.mimeType.trim().toLowerCase();
+        if (!mime.startsWith("image/")) {
+          throw new Error(`Screenshot ${index + 1} must be an image.`);
         }
-        const raw = Buffer.from(screenshot.imageBase64, 'base64')
+        const raw = Buffer.from(screenshot.imageBase64, "base64");
         if (raw.length === 0 || raw.length > 12_000_000) {
-          throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
+          throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`);
         }
-        return { bytes: Uint8Array.from(raw), mimeType: mime }
+        return { bytes: Uint8Array.from(raw), mimeType: mime };
       },
-    )
+    );
 
-    const existingScreenshotUrls = full.screenshotUrls ?? []
+    const existingScreenshotUrls = full.screenshotUrls ?? [];
     const screenshotsChanged =
       newScreenshots.length > 0 ||
       retainedExistingScreenshotUrls.length !== existingScreenshotUrls.length ||
       retainedExistingScreenshotUrls.some(
         (url, index) => url !== existingScreenshotUrls[index],
-      )
+      );
 
     if (screenshotsChanged) {
       const retainedAsBlobs =
         retainedExistingScreenshotUrls.length > 0 && newScreenshots.length > 0
           ? await Promise.all(
               retainedExistingScreenshotUrls.map(async (url, index) => {
-                let resolved
+                let resolved;
                 try {
-                  resolved = await resolveUrlToImageBytes(url)
+                  resolved = await resolveUrlToImageBytes(url);
                 } catch {
                   throw new Error(
                     `Could not keep existing screenshot ${index + 1}; please re-upload it.`,
-                  )
+                  );
                 }
                 if (
-                  !resolved.mimeType.startsWith('image/') ||
+                  !resolved.mimeType.startsWith("image/") ||
                   resolved.bytes.length === 0 ||
                   resolved.bytes.length > 12_000_000
                 ) {
                   throw new Error(
                     `Existing screenshot ${index + 1} is invalid; please re-upload it.`,
-                  )
+                  );
                 }
-                return resolved
+                return resolved;
               }),
             )
-          : []
+          : [];
 
       /**
        * When the caller uploaded new screenshots, re-pack the full ordered list (retained
@@ -5764,11 +5948,11 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
        * passing through `screenshotUrls` in the patch below.
        */
       if (newScreenshots.length > 0) {
-        blobOverrides = blobOverrides ?? {}
-        blobOverrides.screenshots = [...retainedAsBlobs, ...newScreenshots].slice(
-          0,
-          4,
-        )
+        blobOverrides = blobOverrides ?? {};
+        blobOverrides.screenshots = [
+          ...retainedAsBlobs,
+          ...newScreenshots,
+        ].slice(0, 4);
       }
     }
 
@@ -5787,18 +5971,22 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
       categorySlugs: [categorySlug],
       links,
       appTags,
-    }
+    };
     if (productAccountDid) {
-      patch.productAccountDid = productAccountDid
+      patch.productAccountDid = productAccountDid;
     }
     if (screenshotsChanged && newScreenshots.length === 0) {
-      patch.screenshotUrls = retainedExistingScreenshotUrls
+      patch.screenshotUrls = retainedExistingScreenshotUrls;
     }
 
-    const { uri } = await publishDirectoryListingDetail(full, patch, blobOverrides)
+    const { uri } = await publishDirectoryListingDetail(
+      full,
+      patch,
+      blobOverrides,
+    );
 
-    const now = new Date()
-    const t = context.schema.storeListings
+    const now = new Date();
+    const t = context.schema.storeListings;
     await context.db
       .update(t)
       .set({
@@ -5814,23 +6002,23 @@ const updateStoreManagedListing = createServerFn({ method: 'POST' })
         appTags,
         updatedAt: now,
       })
-      .where(eq(t.id, full.id))
+      .where(eq(t.id, full.id));
 
-    return { slug: full.slug }
-  })
+    return { slug: full.slug };
+  });
 
 const previewListingImageByUrlInput = z.object({
   name: z.string().trim().min(1).max(640),
   externalUrl: listingExternalUrlSchema,
   tagline: z.string().trim().max(2000).optional(),
-  fullDescription: z.string().trim().max(20000).optional(),
-})
+  fullDescription: z.string().trim().max(20_000).optional(),
+});
 
 function buildGenerationCandidateFromUrl(
   input: z.infer<typeof previewListingImageByUrlInput>,
 ): DirectoryListingGenerationCandidate {
   return {
-    id: 'draft',
+    id: "draft",
     name: input.name.trim(),
     sourceUrl: input.externalUrl.trim(),
     externalUrl: input.externalUrl.trim(),
@@ -5841,7 +6029,7 @@ function buildGenerationCandidateFromUrl(
     scope: null,
     productType: null,
     domain: null,
-  }
+  };
 }
 
 /**
@@ -5849,50 +6037,50 @@ function buildGenerationCandidateFromUrl(
  * existing listing row. Used by the admin "add listing" flow before the record
  * has been published to the store PDS.
  */
-const previewListingHeroImageByUrl = createServerFn({ method: 'POST' })
+const previewListingHeroImageByUrl = createServerFn({ method: "POST" })
   .middleware([adminFnMiddleware])
   .inputValidator(previewListingImageByUrlInput)
   .handler(async ({ data }) => {
-    const listing = buildGenerationCandidateFromUrl(data)
-    const pageUrl = getListingGenerationUrl(listing)
+    const listing = buildGenerationCandidateFromUrl(data);
+    const pageUrl = getListingGenerationUrl(listing);
     if (!pageUrl) {
-      throw new Error('externalUrl is required')
+      throw new Error("externalUrl is required");
     }
 
-    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl)
+    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
     const generatedImage = await generateImageFromScreenshot({
       screenshot,
       prompt: buildMarketingPrompt(listing, pageUrl),
-    })
+    });
 
     return {
       mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString('base64'),
-    }
-  })
+      imageBase64: generatedImage.buffer.toString("base64"),
+    };
+  });
 
 /**
  * Admin-only: generate an icon preview from a URL + name, without requiring an
  * existing listing row. Mirrors `previewDirectoryListingIcon` but accepts raw
  * inputs so it can run inside the admin "add listing" flow.
  */
-const previewListingIconByUrl = createServerFn({ method: 'POST' })
+const previewListingIconByUrl = createServerFn({ method: "POST" })
   .middleware([adminFnMiddleware])
   .inputValidator(previewListingImageByUrlInput)
   .handler(async ({ data }) => {
-    const listing = buildGenerationCandidateFromUrl(data)
-    const pageUrl = getListingGenerationUrl(listing)
+    const listing = buildGenerationCandidateFromUrl(data);
+    const pageUrl = getListingGenerationUrl(listing);
     if (!pageUrl) {
-      throw new Error('externalUrl is required')
+      throw new Error("externalUrl is required");
     }
 
-    const discovered = await discoverSiteBrandIconAsset(pageUrl)
+    const discovered = await discoverSiteBrandIconAsset(pageUrl);
     if (discovered) {
       try {
         const pngIn = await rasterizeBrandIconForGeminiInput(
           discovered.bytes,
           discovered.contentType,
-        )
+        );
         const polished = await geminiFlashGenerateImageFromPromptAndImage({
           prompt: buildIconPolishFromSiteAssetPrompt({
             name: listing.name,
@@ -5903,35 +6091,35 @@ const previewListingIconByUrl = createServerFn({ method: 'POST' })
             scope: listing.scope,
           }),
           imageBytes: pngIn,
-          imageMimeType: 'image/png',
-        })
+          imageMimeType: "image/png",
+        });
         return {
           mimeType: polished.mimeType,
-          imageBase64: polished.buffer.toString('base64'),
-          previewSource: 'site_asset' as const,
-        }
+          imageBase64: polished.buffer.toString("base64"),
+          previewSource: "site_asset" as const,
+        };
       } catch {
         /* fall through to screenshot-based generation */
       }
     }
 
-    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl)
+    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
     const generatedImage = await generateImageFromScreenshot({
       screenshot,
       prompt: buildIconPrompt(listing, pageUrl),
-    })
+    });
 
     return {
       mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString('base64'),
-      previewSource: 'model' as const,
-    }
-  })
+      imageBase64: generatedImage.buffer.toString("base64"),
+      previewSource: "model" as const,
+    };
+  });
 
 const createStoreManagedListingInput = z.object({
   name: z.string().trim().min(1).max(640),
   tagline: z.string().max(2000),
-  fullDescription: z.string().max(20000),
+  fullDescription: z.string().max(20_000),
   externalUrl: listingExternalUrlSchema,
   categorySlug: z.string().trim().min(1).max(256),
   productHandle: z.string().max(300),
@@ -5963,47 +6151,50 @@ const createStoreManagedListingInput = z.object({
     .max(4)
     .optional()
     .default([]),
-})
+});
 
 /**
  * Admin-only: create a brand-new `fyi.atstore.listing.detail` record on the
  * store PDS. The row in Postgres is created by Tap ingest when the record
  * lands; this server fn only publishes to the PDS and returns the slug/uri.
  */
-const createStoreManagedListing = createServerFn({ method: 'POST' })
+const createStoreManagedListing = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(createStoreManagedListingInput)
   .handler(async ({ data, context }) => {
-    const { client, repoDid } = await createAtstorePublishClient()
+    const { client, repoDid } = await createAtstorePublishClient();
 
-    const name = data.name.trim().slice(0, 640)
-    const taglineClean = sanitizeListingTagline(data.tagline)
-    const descClean = sanitizeListingDescription(data.fullDescription)
-    const externalUrl = data.externalUrl.trim()
-    const categorySlug = normalizeEditableListingCategorySlug(data.categorySlug)
+    const name = data.name.trim().slice(0, 640);
+    const taglineClean = sanitizeListingTagline(data.tagline);
+    const descClean = sanitizeListingDescription(data.fullDescription);
+    const externalUrl = data.externalUrl.trim();
+    const categorySlug = normalizeEditableListingCategorySlug(
+      data.categorySlug,
+    );
     const slug = await allocateUniqueStoreListingSlug(
       context.db,
       name,
       externalUrl,
-    )
-    const productHandleInput = data.productHandle.trim()
+    );
+    const productHandleInput = data.productHandle.trim();
 
-    let productAccountHandle: string | null = null
-    let productAccountDid: string | null = null
+    let productAccountHandle: string | null = null;
+    let productAccountDid: string | null = null;
     if (productHandleInput.length > 0) {
-      productAccountHandle = normalizeManualProductAccountHandle(productHandleInput)
-      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle)
+      productAccountHandle =
+        normalizeManualProductAccountHandle(productHandleInput);
+      const resolvedDid = await resolveBlueskyHandleToDid(productAccountHandle);
       if (!resolvedDid) {
-        throw new Error('Could not resolve that handle to a DID.')
+        throw new Error("Could not resolve that handle to a DID.");
       }
-      productAccountDid = resolvedDid
+      productAccountDid = resolvedDid;
     }
 
-    const now = new Date()
-    const links = normalizeListingLinks(data.links as ListingLink[])
+    const now = new Date();
+    const links = normalizeListingLinks(data.links as Array<ListingLink>);
     const appTags = isEditableAppCategorySlug(categorySlug)
       ? normalizeAppTags(data.appTags ?? [])
-      : []
+      : [];
     const draftRow: StoreListing = {
       id: crypto.randomUUID(),
       sourceUrl: externalUrl,
@@ -6021,7 +6212,7 @@ const createStoreManagedListing = createServerFn({ method: 'POST' })
       repoDid,
       rkey: null,
       heroImageUrl: null,
-      verificationStatus: 'unverified',
+      verificationStatus: "unverified",
       sourceAccountDid: repoDid,
       claimedByDid: null,
       claimedAt: null,
@@ -6039,75 +6230,77 @@ const createStoreManagedListing = createServerFn({ method: 'POST' })
       trendingUpdatedAt: null,
       createdAt: now,
       updatedAt: now,
-    }
+    };
 
     let blobOverrides:
       | {
-          heroImage?: { bytes: Uint8Array; mimeType: string }
-          icon?: { bytes: Uint8Array; mimeType: string }
-          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>
+          heroImage?: { bytes: Uint8Array; mimeType: string };
+          icon?: { bytes: Uint8Array; mimeType: string };
+          screenshots?: Array<{ bytes: Uint8Array; mimeType: string }>;
         }
-      | undefined
+      | undefined;
 
     if (data.heroImage) {
-      const heroMime = data.heroImage.mimeType.trim().toLowerCase()
-      if (!heroMime.startsWith('image/')) {
-        throw new Error('Hero image must be an image.')
+      const heroMime = data.heroImage.mimeType.trim().toLowerCase();
+      if (!heroMime.startsWith("image/")) {
+        throw new Error("Hero image must be an image.");
       }
-      const heroRaw = Buffer.from(data.heroImage.imageBase64, 'base64')
+      const heroRaw = Buffer.from(data.heroImage.imageBase64, "base64");
       if (heroRaw.length === 0 || heroRaw.length > 12_000_000) {
-        throw new Error('Hero image must be at most 12 MB.')
+        throw new Error("Hero image must be at most 12 MB.");
       }
-      blobOverrides = blobOverrides ?? {}
+      blobOverrides = blobOverrides ?? {};
       blobOverrides.heroImage = {
         bytes: Uint8Array.from(heroRaw),
         mimeType: heroMime,
-      }
+      };
     }
 
     if (data.iconImage) {
-      const iconMime = data.iconImage.mimeType.trim().toLowerCase()
-      if (!iconMime.startsWith('image/')) {
-        throw new Error('Icon image must be an image.')
+      const iconMime = data.iconImage.mimeType.trim().toLowerCase();
+      if (!iconMime.startsWith("image/")) {
+        throw new Error("Icon image must be an image.");
       }
-      const iconRaw = Buffer.from(data.iconImage.imageBase64, 'base64')
+      const iconRaw = Buffer.from(data.iconImage.imageBase64, "base64");
       if (iconRaw.length === 0 || iconRaw.length > 2_000_000) {
-        throw new Error('Icon image must be at most 2 MB.')
+        throw new Error("Icon image must be at most 2 MB.");
       }
-      blobOverrides = blobOverrides ?? {}
+      blobOverrides = blobOverrides ?? {};
       blobOverrides.icon = {
         bytes: Uint8Array.from(iconRaw),
         mimeType: iconMime,
-      }
+      };
     }
 
     if (data.screenshotImages && data.screenshotImages.length > 0) {
-      blobOverrides = blobOverrides ?? {}
-      blobOverrides.screenshots = data.screenshotImages.map((screenshot, index) => {
-        const mime = screenshot.mimeType.trim().toLowerCase()
-        if (!mime.startsWith('image/')) {
-          throw new Error(`Screenshot ${index + 1} must be an image.`)
-        }
-        const raw = Buffer.from(screenshot.imageBase64, 'base64')
-        if (raw.length === 0 || raw.length > 12_000_000) {
-          throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`)
-        }
-        return { bytes: Uint8Array.from(raw), mimeType: mime }
-      })
+      blobOverrides = blobOverrides ?? {};
+      blobOverrides.screenshots = data.screenshotImages.map(
+        (screenshot, index) => {
+          const mime = screenshot.mimeType.trim().toLowerCase();
+          if (!mime.startsWith("image/")) {
+            throw new Error(`Screenshot ${index + 1} must be an image.`);
+          }
+          const raw = Buffer.from(screenshot.imageBase64, "base64");
+          if (raw.length === 0 || raw.length > 12_000_000) {
+            throw new Error(`Screenshot ${index + 1} must be at most 12 MB.`);
+          }
+          return { bytes: Uint8Array.from(raw), mimeType: mime };
+        },
+      );
     }
 
     const { record } = await buildListingDetailRecordWithBlobs(
       client,
       draftRow,
       blobOverrides,
-    )
-    const createdAt = now.toISOString()
-    record.createdAt = createdAt
-    record.updatedAt = createdAt
+    );
+    const createdAt = now.toISOString();
+    record.createdAt = createdAt;
+    record.updatedAt = createdAt;
 
-    const { uri } = await createListingDetailRecord(client, repoDid, record)
-    return { uri, slug }
-  })
+    const { uri } = await createListingDetailRecord(client, repoDid, record);
+    return { uri, slug };
+  });
 
 export const directoryListingApi = {
   getHomePageData,
@@ -6214,4 +6407,4 @@ export const directoryListingApi = {
   previewListingHeroImageByUrl,
   previewListingIconByUrl,
   createStoreManagedListing,
-}
+};

@@ -9,6 +9,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useDeferredValue, useState } from "react";
 import { z } from "zod";
 
+import type {
+  DirectoryListingCard,
+  DirectoryListingDetail,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
+
 import { AutocompleteInput } from "../design-system/autocomplete";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
@@ -25,11 +30,7 @@ import {
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { Heading1, Heading3 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import {
-  directoryListingApi,
-  type DirectoryListingCard,
-  type DirectoryListingDetail,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { SKIP_PRODUCT_CLAIM_COOKIE } from "../lib/product-claim-eligibility";
@@ -48,10 +49,10 @@ const styles = stylex.create({
     width: "100%",
   },
   section: {
+    paddingBottom: verticalSpace["5xl"],
     paddingLeft: horizontalSpace.xl,
     paddingRight: horizontalSpace.xl,
     paddingTop: verticalSpace["5xl"],
-    paddingBottom: verticalSpace["5xl"],
   },
   card: {
     boxShadow: shadow.sm,
@@ -59,10 +60,10 @@ const styles = stylex.create({
     width: "100%",
   },
   wideCard: {
+    overflow: "visible",
     boxShadow: shadow.sm,
     maxWidth: "42rem",
     width: "100%",
-    overflow: "visible",
   },
   preview: {
     gap: gap.xl,
@@ -70,13 +71,13 @@ const styles = stylex.create({
   previewIcon: {
     borderRadius: "12px",
     flexShrink: 0,
-    height: "64px",
     objectFit: "cover",
+    height: "64px",
     width: "64px",
   },
   description: {
-    maxWidth: "40rem",
     textAlign: "center",
+    maxWidth: "40rem",
   },
   eligibleStack: {
     marginTop: verticalSpace["3xl"],
@@ -207,6 +208,8 @@ function ProductClaimPage() {
 
   function dismissClaimPrompt() {
     const maxAge = 60 * 60 * 24 * 365;
+    // Cookie Store API is async and not yet universal for simple dismiss flags.
+    // eslint-disable-next-line unicorn/no-document-cookie -- synchronous dismiss flag for client-only flow
     document.cookie = `${SKIP_PRODUCT_CLAIM_COOKIE}=1; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
     void navigate({ to: "/" });
   }

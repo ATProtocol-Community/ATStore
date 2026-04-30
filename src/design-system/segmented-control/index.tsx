@@ -57,23 +57,22 @@ const styles = stylex.create({
   },
   /* eslint-disable @stylexjs/sort-keys -- toggle item layout order */
   item: {
-    // eslint-disable-next-line @stylexjs/valid-styles
     textBoxEdge: "cap alphabetic",
-    // eslint-disable-next-line @stylexjs/valid-styles
+
     textBoxTrim: "trim-both",
     borderWidth: 0,
 
     cornerShape: "squircle",
+    gap: gap["xs"],
     alignItems: "center",
     backgroundColor: "transparent",
     boxSizing: "border-box",
-    gap: gap["xs"],
-    display: "flex",
     color: {
       default: uiColor.text1,
       ":is([data-hovered])": uiColor.text2,
       ":is([data-selected])": uiColor.text2,
     },
+    display: "flex",
     flexGrow: 1,
     justifyContent: "center",
     position: "relative",
@@ -87,7 +86,6 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["md"],
     paddingTop: verticalSpace["xs"],
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",

@@ -18,18 +18,18 @@ import { fontWeight } from "../theme/typography.stylex";
 
 const styles = stylex.create({
   breadcrumbs: {
+    gap: gap["xs"],
+    listStyle: "none",
+    alignItems: "center",
+    display: "flex",
     marginBottom: 0,
     marginLeft: 0,
     marginRight: 0,
     marginTop: 0,
     paddingBottom: 0,
     paddingLeft: 0,
-    gap: gap["xs"],
     paddingRight: 0,
-    listStyle: "none",
     paddingTop: 0,
-    alignItems: "center",
-    display: "flex",
   },
   breadcrumb: {
     gap: gap["xs"],

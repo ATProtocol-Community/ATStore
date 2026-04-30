@@ -3,13 +3,16 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink, notFound } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 
+import type { DirectoryCategoryTreeNode } from "../lib/directory-categories";
+
 import { AppTagHero } from "../components/AppTagHero";
-import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { EcosystemListingCard } from "../components/EcosystemListingCard";
+import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
   verticalSpace,
@@ -18,7 +21,6 @@ import { Body, Heading1 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
-  type DirectoryCategoryTreeNode,
   getAppEcosystemCategoryIdFromRouteParam,
   getAppSegmentFromEcosystemRootCategoryId,
   getEcosystemAllPathFromAppSegment,
@@ -29,7 +31,6 @@ import {
   pickListingImageForCategoryBranch,
 } from "../lib/ecosystem-listings";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -108,10 +109,6 @@ const styles = stylex.create({
   emptyState: {
     gap: gap["lg"],
     maxWidth: "40rem",
-  },
-  searchButton: {
-    marginTop: `calc(${verticalSpace["2xl"]} * -1)`,
-    marginBottom: `calc(${verticalSpace["2xl"]} * -1)`,
   },
   pageContent: {
     gap: {

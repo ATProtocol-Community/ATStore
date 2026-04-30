@@ -10,7 +10,7 @@
  *   reads DB and calls `replaceGeneratedBannerRecordUrls` as a side effect before
  *   SSR renders. Called from the root route's `beforeLoad`.
  * - Client: the root document emits an inline `<script>` that sets
- *   `window.__GENERATED_BANNER_RECORD_URLS__` before the React bundle runs, so
+ *   `globalThis.window.__GENERATED_BANNER_RECORD_URLS__` before the React bundle runs, so
  *   this module picks it up at import time.
  * - Admin writes: banner upload / admin flows UPSERT into DB and may call
  *   `setGeneratedBannerRecordUrl` to keep the in-memory cache fresh for the
@@ -19,27 +19,31 @@
 
 declare global {
   interface Window {
-    __GENERATED_BANNER_RECORD_URLS__?: Record<string, string>
+    __GENERATED_BANNER_RECORD_URLS__?: Record<string, string>;
   }
 }
 
 function readInitialSnapshot(): Record<string, string> {
-  if (typeof window === 'undefined') {
-    return {}
+  if (globalThis.window === undefined) {
+    return {};
   }
-  const injected = window.__GENERATED_BANNER_RECORD_URLS__
-  return injected && typeof injected === 'object' ? { ...injected } : {}
+  const injected = globalThis.window.__GENERATED_BANNER_RECORD_URLS__;
+  return injected && typeof injected === "object" ? { ...injected } : {};
 }
 
-export const GENERATED_BANNER_RECORD_URLS: Record<string, string> = readInitialSnapshot()
+export const GENERATED_BANNER_RECORD_URLS: Record<string, string> =
+  readInitialSnapshot();
 
 export function replaceGeneratedBannerRecordUrls(next: Record<string, string>) {
   for (const key of Object.keys(GENERATED_BANNER_RECORD_URLS)) {
-    delete GENERATED_BANNER_RECORD_URLS[key]
+    Reflect.deleteProperty(GENERATED_BANNER_RECORD_URLS, key);
   }
-  Object.assign(GENERATED_BANNER_RECORD_URLS, next)
+  Object.assign(GENERATED_BANNER_RECORD_URLS, next);
 }
 
-export function setGeneratedBannerRecordUrl(assetPath: string, mappedUrl: string) {
-  GENERATED_BANNER_RECORD_URLS[assetPath] = mappedUrl
+export function setGeneratedBannerRecordUrl(
+  assetPath: string,
+  mappedUrl: string,
+) {
+  GENERATED_BANNER_RECORD_URLS[assetPath] = mappedUrl;
 }

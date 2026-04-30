@@ -1,17 +1,17 @@
-import satori, { type SatoriOptions } from "satori";
-import { createFileRoute } from "@tanstack/react-router";
+import type { SatoriOptions } from "satori";
 
-import {
-  getAppTagAccent,
-  getAppTagEmoji,
-  type AppTagAccent,
-} from "../lib/app-tag-visuals";
-import { getOgTagCardPalette } from "../lib/og-tag-card-style";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
   renderOg,
 } from "#/lib/render-og.server";
+import satori from "satori";
+
+import type { AppTagAccent } from "../lib/app-tag-visuals";
+
+import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
+import { getOgTagCardPalette } from "../lib/og-tag-card-style";
 
 const OG_WIDTH = OG_IMAGE_WIDTH;
 const OG_HEIGHT = OG_IMAGE_HEIGHT;
@@ -80,18 +80,21 @@ function emojiToTwemojiCodepoints(emoji: string): string {
   const VS16 = /\uFE0F/g;
   const normalized = emoji.includes(ZWJ) ? emoji : emoji.replace(VS16, "");
 
-  const codepoints: string[] = [];
+  const codepoints: Array<string> = [];
   let highSurrogate = 0;
   for (let i = 0; i < normalized.length; i++) {
-    const c = normalized.charCodeAt(i);
+    const c = normalized.codePointAt(i);
+    if (c === undefined) continue;
     if (highSurrogate) {
       codepoints.push(
-        (0x10000 + ((highSurrogate - 0xd800) << 10) + (c - 0xdc00)).toString(
-          16,
-        ),
+        (
+          0x1_00_00 +
+          ((highSurrogate - 0xd8_00) << 10) +
+          (c - 0xdc_00)
+        ).toString(16),
       );
       highSurrogate = 0;
-    } else if (c >= 0xd800 && c <= 0xdbff) {
+    } else if (c >= 0xd8_00 && c <= 0xdb_ff) {
       highSurrogate = c;
     } else {
       codepoints.push(c.toString(16));
@@ -186,7 +189,7 @@ type EmojiSlot = {
  * `fontSize` is the rendered emoji size in px. Satori sizes emoji images to match the
  * surrounding text's font size.
  */
-const EMOJI_SLOTS: EmojiSlot[] = [
+const EMOJI_SLOTS: Array<EmojiSlot> = [
   { fontSize: 220, top: "10%", left: "38%", rotate: -16, opacity: 0.22 },
   { fontSize: 300, top: "32%", right: "-3%", rotate: 11, opacity: 0.18 },
   { fontSize: 160, bottom: "12%", left: "20%", rotate: 24, opacity: 0.24 },
@@ -342,7 +345,7 @@ export const Route = createFileRoute("/og/tag")({
                 >
                   {label}
                 </div>
-                {count !== null ? (
+                {count === null ? null : (
                   <div
                     style={{
                       color: "white",
@@ -355,7 +358,7 @@ export const Route = createFileRoute("/og/tag")({
                   >
                     {`${count.toLocaleString()} ${count === 1 ? "listing" : "listings"}`}
                   </div>
-                ) : null}
+                )}
               </div>
             </div>,
             {

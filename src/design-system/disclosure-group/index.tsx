@@ -17,13 +17,13 @@ const styles = stylex.create({
     flexDirection: "column",
   },
   separator: {
+    borderWidth: 0,
+    backgroundColor: uiColor.border2,
+    height: "1px",
     marginBottom: 0,
     marginLeft: 0,
-    borderWidth: 0,
     marginRight: 0,
-    backgroundColor: uiColor.border2,
     marginTop: 0,
-    height: "1px",
     width: "100%",
   },
 });

@@ -16,6 +16,7 @@ import {
   uiColor,
   warningColor,
 } from "./color.stylex";
+import { blue } from "./colors/blue.stylex";
 import { radius } from "./radius.stylex";
 import { ui } from "./semantic-color.stylex";
 import {
@@ -24,7 +25,6 @@ import {
   size as sizeSpace,
 } from "./semantic-spacing.stylex";
 import { fontSize, fontWeight, lineHeight } from "./typography.stylex";
-import { blue } from "./colors/blue.stylex";
 
 const styles = stylex.create({
   field: {
@@ -43,7 +43,6 @@ const styles = stylex.create({
     display: "flex",
     justifyContent: "center",
 
-    // eslint-disable-next-line @stylexjs/no-legacy-contextual-styles, @stylexjs/valid-styles
     ":is(*) svg": {
       flexShrink: 0,
       pointerEvents: "none",
@@ -95,11 +94,11 @@ const styles = stylex.create({
     paddingTop: 0,
 
     cornerShape: "squircle",
+    outline: "none",
     overflow: "hidden",
     boxSizing: "border-box",
     display: "flex",
     lineHeight: lineHeight["none"],
-    outline: "none",
   },
   input: {
     borderWidth: 0,
@@ -124,9 +123,9 @@ const styles = stylex.create({
   primary: {
     borderColor: {
       default: uiColor.border1,
-      ":is([data-hovered]:not(:has(:is([data-invalid]))))":
-        uiColor.border2,
-      ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))": blue.border3,
+      ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))":
+        blue.border3,
+      ":is([data-hovered]:not(:has(:is([data-invalid]))))": uiColor.border2,
     },
     borderStyle: "solid",
     borderWidth: 1,
@@ -192,10 +191,10 @@ const styles = stylex.create({
   secondary: {
     borderColor: {
       default: uiColor.border1,
-      ":is([data-hovered]:not(:has(:is([data-invalid]))))":
-        uiColor.border2,
-        ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))": blue.border3,
-      },
+      ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))":
+        blue.border3,
+      ":is([data-hovered]:not(:has(:is([data-invalid]))))": uiColor.border2,
+    },
     borderStyle: "solid",
     borderWidth: 1,
     backgroundColor: {
@@ -250,11 +249,12 @@ const styles = stylex.create({
   tertiary: {
     borderColor: {
       default: "transparent",
+      ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))":
+        blue.border3,
       ":is([data-hovered]:not(:has(* [data-hovered])),:has(input[data-hovered])):not(:disabled)":
         uiColor.component2,
       ":is([data-pressed=true]):not(:disabled)": uiColor.component3,
       ":disabled": "transparent",
-      ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))": blue.border3,
     },
     borderStyle: "solid",
     borderWidth: 1,

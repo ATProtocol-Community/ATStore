@@ -21,6 +21,7 @@ import {
   animationTimingFunction,
 } from "../theme/animations.stylex";
 import { primaryColor, uiColor } from "../theme/color.stylex";
+import { blue } from "../theme/colors/blue.stylex";
 import { mediaQueries } from "../theme/media-queries.stylex";
 import { radius } from "../theme/radius.stylex";
 import { ui } from "../theme/semantic-color.stylex";
@@ -28,7 +29,6 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "../theme/semantic-spacing.stylex";
-import { blue } from "../theme/colors/blue.stylex";
 
 async function getFiles(items: Array<DropItem>): Promise<Array<File>> {
   return Promise.all(
@@ -37,7 +37,7 @@ async function getFiles(items: Array<DropItem>): Promise<Array<File>> {
 }
 
 function hasAcceptedDropType(
-  acceptedFileTypes: readonly string[],
+  acceptedFileTypes: ReadonlyArray<string>,
   dropTypes: { has: (type: string | symbol) => boolean },
 ): boolean {
   const hasWildcard = acceptedFileTypes.some((type) => type.endsWith("/*"));
@@ -95,21 +95,21 @@ function fileMatchesAcceptedType(file: File, acceptedType: string): boolean {
 
 const styles = stylex.create({
   dropZone: {
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["2xl"],
     borderColor: {
       default: uiColor.border3,
       ":is([data-drop-target])": primaryColor.solid1,
       ":is([data-focus-visible])": blue.border3,
     },
-    paddingRight: horizontalSpace["2xl"],
     borderRadius: radius.lg,
-    paddingTop: verticalSpace["2xl"],
     borderStyle: {
       default: "dashed",
       ":is([data-drop-target])": "solid",
     },
     borderWidth: 2,
+    paddingBottom: verticalSpace["2xl"],
+    paddingLeft: horizontalSpace["2xl"],
+    paddingRight: horizontalSpace["2xl"],
+    paddingTop: verticalSpace["2xl"],
 
     cornerShape: "squircle",
     overflow: "hidden",

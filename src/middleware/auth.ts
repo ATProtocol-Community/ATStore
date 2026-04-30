@@ -3,43 +3,44 @@
  * DB and OAuth session restore are loaded dynamically so this module stays client-safe.
  */
 
-import { Client } from '@atcute/client'
-import { isDid } from '@atcute/lexicons/syntax'
-import { eq } from 'drizzle-orm'
-import { redirect } from '@tanstack/react-router'
-import { createMiddleware } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-
-import { AUTH_SESSION_TOKEN_COOKIE } from '#/integrations/auth/constants'
-import { SUPER_ADMIN_DID } from '#/lib/super-admin'
+import { Client } from "@atcute/client";
+import { isDid } from "@atcute/lexicons/syntax";
+import { redirect } from "@tanstack/react-router";
+import { createMiddleware } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { AUTH_SESSION_TOKEN_COOKIE } from "#/integrations/auth/constants";
+import { SUPER_ADMIN_DID } from "#/lib/super-admin";
+import { eq } from "drizzle-orm";
 
 export type AtprotoSessionContext = {
-  did: string
-  atprotoSession: unknown
-  client: Client
+  did: string;
+  atprotoSession: unknown;
+  client: Client;
   session: {
     user: {
-      id: string
-      name: string
-      email: string | null
-      did: string | null
-      image: string | null
-      isAdmin: boolean
-    }
-  }
-}
+      id: string;
+      name: string;
+      email: string | null;
+      did: string | null;
+      image: string | null;
+      isAdmin: boolean;
+    };
+  };
+};
 
-function readSessionTokenCookie(cookieHeader: string | null): string | undefined {
-  if (!cookieHeader) return undefined
-  for (const pair of cookieHeader.split('; ')) {
-    const eqIdx = pair.indexOf('=')
-    if (eqIdx === -1) continue
-    const name = pair.slice(0, eqIdx)
+function readSessionTokenCookie(
+  cookieHeader: string | null,
+): string | undefined {
+  if (!cookieHeader) return undefined;
+  for (const pair of cookieHeader.split("; ")) {
+    const eqIdx = pair.indexOf("=");
+    if (eqIdx === -1) continue;
+    const name = pair.slice(0, eqIdx);
     if (name === AUTH_SESSION_TOKEN_COOKIE) {
-      return pair.slice(eqIdx + 1)
+      return pair.slice(eqIdx + 1);
     }
   }
-  return undefined
+  return undefined;
 }
 
 /**
@@ -53,93 +54,93 @@ function readSessionTokenCookie(cookieHeader: string | null): string | undefined
 export async function getAtprotoSessionForRequest(
   request: Request,
 ): Promise<AtprotoSessionContext | undefined> {
-  const sessionToken = readSessionTokenCookie(request.headers.get('cookie'))
+  const sessionToken = readSessionTokenCookie(request.headers.get("cookie"));
   if (!sessionToken) {
-    return
+    return;
   }
 
   const [{ db }, schema, { restoreAtprotoSession }] = await Promise.all([
-    import('#/db/index.server'),
-    import('#/db/schema'),
-    import('#/integrations/auth/atproto'),
-  ])
+    import("#/db/index.server"),
+    import("#/db/schema"),
+    import("#/integrations/auth/atproto"),
+  ]);
 
   const sessionRow = await db.query.session.findFirst({
     where: eq(schema.session.token, sessionToken),
     with: { user: true },
-  })
+  });
 
   if (!sessionRow || sessionRow.expiresAt.getTime() <= Date.now()) {
-    return
+    return;
   }
 
-  const userRow = sessionRow.user
-  const did = userRow?.did
+  const userRow = sessionRow.user;
+  const did = userRow?.did;
   if (!did || !isDid(did)) {
-    return
+    return;
   }
 
-  const atprotoSession = await restoreAtprotoSession(did)
+  const atprotoSession = await restoreAtprotoSession(did);
   if (!atprotoSession) {
-    return
+    return;
   }
 
-  const client = new Client({ handler: atprotoSession })
+  const client = new Client({ handler: atprotoSession });
 
-  return { did, atprotoSession, client, session: { user: userRow } }
+  return { did, atprotoSession, client, session: { user: userRow } };
 }
 
 async function getSessionContext(request: Request) {
-  return getAtprotoSessionForRequest(request)
+  return getAtprotoSessionForRequest(request);
 }
 
 /** Route middleware: redirect authenticated users away (e.g. from `/login`). */
 export const unauthMiddleware = createMiddleware().server(async ({ next }) => {
-  const request = getRequest()
-  const context = await getSessionContext(request)
+  const request = getRequest();
+  const context = await getSessionContext(request);
 
   if (context) {
-    throw redirect({ to: '/' })
+    throw redirect({ to: "/" });
   }
 
-  return await next()
-})
+  return await next();
+});
 
 /** Server function middleware: attach session when present. */
-export const maybeAuthMiddleware = createMiddleware({ type: 'function' }).server(
-  async ({ next }) => {
-    const request = getRequest()
-    const context = await getSessionContext(request)
-    return await next({ context })
-  },
-)
+export const maybeAuthMiddleware = createMiddleware({
+  type: "function",
+}).server(async ({ next }) => {
+  const request = getRequest();
+  const context = await getSessionContext(request);
+  return await next({ context });
+});
 
 /** Server functions: require an admin-flagged user row. */
-export const adminFnMiddleware = createMiddleware({ type: 'function' }).server(
+export const adminFnMiddleware = createMiddleware({ type: "function" }).server(
   async ({ next }) => {
-    const request = getRequest()
-    const ctx = await getAtprotoSessionForRequest(request)
+    const request = getRequest();
+    const ctx = await getAtprotoSessionForRequest(request);
     if (!ctx) {
-      throw new Error('Unauthorized')
+      throw new Error("Unauthorized");
     }
     if (!ctx.session.user.isAdmin) {
-      throw new Error('Forbidden')
+      throw new Error("Forbidden");
     }
-    return await next({ context: { adminSession: ctx } })
+    return await next({ context: { adminSession: ctx } });
   },
-)
+);
 
 /** Server functions: only the hard-coded super admin DID (hipstersmoothie.com). */
-export const superAdminFnMiddleware = createMiddleware({ type: 'function' }).server(
-  async ({ next }) => {
-    const request = getRequest()
-    const ctx = await getAtprotoSessionForRequest(request)
-    if (!ctx) {
-      throw new Error('Unauthorized')
-    }
-    if (ctx.did !== SUPER_ADMIN_DID) {
-      throw new Error('Forbidden')
-    }
-    return await next({ context: { superAdminSession: ctx } })
-  },
-)
+export const superAdminFnMiddleware = createMiddleware({
+  type: "function",
+}).server(async ({ next }) => {
+  const request = getRequest();
+  const ctx = await getAtprotoSessionForRequest(request);
+  if (!ctx) {
+    throw new Error("Unauthorized");
+  }
+  if (ctx.did !== SUPER_ADMIN_DID) {
+    throw new Error("Forbidden");
+  }
+  return await next({ context: { superAdminSession: ctx } });
+});
