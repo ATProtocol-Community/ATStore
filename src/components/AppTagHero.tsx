@@ -112,7 +112,7 @@ const styles = stylex.create({
       [breakpoints.sm]: "row",
     },
     flexGrow: 1,
-    gap: 0,
+    gap: gap["6xl"],
     minHeight: "100%",
     paddingBottom: verticalSpace["5xl"],
     paddingLeft: horizontalSpace["5xl"],
@@ -124,7 +124,6 @@ const styles = stylex.create({
   bannerTopStack: {
     display: "flex",
     flexDirection: "column",
-    flexShrink: 0,
   },
   bannerEyebrow: {
     color: uiColor.textContrast,
