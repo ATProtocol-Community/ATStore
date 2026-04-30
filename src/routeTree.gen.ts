@@ -52,11 +52,7 @@ import { Route as HeaderLayoutAdminLayoutAdminReviewsRouteImport } from './route
 import { Route as HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport } from './routes/_header-layout._admin-layout.admin.recently-claimed'
 import { Route as HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport } from './routes/_header-layout._admin-layout.admin.pending-claims'
 import { Route as HeaderLayoutAdminLayoutAdminManagedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.managed-listings'
-import { Route as HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport } from './routes/_header-layout._admin-layout.admin.listing-product-accounts'
-import { Route as HeaderLayoutAdminLayoutAdminListingHeroesRouteImport } from './routes/_header-layout._admin-layout.admin.listing-heroes'
 import { Route as HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport } from './routes/_header-layout._admin-layout.admin.home-page-hero'
-import { Route as HeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport } from './routes/_header-layout._admin-layout.admin.hero-candidates'
-import { Route as HeaderLayoutAdminLayoutAdminHeroArtRouteImport } from './routes/_header-layout._admin-layout.admin.hero-art'
 import { Route as HeaderLayoutAdminLayoutAdminAdminsRouteImport } from './routes/_header-layout._admin-layout.admin.admins'
 import { Route as HeaderLayoutAdminLayoutAdminAddListingRouteImport } from './routes/_header-layout._admin-layout.admin.add-listing'
 import { Route as HeaderLayoutProductsProductIdReviewsIndexRouteImport } from './routes/_header-layout.products.$productId.reviews.index'
@@ -301,34 +297,10 @@ const HeaderLayoutAdminLayoutAdminManagedListingsRoute =
     path: '/admin/managed-listings',
     getParentRoute: () => HeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminListingProductAccountsRoute =
-  HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport.update({
-    id: '/admin/listing-product-accounts',
-    path: '/admin/listing-product-accounts',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
-  } as any)
-const HeaderLayoutAdminLayoutAdminListingHeroesRoute =
-  HeaderLayoutAdminLayoutAdminListingHeroesRouteImport.update({
-    id: '/admin/listing-heroes',
-    path: '/admin/listing-heroes',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
-  } as any)
 const HeaderLayoutAdminLayoutAdminHomePageHeroRoute =
   HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport.update({
     id: '/admin/home-page-hero',
     path: '/admin/home-page-hero',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
-  } as any)
-const HeaderLayoutAdminLayoutAdminHeroCandidatesRoute =
-  HeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport.update({
-    id: '/admin/hero-candidates',
-    path: '/admin/hero-candidates',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
-  } as any)
-const HeaderLayoutAdminLayoutAdminHeroArtRoute =
-  HeaderLayoutAdminLayoutAdminHeroArtRouteImport.update({
-    id: '/admin/hero-art',
-    path: '/admin/hero-art',
     getParentRoute: () => HeaderLayoutAdminLayoutRoute,
   } as any)
 const HeaderLayoutAdminLayoutAdminAdminsRoute =
@@ -389,11 +361,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  '/admin/hero-art': typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  '/admin/hero-candidates': typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  '/admin/listing-heroes': typeof HeaderLayoutAdminLayoutAdminListingHeroesRoute
-  '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
@@ -442,11 +410,7 @@ export interface FileRoutesByTo {
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  '/admin/hero-art': typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  '/admin/hero-candidates': typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  '/admin/listing-heroes': typeof HeaderLayoutAdminLayoutAdminListingHeroesRoute
-  '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
@@ -497,11 +461,7 @@ export interface FileRoutesById {
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/_header-layout/_admin-layout/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  '/_header-layout/_admin-layout/admin/hero-art': typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  '/_header-layout/_admin-layout/admin/hero-candidates': typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
   '/_header-layout/_admin-layout/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  '/_header-layout/_admin-layout/admin/listing-heroes': typeof HeaderLayoutAdminLayoutAdminListingHeroesRoute
-  '/_header-layout/_admin-layout/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   '/_header-layout/_admin-layout/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   '/_header-layout/_admin-layout/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   '/_header-layout/_admin-layout/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
@@ -552,11 +512,7 @@ export interface FileRouteTypes {
     | '/api/admin/hero-candidate-image'
     | '/admin/add-listing'
     | '/admin/admins'
-    | '/admin/hero-art'
-    | '/admin/hero-candidates'
     | '/admin/home-page-hero'
-    | '/admin/listing-heroes'
-    | '/admin/listing-product-accounts'
     | '/admin/managed-listings'
     | '/admin/pending-claims'
     | '/admin/recently-claimed'
@@ -605,11 +561,7 @@ export interface FileRouteTypes {
     | '/api/admin/hero-candidate-image'
     | '/admin/add-listing'
     | '/admin/admins'
-    | '/admin/hero-art'
-    | '/admin/hero-candidates'
     | '/admin/home-page-hero'
-    | '/admin/listing-heroes'
-    | '/admin/listing-product-accounts'
     | '/admin/managed-listings'
     | '/admin/pending-claims'
     | '/admin/recently-claimed'
@@ -659,11 +611,7 @@ export interface FileRouteTypes {
     | '/api/admin/hero-candidate-image'
     | '/_header-layout/_admin-layout/admin/add-listing'
     | '/_header-layout/_admin-layout/admin/admins'
-    | '/_header-layout/_admin-layout/admin/hero-art'
-    | '/_header-layout/_admin-layout/admin/hero-candidates'
     | '/_header-layout/_admin-layout/admin/home-page-hero'
-    | '/_header-layout/_admin-layout/admin/listing-heroes'
-    | '/_header-layout/_admin-layout/admin/listing-product-accounts'
     | '/_header-layout/_admin-layout/admin/managed-listings'
     | '/_header-layout/_admin-layout/admin/pending-claims'
     | '/_header-layout/_admin-layout/admin/recently-claimed'
@@ -1006,39 +954,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRouteImport
       parentRoute: typeof HeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/listing-product-accounts': {
-      id: '/_header-layout/_admin-layout/admin/listing-product-accounts'
-      path: '/admin/listing-product-accounts'
-      fullPath: '/admin/listing-product-accounts'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
-    }
-    '/_header-layout/_admin-layout/admin/listing-heroes': {
-      id: '/_header-layout/_admin-layout/admin/listing-heroes'
-      path: '/admin/listing-heroes'
-      fullPath: '/admin/listing-heroes'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminListingHeroesRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
-    }
     '/_header-layout/_admin-layout/admin/home-page-hero': {
       id: '/_header-layout/_admin-layout/admin/home-page-hero'
       path: '/admin/home-page-hero'
       fullPath: '/admin/home-page-hero'
       preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
-    }
-    '/_header-layout/_admin-layout/admin/hero-candidates': {
-      id: '/_header-layout/_admin-layout/admin/hero-candidates'
-      path: '/admin/hero-candidates'
-      fullPath: '/admin/hero-candidates'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
-    }
-    '/_header-layout/_admin-layout/admin/hero-art': {
-      id: '/_header-layout/_admin-layout/admin/hero-art'
-      path: '/admin/hero-art'
-      fullPath: '/admin/hero-art'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHeroArtRouteImport
       parentRoute: typeof HeaderLayoutAdminLayoutRoute
     }
     '/_header-layout/_admin-layout/admin/admins': {
@@ -1082,11 +1002,7 @@ declare module '@tanstack/react-router' {
 interface HeaderLayoutAdminLayoutRouteChildren {
   HeaderLayoutAdminLayoutAdminAddListingRoute: typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   HeaderLayoutAdminLayoutAdminAdminsRoute: typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  HeaderLayoutAdminLayoutAdminHeroArtRoute: typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  HeaderLayoutAdminLayoutAdminHeroCandidatesRoute: typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
   HeaderLayoutAdminLayoutAdminHomePageHeroRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  HeaderLayoutAdminLayoutAdminListingHeroesRoute: typeof HeaderLayoutAdminLayoutAdminListingHeroesRoute
-  HeaderLayoutAdminLayoutAdminListingProductAccountsRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
   HeaderLayoutAdminLayoutAdminManagedListingsRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
   HeaderLayoutAdminLayoutAdminPendingClaimsRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute: typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
@@ -1101,16 +1017,8 @@ const HeaderLayoutAdminLayoutRouteChildren: HeaderLayoutAdminLayoutRouteChildren
       HeaderLayoutAdminLayoutAdminAddListingRoute,
     HeaderLayoutAdminLayoutAdminAdminsRoute:
       HeaderLayoutAdminLayoutAdminAdminsRoute,
-    HeaderLayoutAdminLayoutAdminHeroArtRoute:
-      HeaderLayoutAdminLayoutAdminHeroArtRoute,
-    HeaderLayoutAdminLayoutAdminHeroCandidatesRoute:
-      HeaderLayoutAdminLayoutAdminHeroCandidatesRoute,
     HeaderLayoutAdminLayoutAdminHomePageHeroRoute:
       HeaderLayoutAdminLayoutAdminHomePageHeroRoute,
-    HeaderLayoutAdminLayoutAdminListingHeroesRoute:
-      HeaderLayoutAdminLayoutAdminListingHeroesRoute,
-    HeaderLayoutAdminLayoutAdminListingProductAccountsRoute:
-      HeaderLayoutAdminLayoutAdminListingProductAccountsRoute,
     HeaderLayoutAdminLayoutAdminManagedListingsRoute:
       HeaderLayoutAdminLayoutAdminManagedListingsRoute,
     HeaderLayoutAdminLayoutAdminPendingClaimsRoute:

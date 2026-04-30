@@ -89,12 +89,6 @@ function RouteComponent() {
               Reviews
             </SidebarLink>
             <SidebarLink
-              to="/admin/listing-product-accounts"
-              activeProps={{ isActive: true }}
-            >
-              Product Account Associations
-            </SidebarLink>
-            <SidebarLink
               to="/admin/home-page-hero"
               activeProps={{ isActive: true }}
             >
@@ -112,23 +106,6 @@ function RouteComponent() {
             >
               Add Listing
             </SidebarLink>
-            <SidebarLink to="/admin/hero-art" activeProps={{ isActive: true }}>
-              Hero Art
-            </SidebarLink>
-            <SidebarLink
-              to="/admin/listing-heroes"
-              activeProps={{ isActive: true }}
-            >
-              Listing heroes
-            </SidebarLink>
-            {import.meta.env.DEV ? (
-              <SidebarLink
-                to="/admin/hero-candidates"
-                activeProps={{ isActive: true }}
-              >
-                Hero Candidates (dev)
-              </SidebarLink>
-            ) : null}
           </SidebarSection>
           {isSuperAdmin ? (
             <SidebarSection title="Super admin">
