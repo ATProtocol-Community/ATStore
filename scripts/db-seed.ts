@@ -1,7 +1,7 @@
 /**
  * Seed the local database with a handful of realistic ATProto-ecosystem
  * listings + a couple of reviews so a fresh `pnpm dev` renders something
- * on the home page without having to run the scrapers.
+ * on the home page without having to import live data.
  *
  *   pnpm db:seed
  *

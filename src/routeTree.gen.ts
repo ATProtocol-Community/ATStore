@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as IndexOldRouteImport } from './routes/index-old'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
@@ -57,11 +56,6 @@ import { Route as HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport } 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexOldRoute = IndexOldRouteImport.update({
-  id: '/index-old',
-  path: '/index-old',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HomeRoute = HomeRouteImport.update({
@@ -304,7 +298,6 @@ export interface FileRoutesByFullPath {
   '/': typeof HeaderLayoutIndexRoute
   '/about': typeof AboutRoute
   '/home': typeof HomeRoute
-  '/index-old': typeof IndexOldRoute
   '/login': typeof LoginRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
@@ -347,7 +340,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/home': typeof HomeRoute
-  '/index-old': typeof IndexOldRoute
   '/login': typeof LoginRoute
   '/': typeof HeaderLayoutIndexRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
@@ -392,7 +384,6 @@ export interface FileRoutesById {
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
   '/about': typeof AboutRoute
   '/home': typeof HomeRoute
-  '/index-old': typeof IndexOldRoute
   '/login': typeof LoginRoute
   '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
@@ -440,7 +431,6 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/home'
-    | '/index-old'
     | '/login'
     | '/notifications'
     | '/search'
@@ -483,7 +473,6 @@ export interface FileRouteTypes {
   to:
     | '/about'
     | '/home'
-    | '/index-old'
     | '/login'
     | '/'
     | '/notifications'
@@ -527,7 +516,6 @@ export interface FileRouteTypes {
     | '/_header-layout'
     | '/about'
     | '/home'
-    | '/index-old'
     | '/login'
     | '/_header-layout/_admin-layout'
     | '/_header-layout/notifications'
@@ -574,7 +562,6 @@ export interface RootRouteChildren {
   HeaderLayoutRoute: typeof HeaderLayoutRouteWithChildren
   AboutRoute: typeof AboutRoute
   HomeRoute: typeof HomeRoute
-  IndexOldRoute: typeof IndexOldRoute
   LoginRoute: typeof LoginRoute
   OgReviewRoute: typeof OgReviewRoute
   OgTagRoute: typeof OgTagRoute
@@ -594,13 +581,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/index-old': {
-      id: '/index-old'
-      path: '/index-old'
-      fullPath: '/index-old'
-      preLoaderRoute: typeof IndexOldRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/home': {
@@ -1014,7 +994,6 @@ const rootRouteChildren: RootRouteChildren = {
   HeaderLayoutRoute: HeaderLayoutRouteWithChildren,
   AboutRoute: AboutRoute,
   HomeRoute: HomeRoute,
-  IndexOldRoute: IndexOldRoute,
   LoginRoute: LoginRoute,
   OgReviewRoute: OgReviewRoute,
   OgTagRoute: OgTagRoute,

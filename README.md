@@ -109,8 +109,8 @@ least one of the following. Open `.env` and add what you have:
 
 | Variable                                      | What it unlocks                                                                                                    |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `ANTHROPIC_API_KEY`                           | LLM-powered scrapers, listing copy, taxonomy generation                                                            |
-| `GEMINI_API_KEY`                              | Image generation scripts (`generate:*`)                                                                            |
+| `ANTHROPIC_API_KEY`                           | LLM-powered listing copy, taxonomy generation, discovery helpers                                                   |
+| `GEMINI_API_KEY`                              | Admin / server routes that call Gemini image APIs (e.g. listing hero regeneration)                                 |
 | `ATSTORE_IDENTIFIER` + `ATSTORE_APP_PASSWORD` | Publishing listings to the @store ATProto repo, admin actions                                                      |
 | `ATPROTO_BASE_URL`                            | OAuth redirect URI — defaults to `http://127.0.0.1:3000` (use `127.0.0.1`, **not** `localhost`, for ATProto OAuth) |
 | `JETSTREAM_URL` / `TAP_URL`                   | Background ingestion consumers (see below)                                                                         |
@@ -169,8 +169,7 @@ you want live ATProto data flowing into your local DB.
 Each consumer is meant to run in its own terminal. They are restart-safe:
 both keep cursor state in Postgres so you can stop and start them freely.
 
-See `package.json` for the full list of `generate:*`, `backfill:*`, and
-`scrape:*` one-off scripts.
+See `package.json` for the full list of `backfill:*`, DB, and consumer scripts.
 
 ---
 
@@ -182,7 +181,7 @@ See `package.json` for the full list of `generate:*`, `backfill:*`, and
 - `src/design-system/` — Shared UI primitives (autocomplete, popovers, theme)
 - `lexicons/` — ATProto lexicons under `fyi.atstore.*`
 - `drizzle/` — Generated SQL migrations (the source of truth — never edit by hand)
-- `scripts/` — One-off and recurring CLI scripts (scraping, generation, consumers, dev setup)
+- `scripts/` — One-off and recurring CLI scripts (listing import, backfills, consumers, dev setup)
 
 ---
 

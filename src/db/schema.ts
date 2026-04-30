@@ -331,7 +331,7 @@ export const storeListingVerificationApprovalEvents = pgTable(
 
 /**
  * Source of truth for `/generated/...` → storage URL mapping (S3 / imgproxy).
- * Populated by the hero-art admin generator and the `upload:generated-banners` script.
+ * Populated by admin flows that register optimized banner URLs (e.g. hero-art pipeline).
  * Consumed at runtime via `resolveBannerRecordUrl` (hydrated on SSR + inline script).
  */
 export const generatedBannerRecordUrls = pgTable('generated_banner_record_urls', {

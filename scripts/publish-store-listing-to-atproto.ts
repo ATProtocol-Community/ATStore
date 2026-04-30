@@ -8,6 +8,7 @@
  *
  *   pnpm listing:publish-store kich
  *   pnpm listing:publish-store <uuid>
+ *   pnpm listing:publish-store slug -- --icon-url https://… --hero-url https://…
  */
 import 'dotenv/config'
 
@@ -23,6 +24,45 @@ import { publishDirectoryListingDetail } from '../src/lib/atproto/publish-direct
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function parsePublishArgs(argv: string[]): {
+  slugOrUuid: string
+  iconUrlOverride?: string
+  heroUrlOverride?: string
+} {
+  let iconUrlOverride: string | undefined
+  let heroUrlOverride: string | undefined
+  const positional: string[] = []
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const a = argv[i]!
+    if (a === '--') continue
+    if (a === '--icon-url') {
+      const next = argv[i + 1]?.trim()
+      if (!next) throw new Error('Missing value for --icon-url')
+      iconUrlOverride = next
+      i += 1
+      continue
+    }
+    if (a === '--hero-url') {
+      const next = argv[i + 1]?.trim()
+      if (!next) throw new Error('Missing value for --hero-url')
+      heroUrlOverride = next
+      i += 1
+      continue
+    }
+    if (a.startsWith('-')) {
+      throw new Error(`Unknown option: ${a}`)
+    }
+    positional.push(a)
+  }
+
+  return {
+    slugOrUuid: (positional[0] ?? 'kich').trim(),
+    iconUrlOverride,
+    heroUrlOverride,
+  }
+}
 
 async function fileExists(absolutePath: string): Promise<boolean> {
   try {
@@ -72,7 +112,19 @@ async function resolveLocalGeneratedAssetPatch(slug: string): Promise<{
 }
 
 async function main() {
-  const arg = (process.argv[2] ?? 'kich').trim()
+  let parsed: ReturnType<typeof parsePublishArgs>
+  try {
+    parsed = parsePublishArgs(process.argv.slice(2))
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : e)
+    console.error(
+      'Usage: pnpm listing:publish-store <slug|listing-uuid> [-- --icon-url <url> --hero-url <url>]',
+    )
+    process.exitCode = 1
+    return
+  }
+
+  const { slugOrUuid: arg, iconUrlOverride, heroUrlOverride } = parsed
   if (!arg) {
     console.error('Usage: pnpm listing:publish-store <slug|listing-uuid>')
     process.exitCode = 1
@@ -113,9 +165,11 @@ async function main() {
     heroImageUrl?: string
     productAccountDid?: string
   } = await resolveLocalGeneratedAssetPatch(row.slug)
+  if (iconUrlOverride) patch.iconUrl = iconUrlOverride
+  if (heroUrlOverride) patch.heroImageUrl = heroUrlOverride
   if (patch.iconUrl || patch.heroImageUrl) {
     console.log(
-      `Using local generated assets for ${row.slug}: icon=${patch.iconUrl ?? 'unchanged'} hero=${patch.heroImageUrl ?? 'unchanged'}`,
+      `Using image URLs for ${row.slug}: icon=${patch.iconUrl ?? 'unchanged'} hero=${patch.heroImageUrl ?? 'unchanged'}`,
     )
   }
 

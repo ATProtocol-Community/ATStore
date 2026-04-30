@@ -103,8 +103,8 @@ async function readIndexFile(): Promise<{
 }
 
 /**
- * Atomic write of `index.json` (matches the temp-file-then-rename pattern used by the scrape
- * script and {@link writeReviewedFile}).
+ * Atomic write of `index.json` (matches the temp-file-then-rename pattern used by
+ * {@link writeReviewedFile} and other hero-candidate writers).
  */
 async function writeIndexFile(payload: {
   generatedAt: string | null
@@ -345,7 +345,7 @@ const applyHeroCandidate = createServerFn({ method: 'POST' })
     const idx = rawEntries.find((row) => row.id === data.listingId)
     if (!idx) {
       throw new Error(
-        `No hero candidate index entry for listing ${data.listingId}. Re-run scrape.`,
+        `No hero candidate index entry for listing ${data.listingId}. Populate out/hero-candidates/index.json first.`,
       )
     }
     if (!idx.candidate) {
@@ -382,7 +382,7 @@ const applyHeroCandidate = createServerFn({ method: 'POST' })
       buffer = await readFile(sourcePath)
     } catch {
       throw new Error(
-        `Candidate file missing on disk: ${sourcePath}. Re-run the scrape script.`,
+        `Candidate file missing on disk: ${sourcePath}. Regenerate hero candidates or restore out/hero-candidates/.`,
       )
     }
 

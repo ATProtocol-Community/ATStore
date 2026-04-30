@@ -1,5 +1,5 @@
 -- One-time: clear Jetstream mention rows and reset mention-derived listing fields.
--- Recompute scores after migrate: `pnpm backfill:trending`
+-- Recompute scores when traffic resumes (Jetstream ingest / consumers call recomputeListingTrending).
 TRUNCATE TABLE "store_listing_mentions" RESTART IDENTITY;
 --> statement-breakpoint
 UPDATE "store_listings"

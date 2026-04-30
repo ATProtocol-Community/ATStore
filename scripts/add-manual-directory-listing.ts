@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import 'dotenv/config'
 
-import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, extname, resolve } from 'node:path'
 
@@ -35,7 +34,6 @@ type ScriptArgs = {
   help: boolean
   dryRun: boolean
   shouldImport: boolean
-  shouldGenerateAssets: boolean
   name: string | null
   sourceUrl: string | null
   externalUrl: string | null
@@ -66,7 +64,6 @@ function parseArgs(argv: string[]): ScriptArgs {
     help: false,
     dryRun: false,
     shouldImport: true,
-    shouldGenerateAssets: true,
     name: null,
     sourceUrl: null,
     externalUrl: null,
@@ -101,10 +98,6 @@ function parseArgs(argv: string[]): ScriptArgs {
     }
     if (arg === '--no-import') {
       out.shouldImport = false
-      continue
-    }
-    if (arg === '--no-generate-assets') {
-      out.shouldGenerateAssets = false
       continue
     }
     if (arg === '--name') {
@@ -227,13 +220,9 @@ Assets:
   --icon-asset-url <url>           Download remote icon into public/generated/listings
   --screenshot-asset-url <url>     Download remote screenshot into public/generated/listings (repeatable)
   --asset-slug <slug>              Override generated asset filename prefix
-                                   If you skip screenshots, run
-                                   npm run generate:listing-images -- --input out/manual-directory-listings.json
-                                   to create fallback-styled generated listing art
 
 Flags:
   --no-import                      Only update out/manual-directory-listings.json
-  --no-generate-assets             Skip running hero/icon generation helper after import
   --dry-run                        Print intended record without writing
   -h, --help                       Show help
 
@@ -545,48 +534,6 @@ async function importRecord(record: InputRecord, dryRun: boolean) {
   }
 }
 
-async function runCommand(command: string, args: string[]) {
-  await new Promise<void>((resolvePromise, rejectPromise) => {
-    const child = spawn(command, args, {
-      cwd: process.cwd(),
-      stdio: 'inherit',
-      env: process.env,
-    })
-
-    child.on('error', rejectPromise)
-    child.on('exit', (code, signal) => {
-      if (typeof code === 'number' && code === 0) {
-        resolvePromise()
-        return
-      }
-      rejectPromise(
-        new Error(
-          signal
-            ? `${command} exited due to signal ${signal}`
-            : `${command} exited with code ${code ?? 'unknown'}`,
-        ),
-      )
-    })
-  })
-}
-
-async function runListingImageGeneration(record: InputRecord) {
-  const baseArgs = [
-    'run',
-    'generate:listing-images',
-    '--input',
-    'out/manual-directory-listings.json',
-    '--id',
-    record.sourceUrl,
-    '--limit',
-    '1',
-    '--concurrency',
-    '1',
-  ]
-  await runCommand('pnpm', baseArgs)
-  await runCommand('pnpm', [...baseArgs, '--icon'])
-}
-
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   if (args.help) {
@@ -613,23 +560,6 @@ async function main() {
     await importRecord(record, args.dryRun)
     if (!args.dryRun) {
       console.log(`Imported "${record.name}" into store_listings.`)
-    }
-
-    const hasIconInput = Boolean(args.iconAssetUrl ?? args.iconUrl)
-    const hasScreenshotInput = args.screenshotAssetUrls.length > 0 || args.screenshotUrls.length > 0
-    const shouldGenerateNow = args.shouldGenerateAssets && !hasIconInput && !hasScreenshotInput
-
-    if (shouldGenerateNow) {
-      if (args.dryRun) {
-        console.log('Dry run: would generate hero and icon assets from listing page context.')
-      } else {
-        console.log('Generating hero and icon assets via generate:listing-images...')
-        await runListingImageGeneration(record)
-      }
-    } else if (!args.shouldGenerateAssets) {
-      console.log('Skipped asset generation (--no-generate-assets).')
-    } else {
-      console.log('Skipped asset generation because icon/screenshot assets were provided explicitly.')
     }
   } else {
     console.log('Skipped DB import.')
