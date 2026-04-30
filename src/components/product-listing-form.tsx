@@ -930,37 +930,40 @@ export function ProductListingForm({
       return;
     }
 
-    const baseItems = screenshotItems;
-    const availableSlots = MAX_SCREENSHOT_COUNT - baseItems.length;
-    if (availableSlots <= 0) {
-      return;
-    }
-    const incomingItems = imageFiles.slice(0, availableSlots).map((file) => {
-      screenshotIdCounterRef.current += 1;
-      const previewUrl = URL.createObjectURL(file);
-      pendingScreenshotObjectUrlsRef.current.add(previewUrl);
-      return {
-        id: `pending-${String(screenshotIdCounterRef.current)}`,
-        previewUrl,
-        blob: file,
-      } satisfies ScreenshotItem;
+    setScreenshotItems((baseItems) => {
+      const availableSlots = MAX_SCREENSHOT_COUNT - baseItems.length;
+      if (availableSlots <= 0) {
+        return baseItems;
+      }
+      const incomingItems = imageFiles.slice(0, availableSlots).map((file) => {
+        screenshotIdCounterRef.current += 1;
+        const previewUrl = URL.createObjectURL(file);
+        pendingScreenshotObjectUrlsRef.current.add(previewUrl);
+        return {
+          id: `pending-${String(screenshotIdCounterRef.current)}`,
+          previewUrl,
+          blob: file,
+        } satisfies ScreenshotItem;
+      });
+      return [...baseItems, ...incomingItems];
     });
-    setScreenshotItems([...baseItems, ...incomingItems]);
   }
 
   function onRemoveScreenshot(id: string) {
-    const itemToRemove = screenshotItems.find((item) => item.id === id);
-    if (!itemToRemove) {
-      return;
-    }
-    if (
-      itemToRemove.blob != null &&
-      pendingScreenshotObjectUrlsRef.current.has(itemToRemove.previewUrl)
-    ) {
-      URL.revokeObjectURL(itemToRemove.previewUrl);
-      pendingScreenshotObjectUrlsRef.current.delete(itemToRemove.previewUrl);
-    }
-    setScreenshotItems(screenshotItems.filter((item) => item.id !== id));
+    setScreenshotItems((items) => {
+      const itemToRemove = items.find((item) => item.id === id);
+      if (!itemToRemove) {
+        return items;
+      }
+      if (
+        itemToRemove.blob != null &&
+        pendingScreenshotObjectUrlsRef.current.has(itemToRemove.previewUrl)
+      ) {
+        URL.revokeObjectURL(itemToRemove.previewUrl);
+        pendingScreenshotObjectUrlsRef.current.delete(itemToRemove.previewUrl);
+      }
+      return items.filter((item) => item.id !== id);
+    });
   }
 
   return (
