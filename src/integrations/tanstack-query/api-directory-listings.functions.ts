@@ -5069,7 +5069,7 @@ export type AdminListingHeroReviewRow = {
   name: string;
   productSlug: string;
   heroImageUrl: string | null;
-  /** Resolved catalog hero URL (e.g. imgproxy for `/generated/…`), when present. */
+  /** Public hero image URL when set on the listing. */
   ogShareImageFromHero: string | null;
   /** `/og?…` card used for Open Graph when there is no hero. */
   ogFallbackImagePath: string;
