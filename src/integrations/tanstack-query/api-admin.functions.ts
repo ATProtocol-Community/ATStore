@@ -1,7 +1,18 @@
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { and, asc, desc, eq, inArray, isNotNull, ne, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { z } from 'zod'
 
 import {
@@ -17,6 +28,10 @@ import { dbMiddleware } from './db-middleware'
 const HOME_HERO_SLOT_COUNT = 3
 const RECENT_REVIEWS_LIMIT = 200
 const RECENTLY_CLAIMED_LISTINGS_LIMIT = 200
+const ADMIN_OVERVIEW_REVIEWS_PREVIEW = 6
+const ADMIN_OVERVIEW_CLAIMED_PREVIEW = 5
+/** Past complete UTC calendar months to include in admin claims burn-down chart (oldest → newest). */
+const ADMIN_CLAIMS_OVER_TIME_MONTHS = 2
 
 const setListingVerificationInput = z
   .object({
@@ -68,8 +83,53 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
     const listings = schema.storeListings
     const claims = schema.listingClaims
     const homeHero = schema.homePageHeroListings
+    const reviews = schema.storeListingReviews
 
-    const [unverified, pendingClaims, homePageHeroListings] = await Promise.all([
+    const atstoreDid = await getAtstoreRepoDid()
+    const listingIsClaimed = or(
+      and(isNotNull(listings.claimedAt), isNotNull(listings.claimedByDid)),
+      and(
+        isNotNull(listings.migratedFromAtUri),
+        isNotNull(listings.repoDid),
+        ne(listings.repoDid, atstoreDid),
+        eq(listings.verificationStatus, 'verified'),
+      ),
+    )
+
+    const now = new Date()
+    const chartMonthSpan = ADMIN_CLAIMS_OVER_TIME_MONTHS - 1
+    const windowStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - chartMonthSpan, 1),
+    )
+
+    const monthKeys: string[] = []
+    const monthLabels: string[] = []
+    for (let i = chartMonthSpan; i >= 0; i--) {
+      const d = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1),
+      )
+      monthKeys.push(
+        `${String(d.getUTCFullYear())}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`,
+      )
+      monthLabels.push(
+        d.toLocaleString('en-US', {
+          month: 'short',
+          year: 'numeric',
+          timeZone: 'UTC',
+        }),
+      )
+    }
+
+    const [
+      unverified,
+      pendingClaims,
+      homePageHeroListings,
+      totalClaimedRow,
+      unclaimedVerifiedRow,
+      monthlyClaimRows,
+      recentClaimedRaw,
+      reviewPreviewRows,
+    ] = await Promise.all([
       db
         .select({
           id: listings.id,
@@ -120,7 +180,147 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
         .from(homeHero)
         .innerJoin(listings, eq(homeHero.storeListingId, listings.id))
         .orderBy(asc(homeHero.position)),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(listings)
+        .where(listingIsClaimed),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(listings)
+        .where(
+          and(
+            eq(listings.verificationStatus, 'verified'),
+            sql`NOT (${listingIsClaimed})`,
+          ),
+        ),
+      db
+        .select({
+          bucket: sql<string>`to_char(date_trunc('month', ${listings.claimedAt}), 'YYYY-MM')`,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(listings)
+        .where(
+          and(isNotNull(listings.claimedAt), gte(listings.claimedAt, windowStart)),
+        )
+        .groupBy(sql`date_trunc('month', ${listings.claimedAt})`),
+      db
+        .select({
+          id: listings.id,
+          name: listings.name,
+          slug: listings.slug,
+          claimedAt: listings.claimedAt,
+          claimedByDid: listings.claimedByDid,
+          repoDid: listings.repoDid,
+          migratedFromAtUri: listings.migratedFromAtUri,
+          verificationStatus: listings.verificationStatus,
+          createdAt: listings.createdAt,
+        })
+        .from(listings)
+        .where(
+          or(
+            and(
+              isNotNull(listings.claimedAt),
+              isNotNull(listings.claimedByDid),
+            ),
+            and(
+              isNotNull(listings.migratedFromAtUri),
+              isNotNull(listings.repoDid),
+              ne(listings.repoDid, atstoreDid),
+              eq(listings.verificationStatus, 'verified'),
+            ),
+          ),
+        )
+        .orderBy(
+          desc(sql`COALESCE(${listings.claimedAt}, ${listings.createdAt})`),
+          desc(listings.id),
+        )
+        .limit(ADMIN_OVERVIEW_CLAIMED_PREVIEW),
+      db
+        .select({
+          id: reviews.id,
+          rating: reviews.rating,
+          text: reviews.text,
+          reviewCreatedAt: reviews.reviewCreatedAt,
+          authorDid: reviews.authorDid,
+          authorDisplayName: reviews.authorDisplayName,
+          authorAvatarUrl: reviews.authorAvatarUrl,
+          listingId: listings.id,
+          listingName: listings.name,
+          listingSlug: listings.slug,
+          listingIconUrl: listings.iconUrl,
+        })
+        .from(reviews)
+        .innerJoin(listings, eq(reviews.storeListingId, listings.id))
+        .orderBy(desc(reviews.reviewCreatedAt))
+        .limit(ADMIN_OVERVIEW_REVIEWS_PREVIEW),
     ])
+
+    const newByMonth = new Map(
+      monthlyClaimRows.map((r) => [r.bucket, r.n] as const),
+    )
+    const newClaims = monthKeys.map((k) => newByMonth.get(k) ?? 0)
+    let running = 0
+    const cumulativeClaimed = newClaims.map((n) => {
+      running += n
+      return running
+    })
+    const totalNewInWindow =
+      cumulativeClaimed[cumulativeClaimed.length - 1] ?? 0
+    const unclaimedNow = unclaimedVerifiedRow[0]?.count ?? 0
+
+    const claimsOverTime = monthKeys.map((_, i) => ({
+      monthLabel: monthLabels[i]!,
+      unclaimed: unclaimedNow + (totalNewInWindow - cumulativeClaimed[i]!),
+      claimedCumulative: cumulativeClaimed[i]!,
+    }))
+
+    const recentClaimedPreview = recentClaimedRaw.map((row) => {
+      const whenIso = row.claimedAt
+        ? row.claimedAt.toISOString()
+        : row.createdAt.toISOString()
+      return {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        whenIso,
+        statusLabel:
+          row.verificationStatus === 'verified'
+            ? ('approved' as const)
+            : ('pending' as const),
+      }
+    })
+
+    const uniqueReviewDids = Array.from(
+      new Set(reviewPreviewRows.map((r) => r.authorDid)),
+    )
+    const profileEntries = await Promise.all(
+      uniqueReviewDids.map(
+        async (did) =>
+          [did, await fetchBlueskyPublicProfileFields(did)] as const,
+      ),
+    )
+    const profileByDid = new Map(profileEntries)
+
+    const recentReviewsPreview = reviewPreviewRows.map((row) => {
+      const profile = profileByDid.get(row.authorDid) ?? null
+      const displayName =
+        row.authorDisplayName?.trim() ||
+        profile?.displayName?.trim() ||
+        profile?.handle ||
+        null
+      const handle = profile?.handle ?? null
+      return {
+        id: row.id,
+        rating: row.rating,
+        text: row.text,
+        reviewCreatedAt: row.reviewCreatedAt.toISOString(),
+        listingName: row.listingName,
+        listingSlug: row.listingSlug,
+        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+        authorDisplayName: displayName,
+        authorHandle: handle,
+      }
+    })
 
     return {
       unverified: unverified.map((row) => ({
@@ -136,6 +336,10 @@ const getAdminDashboard = createServerFn({ method: 'GET' })
         listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
       })),
       homePageHeroListings,
+      totalClaimedCount: totalClaimedRow[0]?.count ?? 0,
+      claimsOverTime,
+      recentClaimedPreview,
+      recentReviewsPreview,
     }
   })
 

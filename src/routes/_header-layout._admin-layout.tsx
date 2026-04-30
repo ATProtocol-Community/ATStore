@@ -67,6 +67,8 @@ function RouteComponent() {
             >
               Overview
             </SidebarLink>
+          </SidebarSection>
+          <SidebarSection title="Incoming Listings">
             <SidebarLink
               to="/admin/unverified-listings"
               activeProps={{ isActive: true }}
@@ -85,26 +87,28 @@ function RouteComponent() {
             >
               Recently Claimed
             </SidebarLink>
+          </SidebarSection>
+          <SidebarSection title="Listings">
             <SidebarLink to="/admin/reviews" activeProps={{ isActive: true }}>
               Reviews
-            </SidebarLink>
-            <SidebarLink
-              to="/admin/home-page-hero"
-              activeProps={{ isActive: true }}
-            >
-              Home Page Hero
             </SidebarLink>
             <SidebarLink
               to="/admin/managed-listings"
               activeProps={{ isActive: true }}
             >
-              Managed Listings
+              Edit Listing
             </SidebarLink>
             <SidebarLink
               to="/admin/add-listing"
               activeProps={{ isActive: true }}
             >
               Add Listing
+            </SidebarLink>
+            <SidebarLink
+              to="/admin/home-page-hero"
+              activeProps={{ isActive: true }}
+            >
+              Home Page Hero
             </SidebarLink>
           </SidebarSection>
           {isSuperAdmin ? (
