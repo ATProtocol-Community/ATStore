@@ -500,6 +500,14 @@ const styles = stylex.create({
   stickyFooterActions: {
     justifyContent: "flex-end",
   },
+  stickyFooterStack: {
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  saveBlockedReasonsList: {
+    gap: gap["xs"],
+    paddingLeft: horizontalSpace["2xl"],
+  },
   linksList: {
     gap: gap["xl"],
   },
@@ -847,6 +855,37 @@ export function ProductListingForm({
    */
   const heroSatisfied = !requireHero || hasHeroImage || pendingHeroRemoval;
   const hasRequiredImages = heroSatisfied && hasIconImage;
+
+  const saveDisabledReasons = useMemo(() => {
+    const reasons: string[] = [];
+    if (!hasValidCategoryInputs) {
+      reasons.push(
+        categoryKind === "app-tool"
+          ? "Choose an app and a category."
+          : "Choose which app this listing belongs to.",
+      );
+    }
+    if (!hasIconImage) {
+      reasons.push("Add an icon image.");
+    }
+    if (requireHero && !hasHeroImage && !pendingHeroRemoval) {
+      reasons.push(
+        "Add a hero image, or remove the current one to save without a hero.",
+      );
+    }
+    if (!hasValidAppTags) {
+      reasons.push("Pick at least one app tag.");
+    }
+    return reasons;
+  }, [
+    hasValidCategoryInputs,
+    categoryKind,
+    hasIconImage,
+    requireHero,
+    hasHeroImage,
+    pendingHeroRemoval,
+    hasValidAppTags,
+  ]);
 
   const { dragAndDropHooks } = useDragAndDrop({
     getItems: (keys) =>
@@ -1659,28 +1698,48 @@ export function ProductListingForm({
           </Card>
         </Flex>
         <Page.StickyFooter>
-          <Flex gap="md" wrap style={styles.stickyFooterActions}>
-            <Button
-              variant="secondary"
-              isDisabled={isSubmitting}
-              size="lg"
-              onPress={onCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              variant="primary"
-              isPending={isSubmitting}
-              isDisabled={
-                !hasValidCategoryInputs ||
-                !hasRequiredImages ||
-                !hasValidAppTags
-              }
-              type="submit"
-            >
-              {submitLabel}
-            </Button>
+          <Flex
+            direction="row"
+            justify="between"
+            gap="md"
+            style={styles.stickyFooterStack}
+          >
+            {saveDisabledReasons.length > 0 && !isSubmitting ? (
+              <div role="status" aria-live="polite">
+                <UnorderedList style={styles.saveBlockedReasonsList}>
+                  {saveDisabledReasons.map((reason) => (
+                    <ListItem key={reason}>
+                      <Text size="sm" variant="secondary">
+                        {reason}
+                      </Text>
+                    </ListItem>
+                  ))}
+                </UnorderedList>
+              </div>
+            ) : null}
+            <Flex gap="md" wrap style={styles.stickyFooterActions}>
+              <Button
+                variant="secondary"
+                isDisabled={isSubmitting}
+                size="lg"
+                onPress={onCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="lg"
+                variant="primary"
+                isPending={isSubmitting}
+                isDisabled={
+                  !hasValidCategoryInputs ||
+                  !hasRequiredImages ||
+                  !hasValidAppTags
+                }
+                type="submit"
+              >
+                {submitLabel}
+              </Button>
+            </Flex>
           </Flex>
         </Page.StickyFooter>
       </Form>
