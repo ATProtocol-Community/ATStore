@@ -31,7 +31,6 @@ import {
   directoryListingApi,
   type DirectoryListingCard,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
 import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";

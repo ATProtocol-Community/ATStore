@@ -197,8 +197,10 @@ export function DirectoryCategoryBranchPage({
               </AppLink>
               {import.meta.env.DEV ? (
                 <>
-                  <AppLink to="/dev/categories">Recategorize DB</AppLink>
-                  <AppLink to="/dev/app-tags">App tags</AppLink>
+                  <AppLink to={"/dev/categories" as never}>
+                    Recategorize DB
+                  </AppLink>
+                  <AppLink to={"/dev/app-tags" as never}>App tags</AppLink>
                 </>
               ) : null}
             </Flex>
@@ -230,6 +232,7 @@ function CategoryCard({ category }: { category: DirectoryCategoryTreeNode }) {
     <RouterLink
       to="/categories/$categoryId"
       params={{ categoryId: category.id }}
+      search={{ sort: "popular" }}
       {...stylex.props(styles.categoryCardLink)}
     >
       <div

@@ -113,11 +113,13 @@ export function ProtocolCategoryCard({ category }: ProtocolCategoryCardProps) {
     getProtocolCategoryCoverAssetPathForSegment(category.segment),
     { width: 640, height: 480, mode: "fill" },
   );
+  const categoryId = `protocol/${category.segment}`;
 
   return (
     <RouterLink
-      params={{ category: category.segment }}
-      to="/protocol/$category"
+      to="/categories/$categoryId"
+      params={{ categoryId }}
+      search={{ sort: "popular" }}
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}
     >
       {coverSrc ? (

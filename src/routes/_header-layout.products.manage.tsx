@@ -204,8 +204,6 @@ function ManageListingsPage() {
 
   function renderListingCard(listing: MyListingRow) {
     const history = listing.rejectionHistory;
-    const latestReason =
-      history.length > 0 ? history[history.length - 1]!.reason : null;
     const isLive = listing.verificationStatus === "verified";
 
     const actions = (

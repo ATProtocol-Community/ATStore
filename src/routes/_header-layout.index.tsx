@@ -20,12 +20,7 @@ import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { blue } from "../design-system/theme/colors/blue.stylex";
-import { indigo as green } from "../design-system/theme/colors/indigo.stylex";
-import { pink } from "../design-system/theme/colors/pink.stylex";
-import { purple } from "../design-system/theme/colors/purple.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { ui } from "../design-system/theme/semantic-color.stylex";
 import {
   gap,
   horizontalSpace,
@@ -564,50 +559,6 @@ const styles = stylex.create({
   dockButton: {
     minWidth: "4.5rem",
   },
-  blueSurface: {
-    backgroundImage: `linear-gradient(135deg, ${blue.solid1} 0%, ${blue.solid2} 45%, ${blue.border3} 100%)`,
-    borderColor: blue.border1,
-  },
-  pinkSurface: {
-    backgroundImage: `linear-gradient(135deg, ${pink.solid1} 0%, ${pink.solid2} 45%, ${purple.solid1} 100%)`,
-    borderColor: pink.border1,
-  },
-  purpleSurface: {
-    backgroundImage: `linear-gradient(135deg, ${purple.solid1} 0%, ${purple.solid2} 45%, ${pink.border3} 100%)`,
-    borderColor: purple.border1,
-  },
-  greenSurface: {
-    backgroundImage: `linear-gradient(135deg, ${green.solid1} 0%, ${green.solid2} 45%, ${green.border3} 100%)`,
-    borderColor: green.border1,
-  },
-  blueGlow: {
-    backgroundImage: `radial-gradient(circle, ${blue.component3}, transparent 70%)`,
-  },
-  pinkGlow: {
-    backgroundImage: `radial-gradient(circle, ${pink.component3}, transparent 70%)`,
-  },
-  purpleGlow: {
-    backgroundImage: `radial-gradient(circle, ${purple.component3}, transparent 70%)`,
-  },
-  greenGlow: {
-    backgroundImage: `radial-gradient(circle, ${green.component3}, transparent 70%)`,
-  },
-  softBlueSurface: {
-    backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
-    borderColor: blue.border1,
-  },
-  softPinkSurface: {
-    backgroundImage: `linear-gradient(135deg, ${pink.border2} 0%, ${pink.solid1} 100%)`,
-    borderColor: pink.border1,
-  },
-  softPurpleSurface: {
-    backgroundImage: `linear-gradient(135deg, ${purple.border2} 0%, ${purple.solid1} 100%)`,
-    borderColor: purple.border1,
-  },
-  softGreenSurface: {
-    backgroundImage: `linear-gradient(135deg, ${green.border2} 0%, ${green.solid1} 100%)`,
-    borderColor: green.border1,
-  },
   exploreButton: {
     borderRadius: radius.full,
     cornerShape: "unset",
@@ -1036,20 +987,4 @@ function formatMetadataLabel(value: string) {
     .split(" ")
     .map((word) => word[0]?.toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
-}
-
-function getAccentSurface(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.pinkSurface;
-  if (accent === "purple") return styles.purpleSurface;
-  if (accent === "green") return styles.greenSurface;
-
-  return styles.blueSurface;
-}
-
-function getAccentGlow(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.pinkGlow;
-  if (accent === "purple") return styles.purpleGlow;
-  if (accent === "green") return styles.greenGlow;
-
-  return styles.blueGlow;
 }

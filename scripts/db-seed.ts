@@ -12,7 +12,6 @@
  */
 import 'dotenv/config'
 import { eq, sql } from 'drizzle-orm'
-import { randomUUID } from 'node:crypto'
 import { db, dbClient } from '../src/db/index.server'
 import {
   storeListings,

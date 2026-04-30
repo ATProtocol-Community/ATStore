@@ -1,23 +1,20 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
-import { LogOut, Monitor, Moon, Shield, Sun } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 
 import { AvatarButton } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
-import { IconButton } from "../design-system/icon-button";
 import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
-import { NavbarAction } from "../design-system/navbar";
 import { criticalColor } from "../design-system/theme/color.stylex";
 import { size } from "../design-system/theme/semantic-spacing.stylex";
 import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
 import { user } from "#/integrations/tanstack-query/api-user.functions";
 import { useNotificationReadState } from "#/lib/notification-read-state";
-import { useTheme } from "#/lib/ThemeContext";
 
-import { ThemeMenu, ThemeSubMenu } from "./ThemeMenu";
+import { ThemeSubMenu } from "./ThemeMenu";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 
 const ButtonLink = createLink(Button);
@@ -177,20 +174,5 @@ export function NavbarAuth() {
         Log in
       </ButtonLink>
     </Flex>
-  );
-}
-
-function GuestThemeMenu() {
-  const { mode } = useTheme();
-  const Icon = mode === "dark" ? Moon : mode === "light" ? Sun : Monitor;
-
-  return (
-    <ThemeMenu
-      trigger={
-        <IconButton variant="secondary" size="lg" aria-label="Change theme">
-          <Icon />
-        </IconButton>
-      }
-    />
   );
 }

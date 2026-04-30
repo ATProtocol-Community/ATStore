@@ -55,7 +55,8 @@
     "discover:product-bsky": "tsx -r dotenv/config scripts/discover-product-bsky-candidates.ts",
     "fix:feed-creator-url": "tsx -r dotenv/config scripts/fix-bluesky-feed-creator-external-url.ts",
     "lexicon:websites": "tsx scripts/collect-lexicon-garden-websites.ts",
-    "lexicon:websites:unlisted": "tsx -r dotenv/config scripts/filter-lexicon-websites-against-listings.ts"
+    "lexicon:websites:unlisted": "tsx -r dotenv/config scripts/filter-lexicon-websites-against-listings.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

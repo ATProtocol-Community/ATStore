@@ -15,6 +15,7 @@
  */
 import 'dotenv/config'
 
+import type { ActorIdentifier } from '@atcute/lexicons'
 import { ok } from '@atcute/client'
 
 import { db, dbClient } from '../src/db/index.server'
@@ -57,7 +58,7 @@ async function main() {
   const gr = await ok(
     client.get('com.atproto.repo.getRecord', {
       params: {
-        repo: parts.repo,
+        repo: parts.repo as ActorIdentifier,
         collection: parts.collection,
         rkey: parts.rkey,
       },

@@ -202,6 +202,7 @@ export function EcosystemCategoryCard({
     <RouterLink
       to="/categories/$categoryId"
       params={{ categoryId: category.id }}
+      search={{ sort: "popular" }}
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}
     >
       <div aria-hidden="true" {...stylex.props(styles.emojiBackdrop)}>

@@ -62,7 +62,7 @@ export function FeaturedListingFallbackCard({
         <Avatar
           alt={listing.name}
           fallback={getInitials(listing.name)}
-          size="2xl"
+          size="xl"
           src={listing.iconUrl || undefined}
         />
         <Text size="3xl" weight="semibold" style={styles.title}>

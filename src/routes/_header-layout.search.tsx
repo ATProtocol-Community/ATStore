@@ -43,7 +43,6 @@ import { getDirectoryCategoryOption } from "../lib/directory-categories";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { blue } from "../design-system/theme/colors/blue.stylex";
-import { uiColor } from "../design-system/theme/color.stylex";
 import { useFocusRing } from "react-aria";
 
 const LinkLink = createLink(Link);

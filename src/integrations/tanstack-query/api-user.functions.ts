@@ -16,7 +16,6 @@ import {
   fetchBlueskyHandleForDid,
 } from '#/lib/bluesky-public-profile'
 import {
-  DEFAULT_THEME_MODE,
   THEME_COOKIE,
   THEME_COOKIE_MAX_AGE_SECONDS,
   THEME_MODES,

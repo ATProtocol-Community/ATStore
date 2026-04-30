@@ -68,7 +68,7 @@ const styles = stylex.create({
     whiteSpace: "pre-wrap",
   },
   facetLink: {
-    color: uiColor.primary,
+    color: uiColor.solid1,
     textDecoration: "underline",
   },
   embedCard: {

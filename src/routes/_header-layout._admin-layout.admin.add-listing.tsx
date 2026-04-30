@@ -1,4 +1,3 @@
-import * as stylex from "@stylexjs/stylex";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -7,35 +6,12 @@ import {
   ProductListingForm,
   type ProductListingFormSubmitValues,
 } from "../components/product-listing-form";
-import { Flex } from "../design-system/flex";
-import { Page } from "../design-system/page";
-import {
-  gap,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body, Heading1 } from "../design-system/typography";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 export const Route = createFileRoute(
   "/_header-layout/_admin-layout/admin/add-listing",
 )({
   component: AdminAddListingPage,
-});
-
-const styles = stylex.create({
-  page: {
-    paddingBottom: verticalSpace["10xl"],
-    paddingTop: verticalSpace["6xl"],
-  },
-  pageContent: {
-    gap: gap["5xl"],
-    maxWidth: "72rem",
-    width: "100%",
-  },
-  header: {
-    gap: gap["2xl"],
-    maxWidth: "56rem",
-  },
 });
 
 async function blobToBase64(blob: Blob): Promise<string> {

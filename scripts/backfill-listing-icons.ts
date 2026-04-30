@@ -683,7 +683,7 @@ async function main(): Promise<void> {
     return
   }
 
-  const [{ db, dbClient }, { directoryListings }] = await Promise.all([
+  const [{ db, dbClient }, { storeListings }] = await Promise.all([
     import("../src/db/index.server"),
     import("../src/db/schema"),
   ])
@@ -693,14 +693,14 @@ async function main(): Promise<void> {
 
     const rows = await db
       .select({
-        id: directoryListings.id,
-        name: directoryListings.name,
-        sourceUrl: directoryListings.sourceUrl,
-        externalUrl: directoryListings.externalUrl,
-        iconUrl: directoryListings.iconUrl,
+        id: storeListings.id,
+        name: storeListings.name,
+        sourceUrl: storeListings.sourceUrl,
+        externalUrl: storeListings.externalUrl,
+        iconUrl: storeListings.iconUrl,
       })
-      .from(directoryListings)
-      .orderBy(desc(directoryListings.updatedAt), desc(directoryListings.createdAt))
+      .from(storeListings)
+      .orderBy(desc(storeListings.updatedAt), desc(storeListings.createdAt))
 
     const candidates = rows
       .filter((row) => (args.id ? row.id === args.id : true))
@@ -735,12 +735,12 @@ async function main(): Promise<void> {
 
           if (!args.dryRun) {
             await db
-              .update(directoryListings)
+              .update(storeListings)
               .set({
                 iconUrl: selected.finalUrl,
                 updatedAt: new Date(),
               })
-              .where(eq(directoryListings.id, listing.id))
+              .where(eq(storeListings.id, listing.id))
           }
 
           updated += 1

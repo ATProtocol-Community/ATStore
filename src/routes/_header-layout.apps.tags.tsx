@@ -15,7 +15,6 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body } from "../design-system/typography";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getAppTagHeroArtSpec } from "../lib/app-tag-hero-art";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { ChevronLeft } from "lucide-react";
 

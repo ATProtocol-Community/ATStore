@@ -374,34 +374,6 @@ const styles = stylex.create({
     gap: gap["lg"],
     maxWidth: "40rem",
   },
-  blueSurface: {
-    backgroundImage: `linear-gradient(135deg, ${blue.solid1} 0%, ${blue.solid2} 45%, ${blue.border3} 100%)`,
-    borderColor: blue.border1,
-  },
-  pinkSurface: {
-    backgroundImage: `linear-gradient(135deg, ${pink.solid1} 0%, ${pink.solid2} 45%, ${purple.solid1} 100%)`,
-    borderColor: pink.border1,
-  },
-  purpleSurface: {
-    backgroundImage: `linear-gradient(135deg, ${purple.solid1} 0%, ${purple.solid2} 45%, ${pink.border3} 100%)`,
-    borderColor: purple.border1,
-  },
-  greenSurface: {
-    backgroundImage: `linear-gradient(135deg, ${green.solid1} 0%, ${green.solid2} 45%, ${green.border3} 100%)`,
-    borderColor: green.border1,
-  },
-  blueGlow: {
-    backgroundImage: `radial-gradient(circle, ${blue.component3}, transparent 70%)`,
-  },
-  pinkGlow: {
-    backgroundImage: `radial-gradient(circle, ${pink.component3}, transparent 70%)`,
-  },
-  purpleGlow: {
-    backgroundImage: `radial-gradient(circle, ${purple.component3}, transparent 70%)`,
-  },
-  greenGlow: {
-    backgroundImage: `radial-gradient(circle, ${green.component3}, transparent 70%)`,
-  },
   softBlueSurface: {
     backgroundImage: `linear-gradient(135deg, ${blue.border2} 0%, ${blue.solid1} 100%)`,
     borderColor: blue.border1,
@@ -519,7 +491,7 @@ function CategoryPage() {
               No listings are assigned to this branch yet.
             </Body>
             {import.meta.env.DEV ? (
-              <AppLink to="/dev/categories">
+              <AppLink to={"/dev/categories" as never}>
                 Open the dev recategorization panel to assign some.
               </AppLink>
             ) : null}
@@ -538,10 +510,7 @@ function CategoryPage() {
         ) : null}
 
         {otherAppCategories.length > 0 ? (
-          <RelatedAppCategoriesSection
-            categories={otherAppCategories}
-            listings={data.listings}
-          />
+          <RelatedAppCategoriesSection categories={otherAppCategories} />
         ) : null}
       </Flex>
     </Page.Root>
@@ -550,10 +519,8 @@ function CategoryPage() {
 
 function RelatedAppCategoriesSection({
   categories,
-  listings,
 }: {
   categories: DirectoryCategoryTreeNode[];
-  listings: DirectoryListingCard[];
 }) {
   return (
     <Flex direction="column" style={styles.relatedSection}>
@@ -698,14 +665,6 @@ function getSoftAccentSurface(accent: DirectoryCategoryAccent) {
   if (accent === "green") return styles.softGreenSurface;
 
   return styles.softBlueSurface;
-}
-
-function getAccentSurface(accent: DirectoryListingCard["accent"]) {
-  if (accent === "pink") return styles.pinkSurface;
-  if (accent === "purple") return styles.purpleSurface;
-  if (accent === "green") return styles.greenSurface;
-
-  return styles.blueSurface;
 }
 
 function formatCount(count: number) {

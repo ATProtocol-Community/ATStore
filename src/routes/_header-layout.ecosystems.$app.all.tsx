@@ -24,8 +24,7 @@ import {
   gap,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { Body, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+import { SmallBody } from "../design-system/typography";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   getAppEcosystemCategoryIdFromRouteParam,

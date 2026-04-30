@@ -1,12 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import type { StyleXStyles } from "@stylexjs/stylex";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-  Link as RouterLink,
-  createFileRoute,
-  createLink,
-} from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, createLink } from "@tanstack/react-router";
 
 import { Page } from "../design-system/page";
 import { blue, blueA } from "../design-system/theme/colors/blue.stylex";
@@ -37,34 +30,19 @@ import {
   TrendingUp,
   UserCheck,
   UserRound,
-  Wrench,
 } from "lucide-react";
 import { HeaderLayout } from "#/design-system/header-layout";
 import { SiteFooter } from "#/components/SiteFooter";
 import { SiteHeader } from "#/components/SiteHeader";
-import { FeaturedListingFallbackCard } from "#/components/FeaturedListingFallbackCard";
-import { FeaturedListingGrid } from "#/components/FeaturedListingGrid";
 import { Flex } from "#/design-system/flex";
 import { Link } from "#/design-system/link";
-import { Avatar } from "#/design-system/avatar";
-import { Card } from "#/design-system/card";
 import {
   directoryListingApi,
   type DirectoryListingCard,
 } from "#/integrations/tanstack-query/api-directory-listings.functions";
-import { formatAppTagLabel } from "#/lib/app-tag-metadata";
-import { getListingsForCategoryBranch } from "#/lib/ecosystem-listings";
-import { getDirectoryListingSlug } from "#/lib/directory-listing-slugs";
-import { getDirectoryListingHeroImageAlt } from "#/lib/listing-copy";
 import { buildRouteOgMeta } from "#/lib/og-meta";
-import { Body, SmallBody } from "#/design-system/typography";
-import { useHover } from "react-aria";
-import { StarRating } from "#/design-system/star-rating";
-import { Button } from "#/design-system/button";
-import { HeroImage } from "#/components/HeroImage";
 import { Text } from "#/design-system/typography/text.tsx";
 
-const ButtonLink = createLink(Button);
 const LinkLink = createLink(Link);
 
 const BLUESKY_ECOSYSTEM_CATEGORY_ID = "apps/bluesky";
@@ -99,15 +77,6 @@ export const Route = createFileRoute("/about")({
   component: AboutPage,
 });
 
-const ACCOUNT_TAGS = [
-  "Social",
-  "Photos",
-  "Blog",
-  "Music",
-  "Video",
-  "Events",
-  "+ more",
-] as const;
 const INTRO_FEATURES = [
   {
     title: "Open Network",
@@ -128,24 +97,6 @@ const INTRO_FEATURES = [
     title: "Always Yours",
     subtitle: "Portable and owned by you.",
     icon: ShieldCheck,
-  },
-] as const;
-
-const DATA_CONTROL = [
-  {
-    title: "Portability",
-    body: "Self host, use an app's PDS, or use a third-party provider. Wherever you choose to host your account, your identity and data are portable.",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Interoperability",
-    body: "Since all apps share a common foundation, they can easily share data — unlocking new possibilities that aren't easy with traditional app ecosystems.",
-    icon: Layers3,
-  },
-  {
-    title: "Anyone Can Build",
-    body: "Developers can build new apps on the Atmosphere and tap into an existing network from day one. No chicken-and-egg problem.",
-    icon: Wrench,
   },
 ] as const;
 
@@ -171,9 +122,6 @@ const HOW_ATSTORE_WORKS = [
     icon: Tags,
   },
 ] as const;
-
-const MAX_BROWSER_TAGS = 8;
-const MAX_BROWSER_APPS = 12;
 
 const styles = stylex.create({
   grow: {
@@ -786,76 +734,6 @@ const styles = stylex.create({
 });
 
 function AboutPage() {
-  const { data: allApps } = useSuspenseQuery(
-    directoryListingApi.getAllAppsQueryOptions({ sort: "popular" }),
-  );
-  const tagStats = useMemo(() => buildTagStats(allApps), [allApps]);
-  const appBrowserTags = useMemo(
-    () => tagStats.slice(0, MAX_BROWSER_TAGS),
-    [tagStats],
-  );
-  const [activeAppTag, setActiveAppTag] = useState<string | null>(
-    appBrowserTags[0]?.tag ?? null,
-  );
-  const activeAppTagValue = activeAppTag ?? appBrowserTags[0]?.tag ?? null;
-  const appFeaturedApps = useMemo(() => {
-    if (!activeAppTagValue) {
-      return allApps;
-    }
-
-    return allApps.filter((app) => app.appTags.includes(activeAppTagValue));
-  }, [activeAppTagValue, allApps]);
-  const appBrowserApps = appFeaturedApps.length > 0 ? appFeaturedApps : allApps;
-
-  const { data: blueskyEcosystemData } = useSuspenseQuery(
-    directoryListingApi.getDirectoryCategoryPageQueryOptions({
-      categoryId: BLUESKY_ECOSYSTEM_CATEGORY_ID,
-      sort: "popular",
-    }),
-  );
-  const ecosystemApps = blueskyEcosystemData?.listings ?? allApps;
-  const browserCategories = useMemo(
-    () =>
-      (blueskyEcosystemData?.category.children ?? [])
-        .map((category) => ({
-          listings: sortListingsByTrendingSignals(
-            getListingsForCategoryBranch(category.id, ecosystemApps),
-          ),
-          id: category.id,
-          label: category.label,
-        }))
-        .filter((category) => category.listings.length > 0)
-        .sort((a) => (a.label === "Client" ? -1 : 1))
-        .slice(0, MAX_BROWSER_TAGS),
-    [blueskyEcosystemData?.category.children, ecosystemApps],
-  );
-  const ecosystemBrowserTags = useMemo(
-    () =>
-      browserCategories.map((category) => ({
-        tag: category.id,
-        label: category.label,
-      })),
-    [browserCategories],
-  );
-  const [activeEcosystemTag, setActiveEcosystemTag] = useState<string | null>(
-    ecosystemBrowserTags[0]?.tag ?? null,
-  );
-  const activeEcosystemTagValue =
-    activeEcosystemTag ?? ecosystemBrowserTags[0]?.tag ?? null;
-  const ecosystemFeaturedApps = useMemo(() => {
-    if (!activeEcosystemTagValue) {
-      return ecosystemApps;
-    }
-
-    return (
-      browserCategories.find(
-        (category) => category.id === activeEcosystemTagValue,
-      )?.listings ?? ecosystemApps
-    );
-  }, [activeEcosystemTagValue, browserCategories, ecosystemApps]);
-  const ecosystemBrowserApps =
-    ecosystemFeaturedApps.length > 0 ? ecosystemFeaturedApps : ecosystemApps;
-
   return (
     <HeaderLayout.Root style={styles.shell}>
       <HeaderLayout.Header>
@@ -1082,107 +960,14 @@ function AboutPage() {
   );
 }
 
-function buildTagStats(apps: DirectoryListingCard[]) {
-  const counts = new Map<string, number>();
-
-  for (const app of apps) {
-    for (const tag of app.appTags) {
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    }
-  }
-
-  return [...counts.entries()]
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-function sortListingsByTrendingSignals(
-  listings: DirectoryListingCard[],
-): DirectoryListingCard[] {
-  return [...listings].sort(
-    (a, b) =>
-      b.reviewCount - a.reviewCount || (b.rating ?? 0) - (a.rating ?? 0),
-  );
-}
-
 function getGroupHeroPreloadImagesFromEcosystem(apps: DirectoryListingCard[]) {
   const heroUrls = new Set<string>();
 
-  for (const app of apps.slice(0, MAX_BROWSER_APPS)) {
+  for (const app of apps.slice(0, 12)) {
     if (app.heroImageUrl) {
       heroUrls.add(app.heroImageUrl);
     }
   }
 
   return [...heroUrls];
-}
-
-function AppBrowserListingCard({
-  listing,
-  featured,
-}: {
-  listing: DirectoryListingCard;
-  featured: boolean;
-}) {
-  const { isHovered, hoverProps } = useHover({});
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(
-        styles.appCardLink,
-        featured && styles.appCardLinkFeatured,
-      )}
-    >
-      {featured ? (
-        listing.heroImageUrl ? (
-          <HeroImage
-            alt={getDirectoryListingHeroImageAlt(listing)}
-            glowIntensity={0.8}
-            src={listing.heroImageUrl}
-          />
-        ) : (
-          <FeaturedListingFallbackCard listing={listing} />
-        )
-      ) : (
-        <Card
-          data-hovered={isHovered}
-          {...(hoverProps as Omit<typeof hoverProps, "style" | "className">)}
-          style={styles.appCard}
-        >
-          <div {...stylex.props(styles.appCardBody)}>
-            <Flex gap="xl">
-              <Avatar
-                alt={listing.name}
-                fallback={listing.name.slice(0, 2).toUpperCase()}
-                src={listing.iconUrl || undefined}
-                size="xl"
-                style={styles.appCardAvatar}
-              />
-              <Flex direction="column" gap="xs" style={styles.browserCardText}>
-                <p {...stylex.props(styles.browserCardTitle)}>{listing.name}</p>
-                <p {...stylex.props(styles.browserCardSubtitle)}>
-                  @
-                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-                </p>
-              </Flex>
-            </Flex>
-            <Body variant="secondary" style={styles.grow}>
-              {listing.tagline}
-            </Body>
-            <Flex align="center" justify="end" gap="lg">
-              <SmallBody variant="secondary">
-                {listing.rating != null ? listing.rating.toFixed(1) : "—"}
-              </SmallBody>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
-              />
-            </Flex>
-          </div>
-        </Card>
-      )}
-    </RouterLink>
-  );
 }

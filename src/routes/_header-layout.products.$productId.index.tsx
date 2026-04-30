@@ -55,7 +55,7 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { Body, SmallBody, SubLabel } from "../design-system/typography";
+import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
@@ -1177,24 +1177,6 @@ function HeroSection({
   );
 }
 
-function MetaCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card style={[styles.metaCard, styles.metadataGridItem]}>
-      <Flex
-        direction="column"
-        align="center"
-        gap="2xl"
-        style={styles.metaCardBody}
-      >
-        <SubLabel variant="secondary" style={styles.metaLabel}>
-          {label}
-        </SubLabel>
-        <Text weight="semibold">{value}</Text>
-      </Flex>
-    </Card>
-  );
-}
-
 function ProductEcosystemSection({
   ecosystemRootId,
 }: {
@@ -1213,7 +1195,7 @@ function ProductEcosystemSection({
     return null;
   }
 
-  const { category, listings } = data;
+  const { category } = data;
 
   if (!category.children.length) {
     return null;

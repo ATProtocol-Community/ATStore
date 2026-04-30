@@ -113,7 +113,6 @@ const styles = stylex.create({
     backgroundColor: "transparent",
     paddingTop: 0,
     cursor: "pointer",
-    display: "inline-block",
     display: "flex",
     alignItems: "center",
     gap: gap["xl"],

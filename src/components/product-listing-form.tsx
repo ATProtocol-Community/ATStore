@@ -1467,8 +1467,6 @@ export function ProductListingForm({
                             <Flex style={styles.screenshotPreviewActions}>
                               <AriaButton
                                 slot="drag"
-                                size="sm"
-                                variant="secondary"
                                 isDisabled={isSubmitting}
                                 {...stylex.props(
                                   styles.screenshotPreviewActionButton,

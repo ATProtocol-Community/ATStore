@@ -18,7 +18,6 @@ import { Card } from "../design-system/card";
 import { ComboBox, ComboBoxItem } from "../design-system/combobox";
 import { Flex } from "../design-system/flex";
 import { Page } from "../design-system/page";
-import { TextField } from "../design-system/text-field";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
@@ -30,7 +29,6 @@ import { shadow } from "../design-system/theme/shadow.stylex";
 import { Body, Heading1, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { normalizeAppTags, tagsEqual } from "../lib/app-tags";
 
 export const Route = createFileRoute(
   "/_header-layout/_admin-layout/admin/managed-listings",
@@ -303,18 +301,12 @@ function ManagedListingEditor({
     null | "hero" | "icon" | "tagline" | "description"
   >(null);
   const [pendingImageCommit, setPendingImageCommit] = useState(false);
-  const [pendingHeroRemoval, setPendingHeroRemoval] = useState(false);
   const [pendingListingDeletion, setPendingListingDeletion] = useState(false);
   const [imageReviewDraft, setImageReviewDraft] =
     useState<null | ImageReviewDraft>(null);
   const [toolbarStatus, setToolbarStatus] = useState<ToolbarStatus | null>(
     null,
   );
-  const [pendingMetadataSave, setPendingMetadataSave] = useState<
-    null | "category" | "tags"
-  >(null);
-  const [devCategorySlugDraft, setDevCategorySlugDraft] = useState("");
-  const [devAppTagsDraft, setDevAppTagsDraft] = useState("");
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(
     null,
   );
@@ -324,14 +316,6 @@ function ManagedListingEditor({
     setToolbarStatus(null);
     setSaveSuccessMessage(null);
   }, [listingId]);
-
-  useEffect(() => {
-    setDevCategorySlugDraft(listing?.categorySlug ?? "");
-  }, [listing?.categorySlug]);
-
-  useEffect(() => {
-    setDevAppTagsDraft(listing?.appTags?.join(", ") ?? "");
-  }, [listing?.appTags]);
 
   async function invalidateListingCaches() {
     await Promise.all([
@@ -421,38 +405,6 @@ function ManagedListingEditor({
     }
   }
 
-  async function removeHero() {
-    if (pendingHeroRemoval) return;
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm(
-        `Remove the hero image from "${listing?.name ?? "this listing"}"? The listing will publish with a placeholder hero until you set a new one.`,
-      )
-    ) {
-      return;
-    }
-    setPendingHeroRemoval(true);
-    setToolbarStatus(null);
-    try {
-      await directoryListingApi.removeStoreManagedListingHero({
-        data: { id: listingId },
-      });
-      setImageReviewDraft(null);
-      setToolbarStatus({
-        tone: "neutral",
-        text: "Removed the hero image and republished the listing with a placeholder.",
-      });
-      await invalidateListingCaches();
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text: error instanceof Error ? error.message : "Could not remove hero.",
-      });
-    } finally {
-      setPendingHeroRemoval(false);
-    }
-  }
-
   async function deleteListing() {
     if (pendingListingDeletion) return;
     if (
@@ -516,73 +468,6 @@ function ManagedListingEditor({
     }
   }
 
-  async function saveDevCategory() {
-    const nextCategorySlug = devCategorySlugDraft.trim() || null;
-    const currentCategorySlug = listing?.categorySlug ?? null;
-    if (pendingMetadataSave || nextCategorySlug === currentCategorySlug) {
-      return;
-    }
-    setPendingMetadataSave("category");
-    setToolbarStatus(null);
-    try {
-      await directoryListingApi.updateDirectoryListingCategoryAssignment({
-        data: { id: listingId, categorySlug: nextCategorySlug },
-      });
-      setToolbarStatus({
-        tone: "neutral",
-        text: nextCategorySlug
-          ? `Saved category: ${nextCategorySlug}`
-          : "Cleared category assignment (defaults to misc on publish).",
-      });
-      await invalidateListingCaches();
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text:
-          error instanceof Error ? error.message : "Category update failed.",
-      });
-    } finally {
-      setPendingMetadataSave(null);
-    }
-  }
-
-  async function saveDevAppTags() {
-    const normalizedTags = normalizeAppTags(
-      devAppTagsDraft
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    );
-    if (
-      pendingMetadataSave ||
-      tagsEqual(normalizedTags, listing?.appTags ?? [])
-    ) {
-      return;
-    }
-    setPendingMetadataSave("tags");
-    setToolbarStatus(null);
-    try {
-      await directoryListingApi.updateDirectoryListingAppTags({
-        data: { id: listingId, appTags: normalizedTags },
-      });
-      setToolbarStatus({
-        tone: "neutral",
-        text:
-          normalizedTags.length > 0
-            ? `Saved tags: ${normalizedTags.join(", ")}`
-            : "Cleared all app tags.",
-      });
-      await invalidateListingCaches();
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text: error instanceof Error ? error.message : "Tag update failed.",
-      });
-    } finally {
-      setPendingMetadataSave(null);
-    }
-  }
-
   const saveMutation = useMutation({
     mutationFn: async (values: ProductListingFormSubmitValues) => {
       const heroImage = values.pendingHeroBlob
@@ -643,16 +528,6 @@ function ManagedListingEditor({
       setSaveSuccessMessage(null);
     },
   });
-
-  const categoryDirty =
-    (devCategorySlugDraft.trim() || null) !== (listing?.categorySlug ?? null);
-  const normalizedTagsDraft = normalizeAppTags(
-    devAppTagsDraft
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean),
-  );
-  const tagsDirty = !tagsEqual(normalizedTagsDraft, listing?.appTags ?? []);
 
   if (!listing) {
     return (
@@ -739,10 +614,8 @@ function ManagedListingEditor({
                 isPending={pendingListingDeletion}
                 isDisabled={
                   pendingListingDeletion ||
-                  pendingHeroRemoval ||
                   pendingGeneration !== null ||
                   pendingImageCommit ||
-                  pendingMetadataSave !== null ||
                   saveMutation.isPending ||
                   imageReviewDraft !== null
                 }

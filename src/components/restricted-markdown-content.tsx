@@ -3,6 +3,7 @@
 import type { ComponentProps } from "react";
 import type { Components } from "react-markdown";
 
+import type { StyleXStyles } from "@stylexjs/stylex";
 import * as stylex from "@stylexjs/stylex";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize, {
@@ -103,12 +104,13 @@ export function RestrictedMarkdownContent({
     ...restrictedMarkdownBasics,
     p: ({ className: _className, style: rmStyle, ...rest }) => {
       const mergedStyle = [styles.restrictedParagraph, paragraphStyle, rmStyle];
+      const paragraphSx = mergedStyle as unknown as StyleXStyles;
       if (compact) {
         return (
-          <SmallBody {...rest} variant={paragraphVariant} style={mergedStyle} />
+          <SmallBody {...rest} variant={paragraphVariant} style={paragraphSx} />
         );
       }
-      return <Body {...rest} variant={paragraphVariant} style={mergedStyle} />;
+      return <Body {...rest} variant={paragraphVariant} style={paragraphSx} />;
     },
   };
 

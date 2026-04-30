@@ -7,6 +7,7 @@ import { Link as AriaLink } from "react-aria-components";
 
 import { formatAppTagLabel } from "#/lib/app-tag-metadata";
 import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
+import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
 import {
   Card,

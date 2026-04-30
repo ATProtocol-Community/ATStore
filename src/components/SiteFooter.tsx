@@ -34,7 +34,7 @@ export function SiteFooter() {
         <Footer.NavSection>
           {FOOTER_LINK_GROUPS.map((group, index) => (
             <Footer.NavGroup
-              key={group.title ?? `links-${index}`}
+              key={"title" in group ? group.title : `links-${index}`}
               title={"title" in group ? group.title : undefined}
             >
               {group.links.map((link) => (

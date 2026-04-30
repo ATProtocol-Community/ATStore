@@ -3,12 +3,9 @@
  * Requires `pg_dump` on PATH and `DATABASE_URL`.
  */
 import 'dotenv/config'
-import { execFile } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { mkdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
-
-const execFileAsync = promisify(execFile)
 
 async function main() {
   const url = process.env.DATABASE_URL
@@ -23,9 +20,18 @@ async function main() {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-')
   const outFile = join(outDir, `at-store-${stamp}.dump`)
 
-  await execFileAsync('pg_dump', ['-Fc', '-f', outFile, url], {
-    stdio: 'inherit',
+  const exitCode = await new Promise<number>((resolve, reject) => {
+    const child = spawn('pg_dump', ['-Fc', '-f', outFile, url], {
+      stdio: 'inherit',
+    })
+    child.on('error', reject)
+    child.on('close', (code) => resolve(code ?? 1))
   })
+
+  if (exitCode !== 0) {
+    console.error(`pg_dump exited with code ${exitCode}.`)
+    process.exit(1)
+  }
 
   const st = await stat(outFile)
   if (st.size < 1) {
