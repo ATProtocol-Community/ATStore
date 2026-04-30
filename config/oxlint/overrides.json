@@ -320,11 +320,7 @@
       "plugins": ["typescript"]
     },
     {
-      "files": [
-        "src/routes/og.review.tsx",
-        "src/routes/og.tag.tsx",
-        "src/lib/site-brand-icon.ts"
-      ],
+      "files": ["src/routes/og.review.tsx", "src/routes/og.tag.tsx"],
       "rules": {
         "unicorn/number-literal-case": "off"
       }

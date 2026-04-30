@@ -1,5 +1,3 @@
-import { GENERATED_BANNER_RECORD_URLS } from "./generated-banner-record-urls";
-
 export interface EcosystemHeroArtSpec {
   categoryId: string;
   label: string;
@@ -110,13 +108,8 @@ export function getEcosystemHeroArtSpec(categoryId: string) {
   return buildDefaultEcosystemHeroArtSpec(categoryId);
 }
 
-export function getEcosystemHeroAssetPathForCategory(categoryId: string) {
-  const assetPath = getEcosystemHeroArtSpec(categoryId)?.assetPath;
-  if (!assetPath) {
-    return null;
-  }
-
-  return GENERATED_BANNER_RECORD_URLS[assetPath] ? assetPath : null;
+export function getEcosystemHeroAssetPathForCategory(_categoryId: string) {
+  return null;
 }
 
 export function getEcosystemHeroArtPrompt(

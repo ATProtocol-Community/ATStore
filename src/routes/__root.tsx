@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import * as stylex from "@stylexjs/stylex";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   HeadContent,
   Scripts,
@@ -15,7 +15,6 @@ import { useLayoutEffect } from "react";
 
 import { primaryColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
-import { getGeneratedBannerRecordUrlsQueryOptions } from "../integrations/tanstack-query/api-banner-record-urls.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import { DEFAULT_THEME_MODE } from "../lib/theme";
@@ -81,14 +80,6 @@ const THEME_STYLE_TAG_HTML = [COLOR_SCHEME_CSS, GLOBAL_FOCUS_OUTLINE_CSS].join(
 );
 
 /**
- * Safely serializes a JSON object for embedding inside a `<script>` tag.
- * Escapes `</` so a stray `</script>` inside a value can't close the tag.
- */
-function safeJsonForScript(value: unknown) {
-  return JSON.stringify(value).replaceAll("<", String.raw`\u003C`);
-}
-
-/**
  * OAuth callback appends loginSuccess, handle, and avatar to the real browser
  * URL. TanStack Router's `location.href` is built only from validated route
  * search, so those params are often missing there—read `window.location`
@@ -130,9 +121,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   beforeLoad: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(user.getSessionQueryOptions),
-      context.queryClient.ensureQueryData(
-        getGeneratedBannerRecordUrlsQueryOptions,
-      ),
       context.queryClient.ensureQueryData(user.getThemePreferenceQueryOptions),
     ]);
   },
@@ -210,15 +198,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const queryClient = useQueryClient();
-  const bannerRecordUrls =
-    queryClient.getQueryData<Record<string, string>>(
-      getGeneratedBannerRecordUrlsQueryOptions.queryKey,
-    ) ?? {};
-  const bannerInitScript = `window.__GENERATED_BANNER_RECORD_URLS__=${safeJsonForScript(
-    bannerRecordUrls,
-  )};`;
-
   // Read theme from the prefilled query cache (populated by `beforeLoad`).
   // Subscribing via `useQuery` lets the menu's mutation re-render <html>.
   const { data: themePreference } = useQuery({
@@ -232,7 +211,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" data-theme={themeMode} suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: THEME_STYLE_TAG_HTML }} />
-        <script dangerouslySetInnerHTML={{ __html: bannerInitScript }} />
         <HeadContent />
       </head>
       <body {...stylex.props(primaryColorTheme)}>

@@ -17,7 +17,6 @@ import {
   normalizeListingLinks,
 } from "#/lib/atproto/listing-record";
 import { COLLECTION, NSID } from "#/lib/atproto/nsids";
-import { protocolRecordImageUrlOrNull } from "#/lib/atproto/protocol-record-image-url";
 import {
   createAtstorePublishClient,
   getAtstoreRepoDid,
@@ -40,14 +39,11 @@ import {
   resolveBlueskyHandleToDid,
 } from "#/lib/bluesky-public-profile";
 import { bskyAppPostUrlFromAtUri } from "#/lib/bsky-app-urls";
-import { geminiFlashGenerateImageFromPromptAndImage } from "#/lib/gemini-flash-image-gen";
-import { buildIconPolishFromSiteAssetPrompt } from "#/lib/listing-icon-prompts";
-import { captureListingPageScreenshotForGeneration } from "#/lib/listing-page-screenshot";
-import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
 import {
-  discoverSiteBrandIconAsset,
-  rasterizeBrandIconForGeminiInput,
-} from "#/lib/site-brand-icon";
+  httpsListingImageUrlOrNull,
+  publicMediaUrlOrNull,
+} from "#/lib/listing-image-url";
+import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
   adminFnMiddleware,
@@ -83,7 +79,6 @@ import {
   suggestAppTagsFromListing,
   suggestedTagsForListing,
 } from "../../lib/app-tags";
-import { resolveBannerRecordUrl } from "../../lib/banner-record-url";
 import {
   buildDirectoryCategoryTree,
   findDirectoryCategoryNode,
@@ -106,7 +101,6 @@ import {
   sanitizeListingTagline,
 } from "../../lib/listing-copy";
 import { buildFallbackOgImageUrl } from "../../lib/og-meta";
-import { findProtocolCategoryBySlugParam } from "../../lib/protocol-category-metadata";
 import { dbMiddleware } from "./db-middleware";
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
@@ -138,10 +132,10 @@ function orderByPopularListingSort(table: typeof dbSchema.storeListings) {
   ];
 }
 
-/** Listing has a two-segment path under `apps/…` or `protocol/…` (e.g. `apps/bluesky`). */
+/** Listing has a two-segment path under `apps/…` (e.g. `apps/bluesky`). */
 function sqlCategorySlugsHasRootTwoSegment(
   col: AnyPgColumn,
-  prefix: "apps" | "protocol",
+  prefix: "apps",
 ): SQL {
   const pattern = `${prefix}/%`;
   return sql<boolean>`exists (
@@ -502,23 +496,6 @@ export interface DirectoryAppTagSummary {
   count: number;
 }
 
-export interface DirectoryProtocolCategoryGroup {
-  /** Full path e.g. `protocol/pds`. */
-  categoryId: string;
-  /** Second path segment; used in URLs `/protocol/$segment`. */
-  segment: string;
-  label: string;
-  description: string;
-  count: number;
-  listings: Array<DirectoryListingCard>;
-}
-
-export interface DirectoryProtocolCategorySummary {
-  segment: string;
-  label: string;
-  count: number;
-}
-
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -563,9 +540,6 @@ export interface DirectoryHomePageData {
   popular: Array<DirectoryListingCard>;
   fresh: Array<DirectoryListingCard>;
   tags: Array<DirectoryAppTagSummary>;
-  protocolFeatured: DirectoryListingCard;
-  protocolSpotlights: Array<DirectoryListingCard>;
-  protocolCategories: Array<DirectoryProtocolCategorySummary>;
 }
 
 const CATEGORY_ACCENTS: Array<CategoryAccent> = [
@@ -611,18 +585,6 @@ const regenerateDirectoryListingContentInput = z.object({
   id: z.string().min(1),
 });
 
-const commitGeneratedListingImageInput = z.object({
-  id: z.string().min(1),
-  mimeType: z
-    .string()
-    .min(1)
-    .max(128)
-    .refine((s) => s.trim().toLowerCase().startsWith("image/"), {
-      message: "mimeType must be an image/* type",
-    }),
-  imageBase64: z.string().min(1).max(25_000_000),
-});
-
 const updateDirectoryListingAppTagsInput = z.object({
   id: z.string().min(1),
   appTags: z.array(z.string()).max(64),
@@ -630,11 +592,6 @@ const updateDirectoryListingAppTagsInput = z.object({
 
 const getAppsByTagPageInput = z.object({
   tag: z.string().trim().min(1),
-  sort: listingSortInput,
-});
-
-const getProtocolCategoryPageInput = z.object({
-  category: z.string().trim().min(1),
   sort: listingSortInput,
 });
 
@@ -685,7 +642,7 @@ function isPlausiblePublicDid(value: string) {
   return s.startsWith("did:") && s.length >= 12 && s.length <= 2048;
 }
 
-const fallbackCategoryIds = ["apps", "protocol"];
+const fallbackCategoryIds = ["apps"];
 
 function formatMetadataLabel(value: string) {
   const normalized = value
@@ -805,8 +762,8 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     slug: row.slug || buildDirectoryListingSlug({ name: row.name }),
     tagline,
     description: getListingDescription(row),
-    iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
-    heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
+    iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
+    heroImageUrl: httpsListingImageUrlOrNull(row.heroImageUrl),
     categorySlugs: slugs,
     categorySlug: primaryCategorySlug(slugs),
     category,
@@ -1061,73 +1018,6 @@ function getRootProtocolCategoryId(slug: string): string | null {
   }
 
   return `protocol/${rootSegment}`;
-}
-
-function buildProtocolCategoryGroups(
-  rows: Array<DirectoryListingRow>,
-  options?: { preserveListingOrder?: boolean },
-): Array<DirectoryProtocolCategoryGroup> {
-  const preserveListingOrder = options?.preserveListingOrder ?? false;
-  const groups = new Map<string, Array<DirectoryListingCard>>();
-
-  for (const row of rows) {
-    const protocolIds = new Set<string>();
-    for (const slug of row.categorySlugs) {
-      const categoryId = getRootProtocolCategoryId(slug);
-      if (!categoryId) {
-        continue;
-      }
-
-      protocolIds.add(categoryId);
-    }
-
-    if (protocolIds.size === 0) {
-      continue;
-    }
-
-    const card = toListingCard(row);
-    for (const categoryId of protocolIds) {
-      const listings = groups.get(categoryId);
-      if (listings) {
-        listings.push(card);
-        continue;
-      }
-
-      groups.set(categoryId, [card]);
-    }
-  }
-
-  return [...groups.entries()]
-    .map(([categoryId, listings]) => {
-      const option = getDirectoryCategoryOption(categoryId);
-      const segment = categoryId.split("/")[1] ?? categoryId;
-
-      return {
-        categoryId,
-        segment,
-        label: option?.label ?? segment,
-        description: option?.description ?? "",
-        count: listings.length,
-        listings: preserveListingOrder
-          ? [...listings]
-          : [...listings].toSorted((left, right) =>
-              left.name.localeCompare(right.name),
-            ),
-      } satisfies DirectoryProtocolCategoryGroup;
-    })
-    .toSorted((left, right) => {
-      if (right.count !== left.count) {
-        return right.count - left.count;
-      }
-
-      return left.label.localeCompare(right.label);
-    });
-}
-
-function buildAllProtocolListings(rows: Array<DirectoryListingRow>) {
-  return dedupeListings(rows.filter((row) => isBrowseableProtocolRow(row))).map(
-    (row) => toListingCard(row),
-  );
 }
 
 function buildHomePageTagSummaries(
@@ -1574,105 +1464,6 @@ async function getDirectoryListingGenerationCandidate(
   return listing;
 }
 
-function buildListingGenerationMetadata(
-  listing: DirectoryListingGenerationCandidate,
-  pageUrl: string,
-) {
-  return [
-    `Name: ${listing.name}`,
-    `URL: ${pageUrl}`,
-    listing.tagline ? `Tagline: ${listing.tagline}` : null,
-    listing.productType ? `Product type: ${listing.productType}` : null,
-    listing.domain ? `Domain: ${listing.domain}` : null,
-    listing.scope ? `Scope: ${listing.scope}` : null,
-    listing.rawCategoryHint
-      ? `Category hint: ${listing.rawCategoryHint}`
-      : null,
-    listing.fullDescription ? `Description: ${listing.fullDescription}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function buildMarketingPrompt(
-  listing: DirectoryListingGenerationCandidate,
-  pageUrl: string,
-) {
-  const metadata = buildListingGenerationMetadata(listing, pageUrl);
-
-  return `Create a polished product-marketing image for this software listing using the provided website screenshot as reference.
-
-Goals:
-- Preserve the brand feeling, palette, and product category suggested by the screenshot.
-- Produce a clean, aspirational hero image suitable for an app directory card or product detail page.
-- **Always include the listing name** from metadata (the "Name:" line) as prominent, legible typography in the image—e.g. title or headline treatment. Spell it exactly as given; this is product identification, not conversion copy.
-- Show a plausible marketing composition inspired by the screenshot; improve clarity and composition. Illustrative **mock product UI** (windows, panels, toolbars, in-app controls) is fine—read as the **product**, not a marketing funnel.
-- If the reference is dominated by CTAs, signup strips, or "Get started"-style conversion blocks, do not recreate that focal layout—borrow palette and mood only.
-- Keep it realistic and product-focused, not abstract art.
-- If the listing doesnt have any branding use the following, otherwise stick as closely as possible the brand feeling, palette, and product category suggested by the screenshot.
-
-Constraints:
-- No device mockups, browser chrome, cursors, or visible cookie banners.
-- **CTAs only:** Do not use marketing / conversion copy as readable text—e.g. "Get started", "Sign up", "Try it free", "Learn more", "Subscribe", "Download", "Contact sales", "Book a demo". Buttons and controls are **allowed** when they read as **in-product mock UI** (neutral toolbars, editors, settings)—not as the main signup or sales pitch.
-- No watermarks.
-- No tiny unreadable text blocks.
-- Avoid adding extra logos unless they are clearly implied by the source.
-- Use a landscape composition that reads well when cropped to a wide card.
-
-Fallback style (DO NOT USE IF THE LISTING HAS BRANDING):
-- Style: bright, colorful, playful, polished, editorial, and high-end product marketing art.
-- Use soft 3D gradients, glossy lighting, rounded cards, translucent glass layers, luminous highlights, subtle depth, and a sense of motion and delight.
-- Composition: wide 16:9 banner with richer decorative energy.
-- Show layered foreground, midground, and background depth with abstract shapes and energy—still no marketing CTA text or conversion-style hero strips.
-
-Listing metadata:
-${metadata}`;
-}
-
-function buildIconPrompt(
-  listing: DirectoryListingGenerationCandidate,
-  pageUrl: string,
-) {
-  const metadata = buildListingGenerationMetadata(listing, pageUrl);
-
-  return `Create a polished product icon for this software listing using the provided website screenshot as reference.
-
-Format (required):
-- Output must be exactly 1:1 — a square image (equal width and height), not a rectangle or wide banner.
-- Do not add a separate "container" shape: no rounded-square plate, squircle, circle mask, glossy bubble, drop-shadow tile, or fake 3D app icon backing. The brand mark sits directly on a flat fill or transparent background across the full square.
-- Safe padding only as empty margin around the mark — not an extra outlined shape.
-
-Goals:
-- Preserve the brand feeling, palette, and primary visual motif suggested by the screenshot.
-- Produce a crisp standalone mark that reads clearly at small sizes in a software directory.
-- Favor a simple, memorable symbol over a detailed illustration.
-
-Style fallback order:
-- If the site already suggests a clear brand mark or symbol, refine that mark only — still full-bleed square, no extra outer shape.
-- If the site mostly uses a wordmark, extract one simple motif or monogram that still feels native to the brand.
-- If the brand is weak or developer-tooling oriented: soft solid or gradient fill across the entire square (no inner rounded card), one centered motif, minimal detail.
-
-Constraints:
-- No browser chrome, screenshots, UI mockups, or website layouts.
-- No tiny text, taglines, or readable words unless a single letter is essential to the brand.
-- Avoid photorealism and avoid generic clip-art.
-- Keep edges clean; readable on light or dark backgrounds.
-
-Listing metadata:
-${metadata}`;
-}
-
-async function generateImageFromScreenshot(input: {
-  screenshot: Buffer;
-  prompt: string;
-}): Promise<{ buffer: Buffer; mimeType: string }> {
-  return geminiFlashGenerateImageFromPromptAndImage({
-    prompt: input.prompt,
-    imageBytes: input.screenshot,
-    imageMimeType: "image/png",
-  });
-}
-
 const getHomePageData = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
@@ -1684,7 +1475,6 @@ const getHomePageData = createServerFn({ method: "GET" })
       recentRows,
       newestRows,
       tagRows,
-      protocolRows,
       configuredHomeHeroRows,
     ] = await Promise.all([
       context.db
@@ -1716,16 +1506,6 @@ const getHomePageData = createServerFn({ method: "GET" })
           listingPublicWhere(
             table,
             sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
-          ),
-        )
-        .orderBy(...orderByPopularListingSort(table)),
-      context.db
-        .select(listingSelect)
-        .from(table)
-        .where(
-          listingPublicWhere(
-            table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "protocol"),
           ),
         )
         .orderBy(...orderByPopularListingSort(table)),
@@ -1820,34 +1600,6 @@ const getHomePageData = createServerFn({ method: "GET" })
     );
 
     const tags = buildHomePageTagSummaries(tagRows, 9);
-    const dedupedProtocolRows = dedupeListings(protocolRows);
-    const protocolFeaturedSource =
-      dedupedProtocolRows.find(
-        (row) => row.screenshotUrls.length > 0 || row.iconUrl,
-      ) || dedupedProtocolRows[0];
-    if (!protocolFeaturedSource) {
-      throw new Error("No homepage protocol featured listing found");
-    }
-
-    const protocolFeatured = toListingCard(protocolFeaturedSource);
-    const protocolSpotlights = requireCards(
-      dedupedProtocolRows
-        .filter((row) => row.id !== protocolFeaturedSource?.id)
-        .slice(0, 2)
-        .map((row) => toListingCard(row)),
-      2,
-      "homepage protocol spotlights",
-    );
-
-    const protocolGroups = buildProtocolCategoryGroups(protocolRows);
-    const protocolCategories: Array<DirectoryProtocolCategorySummary> =
-      protocolGroups.length > 0
-        ? protocolGroups.slice(0, 8).map(({ segment, label, count: n }) => ({
-            segment,
-            label,
-            count: n,
-          }))
-        : [];
 
     return {
       featured,
@@ -1855,9 +1607,6 @@ const getHomePageData = createServerFn({ method: "GET" })
       popular,
       fresh,
       tags,
-      protocolFeatured,
-      protocolSpotlights,
-      protocolCategories,
     } satisfies DirectoryHomePageData;
   });
 
@@ -2115,110 +1864,6 @@ function getAppsByTagPageQueryOptions(
   return queryOptions({
     queryKey: ["storeListings", "appsByTagPage", normalizedInput],
     queryFn: async () => getAppsByTagPage({ data: normalizedInput }),
-  });
-}
-
-const getProtocolCategories = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
-  .handler(async ({ context }) => {
-    const table = context.schema.storeListings;
-    const rows = await context.db
-      .select(getListingSelect(table))
-      .from(table)
-      .where(
-        listingPublicWhere(
-          table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%"),
-        ),
-      )
-      .orderBy(...orderByPopularListingSort(table));
-
-    return buildProtocolCategoryGroups(rows, { preserveListingOrder: true });
-  });
-
-const getProtocolCategoriesQueryOptions = queryOptions({
-  queryKey: ["storeListings", "protocolCategories"],
-  queryFn: async () => getProtocolCategories(),
-});
-
-const getProtocolCategoryPage = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
-  .inputValidator(getProtocolCategoryPageInput)
-  .handler(async ({ data, context }) => {
-    const input = getProtocolCategoryPageInput.parse(data);
-    const table = context.schema.storeListings;
-    const rows = await context.db
-      .select(getListingSelect(table))
-      .from(table)
-      .where(
-        listingPublicWhere(
-          table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%"),
-        ),
-      )
-      .orderBy(
-        ...(input.sort === "newest"
-          ? [desc(table.createdAt)]
-          : input.sort === "alphabetical"
-            ? [asc(table.name)]
-            : orderByPopularListingSort(table)),
-      );
-
-    const groups = buildProtocolCategoryGroups(rows, {
-      preserveListingOrder: true,
-    });
-    return findProtocolCategoryBySlugParam(groups, input.category) ?? null;
-  });
-
-function getProtocolCategoryPageQueryOptions(
-  input: z.input<typeof getProtocolCategoryPageInput>,
-) {
-  const normalizedInput = getProtocolCategoryPageInput.parse(input);
-
-  return queryOptions({
-    queryKey: ["storeListings", "protocolCategoryPage", normalizedInput],
-    queryFn: async () => getProtocolCategoryPage({ data: normalizedInput }),
-  });
-}
-
-const getAllProtocolListingsInput = z.object({
-  sort: listingSortInput,
-});
-
-const getAllProtocolListings = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
-  .inputValidator(getAllProtocolListingsInput)
-  .handler(async ({ data, context }) => {
-    const input = getAllProtocolListingsInput.parse(data);
-    const table = context.schema.storeListings;
-    const rows = await context.db
-      .select(getListingSelect(table))
-      .from(table)
-      .where(
-        listingPublicWhere(
-          table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%"),
-        ),
-      )
-      .orderBy(
-        ...(input.sort === "newest"
-          ? [desc(table.createdAt)]
-          : input.sort === "alphabetical"
-            ? [asc(table.name)]
-            : orderByPopularListingSort(table)),
-      );
-
-    return buildAllProtocolListings(rows);
-  });
-
-function getAllProtocolListingsQueryOptions(
-  input: z.input<typeof getAllProtocolListingsInput> = {},
-) {
-  const normalizedInput = getAllProtocolListingsInput.parse(input);
-
-  return queryOptions({
-    queryKey: ["storeListings", "allProtocol", normalizedInput],
-    queryFn: async () => getAllProtocolListings({ data: normalizedInput }),
   });
 }
 
@@ -2729,7 +2374,7 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
           name: row.listingName,
           slug: row.listingSlug,
           sourceUrl: row.listingSourceUrl,
-          iconUrl: protocolRecordImageUrlOrNull(
+          iconUrl: httpsListingImageUrlOrNull(
             row.listingIconUrl?.trim() || null,
           ),
           tagline: row.listingTagline?.trim() || null,
@@ -2787,7 +2432,7 @@ const getProfileFavoriteListings = createServerFn({ method: "GET" })
       id: row.id,
       name: row.name,
       slug: row.slug,
-      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
       tagline: row.tagline?.trim() || null,
       favoritedAt: row.favoritedAt.toISOString(),
     })) satisfies Array<DirectoryUserFavoriteListing>;
@@ -3340,7 +2985,7 @@ const getDirectoryListingCategoryAssignments = createServerFn({ method: "GET" })
         return {
           id: row.id,
           name: row.name,
-          iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+          iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
           tagline:
             sanitizeListingTagline(row.tagline) ||
             sanitizeListingTagline(row.fullDescription) ||
@@ -3421,7 +3066,7 @@ const getDirectoryListingAppTagAssignments = createServerFn({ method: "GET" })
         return {
           id: row.id,
           name: row.name,
-          iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+          iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
           tagline:
             sanitizeListingTagline(row.tagline) ||
             sanitizeListingTagline(row.fullDescription) ||
@@ -3530,52 +3175,6 @@ const deleteDirectoryListing = createServerFn({ method: "POST" })
 
     return {
       id: data.id,
-    };
-  });
-
-const previewDirectoryListingHeroImage = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware, adminFnMiddleware])
-  .inputValidator(regenerateDirectoryListingContentInput)
-  .handler(async ({ data, context }) => {
-    const listing = await getDirectoryListingGenerationCandidate(
-      context,
-      data.id,
-    );
-    const pageUrl = getListingGenerationUrl(listing);
-
-    if (!pageUrl) {
-      throw new Error(`Missing URL for ${listing.name}`);
-    }
-
-    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
-    const generatedImage = await generateImageFromScreenshot({
-      screenshot,
-      prompt: buildMarketingPrompt(listing, pageUrl),
-    });
-
-    return {
-      id: data.id,
-      mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString("base64"),
-    };
-  });
-
-const commitDirectoryListingHeroImage = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware, adminFnMiddleware])
-  .inputValidator(commitGeneratedListingImageInput)
-  .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.id);
-    const raw = Buffer.from(data.imageBase64, "base64");
-    const { uri } = await publishDirectoryListingDetail(full, undefined, {
-      heroImage: {
-        bytes: Uint8Array.from(raw),
-        mimeType: data.mimeType.trim(),
-      },
-    });
-
-    return {
-      id: data.id,
-      listingDetailUri: uri,
     };
   });
 
@@ -3696,83 +3295,6 @@ const deleteOwnedProductListing = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-const previewDirectoryListingIcon = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware, adminFnMiddleware])
-  .inputValidator(regenerateDirectoryListingContentInput)
-  .handler(async ({ data, context }) => {
-    const listing = await getDirectoryListingGenerationCandidate(
-      context,
-      data.id,
-    );
-    const pageUrl = getListingGenerationUrl(listing);
-
-    if (!pageUrl) {
-      throw new Error(`Missing URL for ${listing.name}`);
-    }
-
-    const discovered = await discoverSiteBrandIconAsset(pageUrl);
-    if (discovered) {
-      try {
-        const pngIn = await rasterizeBrandIconForGeminiInput(
-          discovered.bytes,
-          discovered.contentType,
-        );
-        const polished = await geminiFlashGenerateImageFromPromptAndImage({
-          prompt: buildIconPolishFromSiteAssetPrompt({
-            name: listing.name,
-            pageUrl,
-            tagline: listing.tagline,
-            productType: listing.productType,
-            domain: listing.domain,
-            scope: listing.scope,
-          }),
-          imageBytes: pngIn,
-          imageMimeType: "image/png",
-        });
-        return {
-          id: data.id,
-          mimeType: polished.mimeType,
-          imageBase64: polished.buffer.toString("base64"),
-          previewSource: "site_asset" as const,
-        };
-      } catch {
-        /* Raster or Gemini failed — fall back to full-page screenshot */
-      }
-    }
-
-    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
-    const generatedImage = await generateImageFromScreenshot({
-      screenshot,
-      prompt: buildIconPrompt(listing, pageUrl),
-    });
-
-    return {
-      id: data.id,
-      mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString("base64"),
-      previewSource: "model" as const,
-    };
-  });
-
-const commitDirectoryListingIcon = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware, adminFnMiddleware])
-  .inputValidator(commitGeneratedListingImageInput)
-  .handler(async ({ data, context }) => {
-    const full = await getFullDirectoryListing(context, data.id);
-    const raw = Buffer.from(data.imageBase64, "base64");
-    const { uri } = await publishDirectoryListingDetail(full, undefined, {
-      icon: {
-        bytes: Uint8Array.from(raw),
-        mimeType: data.mimeType.trim(),
-      },
-    });
-
-    return {
-      id: data.id,
-      listingDetailUri: uri,
-    };
-  });
-
 const regenerateDirectoryListingTagline = createServerFn({ method: "POST" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(regenerateDirectoryListingContentInput)
@@ -3873,7 +3395,7 @@ const getNextProductAccountCandidate = createServerFn({ method: "GET" })
     if (!row) return null;
     return {
       ...row,
-      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
       createdAt: row.createdAt.toISOString(),
     } satisfies ProductAccountCandidateQueueItem;
   });
@@ -3911,7 +3433,7 @@ const getPendingProductAccountCandidates = createServerFn({ method: "GET" })
 
     return rows.map((row) => ({
       ...row,
-      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
       createdAt: row.createdAt.toISOString(),
     })) satisfies Array<ProductAccountCandidateQueueItem>;
   });
@@ -3964,7 +3486,7 @@ const getListingsMissingProductAccountHandle = createServerFn({ method: "GET" })
 
     return rows.map((row) => ({
       ...row,
-      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
       productAccountHandleIgnoredAt:
         row.productAccountHandleIgnoredAt?.toISOString() ?? null,
     })) satisfies Array<ListingMissingProductAccountHandleItem>;
@@ -4440,7 +3962,7 @@ const getUserProductListingClaimRequests = createServerFn({ method: "GET" })
 
     return rows.map((row) => ({
       ...row,
-      listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+      listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
     }));
   });
 
@@ -5398,8 +4920,8 @@ const getProfileOwnedProductListings = createServerFn({ method: "GET" })
 
     return rows.map((row) => ({
       ...row,
-      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
-      heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
+      iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
+      heroImageUrl: httpsListingImageUrlOrNull(row.heroImageUrl),
     }));
   });
 
@@ -5466,7 +4988,7 @@ const getMyProductListings = createServerFn({ method: "GET" })
       id: row.id,
       name: row.name,
       slug: row.slug,
-      iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+      iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
       verificationStatus: row.verificationStatus,
       updatedAt: row.updatedAt.toISOString(),
       rejectionHistory:
@@ -5527,7 +5049,7 @@ const getStoreManagedListings = createServerFn({ method: "GET" })
         id: row.id,
         slug: row.slug,
         name: row.name,
-        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+        iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
         externalUrl: row.externalUrl,
         categorySlug: primaryCategorySlug(row.categorySlugs ?? []),
         verificationStatus: row.verificationStatus,
@@ -5586,7 +5108,7 @@ const getAdminListingHeroReview = createServerFn({ method: "GET" })
       .orderBy(asc(t.name));
 
     return rows.map((row): AdminListingHeroReviewRow => {
-      const heroImageUrl = protocolRecordImageUrlOrNull(row.heroImageUrl);
+      const heroImageUrl = httpsListingImageUrlOrNull(row.heroImageUrl);
       const tagline =
         sanitizeListingTagline(row.tagline) ||
         sanitizeListingTagline(row.fullDescription) ||
@@ -5598,7 +5120,7 @@ const getAdminListingHeroReview = createServerFn({ method: "GET" })
         ? `${tagline} Tag: ${primaryTag}.`
         : tagline;
       const ogTitle = `${row.name} | at-store`;
-      const resolvedHero = resolveBannerRecordUrl(heroImageUrl);
+      const resolvedHero = publicMediaUrlOrNull(heroImageUrl);
       const ogFallbackImagePath = buildFallbackOgImageUrl({
         title: ogTitle,
         description: ogDescription,
@@ -6007,115 +5529,6 @@ const updateStoreManagedListing = createServerFn({ method: "POST" })
     return { slug: full.slug };
   });
 
-const previewListingImageByUrlInput = z.object({
-  name: z.string().trim().min(1).max(640),
-  externalUrl: listingExternalUrlSchema,
-  tagline: z.string().trim().max(2000).optional(),
-  fullDescription: z.string().trim().max(20_000).optional(),
-});
-
-function buildGenerationCandidateFromUrl(
-  input: z.infer<typeof previewListingImageByUrlInput>,
-): DirectoryListingGenerationCandidate {
-  return {
-    id: "draft",
-    name: input.name.trim(),
-    sourceUrl: input.externalUrl.trim(),
-    externalUrl: input.externalUrl.trim(),
-    screenshotUrls: [],
-    tagline: input.tagline?.trim() || null,
-    fullDescription: input.fullDescription?.trim() || null,
-    rawCategoryHint: null,
-    scope: null,
-    productType: null,
-    domain: null,
-  };
-}
-
-/**
- * Admin-only: generate a hero image preview from a URL + name, without requiring an
- * existing listing row. Used by the admin "add listing" flow before the record
- * has been published to the store PDS.
- */
-const previewListingHeroImageByUrl = createServerFn({ method: "POST" })
-  .middleware([adminFnMiddleware])
-  .inputValidator(previewListingImageByUrlInput)
-  .handler(async ({ data }) => {
-    const listing = buildGenerationCandidateFromUrl(data);
-    const pageUrl = getListingGenerationUrl(listing);
-    if (!pageUrl) {
-      throw new Error("externalUrl is required");
-    }
-
-    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
-    const generatedImage = await generateImageFromScreenshot({
-      screenshot,
-      prompt: buildMarketingPrompt(listing, pageUrl),
-    });
-
-    return {
-      mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString("base64"),
-    };
-  });
-
-/**
- * Admin-only: generate an icon preview from a URL + name, without requiring an
- * existing listing row. Mirrors `previewDirectoryListingIcon` but accepts raw
- * inputs so it can run inside the admin "add listing" flow.
- */
-const previewListingIconByUrl = createServerFn({ method: "POST" })
-  .middleware([adminFnMiddleware])
-  .inputValidator(previewListingImageByUrlInput)
-  .handler(async ({ data }) => {
-    const listing = buildGenerationCandidateFromUrl(data);
-    const pageUrl = getListingGenerationUrl(listing);
-    if (!pageUrl) {
-      throw new Error("externalUrl is required");
-    }
-
-    const discovered = await discoverSiteBrandIconAsset(pageUrl);
-    if (discovered) {
-      try {
-        const pngIn = await rasterizeBrandIconForGeminiInput(
-          discovered.bytes,
-          discovered.contentType,
-        );
-        const polished = await geminiFlashGenerateImageFromPromptAndImage({
-          prompt: buildIconPolishFromSiteAssetPrompt({
-            name: listing.name,
-            pageUrl,
-            tagline: listing.tagline,
-            productType: listing.productType,
-            domain: listing.domain,
-            scope: listing.scope,
-          }),
-          imageBytes: pngIn,
-          imageMimeType: "image/png",
-        });
-        return {
-          mimeType: polished.mimeType,
-          imageBase64: polished.buffer.toString("base64"),
-          previewSource: "site_asset" as const,
-        };
-      } catch {
-        /* fall through to screenshot-based generation */
-      }
-    }
-
-    const screenshot = await captureListingPageScreenshotForGeneration(pageUrl);
-    const generatedImage = await generateImageFromScreenshot({
-      screenshot,
-      prompt: buildIconPrompt(listing, pageUrl),
-    });
-
-    return {
-      mimeType: generatedImage.mimeType,
-      imageBase64: generatedImage.buffer.toString("base64"),
-      previewSource: "model" as const,
-    };
-  });
-
 const createStoreManagedListingInput = z.object({
   name: z.string().trim().min(1).max(640),
   tagline: z.string().max(2000),
@@ -6319,12 +5732,6 @@ export const directoryListingApi = {
   getAllDirectoryListingAppTagsQueryOptions,
   getAppsByTagPage,
   getAppsByTagPageQueryOptions,
-  getProtocolCategories,
-  getProtocolCategoriesQueryOptions,
-  getProtocolCategoryPage,
-  getProtocolCategoryPageQueryOptions,
-  getAllProtocolListings,
-  getAllProtocolListingsQueryOptions,
   getAllListings,
   getAllListingsQueryOptions,
   getDirectoryListingDetail,
@@ -6359,13 +5766,9 @@ export const directoryListingApi = {
   updateDirectoryListingAppTags,
   updateDirectoryListingCategoryAssignment,
   deleteDirectoryListing,
-  previewDirectoryListingHeroImage,
-  commitDirectoryListingHeroImage,
   removeStoreManagedListingHero,
   deleteStoreManagedListing,
   deleteOwnedProductListing,
-  previewDirectoryListingIcon,
-  commitDirectoryListingIcon,
   regenerateDirectoryListingTagline,
   regenerateDirectoryListingDescription,
   getNextProductAccountCandidate,
@@ -6404,7 +5807,5 @@ export const directoryListingApi = {
   getFetchListingExternalOgImageQueryOptions,
   applyListingHeroFromExternalOg,
   updateStoreManagedListing,
-  previewListingHeroImageByUrl,
-  previewListingIconByUrl,
   createStoreManagedListing,
 };

@@ -78,7 +78,6 @@ function AdminAddListingPage() {
 
   return (
     <ProductListingForm
-      isAdmin
       title="New listing"
       description="Create a new ATStore managed listing."
       submitLabel="Publish to store PDS"

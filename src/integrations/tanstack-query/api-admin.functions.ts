@@ -1,12 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { protocolRecordImageUrlOrNull } from "#/lib/atproto/protocol-record-image-url";
 import { getAtstoreRepoDid } from "#/lib/atproto/publish-directory-listing";
 import {
   fetchBlueskyHandleForDid,
   fetchBlueskyPublicProfileFields,
 } from "#/lib/bluesky-public-profile";
+import { httpsListingImageUrlOrNull } from "#/lib/listing-image-url";
 import {
   adminFnMiddleware,
   getAtprotoSessionForRequest,
@@ -324,7 +324,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
         reviewCreatedAt: row.reviewCreatedAt.toISOString(),
         listingName: row.listingName,
         listingSlug: row.listingSlug,
-        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+        listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
         authorDisplayName: displayName,
         authorHandle: handle,
       };
@@ -333,15 +333,15 @@ const getAdminDashboard = createServerFn({ method: "GET" })
     return {
       unverified: unverified.map((row) => ({
         ...row,
-        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
-        heroImageUrl: protocolRecordImageUrlOrNull(row.heroImageUrl),
+        iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
+        heroImageUrl: httpsListingImageUrlOrNull(row.heroImageUrl),
         screenshotUrls: (row.screenshotUrls ?? [])
-          .map((url) => protocolRecordImageUrlOrNull(url))
+          .map((url) => httpsListingImageUrlOrNull(url))
           .filter((url): url is string => url != null),
       })),
       pendingClaims: pendingClaims.map((row) => ({
         ...row,
-        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+        listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
       })),
       homePageHeroListings,
       totalClaimedCount: totalClaimedRow[0]?.count ?? 0,
@@ -560,7 +560,7 @@ const getRecentReviews = createServerFn({ method: "GET" })
       return {
         ...row,
         reviewCreatedAt: row.reviewCreatedAt.toISOString(),
-        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+        listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
         authorDisplayName: displayName,
         authorAvatarUrl: avatarUrl,
         authorHandle: handle,
@@ -643,7 +643,7 @@ const getRecentlyClaimedListings = createServerFn({ method: "GET" })
         name: row.name,
         slug: row.slug,
         tagline: row.tagline,
-        iconUrl: protocolRecordImageUrlOrNull(row.iconUrl),
+        iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
         externalUrl: row.externalUrl,
         categorySlugs: row.categorySlugs,
         productAccountHandle: row.productAccountHandle,

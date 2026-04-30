@@ -1,4 +1,4 @@
-import { resolveBannerRecordUrl } from "./banner-record-url";
+import { publicMediaUrlOrNull } from "./listing-image-url";
 
 type OgMetaInput = {
   title: string;
@@ -112,7 +112,7 @@ export function buildAppTagOgImageUrl(input: {
 export function buildRouteOgMeta(input: OgMetaInput) {
   const title = truncate(input.title.trim(), 90);
   const description = truncate(input.description.trim(), 220);
-  const resolvedImage = resolveBannerRecordUrl(input.image);
+  const resolvedImage = publicMediaUrlOrNull(input.image);
   const ogImage = toAbsoluteUrl(
     resolvedImage ||
       buildFallbackOgImageUrl({

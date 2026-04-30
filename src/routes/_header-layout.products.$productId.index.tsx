@@ -119,21 +119,6 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
         limit: 3,
       }),
     );
-    const protocolCategorySegment = getProtocolCategorySegment(
-      listing.categorySlugs,
-    );
-    const protocolCategoryGroup = protocolCategorySegment
-      ? await context.queryClient.ensureQueryData(
-          directoryListingApi.getProtocolCategoryPageQueryOptions({
-            category: protocolCategorySegment,
-            sort: "popular",
-          }),
-        )
-      : null;
-    const relatedProtocolTools =
-      protocolCategoryGroup?.listings
-        .filter((candidate) => candidate.id !== listing.id)
-        .slice(0, 3) ?? [];
     const categoryGroup = listing.categorySlug
       ? await context.queryClient.ensureQueryData(
           directoryListingApi.getDirectoryCategoryPageQueryOptions({
@@ -211,7 +196,6 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       ecosystemRootId,
       listing,
       relatedProducts,
-      relatedProtocolTools,
       relatedCategoryListings,
       listingReviews,
       listingMentions: listingMentionsResult.mentions,
@@ -574,7 +558,6 @@ function ProductPage() {
     ecosystemRootId,
     listing,
     relatedProducts,
-    relatedProtocolTools,
     relatedCategoryListings,
     listingReviews,
     listingMentions,
@@ -588,21 +571,12 @@ function ProductPage() {
   }
 
   const previewReviews = listingReviews.slice(0, PRODUCT_REVIEW_PREVIEW_COUNT);
-  const hasProtocolCategory = listing.categorySlugs.some((slug) =>
-    isProtocolCategorySlug(slug),
-  );
   const relatedSectionTitle =
-    hasProtocolCategory && relatedProtocolTools.length > 0
-      ? "More tools"
-      : relatedCategoryListings.length > 0
-        ? "More in this category"
-        : "More Apps";
+    relatedCategoryListings.length > 0 ? "More in this category" : "More Apps";
   const relatedSectionListings =
-    hasProtocolCategory && relatedProtocolTools.length > 0
-      ? relatedProtocolTools
-      : relatedCategoryListings.length > 0
-        ? relatedCategoryListings
-        : relatedProducts;
+    relatedCategoryListings.length > 0
+      ? relatedCategoryListings
+      : relatedProducts;
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
@@ -1241,15 +1215,4 @@ function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
       </Card>
     </RouterLink>
   );
-}
-
-function isProtocolCategorySlug(slug: string) {
-  return slug.startsWith("protocol/") && slug.split("/").length === 2;
-}
-
-function getProtocolCategorySegment(categorySlugs: Array<string>) {
-  const categorySlug = categorySlugs.find((slug) =>
-    isProtocolCategorySlug(slug),
-  );
-  return categorySlug ? (categorySlug.split("/")[1] ?? null) : null;
 }

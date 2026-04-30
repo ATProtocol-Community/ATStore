@@ -110,7 +110,6 @@ least one of the following. Open `.env` and add what you have:
 | Variable                                      | What it unlocks                                                                                                    |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `ANTHROPIC_API_KEY`                           | LLM-powered listing copy, taxonomy generation, discovery helpers                                                   |
-| `GEMINI_API_KEY`                              | Admin / server routes that call Gemini image APIs (e.g. listing hero regeneration)                                 |
 | `ATSTORE_IDENTIFIER` + `ATSTORE_APP_PASSWORD` | Publishing listings to the @store ATProto repo, admin actions                                                      |
 | `ATPROTO_BASE_URL`                            | OAuth redirect URI — defaults to `http://127.0.0.1:3000` (use `127.0.0.1`, **not** `localhost`, for ATProto OAuth) |
 | `JETSTREAM_URL` / `TAP_URL`                   | Background ingestion consumers (see below)                                                                         |

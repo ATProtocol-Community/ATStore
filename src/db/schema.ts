@@ -339,25 +339,6 @@ export const storeListingVerificationApprovalEvents = pgTable(
   }),
 );
 
-/**
- * Source of truth for `/generated/...` → storage URL mapping (S3 / imgproxy).
- * Populated by admin flows that register optimized banner URLs (e.g. hero-art pipeline).
- * Consumed at runtime via `resolveBannerRecordUrl` (hydrated on SSR + inline script).
- */
-export const generatedBannerRecordUrls = pgTable(
-  "generated_banner_record_urls",
-  {
-    assetPath: text("asset_path").primaryKey(),
-    mappedUrl: text("mapped_url").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-);
-
 /** Ordered homepage hero slots managed from admin. */
 export const homePageHeroListings = pgTable(
   "home_page_hero_listings",
@@ -596,10 +577,6 @@ export type StoreListing = typeof storeListings.$inferSelect;
 export type NewStoreListing = typeof storeListings.$inferInsert;
 export type HomePageHeroListing = typeof homePageHeroListings.$inferSelect;
 export type NewHomePageHeroListing = typeof homePageHeroListings.$inferInsert;
-export type GeneratedBannerRecordUrl =
-  typeof generatedBannerRecordUrls.$inferSelect;
-export type NewGeneratedBannerRecordUrl =
-  typeof generatedBannerRecordUrls.$inferInsert;
 export type StoreListingReview = typeof storeListingReviews.$inferSelect;
 export type NewStoreListingReview = typeof storeListingReviews.$inferInsert;
 export type StoreListingFavorite = typeof storeListingFavorites.$inferSelect;

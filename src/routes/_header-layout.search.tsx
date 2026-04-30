@@ -77,7 +77,7 @@ export const Route = createFileRoute("/_header-layout/search")({
     buildRouteOgMeta({
       title: "Search all listings | at-store",
       description:
-        "Search across the full at-store directory in one place, including app and protocol listings.",
+        "Search across the full at-store directory in one place, including every public app listing.",
     }),
   component: SearchPage,
 });
@@ -223,7 +223,7 @@ function SearchPage() {
           <AppTagHero
             eyebrow={`${listings.length} total listings`}
             title="Search all listings"
-            description="Find any listing in one place, across apps and protocol tools."
+            description="Find any listing in one place across apps in the directory."
           />
         </Flex>
 
@@ -310,7 +310,6 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
   const categorySegments = (listing.categorySlug ?? "")
     .split("/")
     .filter(Boolean);
-  const isProtocolListing = categorySegments[0] === "protocol";
   const isAppListing =
     categorySegments[0] === "apps" || categorySegments[0] === "app";
   const isTopLevelAppListing = isAppListing && categorySegments.length === 2;
@@ -371,9 +370,7 @@ function ListingSearchCard({ listing }: { listing: DirectoryListingCard }) {
                 ))
               ) : (
                 <Badge size="sm" variant="primary">
-                  {isProtocolListing
-                    ? (listingPathLabel ?? listing.category)
-                    : (appSubpathLabel ?? listingPathLabel ?? listing.category)}
+                  {appSubpathLabel ?? listingPathLabel ?? listing.category}
                 </Badge>
               )}
             </Flex>

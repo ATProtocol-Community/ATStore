@@ -91,48 +91,6 @@ const styles = stylex.create({
     borderTopWidth: 1,
     paddingTop: verticalSpace["lg"],
   },
-
-  imageReviewCard: {
-    boxShadow: shadow.lg,
-  },
-  imageReviewCardBody: {
-    gap: gap["2xl"],
-    paddingBottom: verticalSpace["3xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
-  },
-  imageReviewFigure: {
-    margin: 0,
-    padding: horizontalSpace["2xl"],
-    borderRadius: radius["2xl"],
-    overflow: "hidden",
-    alignItems: "center",
-    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
-    display: "flex",
-    justifyContent: "center",
-    maxHeight: "min(42vh, 360px)",
-  },
-  imageReviewHeroImg: {
-    borderRadius: radius.xl,
-    display: "block",
-    objectFit: "contain",
-    height: "auto",
-    maxHeight: "min(40vh, 340px)",
-    maxWidth: "100%",
-  },
-  imageReviewIconImg: {
-    borderRadius: radius["2xl"],
-    display: "block",
-    objectFit: "contain",
-    height: "auto",
-    maxHeight: 192,
-    maxWidth: 192,
-  },
-  imageReviewActions: {
-    gap: gap["2xl"],
-    justifyContent: "flex-end",
-  },
 });
 
 function AdminManagedListingsPage() {
@@ -246,13 +204,6 @@ function AdminManagedListingsPage() {
 
 type ToolbarStatus = { tone: "neutral" | "critical"; text: string };
 
-type ImageReviewDraft = {
-  kind: "hero" | "icon";
-  mimeType: string;
-  imageBase64: string;
-  previewSource?: "site_asset" | "model";
-};
-
 function ManagedListingEditor({
   listingId,
   onClear,
@@ -266,12 +217,9 @@ function ManagedListingEditor({
   const { data: listing } = useQuery(detailQueryOptions);
 
   const [pendingGeneration, setPendingGeneration] = useState<
-    null | "hero" | "icon" | "tagline" | "description"
+    null | "tagline" | "description"
   >(null);
-  const [pendingImageCommit, setPendingImageCommit] = useState(false);
   const [pendingListingDeletion, setPendingListingDeletion] = useState(false);
-  const [imageReviewDraft, setImageReviewDraft] =
-    useState<null | ImageReviewDraft>(null);
   const [toolbarStatus, setToolbarStatus] = useState<ToolbarStatus | null>(
     null,
   );
@@ -280,7 +228,6 @@ function ManagedListingEditor({
   );
 
   useEffect(() => {
-    setImageReviewDraft(null);
     setToolbarStatus(null);
     setSaveSuccessMessage(null);
   }, [listingId]);
@@ -300,44 +247,11 @@ function ManagedListingEditor({
     ]);
   }
 
-  async function runGeneration(
-    action: "hero" | "icon" | "tagline" | "description",
-  ) {
+  async function runGeneration(action: "tagline" | "description") {
     setPendingGeneration(action);
     setToolbarStatus(null);
     try {
-      if (action === "hero") {
-        const preview =
-          await directoryListingApi.previewDirectoryListingHeroImage({
-            data: { id: listingId },
-          });
-        setImageReviewDraft({
-          kind: "hero",
-          mimeType: preview.mimeType,
-          imageBase64: preview.imageBase64,
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text: "Review the hero preview below, then accept or discard.",
-        });
-      } else if (action === "icon") {
-        const preview = await directoryListingApi.previewDirectoryListingIcon({
-          data: { id: listingId },
-        });
-        setImageReviewDraft({
-          kind: "icon",
-          mimeType: preview.mimeType,
-          imageBase64: preview.imageBase64,
-          previewSource: preview.previewSource,
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text:
-            preview.previewSource === "site_asset"
-              ? "Preview from site favicon/logo, refined with Gemini. Accept or discard."
-              : "Review the generated icon below, then accept or discard.",
-        });
-      } else if (action === "tagline") {
+      if (action === "tagline") {
         const result =
           await directoryListingApi.regenerateDirectoryListingTagline({
             data: { id: listingId },
@@ -398,41 +312,6 @@ function ManagedListingEditor({
           error instanceof Error ? error.message : "Could not delete listing.",
       });
       setPendingListingDeletion(false);
-    }
-  }
-
-  async function commitImageReview() {
-    if (!imageReviewDraft) return;
-    setPendingImageCommit(true);
-    setToolbarStatus(null);
-    try {
-      const { kind, mimeType, imageBase64 } = imageReviewDraft;
-      if (kind === "hero") {
-        await directoryListingApi.commitDirectoryListingHeroImage({
-          data: { id: listingId, mimeType, imageBase64 },
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text: "Published the new hero image to the listing record.",
-        });
-      } else {
-        await directoryListingApi.commitDirectoryListingIcon({
-          data: { id: listingId, mimeType, imageBase64 },
-        });
-        setToolbarStatus({
-          tone: "neutral",
-          text: "Published the new icon to the listing record.",
-        });
-      }
-      setImageReviewDraft(null);
-      await invalidateListingCaches();
-    } catch (error) {
-      setToolbarStatus({
-        tone: "critical",
-        text: error instanceof Error ? error.message : "Publish failed.",
-      });
-    } finally {
-      setPendingImageCommit(false);
     }
   }
 
@@ -515,30 +394,10 @@ function ManagedListingEditor({
             Dev tools
           </Text>
           <SmallBody variant="secondary">
-            Quick generate/preview actions. Each button publishes directly to
-            the store PDS when accepted.
+            Regenerate tagline or description from the listing URL (copy only —
+            images are edited in the form below).
           </SmallBody>
           <Flex style={styles.devToolsGrid}>
-            <Button
-              variant="secondary"
-              isPending={pendingGeneration === "icon"}
-              isDisabled={
-                pendingGeneration !== null || imageReviewDraft !== null
-              }
-              onPress={() => void runGeneration("icon")}
-            >
-              Generate icon
-            </Button>
-            <Button
-              variant="secondary"
-              isPending={pendingGeneration === "hero"}
-              isDisabled={
-                pendingGeneration !== null || imageReviewDraft !== null
-              }
-              onPress={() => void runGeneration("hero")}
-            >
-              Generate hero image
-            </Button>
             <Button
               variant="secondary"
               isPending={pendingGeneration === "tagline"}
@@ -583,9 +442,7 @@ function ManagedListingEditor({
                 isDisabled={
                   pendingListingDeletion ||
                   pendingGeneration !== null ||
-                  pendingImageCommit ||
-                  saveMutation.isPending ||
-                  imageReviewDraft !== null
+                  saveMutation.isPending
                 }
                 onPress={() => void deleteListing()}
               >
@@ -595,60 +452,6 @@ function ManagedListingEditor({
           </Flex>
         </Flex>
       </Card>
-
-      {imageReviewDraft ? (
-        <Card style={styles.imageReviewCard}>
-          <Flex direction="column" style={styles.imageReviewCardBody}>
-            <Text size="lg" weight="semibold">
-              {imageReviewDraft.kind === "hero"
-                ? "Review new hero image"
-                : "Review new icon"}
-            </Text>
-            {imageReviewDraft.kind === "icon" &&
-            imageReviewDraft.previewSource ? (
-              <SmallBody variant="secondary">
-                {imageReviewDraft.previewSource === "site_asset"
-                  ? "Sourced from site favicon or logo asset, then refined with Gemini."
-                  : "Generated from a homepage screenshot."}
-              </SmallBody>
-            ) : null}
-            <figure {...stylex.props(styles.imageReviewFigure)}>
-              <img
-                alt={
-                  imageReviewDraft.kind === "hero"
-                    ? "Generated hero preview"
-                    : "Generated icon preview"
-                }
-                src={`data:${imageReviewDraft.mimeType};base64,${imageReviewDraft.imageBase64}`}
-                {...stylex.props(
-                  imageReviewDraft.kind === "hero"
-                    ? styles.imageReviewHeroImg
-                    : styles.imageReviewIconImg,
-                )}
-              />
-            </figure>
-            <Flex style={styles.imageReviewActions}>
-              <Button
-                variant="secondary"
-                isDisabled={pendingImageCommit}
-                onPress={() => {
-                  setImageReviewDraft(null);
-                  setToolbarStatus(null);
-                }}
-              >
-                Discard
-              </Button>
-              <Button
-                isPending={pendingImageCommit}
-                isDisabled={pendingImageCommit}
-                onPress={() => void commitImageReview()}
-              >
-                Publish to listing
-              </Button>
-            </Flex>
-          </Flex>
-        </Card>
-      ) : null}
 
       <ProductListingForm
         key={listingId}

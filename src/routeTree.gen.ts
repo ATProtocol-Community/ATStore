@@ -20,7 +20,6 @@ import { Route as OgReviewRouteImport } from './routes/og.review'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
-import { Route as ApiAdminHeroCandidateImageRouteImport } from './routes/api.admin.hero-candidate-image'
 import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
 import { Route as HeaderLayoutProductsManageRouteImport } from './routes/_header-layout.products.manage'
 import { Route as HeaderLayoutProductsCreateRouteImport } from './routes/_header-layout.products.create'
@@ -107,12 +106,6 @@ const HeaderLayoutAdminLayoutRoute = HeaderLayoutAdminLayoutRouteImport.update({
   id: '/_admin-layout',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
-const ApiAdminHeroCandidateImageRoute =
-  ApiAdminHeroCandidateImageRouteImport.update({
-    id: '/api/admin/hero-candidate-image',
-    path: '/api/admin/hero-candidate-image',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const HeaderLayoutProfileActorRoute =
   HeaderLayoutProfileActorRouteImport.update({
     id: '/profile/$actor',
@@ -312,7 +305,6 @@ export interface FileRoutesByFullPath {
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
@@ -355,7 +347,6 @@ export interface FileRoutesByTo {
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
@@ -400,7 +391,6 @@ export interface FileRoutesById {
   '/_header-layout/products/create': typeof HeaderLayoutProductsCreateRoute
   '/_header-layout/products/manage': typeof HeaderLayoutProductsManageRoute
   '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
   '/_header-layout/_admin-layout/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/_header-layout/_admin-layout/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
@@ -445,7 +435,6 @@ export interface FileRouteTypes {
     | '/products/create'
     | '/products/manage'
     | '/profile/$actor'
-    | '/api/admin/hero-candidate-image'
     | '/admin/add-listing'
     | '/admin/admins'
     | '/admin/home-page-hero'
@@ -488,7 +477,6 @@ export interface FileRouteTypes {
     | '/products/create'
     | '/products/manage'
     | '/profile/$actor'
-    | '/api/admin/hero-candidate-image'
     | '/admin/add-listing'
     | '/admin/admins'
     | '/admin/home-page-hero'
@@ -532,7 +520,6 @@ export interface FileRouteTypes {
     | '/_header-layout/products/create'
     | '/_header-layout/products/manage'
     | '/_header-layout/profile/$actor'
-    | '/api/admin/hero-candidate-image'
     | '/_header-layout/_admin-layout/admin/add-listing'
     | '/_header-layout/_admin-layout/admin/admins'
     | '/_header-layout/_admin-layout/admin/home-page-hero'
@@ -566,7 +553,6 @@ export interface RootRouteChildren {
   OgReviewRoute: typeof OgReviewRoute
   OgTagRoute: typeof OgTagRoute
   OgIndexRoute: typeof OgIndexRoute
-  ApiAdminHeroCandidateImageRoute: typeof ApiAdminHeroCandidateImageRoute
   ApiAuthAtprotoAuthorizeRoute: typeof ApiAuthAtprotoAuthorizeRoute
   ApiAuthAtprotoCallbackRoute: typeof ApiAuthAtprotoCallbackRoute
   ApiAuthAtprotoJwksDotjsonRoute: typeof ApiAuthAtprotoJwksDotjsonRoute
@@ -652,13 +638,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof HeaderLayoutAdminLayoutRouteImport
       parentRoute: typeof HeaderLayoutRoute
-    }
-    '/api/admin/hero-candidate-image': {
-      id: '/api/admin/hero-candidate-image'
-      path: '/api/admin/hero-candidate-image'
-      fullPath: '/api/admin/hero-candidate-image'
-      preLoaderRoute: typeof ApiAdminHeroCandidateImageRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/_header-layout/profile/$actor': {
       id: '/_header-layout/profile/$actor'
@@ -998,7 +977,6 @@ const rootRouteChildren: RootRouteChildren = {
   OgReviewRoute: OgReviewRoute,
   OgTagRoute: OgTagRoute,
   OgIndexRoute: OgIndexRoute,
-  ApiAdminHeroCandidateImageRoute: ApiAdminHeroCandidateImageRoute,
   ApiAuthAtprotoAuthorizeRoute: ApiAuthAtprotoAuthorizeRoute,
   ApiAuthAtprotoCallbackRoute: ApiAuthAtprotoCallbackRoute,
   ApiAuthAtprotoJwksDotjsonRoute: ApiAuthAtprotoJwksDotjsonRoute,

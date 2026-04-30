@@ -24,6 +24,7 @@ import {
   useDragAndDrop,
 } from "react-aria-components";
 
+import { Alert } from "../design-system/alert";
 import { Button } from "../design-system/button";
 import { Card, CardBody } from "../design-system/card";
 import { ComboBox, ComboBoxItem } from "../design-system/combobox";
@@ -88,24 +89,6 @@ type LinkRow = {
 };
 
 const MAX_SCREENSHOT_COUNT = 4;
-
-type GenerationStatus = { tone: "neutral" | "critical"; text: string };
-
-type ImageReviewDraft = {
-  kind: "hero" | "icon";
-  mimeType: string;
-  imageBase64: string;
-  previewSource?: "site_asset" | "model";
-};
-
-function base64ToBlob(imageBase64: string, mimeType: string): Blob {
-  const binary = atob(imageBase64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.codePointAt(i) ?? 0;
-  }
-  return new Blob([bytes], { type: mimeType });
-}
 
 const LINK_TYPE_OPTIONS: Array<{ id: ListingLinkType; label: string }> = [
   { id: "support", label: "Support" },
@@ -183,34 +166,6 @@ function reorderScreenshotItems(
     ...movingItems,
     ...remainingItems.slice(insertIndex),
   ];
-}
-
-function collectProtocolCategoryOptions(
-  nodes: Array<CategoryTreeNode>,
-): Array<ProtocolCategoryOption> {
-  const seen = new Set<string>();
-  const out: Array<ProtocolCategoryOption> = [];
-
-  const walk = (node: CategoryTreeNode) => {
-    const pathIds = node.pathIds ?? node.id.split("/").filter(Boolean);
-    const pathLabels = node.pathLabels ?? [];
-    if (pathIds[0] === "protocol" && pathIds.length === 2) {
-      const id = pathIds[1]?.trim();
-      if (id && !seen.has(id)) {
-        seen.add(id);
-        out.push({ id, label: pathLabels[1] ?? id });
-      }
-    }
-    for (const child of node.children ?? []) {
-      walk(child);
-    }
-  };
-
-  for (const node of nodes) {
-    walk(node);
-  }
-
-  return out.toSorted((a, b) => a.label.localeCompare(b.label));
 }
 
 function collectAppCategoryOptionsByApp(
@@ -586,47 +541,6 @@ const styles = stylex.create({
     alignItems: "center",
     flexWrap: "wrap",
   },
-  generationStatusRow: {
-    minHeight: "1.25rem",
-  },
-  imageReviewCard: {
-    boxShadow: shadow.md,
-    width: "100%",
-  },
-  imageReviewBody: {
-    gap: gap["2xl"],
-  },
-  imageReviewFigure: {
-    margin: 0,
-    padding: horizontalSpace["2xl"],
-    borderRadius: radius["2xl"],
-    overflow: "hidden",
-    alignItems: "center",
-    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
-    display: "flex",
-    justifyContent: "center",
-    maxHeight: "min(42vh, 360px)",
-  },
-  imageReviewHeroImg: {
-    borderRadius: radius.xl,
-    display: "block",
-    objectFit: "contain",
-    height: "auto",
-    maxHeight: "min(40vh, 340px)",
-    maxWidth: "100%",
-  },
-  imageReviewIconImg: {
-    borderRadius: radius["2xl"],
-    display: "block",
-    objectFit: "contain",
-    height: "auto",
-    maxHeight: 192,
-    maxWidth: 192,
-  },
-  imageReviewActions: {
-    gap: gap["2xl"],
-    justifyContent: "flex-end",
-  },
 });
 
 export type ProductListingFormSubmitValues = {
@@ -648,8 +562,8 @@ export type ProductListingFormSubmitValues = {
   retainedScreenshotUrls: Array<string>;
   links: Array<ListingLink>;
   /**
-   * Editorial app tags for `apps/<slug>` listings. Empty for app-tool / protocol
-   * categories since the lexicon only uses tags on top-level apps.
+   * Editorial app tags for `apps/<slug>` listings. Empty for app-tool categories
+   * since the lexicon only uses tags on top-level apps.
    */
   appTags: Array<string>;
 };
@@ -679,12 +593,6 @@ type ProductListingFormProps = {
   errorMessage?: string | null;
   successMessage?: string | null;
   /**
-   * When true, exposes admin-only tools inline in the form — currently the
-   * "Generate hero / icon from URL" helpers that seed hero and icon images
-   * from the product's homepage using the current `name` and `externalUrl`.
-   */
-  isAdmin?: boolean;
-  /**
    * When true, the form renders a "Remove hero" toggle in the hero header that
    * stages a hero removal. The actual mutation is deferred to the next save —
    * `onSubmit` receives `pendingHeroRemoval: true` so the caller can call its
@@ -709,7 +617,6 @@ export function ProductListingForm({
   onCancel,
   errorMessage,
   successMessage,
-  isAdmin = false,
   allowRemoveHero = false,
   requireHero = true,
 }: ProductListingFormProps) {
@@ -733,11 +640,10 @@ export function ProductListingForm({
   const categoryParts = (initialValues.categorySlug ?? "")
     .split("/")
     .filter(Boolean);
-  const [categoryKind, setCategoryKind] = useState<
-    "app" | "app-tool" | "protocol"
-  >(
-    categoryParts[0] === "protocol"
-      ? "protocol"
+  const listingHadLegacyProtocolCategory = categoryParts[0] === "protocol";
+  const [categoryKind, setCategoryKind] = useState<"app" | "app-tool">(
+    listingHadLegacyProtocolCategory
+      ? "app"
       : categoryParts.length >= 3
         ? "app-tool"
         : "app",
@@ -750,9 +656,6 @@ export function ProductListingForm({
   );
   const [appCategoryLabel, setAppCategoryLabel] = useState(
     categoryParts[0] === "apps" ? (categoryParts[2] ?? "") : "",
-  );
-  const [protocolCategory, setProtocolCategory] = useState(
-    categoryParts[0] === "protocol" ? (categoryParts[1] ?? "") : "",
   );
 
   const appCategoryOptionsByApp = collectAppCategoryOptionsByApp(
@@ -789,28 +692,14 @@ export function ProductListingForm({
     }
   }, [categoryKind, appCategoryOptions, appCategorySlug, appCategoryLabel]);
 
-  const protocolCategoryOptions = collectProtocolCategoryOptions(
-    (categoryTree ?? []) as Array<CategoryTreeNode>,
-  );
-  const selectedProtocolCategoryOption =
-    protocolCategoryOptions.find((option) => option.id === protocolCategory)
-      ?.id ?? null;
-  const isCustomProtocolCategory =
-    categoryKind === "protocol" &&
-    protocolCategory.trim().length > 0 &&
-    !protocolCategoryOptions.some((option) => option.id === protocolCategory);
   const categorySlug =
-    categoryKind === "protocol"
-      ? `protocol/${protocolCategory.trim()}`
-      : categoryKind === "app-tool" && appCategorySlug.trim().length > 0
-        ? `apps/${appName.trim()}/${appCategorySlug.trim()}`
-        : `apps/${appName.trim()}`;
+    categoryKind === "app-tool" && appCategorySlug.trim().length > 0
+      ? `apps/${appName.trim()}/${appCategorySlug.trim()}`
+      : `apps/${appName.trim()}`;
   const hasValidCategoryInputs =
-    categoryKind === "protocol"
-      ? protocolCategory.trim().length > 0
-      : categoryKind === "app-tool"
-        ? appName.trim().length > 0 && appCategorySlug.trim().length > 0
-        : appName.trim().length > 0;
+    categoryKind === "app-tool"
+      ? appName.trim().length > 0 && appCategorySlug.trim().length > 0
+      : appName.trim().length > 0;
 
   const [cropKind, setCropKind] = useState<null | "hero" | "icon">(null);
   const [cropSourceBlob, setCropSourceBlob] = useState<Blob | null>(null);
@@ -1008,109 +897,6 @@ export function ProductListingForm({
     };
   }, [pendingIconPreviewUrl]);
 
-  const [pendingGeneration, setPendingGeneration] = useState<
-    null | "hero" | "icon"
-  >(null);
-  const [imageReviewDraft, setImageReviewDraft] =
-    useState<null | ImageReviewDraft>(null);
-  const [generationStatus, setGenerationStatus] =
-    useState<GenerationStatus | null>(null);
-
-  async function runGeneration(kind: "hero" | "icon") {
-    const trimmedName = name.trim();
-    const trimmedUrl = externalUrl.trim();
-    if (!trimmedName || !trimmedUrl) {
-      setGenerationStatus({
-        tone: "critical",
-        text: "Fill in Name and Primary URL before generating images.",
-      });
-      return;
-    }
-
-    setPendingGeneration(kind);
-    setGenerationStatus(null);
-    try {
-      if (kind === "hero") {
-        const preview = await directoryListingApi.previewListingHeroImageByUrl({
-          data: { name: trimmedName, externalUrl: trimmedUrl },
-        });
-        setImageReviewDraft({
-          kind: "hero",
-          mimeType: preview.mimeType,
-          imageBase64: preview.imageBase64,
-        });
-        setGenerationStatus({
-          tone: "neutral",
-          text: "Review the hero preview below, then accept or discard.",
-        });
-      } else {
-        const preview = await directoryListingApi.previewListingIconByUrl({
-          data: { name: trimmedName, externalUrl: trimmedUrl },
-        });
-        setImageReviewDraft({
-          kind: "icon",
-          mimeType: preview.mimeType,
-          imageBase64: preview.imageBase64,
-          previewSource: preview.previewSource,
-        });
-        setGenerationStatus({
-          tone: "neutral",
-          text:
-            preview.previewSource === "site_asset"
-              ? "Preview from site favicon/logo, refined with Gemini. Accept or discard."
-              : "Review the generated icon below, then accept or discard.",
-        });
-      }
-    } catch (error) {
-      setGenerationStatus({
-        tone: "critical",
-        text: error instanceof Error ? error.message : "Generation failed.",
-      });
-    } finally {
-      setPendingGeneration(null);
-    }
-  }
-
-  function acceptImageReview() {
-    if (!imageReviewDraft) return;
-    const blob = base64ToBlob(
-      imageReviewDraft.imageBase64,
-      imageReviewDraft.mimeType,
-    );
-    const nextPreviewUrl = URL.createObjectURL(blob);
-    if (imageReviewDraft.kind === "hero") {
-      setPendingHeroPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return nextPreviewUrl;
-      });
-      pendingHeroBlobRef.current = blob;
-      setPendingHeroRemoval(false);
-      setGenerationStatus({
-        tone: "neutral",
-        text: "Hero image staged. Submit the form to publish.",
-      });
-    } else {
-      setPendingIconPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return nextPreviewUrl;
-      });
-      pendingIconBlobRef.current = blob;
-      setGenerationStatus({
-        tone: "neutral",
-        text: "Icon staged. Submit the form to publish.",
-      });
-    }
-    setImageReviewDraft(null);
-  }
-
-  function discardImageReview() {
-    setImageReviewDraft(null);
-    setGenerationStatus(null);
-  }
-
-  const isGenerateDisabled =
-    pendingGeneration !== null || imageReviewDraft !== null || isSubmitting;
-
   useEffect(() => {
     pendingScreenshotBlobsRef.current = screenshotItems
       .map((item) => item.blob)
@@ -1280,44 +1066,30 @@ export function ProductListingForm({
                         </Text>
                       ) : null}
                     </Flex>
-                    {isAdmin ||
-                    (allowRemoveHero && initialValues.heroImageUrl) ? (
+                    {allowRemoveHero && initialValues.heroImageUrl ? (
                       <Flex style={styles.imageAssetHeaderActions}>
-                        {allowRemoveHero && initialValues.heroImageUrl ? (
-                          <Button
-                            size="sm"
-                            variant={
-                              pendingHeroRemoval
-                                ? "secondary"
-                                : "critical-outline"
-                            }
-                            isDisabled={isSubmitting}
-                            onPress={() => {
-                              setPendingHeroRemoval((prev) => {
-                                const next = !prev;
-                                if (next && pendingHeroPreviewUrl) {
-                                  URL.revokeObjectURL(pendingHeroPreviewUrl);
-                                  setPendingHeroPreviewUrl(null);
-                                  pendingHeroBlobRef.current = null;
-                                }
-                                return next;
-                              });
-                            }}
-                          >
-                            {pendingHeroRemoval ? "Undo remove" : "Remove hero"}
-                          </Button>
-                        ) : null}
-                        {isAdmin ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            isPending={pendingGeneration === "hero"}
-                            isDisabled={isGenerateDisabled}
-                            onPress={() => void runGeneration("hero")}
-                          >
-                            Generate hero image
-                          </Button>
-                        ) : null}
+                        <Button
+                          size="sm"
+                          variant={
+                            pendingHeroRemoval
+                              ? "secondary"
+                              : "critical-outline"
+                          }
+                          isDisabled={isSubmitting}
+                          onPress={() => {
+                            setPendingHeroRemoval((prev) => {
+                              const next = !prev;
+                              if (next && pendingHeroPreviewUrl) {
+                                URL.revokeObjectURL(pendingHeroPreviewUrl);
+                                setPendingHeroPreviewUrl(null);
+                                pendingHeroBlobRef.current = null;
+                              }
+                              return next;
+                            });
+                          }}
+                        >
+                          {pendingHeroRemoval ? "Undo remove" : "Remove hero"}
+                        </Button>
                       </Flex>
                     ) : null}
                   </Flex>
@@ -1396,19 +1168,6 @@ export function ProductListingForm({
                         *
                       </Text>
                     </Flex>
-                    {isAdmin ? (
-                      <Flex style={styles.imageAssetHeaderActions}>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          isPending={pendingGeneration === "icon"}
-                          isDisabled={isGenerateDisabled}
-                          onPress={() => void runGeneration("icon")}
-                        >
-                          Generate icon
-                        </Button>
-                      </Flex>
-                    ) : null}
                   </Flex>
                   <FileDropZone
                     acceptedFileTypes={["image/*"]}
@@ -1528,74 +1287,9 @@ export function ProductListingForm({
                     ) : null}
                   </div>
                 </Flex>
-                {isAdmin && generationStatus ? (
-                  <Text
-                    size="sm"
-                    variant={
-                      generationStatus.tone === "critical"
-                        ? "critical"
-                        : "secondary"
-                    }
-                    style={styles.generationStatusRow}
-                  >
-                    {generationStatus.text}
-                  </Text>
-                ) : null}
               </Flex>
             </CardBody>
           </Card>
-
-          {isAdmin && imageReviewDraft ? (
-            <Card style={styles.imageReviewCard} size="lg">
-              <CardBody>
-                <Flex direction="column" style={styles.imageReviewBody}>
-                  <Text size="lg" weight="semibold">
-                    {imageReviewDraft.kind === "hero"
-                      ? "Review new hero image"
-                      : "Review new icon"}
-                  </Text>
-                  {imageReviewDraft.kind === "icon" &&
-                  imageReviewDraft.previewSource ? (
-                    <Text size="sm" variant="secondary">
-                      {imageReviewDraft.previewSource === "site_asset"
-                        ? "Sourced from site favicon or logo asset, then refined with Gemini."
-                        : "Generated from a homepage screenshot."}
-                    </Text>
-                  ) : null}
-                  <figure {...stylex.props(styles.imageReviewFigure)}>
-                    <img
-                      alt={
-                        imageReviewDraft.kind === "hero"
-                          ? "Generated hero preview"
-                          : "Generated icon preview"
-                      }
-                      src={`data:${imageReviewDraft.mimeType};base64,${imageReviewDraft.imageBase64}`}
-                      {...stylex.props(
-                        imageReviewDraft.kind === "hero"
-                          ? styles.imageReviewHeroImg
-                          : styles.imageReviewIconImg,
-                      )}
-                    />
-                  </figure>
-                  <Flex style={styles.imageReviewActions}>
-                    <Button
-                      variant="secondary"
-                      isDisabled={isSubmitting}
-                      onPress={discardImageReview}
-                    >
-                      Discard
-                    </Button>
-                    <Button
-                      isDisabled={isSubmitting}
-                      onPress={acceptImageReview}
-                    >
-                      Use this image
-                    </Button>
-                  </Flex>
-                </Flex>
-              </CardBody>
-            </Card>
-          ) : null}
 
           {cropSourceBlob && cropKind ? (
             <ImageCropperDialog
@@ -1781,6 +1475,12 @@ export function ProductListingForm({
                   </UnorderedList>
                 </Flex>
                 <Separator />
+                {listingHadLegacyProtocolCategory ? (
+                  <Alert variant="warning" title="Update category">
+                    This listing used a legacy protocol category. Choose an app
+                    or app tool category before saving.
+                  </Alert>
+                ) : null}
                 <Flex direction="column" gap="6xl">
                   <Flex wrap align="center" gap="xl">
                     <Select
@@ -1792,11 +1492,7 @@ export function ProductListingForm({
                       placeholder="Select type"
                       value={categoryKind}
                       onChange={(value) => {
-                        if (
-                          value === "app" ||
-                          value === "app-tool" ||
-                          value === "protocol"
-                        ) {
+                        if (value === "app" || value === "app-tool") {
                           setCategoryKind(value);
                         }
                       }}
@@ -1805,95 +1501,73 @@ export function ProductListingForm({
                     >
                       {(item) => <SelectItem>{item.label}</SelectItem>}
                     </Select>
-                    {categoryKind === "app" || categoryKind === "app-tool" ? (
-                      <>
-                        {categoryKind === "app" ? (
-                          <TextField
-                            style={styles.grow}
-                            label="App Slug"
-                            value={appName}
-                            onChange={setAppName}
-                            placeholder="bluesky"
-                            isRequired
-                          />
-                        ) : (
-                          <Select
-                            style={styles.grow}
-                            label="App"
-                            items={appSlugOptions}
-                            placeholder="Select app"
-                            value={selectedAppSlugOption}
-                            onChange={(value) => {
-                              if (typeof value !== "string") return;
-                              setAppName(value);
-                            }}
-                            isRequired
-                          >
-                            {(item) => <SelectItem>{item.label}</SelectItem>}
-                          </Select>
-                        )}
-                        {categoryKind === "app-tool" ? (
-                          <ComboBox
-                            allowsCustomValue
-                            allowsEmptyCollection
-                            style={styles.grow}
-                            label="Category"
-                            items={appCategoryOptions}
-                            renderEmptyState={() => (
-                              <div {...stylex.props(styles.emptyStateMessage)}>
-                                {appSlugKey
-                                  ? "No defined categories for this app yet."
-                                  : "Type an app slug to see known categories."}
-                              </div>
-                            )}
-                            inputValue={appCategoryLabel}
-                            value={selectedAppCategoryOption}
-                            onInputChange={(value) => {
-                              setAppCategoryLabel(value);
-                              setAppCategorySlug(toKebabCaseSegment(value));
-                            }}
-                            onChange={(key) => {
-                              if (key === null) return;
-                              const nextSlug = String(key);
-                              const nextLabel =
-                                appCategoryOptions.find(
-                                  (option) => option.id === nextSlug,
-                                )?.label ?? nextSlug;
-                              setAppCategorySlug(nextSlug);
-                              setAppCategoryLabel(nextLabel);
-                            }}
-                            placeholder="clients"
-                            isRequired
-                          >
-                            {(item) => (
-                              <ComboBoxItem id={item.id}>
-                                {item.label}
-                              </ComboBoxItem>
-                            )}
-                          </ComboBox>
-                        ) : null}
-                      </>
-                    ) : (
-                      <ComboBox
-                        allowsCustomValue
-                        style={styles.grow}
-                        label="Category"
-                        items={protocolCategoryOptions}
-                        inputValue={protocolCategory}
-                        selectedKey={selectedProtocolCategoryOption}
-                        onInputChange={setProtocolCategory}
-                        onSelectionChange={(key) => {
-                          if (key === null) return;
-                          setProtocolCategory(String(key));
-                        }}
-                        placeholder="PDS"
-                        isRequired
-                      >
-                        {(item) => (
-                          <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
-                        )}
-                      </ComboBox>
-                    )}
+                    <>
+                      {categoryKind === "app" ? (
+                        <TextField
+                          style={styles.grow}
+                          label="App Slug"
+                          value={appName}
+                          onChange={setAppName}
+                          placeholder="bluesky"
+                          isRequired
+                        />
+                      ) : (
+                        <Select
+                          style={styles.grow}
+                          label="App"
+                          items={appSlugOptions}
+                          placeholder="Select app"
+                          value={selectedAppSlugOption}
+                          onChange={(value) => {
+                            if (typeof value !== "string") return;
+                            setAppName(value);
+                          }}
+                          isRequired
+                        >
+                          {(item) => <SelectItem>{item.label}</SelectItem>}
+                        </Select>
+                      )}
+                      {categoryKind === "app-tool" ? (
+                        <ComboBox
+                          allowsCustomValue
+                          allowsEmptyCollection
+                          style={styles.grow}
+                          label="Category"
+                          items={appCategoryOptions}
+                          renderEmptyState={() => (
+                            <div {...stylex.props(styles.emptyStateMessage)}>
+                              {appSlugKey
+                                ? "No defined categories for this app yet."
+                                : "Type an app slug to see known categories."}
+                            </div>
+                          )}
+                          inputValue={appCategoryLabel}
+                          value={selectedAppCategoryOption}
+                          onInputChange={(value) => {
+                            setAppCategoryLabel(value);
+                            setAppCategorySlug(toKebabCaseSegment(value));
+                          }}
+                          onChange={(key) => {
+                            if (key === null) return;
+                            const nextSlug = String(key);
+                            const nextLabel =
+                              appCategoryOptions.find(
+                                (option) => option.id === nextSlug,
+                              )?.label ?? nextSlug;
+                            setAppCategorySlug(nextSlug);
+                            setAppCategoryLabel(nextLabel);
+                          }}
+                          placeholder="clients"
+                          isRequired
+                        >
+                          {(item) => (
+                            <ComboBoxItem id={item.id}>
+                              {item.label}
+                            </ComboBoxItem>
+                          )}
+                        </ComboBox>
+                      ) : null}
+                    </>
                   </Flex>
                   {categoryKind === "app-tool" ? (
                     isCustomAppCategory ? (
@@ -1975,20 +1649,7 @@ export function ProductListingForm({
                         )}
                       </Flex>
                     </Flex>
-                  ) : (
-                    <Flex direction="column" gap="xl">
-                      <Text size="sm" variant="secondary">
-                        Saved in group{" "}
-                        <code>protocol/{protocolCategory || "<category>"}</code>
-                      </Text>
-                      {isCustomProtocolCategory ? (
-                        <Text size="sm" variant="critical">
-                          New category detected. Please try to stick to defined
-                          categories when possible.
-                        </Text>
-                      ) : null}
-                    </Flex>
-                  )}
+                  ) : null}
                 </Flex>
               </Flex>
             </CardBody>

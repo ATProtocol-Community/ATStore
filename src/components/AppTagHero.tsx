@@ -32,7 +32,7 @@ import {
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { resolveBannerRecordUrl } from "../lib/banner-record-url";
+import { publicMediaUrlOrNull } from "../lib/listing-image-url";
 
 interface AppTagHeroProps {
   eyebrow?: string;
@@ -310,7 +310,7 @@ export function AppTagHero({
   imageSrc,
   action,
 }: AppTagHeroProps) {
-  const bannerSrc = resolveBannerRecordUrl(imageSrc);
+  const bannerSrc = publicMediaUrlOrNull(imageSrc);
   const slotEmojis = buildSlotEmojis(emojis);
 
   return (

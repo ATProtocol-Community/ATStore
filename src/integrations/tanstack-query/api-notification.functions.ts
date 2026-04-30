@@ -1,8 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { protocolRecordImageUrlOrNull } from "#/lib/atproto/protocol-record-image-url";
 import { fetchBlueskyHandleForDid } from "#/lib/bluesky-public-profile";
+import { httpsListingImageUrlOrNull } from "#/lib/listing-image-url";
 import { getAtprotoSessionForRequest } from "#/middleware/auth";
 import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -218,7 +218,7 @@ const getProductNotifications = createServerFn({ method: "GET" })
         listingId: row.listingId,
         listingName: row.listingName,
         listingSlug: row.listingSlug,
-        listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+        listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
         actorDid: session.did,
         actorHandle: null,
         actorDisplayName: null,
@@ -237,7 +237,7 @@ const getProductNotifications = createServerFn({ method: "GET" })
           listingId: row.listingId,
           listingName: row.listingName,
           listingSlug: row.listingSlug,
-          listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+          listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
           actorDid,
           actorHandle: actorHandleByDid.get(actorDid) ?? null,
           actorDisplayName: null,
@@ -257,7 +257,7 @@ const getProductNotifications = createServerFn({ method: "GET" })
           listingId: row.listingId,
           listingName: row.listingName,
           listingSlug: row.listingSlug,
-          listingIconUrl: protocolRecordImageUrlOrNull(row.listingIconUrl),
+          listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
           actorDid,
           actorHandle: actorHandleByDid.get(actorDid) ?? null,
           actorDisplayName: null,
