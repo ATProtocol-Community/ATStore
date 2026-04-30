@@ -11,7 +11,7 @@ interface HeroImageProps {
   showOverlay?: boolean;
 }
 
-export const DEFAULT_HERO_GLOW_INTENSITY = 1;
+const DEFAULT_HERO_GLOW_INTENSITY = 1;
 
 const styles = stylex.create({
   glowWrap: {

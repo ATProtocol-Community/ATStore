@@ -30,6 +30,9 @@ const styles = stylex.create({
 interface IconBaseButtonProps extends StyleXComponentProps<AriaButtonProps> {
   variant?: ButtonVariant;
   size?: Size;
+  href?: string;
+  target?: string;
+  rel?: string;
 }
 
 interface IconButtonWithLabelProps extends IconBaseButtonProps {

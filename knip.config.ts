@@ -3,10 +3,16 @@ import type { KnipConfig } from "knip";
 export default {
   vite: true,
   vitest: true,
+  // Treat the design system as a public surface: every module is a valid entry (consumers import arbitrarily).
+  entry: ["src/design-system/**/*.ts", "src/design-system/**/*.tsx"],
   ignore: [
-    "src/routeTree.gen.ts",
     "src/lexicons/generated/**",
   ],
+  // Unused exports/types on shared `src/lib` and large API modules are usually intentional surface, not dead code.
+  rules: {
+    exports: "off",
+    types: "off",
+  },
   ignoreDependencies: [
     // Pulled in via @tanstack/react-start / TanStack Router Vite integration, not a direct import.
     "@tanstack/router-plugin",

@@ -42,21 +42,3 @@ export function sanitizeAuthRedirectTarget(
   const origin = new URL(requestUrl).origin
   return toSafePathname(candidate ?? '', origin) ?? DEFAULT_AUTH_REDIRECT
 }
-
-export function getSafePostLoginRedirect(request: Request): string {
-  const requestUrl = new URL(request.url)
-  const requestTarget = toSafePathname(
-    `${requestUrl.pathname}${requestUrl.search}${requestUrl.hash}`,
-    requestUrl.origin,
-  )
-  if (requestTarget) {
-    return requestTarget
-  }
-
-  const referer = request.headers.get('referer')
-  if (!referer) {
-    return DEFAULT_AUTH_REDIRECT
-  }
-
-  return toSafePathname(referer, requestUrl.origin) ?? DEFAULT_AUTH_REDIRECT
-}

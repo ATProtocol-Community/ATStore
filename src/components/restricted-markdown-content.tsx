@@ -59,7 +59,7 @@ export interface RestrictedMarkdownContentProps extends StyleXComponentProps<
  * Narrow tag allowlist layered on GitHub-ish defaults (`rehype-sanitize`): only bold,
  * italic, paragraphs, breaks, and lists survive the tree pass; everything else unwraps or strips.
  */
-export const RESTRICTED_MARKDOWN_SANITIZE_SCHEMA: RehypeSanitizeOptions = {
+const RESTRICTED_MARKDOWN_SANITIZE_SCHEMA: RehypeSanitizeOptions = {
   ...rehypeSanitizeDefaultSchema,
   tagNames: ["p", "strong", "em", "ul", "ol", "li", "br"],
 };

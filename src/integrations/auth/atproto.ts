@@ -15,7 +15,7 @@ import {
   WellKnownHandleResolver,
 } from '@atcute/identity-resolver'
 import { NodeDnsHandleResolver } from '@atcute/identity-resolver-node'
-import { OAuthClient, generateClientAssertionKey } from '@atcute/oauth-node-client'
+import { OAuthClient } from '@atcute/oauth-node-client'
 import { eq, like } from 'drizzle-orm'
 
 import { db } from '../../db/index.server'
@@ -291,8 +291,4 @@ export async function restoreAtprotoSession(
 export async function revokeAtprotoSession(did: Did): Promise<void> {
   const client = getAtprotoOAuth()
   await client.revoke(did)
-}
-
-export async function generateAtprotoPrivateKey(): Promise<ClientAssertionPrivateJwk> {
-  return await generateClientAssertionKey('main', 'ES256')
 }

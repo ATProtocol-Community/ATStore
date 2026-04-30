@@ -12,7 +12,6 @@ import { getRequest } from '@tanstack/react-start/server'
 
 import { AUTH_SESSION_TOKEN_COOKIE } from '#/integrations/auth/constants'
 import { SUPER_ADMIN_DID } from '#/lib/super-admin'
-import { getSafePostLoginRedirect } from '#/utils/auth-redirect'
 
 export type AtprotoSessionContext = {
   did: string
@@ -104,39 +103,6 @@ export const unauthMiddleware = createMiddleware().server(async ({ next }) => {
   }
 
   return await next()
-})
-
-export const authMiddleware = createMiddleware().server(async ({ next }) => {
-  const request = getRequest()
-  const context = await getSessionContext(request)
-
-  if (!context) {
-    throw redirect({
-      to: '/login',
-      search: { redirect: getSafePostLoginRedirect(request) },
-    })
-  }
-
-  return await next({ context })
-})
-
-/** Route middleware: only allow users flagged as admin in the `user` table. */
-export const adminRouteMiddleware = createMiddleware().server(async ({ next }) => {
-  const request = getRequest()
-  const context = await getAtprotoSessionForRequest(request)
-
-  if (!context) {
-    throw redirect({
-      to: '/login',
-      search: { redirect: getSafePostLoginRedirect(request) },
-    })
-  }
-
-  if (!context.session.user.isAdmin) {
-    throw redirect({ to: '/' })
-  }
-
-  return await next({ context })
 })
 
 /** Server function middleware: attach session when present. */

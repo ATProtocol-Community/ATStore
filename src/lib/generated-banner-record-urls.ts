@@ -12,9 +12,9 @@
  * - Client: the root document emits an inline `<script>` that sets
  *   `window.__GENERATED_BANNER_RECORD_URLS__` before the React bundle runs, so
  *   this module picks it up at import time.
- * - Admin writes: `generateMissingHeroArtItem` and the upload script both UPSERT
- *   into DB and call `setGeneratedBannerRecordUrl` to keep the in-memory cache
- *   fresh for the current process.
+ * - Admin writes: banner upload / admin flows UPSERT into DB and may call
+ *   `setGeneratedBannerRecordUrl` to keep the in-memory cache fresh for the
+ *   current process.
  */
 
 declare global {

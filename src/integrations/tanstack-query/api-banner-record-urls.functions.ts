@@ -10,7 +10,7 @@ import { dbMiddleware } from './db-middleware'
  * in-memory cache so synchronous callers (`resolveBannerRecordUrl`) see the latest
  * map without needing to await anything during render.
  */
-export const getGeneratedBannerRecordUrls = createServerFn({ method: 'GET' })
+const getGeneratedBannerRecordUrls = createServerFn({ method: 'GET' })
   .middleware([dbMiddleware])
   .handler(async ({ context }): Promise<Record<string, string>> => {
     const { db, schema } = context

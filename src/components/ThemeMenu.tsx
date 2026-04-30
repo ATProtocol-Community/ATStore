@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { Monitor, Moon, Sun } from "lucide-react";
 
-import { Menu, MenuItem, SubMenu } from "../design-system/menu";
+import { MenuItem, SubMenu } from "../design-system/menu";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { useTheme } from "../lib/ThemeContext";
 import { isThemeMode, type ThemeMode } from "../lib/theme";
@@ -67,25 +67,5 @@ export function ThemeSubMenu() {
     >
       <ThemeMenuItems onSelect={setMode} />
     </SubMenu>
-  );
-}
-
-/**
- * Standalone theme picker — a top-level menu with its own trigger. Used in
- * spots where there's no parent account menu (e.g. when signed out).
- */
-export function ThemeMenu({ trigger }: { trigger: React.ReactNode }) {
-  const { mode, setMode } = useTheme();
-
-  return (
-    <Menu
-      trigger={trigger}
-      placement="bottom end"
-      selectionMode="single"
-      selectedKeys={new Set([mode])}
-      disallowEmptySelection
-    >
-      <ThemeMenuItems onSelect={setMode} />
-    </Menu>
   );
 }
