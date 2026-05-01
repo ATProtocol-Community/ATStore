@@ -36,7 +36,6 @@ import {
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { fontSize } from "../design-system/theme/typography.stylex";
 import {
   Body,
   Heading1,
@@ -89,7 +88,7 @@ const styles = stylex.create({
   bentoLinkFeatured: {
     zIndex: 0,
   },
-  newCardLink: {
+  listingCardLink: {
     borderRadius: radius.lg,
     cornerShape: "squircle",
     textDecoration: "none",
@@ -120,10 +119,6 @@ const styles = stylex.create({
       transitionTimingFunction: "ease-in-out",
     },
   },
-  compactCardContentText: {
-    flexGrow: 1,
-    fontSize: fontSize["base"],
-  },
   claimBanner: {
     width: "100%",
   },
@@ -148,48 +143,6 @@ const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     width: "100%",
-  },
-  accentCard: {
-    borderRadius: radius["3xl"],
-    borderStyle: "solid",
-    borderWidth: 1,
-    cornerShape: "squircle",
-    overflow: "hidden",
-    position: "relative",
-  },
-  spotlightCardShadow: {
-    borderRadius: radius.xl,
-    cornerShape: "squircle",
-    boxShadow: shadow.xl,
-    position: "relative",
-
-    ":hover::before": {
-      opacity: 1,
-    },
-    "::before": {
-      inset: 0,
-      borderRadius: radius.xl,
-      cornerShape: "squircle",
-      boxShadow: shadow.xl,
-      content: "''",
-      opacity: 0,
-      position: "absolute",
-      transitionDuration: animationDuration.default,
-      transitionProperty: "opacity",
-      transitionTimingFunction: animationTimingFunction.linear,
-    },
-  },
-  spotlightCard: {
-    borderRadius: radius["xl"],
-    boxShadow: shadow.none,
-    transform: {
-      default: "none",
-      ":hover": "translateY(-2px)",
-    },
-    transitionDuration: animationDuration.slow,
-    transitionProperty: "transform",
-    transitionTimingFunction: "ease-in-out",
-    height: "100%",
   },
   promoCard: {
     borderColor: uiColor.component2,
@@ -228,19 +181,6 @@ const styles = stylex.create({
       transitionProperty: "opacity",
       transitionTimingFunction: animationTimingFunction.linear,
     },
-  },
-  compactCardContent: {
-    boxSizing: "border-box",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "flex-start",
-    position: "relative",
-    zIndex: 1,
-    height: "100%",
-    paddingBottom: verticalSpace["3xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
   },
   promoCardBody: {
     boxSizing: "border-box",
@@ -362,12 +302,13 @@ const styles = stylex.create({
       [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
     },
   },
-  newCard: {
+  listingCard: {
+    boxSizing: "border-box",
     boxShadow: shadow.none,
     position: "relative",
     height: "100%",
   },
-  newCardContent: {
+  listingCardContent: {
     display: "flex",
     flexDirection: "column",
     height: "100%",
@@ -376,10 +317,9 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["4xl"],
     paddingTop: verticalSpace["4xl"],
   },
-  spacer: {
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
+  listItemTagline: {
+    flexGrow: 1,
+    minWidth: 0,
   },
   exploreButton: {
     borderRadius: radius.full,
@@ -459,7 +399,7 @@ function HomePage() {
               featured ? (
                 <HeroCard listing={listing} />
               ) : (
-                <SpotlightCard listing={listing} />
+                <ListingCard listing={listing} />
               )
             }
           />
@@ -508,7 +448,7 @@ function HomePage() {
           />
           <Grid style={styles.newGrid}>
             {data.fresh.map((listing) => (
-              <NewListingCard key={listing.id} listing={listing} />
+              <ListingCard key={listing.id} listing={listing} />
             ))}
           </Grid>
         </section>
@@ -590,44 +530,6 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
       ) : (
         <FeaturedListingFallbackCard listing={listing} />
       )}
-    </RouterLink>
-  );
-}
-
-function SpotlightCard({ listing }: { listing: DirectoryListingCard }) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, styles.spotlightCardShadow)}
-    >
-      <Card style={[styles.accentCard, styles.spotlightCard]}>
-        <Flex direction="column" gap="2xl" style={styles.compactCardContent}>
-          <SmallBody style={styles.eyebrow}>
-            {getListingMetadataLabel(listing)}
-          </SmallBody>
-          <Flex
-            direction="column"
-            gap="4xl"
-            style={styles.compactCardContentText}
-          >
-            <Text
-              size={{ default: "xl", sm: "2xl" }}
-              weight="semibold"
-              style={styles.heroTitle}
-            >
-              {listing.name}
-            </Text>
-            <Body style={styles.heroDescription}>{listing.tagline}</Body>
-          </Flex>
-          <Flex align="center" justify="between" gap="xl">
-            <StoreIcon listing={listing} size="lg" />
-            <Button variant="secondary" style={styles.exploreButton}>
-              Explore
-            </Button>
-          </Flex>
-        </Flex>
-      </Card>
     </RouterLink>
   );
 }
@@ -720,15 +622,15 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
   );
 }
 
-function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
+function ListingCard({ listing }: { listing: DirectoryListingCard }) {
   return (
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, styles.newCardLink)}
+      {...stylex.props(styles.bentoLink, styles.listingCardLink)}
     >
-      <Card style={styles.newCard}>
-        <Flex direction="column" gap="4xl" style={styles.newCardContent}>
+      <Card style={styles.listingCard}>
+        <Flex direction="column" gap="4xl" style={styles.listingCardContent}>
           <Flex align="center" gap="2xl">
             <StoreIcon listing={listing} size="xl" />
             <Flex direction="column" gap="xl">
@@ -740,8 +642,9 @@ function NewListingCard({ listing }: { listing: DirectoryListingCard }) {
               </SmallBody>
             </Flex>
           </Flex>
-          <Body variant="secondary">{listing.tagline}</Body>
-          <div {...stylex.props(styles.spacer)} />
+          <Body variant="secondary" style={styles.listItemTagline}>
+            {listing.tagline}
+          </Body>
           <Flex align="center" justify="end" gap="xl">
             <ChevronRight />
           </Flex>
