@@ -856,10 +856,19 @@ export function ProductListingForm({
   );
   const hasIconImage = Boolean(pendingIconPreviewUrl || initialValues.iconUrl);
   /**
+   * A listing that was already persisted without a hero is in a valid
+   * hero-less state — the user previously opted out (or never had one), so we
+   * shouldn't force them to re-confirm by clicking "Remove hero" again. There
+   * also wouldn't be a button to click, since the toggle only renders when
+   * there's an existing hero to remove.
+   */
+  const persistedWithoutHero = allowRemoveHero && !initialValues.heroImageUrl;
+  /**
    * `pendingHeroRemoval` is an explicit "save without a hero" signal so the
    * Save button stays enabled even though `hasHeroImage` is false.
    */
-  const heroSatisfied = !requireHero || hasHeroImage || pendingHeroRemoval;
+  const heroSatisfied =
+    !requireHero || hasHeroImage || pendingHeroRemoval || persistedWithoutHero;
   const hasRequiredImages = heroSatisfied && hasIconImage;
 
   const saveDisabledReasons = useMemo(() => {
@@ -874,9 +883,16 @@ export function ProductListingForm({
     if (!hasIconImage) {
       reasons.push("Add an icon image.");
     }
-    if (requireHero && !hasHeroImage && !pendingHeroRemoval) {
+    if (
+      requireHero &&
+      !hasHeroImage &&
+      !pendingHeroRemoval &&
+      !persistedWithoutHero
+    ) {
       reasons.push(
-        "Add a hero image, or remove the current one to save without a hero.",
+        allowRemoveHero && initialValues.heroImageUrl
+          ? "Add a hero image, or remove the current one to save without a hero."
+          : "Add a hero image.",
       );
     }
     if (!hasValidAppTags) {
@@ -890,6 +906,9 @@ export function ProductListingForm({
     requireHero,
     hasHeroImage,
     pendingHeroRemoval,
+    persistedWithoutHero,
+    allowRemoveHero,
+    initialValues.heroImageUrl,
     hasValidAppTags,
   ]);
 
