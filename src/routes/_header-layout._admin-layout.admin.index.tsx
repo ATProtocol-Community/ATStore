@@ -374,7 +374,8 @@ function StatusBadge({ label }: { label: "approved" | "pending" }) {
 function AdminOverviewPage() {
   const { data } = useSuspenseQuery(adminApi.getAdminDashboardQueryOptions);
 
-  const unverifiedCount = data.unverified.length;
+  const unverifiedCount =
+    data.unverified.length + data.resubmittedAfterRejection.length;
   const pendingClaimCount = data.pendingClaims.length;
   const totalClaimed = data.totalClaimedCount;
 

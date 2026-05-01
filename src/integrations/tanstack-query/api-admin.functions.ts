@@ -86,6 +86,26 @@ const getAdminDashboard = createServerFn({ method: "GET" })
     const claims = schema.listingClaims;
     const homeHero = schema.homePageHeroListings;
     const reviews = schema.storeListingReviews;
+    const rejectionEvents = schema.storeListingRejectionEvents;
+
+    /**
+     * Latest rejection event per listing — used to detect rows that were rejected
+     * by an admin and have since been republished by the owner (`updated_at` past
+     * the rejection). Tap ingest preserves `verification_status = 'rejected'`
+     * (see `tap-listing-sync.ts:resolveListingVerificationStatus`), so without
+     * this surface a resubmission is invisible to admins.
+     */
+    const latestRejectionPerListing = db
+      .select({
+        storeListingId: rejectionEvents.storeListingId,
+        reason: rejectionEvents.reason,
+        rejectedAt: rejectionEvents.createdAt,
+        rn: sql<number>`row_number() over (partition by ${rejectionEvents.storeListingId} order by ${rejectionEvents.createdAt} desc)`.as(
+          "rn",
+        ),
+      })
+      .from(rejectionEvents)
+      .as("latest_rejection");
 
     const atstoreDid = await getAtstoreRepoDid();
     const listingIsClaimed = or(
@@ -124,6 +144,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
 
     const [
       unverified,
+      resubmittedAfterRejection,
       pendingClaims,
       homePageHeroListings,
       totalClaimedRow,
@@ -152,6 +173,46 @@ const getAdminDashboard = createServerFn({ method: "GET" })
         })
         .from(listings)
         .where(eq(listings.verificationStatus, "unverified"))
+        .orderBy(desc(listings.updatedAt)),
+      db
+        .select({
+          id: listings.id,
+          name: listings.name,
+          slug: listings.slug,
+          categorySlugs: listings.categorySlugs,
+          externalUrl: listings.externalUrl,
+          tagline: listings.tagline,
+          fullDescription: listings.fullDescription,
+          appTags: listings.appTags,
+          iconUrl: listings.iconUrl,
+          heroImageUrl: listings.heroImageUrl,
+          screenshotUrls: listings.screenshotUrls,
+          productAccountHandle: listings.productAccountHandle,
+          verificationStatus: listings.verificationStatus,
+          atUri: listings.atUri,
+          updatedAt: listings.updatedAt,
+          lastRejectionReason: latestRejectionPerListing.reason,
+          lastRejectionAt: latestRejectionPerListing.rejectedAt,
+        })
+        .from(listings)
+        .innerJoin(
+          latestRejectionPerListing,
+          and(
+            eq(latestRejectionPerListing.storeListingId, listings.id),
+            eq(latestRejectionPerListing.rn, 1),
+          ),
+        )
+        .where(
+          and(
+            eq(listings.verificationStatus, "rejected"),
+            /**
+             * Buffer absorbs the same-transaction skew between the admin
+             * rejection's `updated_at` (JS `new Date()`) and the rejection
+             * event's `created_at` (Postgres `now()` of the transaction).
+             */
+            sql`${listings.updatedAt} > ${latestRejectionPerListing.rejectedAt} + interval '5 seconds'`,
+          ),
+        )
         .orderBy(desc(listings.updatedAt)),
       db
         .select({
@@ -338,6 +399,15 @@ const getAdminDashboard = createServerFn({ method: "GET" })
         screenshotUrls: (row.screenshotUrls ?? [])
           .map((url) => httpsListingImageUrlOrNull(url))
           .filter((url): url is string => url != null),
+      })),
+      resubmittedAfterRejection: resubmittedAfterRejection.map((row) => ({
+        ...row,
+        iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
+        heroImageUrl: httpsListingImageUrlOrNull(row.heroImageUrl),
+        screenshotUrls: (row.screenshotUrls ?? [])
+          .map((url) => httpsListingImageUrlOrNull(url))
+          .filter((url): url is string => url != null),
+        lastRejectionAt: row.lastRejectionAt.toISOString(),
       })),
       pendingClaims: pendingClaims.map((row) => ({
         ...row,
