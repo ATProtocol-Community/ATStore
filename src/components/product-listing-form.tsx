@@ -9,7 +9,11 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { ImageCropperDialog } from "#/components/image-cropper-dialog";
 import { UserHandleAutocomplete } from "#/components/user-handle-autocomplete";
 import { formatAppTagLabel } from "#/lib/app-tag-metadata";
-import { normalizeAppTag, normalizeAppTags } from "#/lib/app-tags";
+import {
+  MAX_APP_TAGS_PER_LISTING,
+  normalizeAppTag,
+  normalizeAppTags,
+} from "#/lib/app-tags";
 import {
   LISTING_LINK_MAX_COUNT,
   LISTING_LINK_TYPES,
@@ -778,7 +782,7 @@ export function ProductListingForm({
       const next = new Set(current);
       if (next.has(tag)) {
         next.delete(tag);
-      } else {
+      } else if (next.size < MAX_APP_TAGS_PER_LISTING) {
         next.add(tag);
       }
       return next;
@@ -790,6 +794,7 @@ export function ProductListingForm({
     if (!normalized) return;
     setSelectedAppTags((current) => {
       if (current.has(normalized)) return current;
+      if (current.size >= MAX_APP_TAGS_PER_LISTING) return current;
       const next = new Set(current);
       next.add(normalized);
       return next;
@@ -797,6 +802,7 @@ export function ProductListingForm({
     setCustomTagInput("");
   }
 
+  const isAppTagLimitReached = selectedAppTags.size >= MAX_APP_TAGS_PER_LISTING;
   const hasValidAppTags = categoryKind !== "app" || selectedAppTags.size > 0;
 
   function collectAppTagsForSubmit(): Array<string> {
@@ -1631,8 +1637,8 @@ export function ProductListingForm({
                             </Text>
                           </Flex>
                           <Text size="sm" variant="secondary">
-                            What does your app do? Pick at least one tag, or add
-                            your own.
+                            What does your app do? Pick up to{" "}
+                            {MAX_APP_TAGS_PER_LISTING} tags, or add your own.
                           </Text>
                         </Flex>
                         {availableAppTags.length > 0 ? (
@@ -1645,7 +1651,10 @@ export function ProductListingForm({
                                   size="sm"
                                   variant={isSelected ? "primary" : "secondary"}
                                   isSelected={isSelected}
-                                  isDisabled={isSubmitting}
+                                  isDisabled={
+                                    isSubmitting ||
+                                    (!isSelected && isAppTagLimitReached)
+                                  }
                                   onChange={() => {
                                     toggleAppTag(tag);
                                   }}
@@ -1663,6 +1672,7 @@ export function ProductListingForm({
                             onChange={setCustomTagInput}
                             placeholder="e.g. labeler, feed generator"
                             style={styles.customTagInput}
+                            isDisabled={isSubmitting || isAppTagLimitReached}
                             onKeyDown={(event) => {
                               if (event.key === "Enter") {
                                 event.preventDefault();
@@ -1676,6 +1686,7 @@ export function ProductListingForm({
                             label="Add custom tag"
                             isDisabled={
                               isSubmitting ||
+                              isAppTagLimitReached ||
                               normalizeAppTag(customTagInput) === null
                             }
                             onPress={addCustomAppTag}
@@ -1689,6 +1700,13 @@ export function ProductListingForm({
                             but prefer using the predefined tags when possible.
                           </Text>
                         )}
+                        {isAppTagLimitReached ? (
+                          <Text size="sm" variant="secondary">
+                            You've selected the maximum of{" "}
+                            {MAX_APP_TAGS_PER_LISTING} tags. Remove one to pick
+                            a different tag.
+                          </Text>
+                        ) : null}
                       </Flex>
                     </Flex>
                   ) : null}

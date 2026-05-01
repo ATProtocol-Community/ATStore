@@ -5,6 +5,13 @@
 
 const MAX_TAG_LENGTH = 80;
 
+/**
+ * Maximum number of app tags allowed on a submitted listing. Kept small so
+ * the directory's tag facets stay meaningful — submitters must pick the two
+ * tags that best describe the app rather than carpet-bombing the lexicon.
+ */
+export const MAX_APP_TAGS_PER_LISTING = 2;
+
 export function normalizeAppTag(raw: string | null | undefined): string | null {
   if (raw == null) {
     return null;
