@@ -31,7 +31,6 @@ function normalizeListingCategorySlugs(row: StoreListing): Array<string> {
   }
   return out.length > 0 ? out : ["misc"];
 }
-const PLACEHOLDER_HERO = "https://placehold.co/1200x630/png";
 
 /**
  * `knownValues` from `fyi.atstore.listing.detail#link.type`. Lexicon allows any string
@@ -267,33 +266,30 @@ export async function buildListingDetailRecordWithBlobs(
     pickImageUri(row.iconUrl, row.screenshotUrls?.[0]) ?? PLACEHOLDER_ICON;
   // Hero must follow `heroImageUrl` (and `/generated/…` paths), not the icon/avatar.
   // `pickUri` alone skipped relative URLs, so we wrongly fell back to `iconUrl`.
-  const heroUrl =
-    pickImageUri(
-      row.heroImageUrl,
-      row.screenshotUrls?.[0],
-      row.screenshotUrls?.[1],
-    ) ?? PLACEHOLDER_HERO;
-  const heroKey = heroUrl.trim();
+  const heroUrl = pickImageUri(
+    row.heroImageUrl,
+    row.screenshotUrls?.[0],
+    row.screenshotUrls?.[1],
+  );
+  const heroKey = heroUrl?.trim();
   const screenshotUrls = (row.screenshotUrls ?? [])
     .filter((u) => isHttpsUri(u) || isPublicImagePath(u))
-    .filter((u) => u.trim() !== heroKey);
+    .filter((u) => !heroKey || u.trim() !== heroKey);
 
   const tagline = row.tagline?.trim() || "—";
   const categorySlug = normalizeListingCategorySlugs(row);
   const createdAt = row.createdAt.toISOString();
   const updatedAt = row.updatedAt.toISOString();
 
-  async function resolveImageSlot(
-    slot: "icon" | "heroImage",
+  async function resolveIconSlot(
     override: ListingDetailInMemoryImage | undefined,
     existing: AtprotoBlob | undefined,
     fallbackUrl: string,
-    placeholderUrl: string,
   ): Promise<AtprotoBlob> {
     if (override) {
       if (!override.mimeType.startsWith("image/")) {
         throw new Error(
-          `${slot === "icon" ? "Icon" : "Hero"} is not an image: ${override.mimeType} (in-memory)`,
+          `Icon is not an image: ${override.mimeType} (in-memory)`,
         );
       }
       return uploadImageBlob(client, override.bytes, override.mimeType);
@@ -301,36 +297,62 @@ export async function buildListingDetailRecordWithBlobs(
     if (existing) return existing;
     const bytes = await resolveUrlToImageBytesOrPlaceholder(
       fallbackUrl,
-      placeholderUrl,
+      PLACEHOLDER_ICON,
     );
     if (!bytes.mimeType.startsWith("image/")) {
       throw new Error(
-        `${slot === "icon" ? "Icon" : "Hero"} is not an image: ${bytes.mimeType} (${fallbackUrl})`,
+        `Icon is not an image: ${bytes.mimeType} (${fallbackUrl})`,
       );
     }
     return uploadImageBlob(client, bytes.bytes, bytes.mimeType);
   }
 
-  const icon = await resolveImageSlot(
-    "icon",
+  /**
+   * Hero is optional in the lexicon — when there's no override, no prior blob, and no usable
+   * source URL (or fetching it fails), publish the record without `heroImage` rather than
+   * substituting a generic placeholder. Directory surfaces fall back to the first screenshot
+   * or category art.
+   */
+  async function resolveHeroSlot(
+    override: ListingDetailInMemoryImage | undefined,
+    existing: AtprotoBlob | undefined,
+    fallbackUrl: string | undefined,
+  ): Promise<AtprotoBlob | undefined> {
+    if (override) {
+      if (!override.mimeType.startsWith("image/")) {
+        throw new Error(
+          `Hero is not an image: ${override.mimeType} (in-memory)`,
+        );
+      }
+      return uploadImageBlob(client, override.bytes, override.mimeType);
+    }
+    if (existing) return existing;
+    if (!fallbackUrl) return undefined;
+    try {
+      const bytes = await resolveUrlToImageBytes(fallbackUrl);
+      if (!bytes.mimeType.startsWith("image/")) return undefined;
+      return await uploadImageBlob(client, bytes.bytes, bytes.mimeType);
+    } catch {
+      return undefined;
+    }
+  }
+
+  const icon = await resolveIconSlot(
     blobOverrides?.icon,
     existingBlobs?.icon,
     iconUrl,
-    PLACEHOLDER_ICON,
   );
   /**
    * `clearHero` wins over both fresh-bytes overrides and the prior blob ref so the admin
    * "Remove hero" action actually removes the hero — otherwise the existing-blob branch in
-   * `resolveImageSlot` would silently re-attach the prior hero on every republish.
+   * `resolveHeroSlot` would silently re-attach the prior hero on every republish.
    */
   const heroImage = blobOverrides?.clearHero
     ? undefined
-    : await resolveImageSlot(
-        "heroImage",
+    : await resolveHeroSlot(
         blobOverrides?.heroImage,
         existingBlobs?.heroImage,
         heroUrl,
-        PLACEHOLDER_HERO,
       );
 
   const screenshots: Array<AtprotoBlob> = [];
@@ -400,7 +422,7 @@ export async function buildListingDetailRecordWithBlobs(
     record,
     dbUrls: {
       iconUrl,
-      heroImageUrl: heroImage ? heroUrl : null,
+      heroImageUrl: heroImage && heroUrl ? heroUrl : null,
       screenshotUrls,
     },
   };
