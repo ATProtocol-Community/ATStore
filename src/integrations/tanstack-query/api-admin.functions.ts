@@ -29,9 +29,9 @@ import { dbMiddleware } from "./db-middleware";
 
 const HOME_HERO_SLOT_COUNT = 3;
 const RECENT_REVIEWS_LIMIT = 200;
-const RECENTLY_CLAIMED_LISTINGS_LIMIT = 200;
+const RECENT_LISTINGS_LIMIT = 200;
 const ADMIN_OVERVIEW_REVIEWS_PREVIEW = 6;
-const ADMIN_OVERVIEW_CLAIMED_PREVIEW = 5;
+const ADMIN_OVERVIEW_LISTINGS_PREVIEW = 5;
 /** Past complete UTC calendar months to include in admin claims burn-down chart (oldest → newest). */
 const ADMIN_CLAIMS_OVER_TIME_MONTHS = 2;
 
@@ -150,7 +150,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
       totalClaimedRow,
       unclaimedVerifiedRow,
       monthlyClaimRows,
-      recentClaimedRaw,
+      recentListingsRaw,
       reviewPreviewRows,
     ] = await Promise.all([
       db
@@ -282,25 +282,12 @@ const getAdminDashboard = createServerFn({ method: "GET" })
           createdAt: listings.createdAt,
         })
         .from(listings)
-        .where(
-          or(
-            and(
-              isNotNull(listings.claimedAt),
-              isNotNull(listings.claimedByDid),
-            ),
-            and(
-              isNotNull(listings.migratedFromAtUri),
-              isNotNull(listings.repoDid),
-              ne(listings.repoDid, atstoreDid),
-              eq(listings.verificationStatus, "verified"),
-            ),
-          ),
-        )
+        .where(inArray(listings.verificationStatus, ["verified", "rejected"]))
         .orderBy(
           desc(sql`COALESCE(${listings.claimedAt}, ${listings.createdAt})`),
           desc(listings.id),
         )
-        .limit(ADMIN_OVERVIEW_CLAIMED_PREVIEW),
+        .limit(ADMIN_OVERVIEW_LISTINGS_PREVIEW),
       db
         .select({
           id: reviews.id,
@@ -343,19 +330,33 @@ const getAdminDashboard = createServerFn({ method: "GET" })
       };
     });
 
-    const recentClaimedPreview = recentClaimedRaw.map((row) => {
+    const recentListingsPreview = recentListingsRaw.map((row) => {
+      const isMigration =
+        row.migratedFromAtUri != null &&
+        row.repoDid != null &&
+        row.repoDid !== atstoreDid &&
+        row.verificationStatus === "verified";
+      const isClaimed =
+        (row.claimedAt != null && row.claimedByDid != null) || isMigration;
       const whenIso = row.claimedAt
         ? row.claimedAt.toISOString()
         : row.createdAt.toISOString();
+      let statusLabel: "claimed" | "verified" | "submitted" | "rejected";
+      if (isClaimed) {
+        statusLabel = "claimed";
+      } else if (row.verificationStatus === "verified") {
+        statusLabel = "verified";
+      } else if (row.verificationStatus === "rejected") {
+        statusLabel = "rejected";
+      } else {
+        statusLabel = "submitted";
+      }
       return {
         id: row.id,
         name: row.name,
         slug: row.slug,
         whenIso,
-        statusLabel:
-          row.verificationStatus === "verified"
-            ? ("approved" as const)
-            : ("pending" as const),
+        statusLabel,
       };
     });
 
@@ -416,7 +417,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
       homePageHeroListings,
       totalClaimedCount: totalClaimedRow[0]?.count ?? 0,
       claimsOverTime,
-      recentClaimedPreview,
+      recentListingsPreview,
       recentReviewsPreview,
     };
   });
@@ -643,25 +644,28 @@ const getRecentReviewsQueryOptions = queryOptions({
   queryFn: async () => getRecentReviews(),
 });
 
-const getRecentlyClaimedListings = createServerFn({ method: "GET" })
+const getRecentListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
     const { db, schema } = context;
     const listings = schema.storeListings;
 
     /**
+     * Returns recent listings — both claimed and submitted (unclaimed) —
+     * ordered by most recent activity.
+     *
      * "Claimed" covers two paths:
      * - Manual admin approval (`setClaimStatus`) — sets `claimedAt` + `claimedByDid`.
      * - PDS migration (`claimProductListingToPds`) — sets `migratedFromAtUri`, re-points
      *   `repoDid`, and (on success) `claimedAt` + `claimedByDid` so claim time is stable
      *   (Tap ingest does not bump those columns).
      *
-     * Restrict the migration branch to verified rows whose `repoDid` is no longer the
-     * store account so we don't surface spoofed `migratedFromAtUri` values from
-     * unverified records.
+     * The migration branch is only treated as claimed when the row is verified and its
+     * `repoDid` is no longer the store account, so we don't surface spoofed
+     * `migratedFromAtUri` values from unverified records.
      *
-     * Sort by `COALESCE(claimed_at, created_at)` only. Legacy PDS rows without
-     * `claimed_at` use directory date added; backfill `claimed_at` when possible.
+     * Sort by `COALESCE(claimed_at, created_at)` so claimed rows surface by claim time
+     * and unclaimed rows by directory date added.
      */
     const atstoreDid = await getAtstoreRepoDid();
 
@@ -684,30 +688,28 @@ const getRecentlyClaimedListings = createServerFn({ method: "GET" })
         createdAt: listings.createdAt,
       })
       .from(listings)
-      .where(
-        or(
-          and(isNotNull(listings.claimedAt), isNotNull(listings.claimedByDid)),
-          and(
-            isNotNull(listings.migratedFromAtUri),
-            isNotNull(listings.repoDid),
-            ne(listings.repoDid, atstoreDid),
-            eq(listings.verificationStatus, "verified"),
-          ),
-        ),
-      )
+      .where(eq(listings.verificationStatus, "verified"))
       .orderBy(
         desc(sql`COALESCE(${listings.claimedAt}, ${listings.createdAt})`),
         desc(listings.id),
       )
-      .limit(RECENTLY_CLAIMED_LISTINGS_LIMIT);
+      .limit(RECENT_LISTINGS_LIMIT);
 
     return rows.map((row) => {
       const isMigration =
         row.migratedFromAtUri != null &&
         row.repoDid != null &&
-        row.repoDid !== atstoreDid;
+        row.repoDid !== atstoreDid &&
+        row.verificationStatus === "verified";
+      const isClaimed =
+        (row.claimedAt != null && row.claimedByDid != null) || isMigration;
       const claimedByDid =
         row.claimedByDid ?? (isMigration ? row.repoDid : null);
+      const claimSource = isClaimed
+        ? ((isMigration ? "pds-migration" : "admin-approval") as
+            | "pds-migration"
+            | "admin-approval")
+        : null;
       return {
         id: row.id,
         name: row.name,
@@ -718,19 +720,19 @@ const getRecentlyClaimedListings = createServerFn({ method: "GET" })
         categorySlugs: row.categorySlugs,
         productAccountHandle: row.productAccountHandle,
         productAccountDid: row.productAccountDid,
-        claimedByDid,
+        claimedByDid: isClaimed ? claimedByDid : null,
         claimedAt: row.claimedAt ? row.claimedAt.toISOString() : null,
         createdAt: row.createdAt.toISOString(),
-        claimSource: (isMigration ? "pds-migration" : "admin-approval") as
-          | "pds-migration"
-          | "admin-approval",
+        verificationStatus: row.verificationStatus,
+        isClaimed,
+        claimSource,
       };
     });
   });
 
-const getRecentlyClaimedListingsQueryOptions = queryOptions({
-  queryKey: ["admin", "recently-claimed-listings"],
-  queryFn: async () => getRecentlyClaimedListings(),
+const getRecentListingsQueryOptions = queryOptions({
+  queryKey: ["admin", "recent-listings"],
+  queryFn: async () => getRecentListings(),
 });
 
 export const adminApi = {
@@ -741,6 +743,6 @@ export const adminApi = {
   setHomePageHeroListings,
   getRecentReviews,
   getRecentReviewsQueryOptions,
-  getRecentlyClaimedListings,
-  getRecentlyClaimedListingsQueryOptions,
+  getRecentListings,
+  getRecentListingsQueryOptions,
 };

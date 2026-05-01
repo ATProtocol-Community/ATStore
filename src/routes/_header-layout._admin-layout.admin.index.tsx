@@ -356,14 +356,18 @@ function KpiCard({ count, title, to }: KpiCardProps) {
   );
 }
 
-function StatusBadge({ label }: { label: "approved" | "pending" }) {
-  const isApproved = label === "approved";
+function StatusBadge({
+  label,
+}: {
+  label: "claimed" | "verified" | "submitted" | "rejected";
+}) {
+  const isPositive = label === "claimed" || label === "verified";
   return (
     <span
       {...stylex.props(
         styles.badgeBase,
-        isApproved ? success.borderInteractive : warning.borderInteractive,
-        isApproved ? success.text : warning.text,
+        isPositive ? success.borderInteractive : warning.borderInteractive,
+        isPositive ? success.text : warning.text,
       )}
     >
       {label}
@@ -465,13 +469,13 @@ function AdminOverviewPage() {
 
           <Card style={[ui.borderInteractive, ui.bgGhost]}>
             <CardHeader>
-              <CardTitle>Recently claimed</CardTitle>
+              <CardTitle>Recent listings</CardTitle>
               <CardDescription>
-                Listings recently claimed by owners, newest activity first.
+                Recently claimed and submitted listings, newest activity first.
               </CardDescription>
             </CardHeader>
             <CardBody>
-              {data.recentClaimedPreview.length === 0 ? (
+              {data.recentListingsPreview.length === 0 ? (
                 <Body variant="secondary">None yet.</Body>
               ) : (
                 <div {...stylex.props(styles.tableScroll)}>
@@ -484,7 +488,7 @@ function AdminOverviewPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.recentClaimedPreview.map((row) => (
+                      {data.recentListingsPreview.map((row) => (
                         <tr key={row.id}>
                           <td {...stylex.props(styles.td)}>
                             <ProductLink
@@ -516,7 +520,7 @@ function AdminOverviewPage() {
               <div {...stylex.props(styles.linkRow)}>
                 <Link href="/admin/recently-claimed">
                   <Text size="sm" variant="secondary">
-                    View all claimed
+                    View all
                   </Text>{" "}
                   <ChevronRightIcon
                     aria-hidden

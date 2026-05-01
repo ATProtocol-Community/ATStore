@@ -25,10 +25,10 @@ export const Route = createFileRoute(
 )({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(
-      adminApi.getRecentlyClaimedListingsQueryOptions,
+      adminApi.getRecentListingsQueryOptions,
     );
   },
-  component: AdminRecentlyClaimedPage,
+  component: AdminRecentListingsPage,
 });
 
 const styles = stylex.create({
@@ -92,23 +92,36 @@ function formatDate(iso: string) {
   });
 }
 
-function AdminRecentlyClaimedPage() {
-  const { data } = useSuspenseQuery(
-    adminApi.getRecentlyClaimedListingsQueryOptions,
-  );
+function statusLabel(row: {
+  isClaimed: boolean;
+  verificationStatus: "verified" | "rejected" | "unverified";
+}) {
+  if (row.isClaimed) return "Claimed";
+  switch (row.verificationStatus) {
+    case "verified":
+      return "Verified";
+    case "rejected":
+      return "Rejected";
+    case "unverified":
+      return "Submitted";
+  }
+}
+
+function AdminRecentListingsPage() {
+  const { data } = useSuspenseQuery(adminApi.getRecentListingsQueryOptions);
 
   return (
     <Page.Root variant="large" style={styles.page}>
       <Flex direction="column" gap="6xl" style={styles.section}>
-        <Heading1>Recently claimed listings</Heading1>
+        <Heading1>Recent listings</Heading1>
         <SmallBody>
-          Newest by stored claim time when present; otherwise by directory date
-          added (legacy PDS rows). Uses only those timestamps.
+          Verified listings — both claimed and submitted — newest first. Sorted
+          by stored claim time when present; otherwise by directory date added.
         </SmallBody>
 
         <Card>
           <CardHeader>
-            <CardTitle>Claimed listings ({data.length})</CardTitle>
+            <CardTitle>Listings ({data.length})</CardTitle>
           </CardHeader>
           <CardBody>
             {data.length === 0 ? (
@@ -170,23 +183,28 @@ function AdminRecentlyClaimedPage() {
                           </ProductLink>
 
                           <Flex direction="column" style={styles.claimColumn}>
-                            {row.claimedAt ? (
-                              <Text size="sm">
-                                Claimed {formatDate(row.claimedAt)}
-                              </Text>
-                            ) : (
-                              <Text size="sm" variant="secondary">
-                                Claim date not stored (pre-backfill migration)
-                              </Text>
-                            )}
+                            <Text size="sm">{statusLabel(row)}</Text>
+                            {row.isClaimed ? (
+                              row.claimedAt ? (
+                                <Text size="xs" variant="secondary">
+                                  Claimed {formatDate(row.claimedAt)}
+                                </Text>
+                              ) : (
+                                <Text size="xs" variant="secondary">
+                                  Claim date not stored (pre-backfill migration)
+                                </Text>
+                              )
+                            ) : null}
                             <Text size="xs" variant="secondary">
                               Added {formatDate(row.createdAt)}
                             </Text>
-                            <Text size="xs" variant="secondary">
-                              {row.claimSource === "pds-migration"
-                                ? "PDS migration"
-                                : "Admin approval"}
-                            </Text>
+                            {row.claimSource ? (
+                              <Text size="xs" variant="secondary">
+                                {row.claimSource === "pds-migration"
+                                  ? "PDS migration"
+                                  : "Admin approval"}
+                              </Text>
+                            ) : null}
                             {claimant ? (
                               <Text size="xs" variant="secondary">
                                 Claimed by{" "}

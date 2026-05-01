@@ -69,19 +69,19 @@ function RouteComponent() {
               to="/admin/unverified-listings"
               activeProps={{ isActive: true }}
             >
-              Unverified Listings
+              Unverified
             </SidebarLink>
             <SidebarLink
               to="/admin/pending-claims"
               activeProps={{ isActive: true }}
             >
-              Pending Claims
+              Claims
             </SidebarLink>
             <SidebarLink
               to="/admin/recently-claimed"
               activeProps={{ isActive: true }}
             >
-              Recently Claimed
+              Recently Added
             </SidebarLink>
           </SidebarSection>
           <SidebarSection title="Listings">
