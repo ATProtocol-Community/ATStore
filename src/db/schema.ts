@@ -365,6 +365,24 @@ export const homePageHeroListings = pgTable(
   }),
 );
 
+/**
+ * Singleton table holding the listing shown in the homepage promo card slot.
+ * Empty when no promo is configured (homepage falls back to auto-pick).
+ */
+export const homePagePromoListing = pgTable("home_page_promo_listing", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  storeListingId: uuid("store_listing_id")
+    .notNull()
+    .references(() => storeListings.id, { onDelete: "cascade" })
+    .unique(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 /** Queued Bluesky account candidates for manual verification (dev tooling + discovery script). */
 export const storeListingProductAccountCandidates = pgTable(
   "store_listing_product_account_candidates",
@@ -577,6 +595,8 @@ export type StoreListing = typeof storeListings.$inferSelect;
 export type NewStoreListing = typeof storeListings.$inferInsert;
 export type HomePageHeroListing = typeof homePageHeroListings.$inferSelect;
 export type NewHomePageHeroListing = typeof homePageHeroListings.$inferInsert;
+export type HomePagePromoListing = typeof homePagePromoListing.$inferSelect;
+export type NewHomePagePromoListing = typeof homePagePromoListing.$inferInsert;
 export type StoreListingReview = typeof storeListingReviews.$inferSelect;
 export type NewStoreListingReview = typeof storeListingReviews.$inferInsert;
 export type StoreListingFavorite = typeof storeListingFavorites.$inferSelect;

@@ -539,6 +539,7 @@ export interface DirectoryHomePageData {
   spotlights: Array<DirectoryListingCard>;
   popular: Array<DirectoryListingCard>;
   fresh: Array<DirectoryListingCard>;
+  promo: DirectoryListingCard | null;
   tags: Array<DirectoryAppTagSummary>;
 }
 
@@ -1469,6 +1470,7 @@ const getHomePageData = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const table = context.schema.storeListings;
     const homeHeroTable = context.schema.homePageHeroListings;
+    const homePromoTable = context.schema.homePagePromoListing;
     const listingSelect = getListingSelect(table);
 
     const [
@@ -1476,6 +1478,7 @@ const getHomePageData = createServerFn({ method: "GET" })
       newestRows,
       tagRows,
       configuredHomeHeroRows,
+      configuredHomePromoRow,
     ] = await Promise.all([
       context.db
         .select(listingSelect)
@@ -1542,6 +1545,34 @@ const getHomePageData = createServerFn({ method: "GET" })
           .map((id) => rowsById.get(id) ?? null)
           .filter((row): row is DirectoryListingRow => row !== null);
       })(),
+      (async (): Promise<DirectoryListingRow | null> => {
+        const [configured] = await context.db
+          .select({
+            listingId: homePromoTable.storeListingId,
+          })
+          .from(homePromoTable)
+          .limit(1);
+
+        if (!configured) {
+          return null;
+        }
+
+        const [row] = (await context.db
+          .select(listingSelect)
+          .from(table)
+          .where(
+            listingPublicWhere(
+              table,
+              and(
+                eq(table.id, configured.listingId),
+                sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
+              ),
+            ),
+          )
+          .limit(1)) as Array<DirectoryListingRow>;
+
+        return row ?? null;
+      })(),
     ]);
 
     if (recentRows.length === 0) {
@@ -1575,29 +1606,54 @@ const getHomePageData = createServerFn({ method: "GET" })
         ? heroRows.slice(1)
         : dedupedRecentAppRows.filter((row) => row.id !== featuredSource.id);
 
+    const spotlightRows = remainingAppRows.slice(0, 2);
     const spotlights = requireCards(
-      remainingAppRows.slice(0, 2).map((row) => toListingCard(row)),
+      spotlightRows.map((row) => toListingCard(row)),
       2,
       "homepage spotlights",
     );
 
+    const popularRows = dedupedRecentRows
+      .filter((row) => row.id !== featuredSource.id)
+      .slice(0, 6);
     const popular = requireCards(
-      dedupedRecentRows
-        .filter((row) => row.id !== featuredSource.id)
-        .slice(0, 6)
-        .map((row) => toListingCard(row)),
+      popularRows.map((row) => toListingCard(row)),
       6,
       "homepage popular listings",
     );
 
+    const freshRows = dedupeListings(newestRows)
+      .filter((row) => row.id !== featuredSource.id)
+      .slice(0, 3);
     const fresh = requireCards(
-      dedupeListings(newestRows)
-        .filter((row) => row.id !== featuredSource.id)
-        .slice(0, 3)
-        .map((row) => toListingCard(row)),
+      freshRows.map((row) => toListingCard(row)),
       3,
       "homepage fresh listings",
     );
+
+    // Use the admin-configured promo when present; otherwise auto-pick a
+    // listing that isn't already shown elsewhere so the slot acts as a
+    // discovery surface rather than a re-feature.
+    const displayedListingIds = new Set<string>([
+      featuredSource.id,
+      ...spotlightRows.map((row) => row.id),
+      ...popularRows.map((row) => row.id),
+      ...freshRows.map((row) => row.id),
+    ]);
+    let promoSource: DirectoryListingRow | null = configuredHomePromoRow;
+    if (!promoSource) {
+      const promoCandidates = dedupedRecentAppRows.filter(
+        (row) => !displayedListingIds.has(row.id),
+      );
+      promoSource =
+        promoCandidates.find((row) => row.heroImageUrl) ??
+        promoCandidates.find(
+          (row) => row.screenshotUrls.length > 0 || row.iconUrl,
+        ) ??
+        promoCandidates[0] ??
+        null;
+    }
+    const promo = promoSource ? toListingCard(promoSource) : null;
 
     const tags = buildHomePageTagSummaries(tagRows, 9);
 
@@ -1606,6 +1662,7 @@ const getHomePageData = createServerFn({ method: "GET" })
       spotlights,
       popular,
       fresh,
+      promo,
       tags,
     } satisfies DirectoryHomePageData;
   });

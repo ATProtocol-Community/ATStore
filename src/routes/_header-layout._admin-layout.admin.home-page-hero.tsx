@@ -70,6 +70,9 @@ function HomePageHeroPage() {
     Array.from({ length: HOME_HERO_SLOT_COUNT }, () => ""),
   );
   const [heroError, setHeroError] = useState<string | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoListingId, setPromoListingId] = useState<string>("");
+  const [promoError, setPromoError] = useState<string | null>(null);
 
   useEffect(() => {
     const next = Array.from({ length: HOME_HERO_SLOT_COUNT }, () => "");
@@ -80,6 +83,10 @@ function HomePageHeroPage() {
     }
     setHeroListingIds(next);
   }, [data.homePageHeroListings]);
+
+  useEffect(() => {
+    setPromoListingId(data.homePagePromoListing?.id ?? "");
+  }, [data.homePagePromoListing]);
 
   async function refresh() {
     await Promise.all([
@@ -177,6 +184,87 @@ function HomePageHeroPage() {
               >
                 Save homepage hero list
               </Button>
+            </Flex>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Homepage promo card</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <Flex direction="column" style={styles.cardBody}>
+              <SmallBody style={styles.helperText}>
+                Pick the app shown alongside the “Trending” popular list. Leave
+                empty to auto-pick a listing not featured elsewhere on the home
+                page.
+              </SmallBody>
+              <Flex direction="column" style={styles.comboList}>
+                <ComboBox
+                  style={styles.formField}
+                  label="Promo card app"
+                  items={appListings.map((listing) => ({
+                    id: listing.id,
+                    label: listing.name,
+                  }))}
+                  isDisabled={promoBusy}
+                  placeholder="Auto-pick"
+                  selectedKey={promoListingId || null}
+                  onSelectionChange={(key) =>
+                    setPromoListingId(key ? String(key) : "")
+                  }
+                >
+                  {(item) => (
+                    <ComboBoxItem id={item.id}>{item.label}</ComboBoxItem>
+                  )}
+                </ComboBox>
+              </Flex>
+              {promoError ? <SmallBody>{promoError}</SmallBody> : null}
+              {data.homePagePromoListing ? (
+                <SmallBody>
+                  Current: {data.homePagePromoListing.name} (
+                  {data.homePagePromoListing.id})
+                </SmallBody>
+              ) : (
+                <SmallBody>Current: auto-pick</SmallBody>
+              )}
+              <Flex gap="md">
+                <Button
+                  isDisabled={promoBusy}
+                  onPress={async () => {
+                    setPromoBusy(true);
+                    setPromoError(null);
+                    try {
+                      await adminApi.setHomePagePromoListing({
+                        data: {
+                          listingId:
+                            promoListingId.length > 0 ? promoListingId : null,
+                        },
+                      });
+                      await refresh();
+                    } catch (error) {
+                      setPromoError(
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to update homepage promo card.",
+                      );
+                    } finally {
+                      setPromoBusy(false);
+                    }
+                  }}
+                >
+                  Save promo card
+                </Button>
+                <Button
+                  variant="secondary"
+                  isDisabled={promoBusy || promoListingId.length === 0}
+                  onPress={() => {
+                    setPromoListingId("");
+                  }}
+                >
+                  Clear selection
+                </Button>
+              </Flex>
             </Flex>
           </CardBody>
         </Card>

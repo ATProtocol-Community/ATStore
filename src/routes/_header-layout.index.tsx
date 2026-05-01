@@ -22,7 +22,6 @@ import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { StarRating } from "../design-system/star-rating";
 import {
   animationDuration,
   animationTimingFunction,
@@ -235,6 +234,12 @@ const styles = stylex.create({
       [breakpoints.lg]: "minmax(0, 1.2fr) minmax(18rem, 0.9fr)",
     },
   },
+  popularGridSingle: {
+    gridTemplateColumns: {
+      default: "1fr",
+      [breakpoints.lg]: "1fr",
+    },
+  },
   popularList: {
     padding: verticalSpace["2xl"],
     borderColor: uiColor.component2,
@@ -336,7 +341,7 @@ function HomePage() {
   const { data: claimEligibility } = useSuspenseQuery(
     directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
-  const promoListing = data.spotlights[0] || data.featured;
+  const promoListing = data.promo;
 
   const showClaimBanner =
     claimEligibility.eligible && claimEligibility.listings.length > 0;
@@ -425,7 +430,12 @@ function HomePage() {
             to="/apps/all"
             search={{ sort: "popular" }}
           />
-          <Grid style={styles.popularGrid}>
+          <Grid
+            style={[
+              styles.popularGrid,
+              promoListing ? null : styles.popularGridSingle,
+            ]}
+          >
             <Flex direction="column" gap="md" style={styles.popularList}>
               {data.popular.map((listing, index) => (
                 <PopularListItem
@@ -435,7 +445,7 @@ function HomePage() {
                 />
               ))}
             </Flex>
-            <PromoCard listing={promoListing} />
+            {promoListing ? <PromoCard listing={promoListing} /> : null}
           </Grid>
         </section>
 
@@ -585,23 +595,20 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
           />
         ) : null}
         <Flex direction="column" gap="4xl" style={styles.promoCardBody}>
-          <Flex direction="column" gap="2xl">
-            <Flex align="center" justify="between">
-              <Text size="sm" weight="light" style={styles.eyebrow}>
-                Trending
+          <Flex align="center" gap="2xl">
+            <StoreIcon listing={listing} size="xl" />
+            <Flex direction="column" gap="xl">
+              <Text
+                size={{ default: "2xl", sm: "3xl" }}
+                weight="semibold"
+                style={styles.heroTitle}
+              >
+                {listing.name}
               </Text>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-              />
+              <SmallBody variant="secondary">
+                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+              </SmallBody>
             </Flex>
-            <Text
-              size={{ default: "2xl", sm: "3xl" }}
-              weight="semibold"
-              style={styles.heroTitle}
-            >
-              {listing.name}
-            </Text>
           </Flex>
           <Text
             size="lg"
@@ -610,11 +617,8 @@ function PromoCard({ listing }: { listing: DirectoryListingCard }) {
           >
             {listing.tagline}
           </Text>
-          <Flex align="center" justify="between" gap="xl">
-            <StoreIcon listing={listing} size="lg" />
-            <Button variant="secondary" style={styles.exploreButton}>
-              Explore
-            </Button>
+          <Flex align="center" justify="end" gap="xl">
+            <ChevronRight />
           </Flex>
         </Flex>
       </Card>

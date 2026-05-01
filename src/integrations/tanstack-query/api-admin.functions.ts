@@ -68,6 +68,10 @@ const setHomePageHeroListingsInput = z.object({
     }),
 });
 
+const setHomePagePromoListingInput = z.object({
+  listingId: z.string().uuid().nullable(),
+});
+
 function hasAppTwoSegmentCategory(categorySlugs: Array<string>) {
   return categorySlugs.some((slug) => {
     const trimmed = slug.trim();
@@ -85,6 +89,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
     const listings = schema.storeListings;
     const claims = schema.listingClaims;
     const homeHero = schema.homePageHeroListings;
+    const homePromo = schema.homePagePromoListing;
     const reviews = schema.storeListingReviews;
     const rejectionEvents = schema.storeListingRejectionEvents;
 
@@ -147,6 +152,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
       resubmittedAfterRejection,
       pendingClaims,
       homePageHeroListings,
+      homePagePromoListingRows,
       totalClaimedRow,
       unclaimedVerifiedRow,
       monthlyClaimRows,
@@ -243,6 +249,15 @@ const getAdminDashboard = createServerFn({ method: "GET" })
         .from(homeHero)
         .innerJoin(listings, eq(homeHero.storeListingId, listings.id))
         .orderBy(asc(homeHero.position)),
+      db
+        .select({
+          id: listings.id,
+          name: listings.name,
+          slug: listings.slug,
+        })
+        .from(homePromo)
+        .innerJoin(listings, eq(homePromo.storeListingId, listings.id))
+        .limit(1),
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(listings)
@@ -415,6 +430,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
         listingIconUrl: httpsListingImageUrlOrNull(row.listingIconUrl),
       })),
       homePageHeroListings,
+      homePagePromoListing: homePagePromoListingRows[0] ?? null,
       totalClaimedCount: totalClaimedRow[0]?.count ?? 0,
       claimsOverTime,
       recentListingsPreview,
@@ -582,6 +598,50 @@ const setHomePageHeroListings = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+const setHomePagePromoListing = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .inputValidator(setHomePagePromoListingInput)
+  .handler(async ({ data, context }) => {
+    const { db, schema } = context;
+    const listings = schema.storeListings;
+    const homePromo = schema.homePagePromoListing;
+
+    if (data.listingId !== null) {
+      const [selected] = await db
+        .select({
+          id: listings.id,
+          categorySlugs: listings.categorySlugs,
+          verificationStatus: listings.verificationStatus,
+        })
+        .from(listings)
+        .where(eq(listings.id, data.listingId))
+        .limit(1);
+
+      if (!selected || selected.verificationStatus !== "verified") {
+        throw new Error(
+          "Promo listing must reference a verified app listing.",
+        );
+      }
+      if (!hasAppTwoSegmentCategory(selected.categorySlugs ?? [])) {
+        throw new Error(
+          "Promo listing must reference a verified app listing (apps/*).",
+        );
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(homePromo);
+      if (data.listingId !== null) {
+        await tx.insert(homePromo).values({
+          storeListingId: data.listingId,
+          updatedAt: new Date(),
+        });
+      }
+    });
+
+    return { ok: true as const };
+  });
+
 const getRecentReviews = createServerFn({ method: "GET" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
@@ -741,6 +801,7 @@ export const adminApi = {
   setListingVerification,
   setClaimStatus,
   setHomePageHeroListings,
+  setHomePagePromoListing,
   getRecentReviews,
   getRecentReviewsQueryOptions,
   getRecentListings,
