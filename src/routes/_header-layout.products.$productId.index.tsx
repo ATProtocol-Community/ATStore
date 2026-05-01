@@ -756,11 +756,11 @@ function ProductPage() {
               </Flex>
               <Flex gap="xl" style={styles.reviewsActions}>
                 <ButtonLink
-                  to="/products/$productId/reviews"
+                  to="/products/$productId/reviews/write"
                   params={{ productId: productSlug }}
                   variant="secondary"
                 >
-                  View all
+                  Create review
                 </ButtonLink>
               </Flex>
             </Flex>
@@ -802,14 +802,16 @@ function ProductPage() {
             </Flex>
           )}
 
-          <ButtonLink
-            to="/products/$productId/reviews/write"
-            params={{ productId: productSlug }}
-            size="lg"
-            variant="secondary"
-          >
-            Create review
-          </ButtonLink>
+          {previewReviews.length > 0 ? (
+            <ButtonLink
+              to="/products/$productId/reviews"
+              params={{ productId: productSlug }}
+              variant="secondary"
+              size="lg"
+            >
+              View all
+            </ButtonLink>
+          ) : null}
         </Flex>
 
         {listingMentions.length > 0 ? (
