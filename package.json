@@ -30,6 +30,7 @@
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
     "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts",
     "jetstream:consumer": "tsx -r dotenv/config scripts/jetstream-consumer.ts",
+    "trending:rescore": "tsx -r dotenv/config scripts/rescore-trending.ts",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
     "lint": "pnpm exec oxlint .",

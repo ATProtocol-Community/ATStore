@@ -11,7 +11,6 @@ import { ChevronRight } from "lucide-react";
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { AppTagCard } from "../components/AppTagCard";
-import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { HeroImage } from "../components/HeroImage";
 import { Alert } from "../design-system/alert";
@@ -331,10 +330,6 @@ const styles = stylex.create({
     cornerShape: "unset",
     cursor: "pointer",
   },
-  heroImage: {
-    // aspectRatio: "16 / 9",
-    width: "auto",
-  },
   heroImagePlaceholder: {
     flexGrow: 1,
     minHeight: 0,
@@ -540,14 +535,15 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
     >
       <Card size="lg" style={styles.bentoLinkFeatured}>
         <Flex direction="column" gap="4xl" style={styles.heroCardContent}>
-          <div {...stylex.props(styles.heroImagePlaceholder)}>
-            <HeroImage
-              alt={getDirectoryListingHeroImageAlt(listing)}
-              glowIntensity={0}
-              src={listing.heroImageUrl}
-              style={styles.heroImage}
-            />
-          </div>
+          {listing.heroImageUrl ? (
+            <div {...stylex.props(styles.heroImagePlaceholder)}>
+              <HeroImage
+                alt={getDirectoryListingHeroImageAlt(listing)}
+                glowIntensity={0}
+                src={listing.heroImageUrl}
+              />
+            </div>
+          ) : null}
           <Flex direction="column" gap="4xl" style={styles.listingCardContent}>
             <Flex align="center" gap="2xl">
               <StoreIcon listing={listing} size="xl" />
