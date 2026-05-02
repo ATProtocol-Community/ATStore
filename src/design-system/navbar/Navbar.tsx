@@ -132,6 +132,7 @@ const styles = stylex.create({
       ":is([aria-current=page])": 1,
       ":is([data-active])": 1,
       ":is([data-status=active])": 1,
+      ":is([data-has-underline=false])": "0 !important",
     },
     gap: gap["md"],
     textDecoration: "none",
@@ -151,6 +152,8 @@ const styles = stylex.create({
   },
   logoContent: {
     position: "relative",
+    display: "flex",
+    alignItems: "center",
 
     "::after": {
       backgroundColor: "currentColor",
@@ -324,6 +327,11 @@ export interface NavbarLogoProps extends StyleXComponentProps<
    * Optional logo image source. If provided, displays the image instead of text.
    */
   logoSrc?: string | null;
+  /**
+   * Whether the logo should have an underline.
+   * @default true
+   */
+  hasUnderline?: boolean;
 }
 
 /**
@@ -333,12 +341,14 @@ export const NavbarLogo = ({
   style,
   isActive,
   logoSrc,
+  hasUnderline = true,
   ...props
 }: NavbarLogoProps) => {
   return (
     <div
       {...props}
       data-active={isActive}
+      data-has-underline={hasUnderline}
       {...stylex.props(styles.logo, style)}
     >
       {logoSrc ? (

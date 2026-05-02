@@ -21,7 +21,6 @@ const IconButtonLink = createLink(IconButton);
 
 const styles = stylex.create({
   logoContent: {
-    textDecoration: "none",
     alignItems: "center",
     columnGap: "8px",
     display: "flex",
@@ -49,7 +48,7 @@ export function SiteHeader() {
 
   return (
     <Navbar>
-      <NavbarLogoLink to="/" style={styles.logoContent}>
+      <NavbarLogoLink to="/" style={styles.logoContent} hasUnderline={false}>
         <AtStoreLogo variant="navbar" />
       </NavbarLogoLink>
       <NavbarNavigation justify="right">
