@@ -1,52 +1,22 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
-import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions";
 import { user } from "#/integrations/tanstack-query/api-user.functions";
-import { useNotificationReadState } from "#/lib/notification-read-state";
 import { LogOut, Shield } from "lucide-react";
 
 import { AvatarButton } from "../design-system/avatar";
-import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
-import { criticalColor } from "../design-system/theme/color.stylex";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { size } from "../design-system/theme/semantic-spacing.stylex";
 import { ThemeSubMenu } from "./ThemeMenu";
 
 const ButtonLink = createLink(Button);
 
 const styles = stylex.create({
-  avatarTriggerWrapper: {
-    display: "inline-flex",
-    position: "relative",
-  },
-  unreadDot: {
-    borderColor: "white",
-    borderRadius: "999px",
-    borderStyle: "solid",
-    borderWidth: 2,
-    backgroundColor: criticalColor.solid1,
-    pointerEvents: "none",
-    position: "absolute",
-    height: size.xs,
-    right: "-2px",
-    top: "-2px",
-    width: size.xs,
-  },
-  desktopAvatar: {
-    display: {
-      default: "none",
-      [breakpoints.sm]: "flex",
-    },
-  },
-  mobileAvatar: {
-    display: {
-      default: "flex",
-      [breakpoints.sm]: "none",
-    },
+  avatar: {
+    height: size["4xl"],
+    width: size["4xl"],
   },
 });
 
@@ -56,14 +26,7 @@ export function NavbarAuth() {
     ...user.getUserProfileQueryOptions,
     enabled: session?.user != null,
   });
-  const { data: notifications } = useQuery({
-    ...notificationApi.getProductNotificationsQueryOptions({ limit: 50 }),
-    enabled: session?.user != null,
-  });
-  const { unreadCount } = useNotificationReadState(
-    session?.user?.did ?? null,
-    notifications ?? [],
-  );
+
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -83,39 +46,15 @@ export function NavbarAuth() {
       <Menu
         size="lg"
         trigger={
-          <div {...stylex.props(styles.avatarTriggerWrapper)}>
-            <AvatarButton
-              size="md"
-              src={session.user.image ?? undefined}
-              fallback={initial}
-              label={session.user.name}
-              style={styles.mobileAvatar}
-            />
-            <AvatarButton
-              size="md"
-              src={session.user.image ?? undefined}
-              fallback={initial}
-              style={styles.desktopAvatar}
-            />
-            {unreadCount > 0 && <span {...stylex.props(styles.unreadDot)} />}
-          </div>
+          <AvatarButton
+            size="md"
+            src={session.user.image ?? undefined}
+            fallback={initial}
+            avatarStyle={styles.avatar}
+          />
         }
         placement="bottom end"
       >
-        <MenuItem
-          onPress={() => {
-            void navigate({ to: "/notifications" });
-          }}
-        >
-          <Flex align="center" gap="md">
-            Notifications
-            {unreadCount > 0 && (
-              <Badge size="sm" variant="primary">
-                {unreadCount}
-              </Badge>
-            )}
-          </Flex>
-        </MenuItem>
         <MenuItem
           onPress={() => {
             const did = session.user.did;
