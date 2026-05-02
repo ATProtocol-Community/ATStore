@@ -11,8 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
+import { Route as LocaleRouteImport } from './routes/$locale'
 import { Route as OgIndexRouteImport } from './routes/og.index'
 import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
 import { Route as OgTagRouteImport } from './routes/og.tag'
@@ -20,6 +20,7 @@ import { Route as OgReviewRouteImport } from './routes/og.review'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
+import { Route as LocaleAboutRouteImport } from './routes/$locale.about'
 import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
 import { Route as HeaderLayoutProductsManageRouteImport } from './routes/_header-layout.products.manage'
 import { Route as HeaderLayoutProductsCreateRouteImport } from './routes/_header-layout.products.create'
@@ -62,13 +63,13 @@ const HomeRoute = HomeRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
   id: '/_header-layout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocaleRoute = LocaleRouteImport.update({
+  id: '/$locale',
+  path: '/$locale',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OgIndexRoute = OgIndexRouteImport.update({
@@ -105,6 +106,11 @@ const HeaderLayoutNotificationsRoute =
 const HeaderLayoutAdminLayoutRoute = HeaderLayoutAdminLayoutRouteImport.update({
   id: '/_admin-layout',
   getParentRoute: () => HeaderLayoutRoute,
+} as any)
+const LocaleAboutRoute = LocaleAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => LocaleRoute,
 } as any)
 const HeaderLayoutProfileActorRoute =
   HeaderLayoutProfileActorRouteImport.update({
@@ -288,10 +294,11 @@ const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/$locale': typeof LocaleRouteWithChildren
   '/': typeof HeaderLayoutIndexRoute
-  '/about': typeof AboutRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/$locale/about': typeof LocaleAboutRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og/review': typeof OgReviewRoute
@@ -330,9 +337,10 @@ export interface FileRoutesByFullPath {
   '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesByTo {
-  '/about': typeof AboutRoute
+  '/$locale': typeof LocaleRouteWithChildren
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/$locale/about': typeof LocaleAboutRoute
   '/': typeof HeaderLayoutIndexRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
@@ -372,10 +380,11 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/$locale': typeof LocaleRouteWithChildren
   '/_header-layout': typeof HeaderLayoutRouteWithChildren
-  '/about': typeof AboutRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/$locale/about': typeof LocaleAboutRoute
   '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
   '/_header-layout/search': typeof HeaderLayoutSearchRoute
@@ -418,10 +427,11 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/$locale'
     | '/'
-    | '/about'
     | '/home'
     | '/login'
+    | '/$locale/about'
     | '/notifications'
     | '/search'
     | '/og/review'
@@ -460,9 +470,10 @@ export interface FileRouteTypes {
     | '/products/$productId/reviews/$reviewId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/about'
+    | '/$locale'
     | '/home'
     | '/login'
+    | '/$locale/about'
     | '/'
     | '/notifications'
     | '/search'
@@ -501,10 +512,11 @@ export interface FileRouteTypes {
     | '/products/$productId/reviews/$reviewId/edit'
   id:
     | '__root__'
+    | '/$locale'
     | '/_header-layout'
-    | '/about'
     | '/home'
     | '/login'
+    | '/$locale/about'
     | '/_header-layout/_admin-layout'
     | '/_header-layout/notifications'
     | '/_header-layout/search'
@@ -546,8 +558,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  LocaleRoute: typeof LocaleRouteWithChildren
   HeaderLayoutRoute: typeof HeaderLayoutRouteWithChildren
-  AboutRoute: typeof AboutRoute
   HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
   OgReviewRoute: typeof OgReviewRoute
@@ -576,18 +588,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_header-layout': {
       id: '/_header-layout'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof HeaderLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$locale': {
+      id: '/$locale'
+      path: '/$locale'
+      fullPath: '/$locale'
+      preLoaderRoute: typeof LocaleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/og/': {
@@ -638,6 +650,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof HeaderLayoutAdminLayoutRouteImport
       parentRoute: typeof HeaderLayoutRoute
+    }
+    '/$locale/about': {
+      id: '/$locale/about'
+      path: '/about'
+      fullPath: '/$locale/about'
+      preLoaderRoute: typeof LocaleAboutRouteImport
+      parentRoute: typeof LocaleRoute
     }
     '/_header-layout/profile/$actor': {
       id: '/_header-layout/profile/$actor'
@@ -859,6 +878,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface LocaleRouteChildren {
+  LocaleAboutRoute: typeof LocaleAboutRoute
+}
+
+const LocaleRouteChildren: LocaleRouteChildren = {
+  LocaleAboutRoute: LocaleAboutRoute,
+}
+
+const LocaleRouteWithChildren =
+  LocaleRoute._addFileChildren(LocaleRouteChildren)
+
 interface HeaderLayoutAdminLayoutRouteChildren {
   HeaderLayoutAdminLayoutAdminAddListingRoute: typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   HeaderLayoutAdminLayoutAdminAdminsRoute: typeof HeaderLayoutAdminLayoutAdminAdminsRoute
@@ -970,8 +1000,8 @@ const HeaderLayoutRouteWithChildren = HeaderLayoutRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  LocaleRoute: LocaleRouteWithChildren,
   HeaderLayoutRoute: HeaderLayoutRouteWithChildren,
-  AboutRoute: AboutRoute,
   HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
   OgReviewRoute: OgReviewRoute,

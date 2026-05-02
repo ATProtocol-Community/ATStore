@@ -7,18 +7,51 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  redirect,
   useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { saveHandle } from "#/utils/saved-handles";
 import { useLayoutEffect } from "react";
 
+import type { Locale } from "../lib/locale";
+
 import { primaryColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
+import { initI18n } from "../i18n";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
+import { matchAcceptLanguage } from "../lib/locale";
 import { DEFAULT_THEME_MODE } from "../lib/theme";
 import appCss from "../styles.css?url";
+
+// Eagerly initialize i18next so `useTranslation` works on any route — even
+// top-level ones outside `$locale` (where the `<I18nextProvider>` lives).
+// Idempotent: subsequent `initI18n` calls (e.g. from `$locale.tsx` to switch
+// languages) reuse the same instance and just call `changeLanguage`.
+initI18n();
+
+/**
+ * Server-side locale detection for unprefixed-path redirects. URL is the
+ * source of truth, so the only fallback is `Accept-Language` (and
+ * `DEFAULT_LOCALE` if nothing matches).
+ */
+const detectLocale = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ locale: Locale }> => {
+    const acceptLanguage = getRequest().headers.get("accept-language");
+    return { locale: matchAcceptLanguage(acceptLanguage) };
+  },
+);
+
+/**
+ * Top-level paths whose route file was moved under `$locale/...`. When one
+ * of these is hit without a locale prefix, the top-level route no longer
+ * exists — so we redirect to the locale-prefixed version. Append to this
+ * list as more surfaces are migrated.
+ */
+const MIGRATED_TOP_LEVEL_PATHS: ReadonlySet<string> = new Set(["/about"]);
 
 const primaryColorTheme = stylex.createTheme(primaryColor, {
   bg: blue.bg,
@@ -118,7 +151,19 @@ function PersistOAuthSavedHandle() {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
+    // If the user hits an unprefixed top-level path that we've migrated under
+    // `$locale/...`, redirect to the locale-prefixed version (the top-level
+    // file no longer exists). Untouched routes are left alone, so this PR
+    // can ship without migrating every surface.
+    const pathname = location.pathname;
+    if (MIGRATED_TOP_LEVEL_PATHS.has(pathname)) {
+      const { locale: detected } = await detectLocale();
+      throw redirect({
+        href: `/${detected}${pathname}${location.searchStr ?? ""}`,
+      });
+    }
+
     await Promise.all([
       context.queryClient.ensureQueryData(user.getSessionQueryOptions),
       context.queryClient.ensureQueryData(user.getThemePreferenceQueryOptions),

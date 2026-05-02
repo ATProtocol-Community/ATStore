@@ -1,0 +1,12 @@
+{
+  "siteHeader": {
+    "searchListingsLabel": "[~~~~ Šéåŕçĥ ļîšţîñĝš ~~~~]"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "[~~~~ Çĥåñĝé ļåñĝüåĝé ~~~~]",
+    "languageName": {
+      "en": "[~~ Éñĝļîšĥ ~~]",
+      "en-XA": "[~~~~ Þšéüðö (éñ-ẊÅ) ~~~~]"
+    }
+  }
+}

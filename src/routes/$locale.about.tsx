@@ -46,7 +46,7 @@ const LinkLink = createLink(Link);
 
 const BLUESKY_ECOSYSTEM_CATEGORY_ID = "apps/bluesky";
 
-export const Route = createFileRoute("/about")({
+export const Route = createFileRoute("/$locale/about")({
   loader: async ({ context }) => {
     const ecosystemData = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryCategoryPageQueryOptions({
