@@ -1594,6 +1594,8 @@ export function ProductListingForm({
                             setAppName(value);
                           }}
                           isRequired
+                          isSearchable
+                          shouldFlip={false}
                         >
                           {(item) => <SelectItem>{item.label}</SelectItem>}
                         </Select>
@@ -1742,7 +1744,7 @@ export function ProductListingForm({
           <Flex align="center" justify="between" gap="2xl">
             {saveDisabledReasons.length > 0 && !isSubmitting ? (
               <Popover
-                placement="top center"
+                placement="top"
                 trigger={
                   <IconButton
                     size="lg"

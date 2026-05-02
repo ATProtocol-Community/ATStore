@@ -158,7 +158,8 @@ function SelectContent<T extends object>({
     listbox = (
       <Autocomplete filter={contains}>
         <div {...stylex.props(styles.searchField)}>
-          <SearchField placeholder="Search" variant="secondary" />
+          {/* eslint-disable-next-line jsx_a11y/no-autofocus */}
+          <SearchField placeholder="Search" variant="secondary" autoFocus />
         </div>
         <ListBoxSeparator />
         {listbox}
