@@ -46,6 +46,9 @@ export const LISTING_LINK_TYPES = [
   "changelog",
   "source",
   "status",
+  "community",
+  "donate",
+  "license",
   "other",
 ] as const;
 

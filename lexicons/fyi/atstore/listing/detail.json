@@ -148,6 +148,9 @@
             "changelog",
             "source",
             "status",
+            "community",
+            "donate",
+            "license",
             "other"
           ],
           "description": "The kind of link."

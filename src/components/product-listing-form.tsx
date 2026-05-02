@@ -98,11 +98,14 @@ const MAX_SCREENSHOT_COUNT = 4;
 const LINK_TYPE_OPTIONS: Array<{ id: ListingLinkType; label: string }> = [
   { id: "support", label: "Support" },
   { id: "contact", label: "Contact" },
+  { id: "community", label: "Community" },
   { id: "docs", label: "Documentation" },
   { id: "blog", label: "Blog" },
   { id: "changelog", label: "Changelog" },
   { id: "source", label: "Source code" },
+  { id: "license", label: "License" },
   { id: "status", label: "Status page" },
+  { id: "donate", label: "Donate" },
   { id: "other", label: "Other" },
 ];
 
@@ -521,8 +524,8 @@ const styles = stylex.create({
   },
   linkRowTypeFieldPrivacyTermsText: {
     boxSizing: "border-box",
-    paddingLeft: `calc(${horizontalSpace.md} + 1px)`,
-    paddingRight: `calc(${horizontalSpace.md} + 1px)`,
+    paddingLeft: `calc(${horizontalSpace["2xl"]} + 1px)`,
+    paddingRight: `calc(${horizontalSpace["2xl"]} + 1px)`,
   },
   linkRowUrlField: {
     flexBasis: "20rem",
