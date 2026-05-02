@@ -278,6 +278,8 @@ export interface DirectoryListingReviewReply {
   text: string;
   replyCreatedAt: string;
   authorDisplayName: string | null;
+  /** Resolved Bluesky handle (no leading @); null if profile lookup failed. */
+  authorHandle: string | null;
   authorAvatarUrl: string | null;
 }
 
@@ -288,6 +290,8 @@ export interface DirectoryListingReview {
   text: string | null;
   reviewCreatedAt: string;
   authorDisplayName: string | null;
+  /** Resolved Bluesky handle (no leading @); null if profile lookup failed. */
+  authorHandle: string | null;
   authorAvatarUrl: string | null;
   /** Mirrored reply rows for this review. */
   replyCount: number;
@@ -2291,6 +2295,10 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
     const enriched: Array<DirectoryListingReview> = await Promise.all(
       rows.map(async (row) => {
         const profile = await fetchBlueskyPublicProfileFields(row.authorDid);
+        const handle =
+          profile?.handle?.trim() && profile.handle.trim().length > 0
+            ? profile.handle.trim()
+            : null;
         const displayName =
           row.authorDisplayName?.trim() ||
           profile?.displayName?.trim() ||
@@ -2307,6 +2315,7 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
           text: row.text,
           reviewCreatedAt: row.reviewCreatedAt.toISOString(),
           authorDisplayName: displayName,
+          authorHandle: handle,
           authorAvatarUrl: avatarUrl,
           replyCount,
           canReply: viewerMayReplyOnListingReview({
@@ -2498,6 +2507,11 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
       const avatarUrl =
         row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
 
+      const handle =
+        profile?.handle?.trim() && profile.handle.trim().length > 0
+          ? profile.handle.trim()
+          : null;
+
       const replyCount = Number(row.replyCount ?? 0);
       return {
         id: row.id,
@@ -2506,6 +2520,7 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
         text: row.text,
         reviewCreatedAt: row.reviewCreatedAt.toISOString(),
         authorDisplayName: displayName,
+        authorHandle: handle,
         authorAvatarUrl: avatarUrl,
         replyCount,
         canReply: viewerMayReplyOnListingReview({
@@ -2952,9 +2967,13 @@ const getDirectoryListingReviewReplies = createServerFn({ method: "GET" })
     const enriched: Array<DirectoryListingReviewReply> = await Promise.all(
       rows.map(async (row) => {
         const profile = await fetchBlueskyPublicProfileFields(row.authorDid);
+        const handle =
+          profile?.handle?.trim() && profile.handle.trim().length > 0
+            ? profile.handle.trim()
+            : null;
         const displayName =
           profile?.displayName?.trim() ||
-          profile?.handle ||
+          handle ||
           (row.authorDid.length > 16
             ? `${row.authorDid.slice(0, 10)}…`
             : row.authorDid);
@@ -2967,6 +2986,7 @@ const getDirectoryListingReviewReplies = createServerFn({ method: "GET" })
           text: row.text,
           replyCreatedAt: row.replyCreatedAt.toISOString(),
           authorDisplayName: displayName,
+          authorHandle: handle,
           authorAvatarUrl: avatarUrl,
         };
       }),

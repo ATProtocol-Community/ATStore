@@ -1,8 +1,21 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link as TanstackLink, createLink } from "@tanstack/react-router";
-import { MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  MoreVertical,
+  Pencil,
+  Share2,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
+import {
+  Button as AriaDisclosureTriggerButton,
+  Disclosure,
+  DisclosurePanel,
+} from "react-aria-components";
 
 import type {
   DirectoryListingReview,
@@ -31,17 +44,18 @@ import { Form } from "../design-system/form";
 import { IconButton } from "../design-system/icon-button";
 import { Menu, MenuItem } from "../design-system/menu";
 import { StarRating } from "../design-system/star-rating";
+import { TextArea } from "../design-system/text-area";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
   horizontalSpace,
+  size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 import { Text } from "../design-system/typography/text";
-import { TextArea } from "../design-system/text-area";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
@@ -51,6 +65,9 @@ import { RestrictedMarkdownContent } from "./restricted-markdown-content";
 const IconButtonLink = createLink(IconButton);
 
 const styles = stylex.create({
+  repliesDisclosure: {
+    paddingTop: gap["xl"],
+  },
   reviewedListingCardBody: {
     paddingBottom: verticalSpace["xl"],
     paddingTop: verticalSpace["xl"],
@@ -106,7 +123,7 @@ const styles = stylex.create({
     minWidth: 0,
   },
   authorLinkRow: {
-    gap: gap["2xl"],
+    gap: gap["xl"],
     alignItems: "center",
     flexBasis: "0%",
     flexGrow: "1",
@@ -135,21 +152,73 @@ const styles = stylex.create({
     WebkitLineClamp: 2,
     display: "-webkit-box",
   },
-  replyThread: {
-    marginTop: verticalSpace.md,
-    paddingLeft: horizontalSpace.md,
-    borderLeftWidth: 3,
-    borderLeftStyle: "solid",
-    borderLeftColor: uiColor.border2,
+  replySection: {
     gap: gap.md,
+    borderTopColor: uiColor.component3,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    paddingTop: verticalSpace.lg,
+  },
+  repliesToggleRow: {
+    borderRadius: radius.md,
+    borderWidth: 0,
+    cornerShape: "squircle",
+    gap: gap["2xl"],
+    alignItems: "center",
+    backgroundColor: "transparent",
+    color: {
+      default: uiColor.text1,
+      ":is([data-hovered])": uiColor.text2,
+    },
+    cursor: "pointer",
+    display: "flex",
+    justifyContent: "space-between",
+    height: size["3xl"],
+    paddingBottom: verticalSpace.sm,
+    paddingTop: verticalSpace.sm,
+    width: "100%",
+  },
+  repliesToggleLeading: {
+    gap: gap["2xl"],
+    alignItems: "center",
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  repliesIconWrap: {
+    flexShrink: 0,
+  },
+  threadRail: {
+    borderLeftColor: uiColor.border1,
+    borderLeftStyle: "solid",
+    borderLeftWidth: 1,
+    marginLeft: horizontalSpace.sm,
+    paddingLeft: horizontalSpace["2xl"],
+  },
+  replyBubble: {
+    borderColor: uiColor.component3,
+    borderRadius: radius.md,
+    borderStyle: "solid",
+    borderWidth: 1,
+    gap: gap["4xl"],
+    backgroundColor: uiColor.bgSubtle,
     display: "flex",
     flexDirection: "column",
+    paddingBottom: verticalSpace["4xl"],
+    paddingLeft: horizontalSpace["3xl"],
+    paddingRight: horizontalSpace["3xl"],
+    paddingTop: verticalSpace["2xl"],
   },
-  replyRow: {
-    gap: gap.xl,
+  replyBubbleHeaderRow: {
+    gap: gap["2xl"],
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    width: "100%",
   },
   replyBodyParagraph: {
     fontSize: fontSize.sm,
+  },
+  replyComposerButton: {
+    marginTop: verticalSpace["sm"],
   },
 });
 
@@ -182,6 +251,13 @@ function authorLabelFor(review: DirectoryListingReview) {
       ? `${review.authorDid.slice(0, 10)}…`
       : review.authorDid)
   );
+}
+
+function replyHandleLabel(handle: string | null | undefined): string | null {
+  const trimmed = handle?.trim();
+  if (!trimmed) return null;
+  const withoutAt = trimmed.replace(/^@+/, "");
+  return withoutAt.length > 0 ? `@${withoutAt}` : null;
 }
 
 function authorLabelForReply(reply: DirectoryListingReviewReply): string {
@@ -233,7 +309,6 @@ function ReviewConversationSection({
   showReplyComposer: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
@@ -278,7 +353,6 @@ function ReviewConversationSection({
       }),
     onSuccess: async () => {
       setDraft("");
-      setComposerOpen(false);
       setFormError(null);
       await invalidateAll();
     },
@@ -322,226 +396,261 @@ function ReviewConversationSection({
 
   const authorRowForReply = (reply: DirectoryListingReviewReply) => {
     const label = authorLabelForReply(reply);
-    const inner = (
+    const handleSubtitle = replyHandleLabel(reply.authorHandle);
+
+    const nameBlock = (
       <Flex style={styles.authorLinkRow}>
         <Avatar
-          alt={label}
+          alt={handleSubtitle ? `${label} (${handleSubtitle})` : `${label}`}
           fallback={getInitials(label)}
           src={reply.authorAvatarUrl || undefined}
         />
-        <Flex direction="column" gap="sm" style={styles.reviewAuthor}>
-          <Text weight="medium" size="sm">
+        <Flex direction="column" gap="lg" style={styles.reviewAuthor}>
+          <Text weight="medium" size="base">
             {label}
           </Text>
+          {handleSubtitle ? (
+            <Text size="xs" variant="secondary">
+              {handleSubtitle}
+            </Text>
+          ) : null}
         </Flex>
       </Flex>
     );
+
     return linkAuthorProfile ? (
       <TanstackLink
         to="/profile/$actor"
         params={{ actor: reply.authorDid }}
         {...stylex.props(styles.profileLink)}
       >
-        {inner}
+        {nameBlock}
       </TanstackLink>
     ) : (
-      inner
+      nameBlock
     );
   };
 
   const isReplyAuthor = (did: string) =>
     viewerDid != null && viewerDid !== "" && viewerDid.trim() === did.trim();
 
+  const replyHeadingLabel =
+    review.replyCount === 1 ? "1 Reply" : `${review.replyCount} Replies`;
+
   return (
     <>
-      <Flex direction="column" gap="xl" style={styles.replyThread}>
+      <Flex direction="column" style={styles.replySection}>
         {review.replyCount > 0 ? (
-          repliesQuery.isPending ? (
-            <Text size="sm" variant="secondary">
-              Loading replies…
-            </Text>
-          ) : (
-            <Flex direction="column" gap="xl">
-              {replies.map((reply) => (
-                <Flex
-                  key={reply.id}
-                  direction="column"
-                  gap="md"
-                  id={`listing-review-reply-${reply.id}`}
-                  style={styles.replyRow}
+          <Disclosure>
+            {({ isExpanded }) => (
+              <>
+                <AriaDisclosureTriggerButton
+                  slot="trigger"
+                  {...stylex.props(styles.repliesToggleRow)}
                 >
-                  <Flex gap="xl" justify="between" align="start">
-                    <Flex style={styles.reviewAuthor}>
-                      {authorRowForReply(reply)}
+                  <Flex style={styles.repliesToggleLeading}>
+                    <span {...stylex.props(styles.repliesIconWrap)}>
+                      <MessageCircle size={20} aria-hidden strokeWidth={2} />
+                    </span>
+                    <Text weight="medium">{replyHeadingLabel}</Text>
+                  </Flex>
+                  {isExpanded ? (
+                    <ChevronUp size={20} aria-hidden strokeWidth={2} />
+                  ) : (
+                    <ChevronDown size={20} aria-hidden strokeWidth={2} />
+                  )}
+                </AriaDisclosureTriggerButton>
+                <DisclosurePanel>
+                  <Flex
+                    direction="column"
+                    gap="3xl"
+                    style={styles.repliesDisclosure}
+                  >
+                    <Flex
+                      direction="column"
+                      gap="3xl"
+                      style={styles.threadRail}
+                    >
+                      {repliesQuery.isPending ? (
+                        <Text size="sm" variant="secondary">
+                          Loading replies…
+                        </Text>
+                      ) : (
+                        <Flex direction="column" gap="lg">
+                          {replies.map((reply) => (
+                            <Flex
+                              key={reply.id}
+                              direction="column"
+                              id={`listing-review-reply-${reply.id}`}
+                              style={styles.replyBubble}
+                            >
+                              <Flex
+                                style={styles.replyBubbleHeaderRow}
+                                align="start"
+                              >
+                                <Flex style={styles.reviewAuthor}>
+                                  {authorRowForReply(reply)}
+                                </Flex>
+                                {isReplyAuthor(reply.authorDid) ? (
+                                  <Menu
+                                    placement="bottom end"
+                                    trigger={
+                                      <IconButton
+                                        aria-label="Reply actions"
+                                        variant="tertiary"
+                                      >
+                                        <MoreVertical size={18} />
+                                      </IconButton>
+                                    }
+                                  >
+                                    <MenuItem
+                                      prefix={<Pencil size={16} />}
+                                      onPress={() => {
+                                        setEditingReplyId(reply.id);
+                                        setEditDraft(reply.text);
+                                      }}
+                                    >
+                                      Edit reply
+                                    </MenuItem>
+                                    <MenuItem
+                                      variant="destructive"
+                                      prefix={<Trash2 size={16} />}
+                                      onPress={() => setDeleteReplyId(reply.id)}
+                                    >
+                                      Delete reply
+                                    </MenuItem>
+                                  </Menu>
+                                ) : null}
+                              </Flex>
+                              {editingReplyId === reply.id ? (
+                                <Form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const trimmed = editDraft.trim();
+                                    if (trimmed.length === 0) return;
+                                    setFormError(null);
+                                    updateReply.mutate({
+                                      replyId: reply.id,
+                                      text: trimmed,
+                                    });
+                                  }}
+                                >
+                                  <Flex direction="column" gap="md">
+                                    <TextArea
+                                      aria-label="Edit reply"
+                                      value={editDraft}
+                                      rows={4}
+                                      onChange={setEditDraft}
+                                      size="lg"
+                                    />
+                                    {formError &&
+                                    editingReplyId === reply.id ? (
+                                      <Text size="xs" variant="secondary">
+                                        {formError}
+                                      </Text>
+                                    ) : null}
+                                    <Flex gap="md">
+                                      <Button
+                                        size="sm"
+                                        type="submit"
+                                        variant="secondary"
+                                        isPending={updateReply.isPending}
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        type="button"
+                                        variant="tertiary"
+                                        onPress={() => {
+                                          setEditingReplyId(null);
+                                          setEditDraft("");
+                                          setFormError(null);
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </Flex>
+                                  </Flex>
+                                </Form>
+                              ) : (
+                                <RestrictedMarkdownContent
+                                  content={reply.text}
+                                  paragraphStyle={styles.replyBodyParagraph}
+                                />
+                              )}
+                              <Text
+                                size="xs"
+                                variant="secondary"
+                                style={styles.reviewMeta}
+                              >
+                                {new Date(reply.replyCreatedAt).toLocaleString(
+                                  undefined,
+                                  {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  },
+                                )}
+                              </Text>
+                            </Flex>
+                          ))}
+                        </Flex>
+                      )}
                     </Flex>
-                    {isReplyAuthor(reply.authorDid) ? (
-                      <Menu
-                        placement="bottom end"
-                        trigger={
-                          <IconButton
-                            aria-label="Reply actions"
-                            variant="tertiary"
-                            size="lg"
-                          >
-                            <MoreVertical size={18} />
-                          </IconButton>
-                        }
+
+                    {showComposerControls ? (
+                      <Form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const trimmed = draft.trim();
+                          if (trimmed.length === 0) return;
+                          setFormError(null);
+                          createReply.mutate();
+                        }}
                       >
-                        <MenuItem
-                          prefix={<Pencil size={16} />}
-                          onPress={() => {
-                            setEditingReplyId(reply.id);
-                            setEditDraft(reply.text);
-                            setComposerOpen(false);
-                          }}
-                        >
-                          Edit reply
-                        </MenuItem>
-                        <MenuItem
-                          variant="destructive"
-                          prefix={<Trash2 size={16} />}
-                          onPress={() => setDeleteReplyId(reply.id)}
-                        >
-                          Delete reply
-                        </MenuItem>
-                      </Menu>
+                        <Flex direction="column" gap="sm">
+                          <TextArea
+                            aria-label="Write a reply"
+                            size="lg"
+                            autosize={true}
+                            isResizable={false}
+                            value={draft}
+                            placeholder="Write a reply..."
+                            variant="secondary"
+                            onChange={setDraft}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && e.metaKey) {
+                                e.preventDefault();
+                                if (draft.trim().length === 0) return;
+                                setFormError(null);
+                                createReply.mutate();
+                              }
+                            }}
+                            suffix={
+                              <Button
+                                type="submit"
+                                variant="tertiary"
+                                isDisabled={draft.trim().length === 0}
+                                isPending={createReply.isPending}
+                                style={styles.replyComposerButton}
+                              >
+                                Reply
+                              </Button>
+                            }
+                          />
+                          {formError ? (
+                            <Text size="xs" variant="secondary">
+                              {formError}
+                            </Text>
+                          ) : null}
+                        </Flex>
+                      </Form>
                     ) : null}
                   </Flex>
-                  {editingReplyId === reply.id ? (
-                    <Form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const trimmed = editDraft.trim();
-                        if (trimmed.length === 0) return;
-                        setFormError(null);
-                        updateReply.mutate({
-                          replyId: reply.id,
-                          text: trimmed,
-                        });
-                      }}
-                    >
-                      <Flex direction="column" gap="md">
-                        <TextArea
-                          aria-label="Edit reply"
-                          value={editDraft}
-                          rows={4}
-                          onChange={setEditDraft}
-                        />
-                        {formError && editingReplyId === reply.id ? (
-                          <Text size="xs" variant="secondary">
-                            {formError}
-                          </Text>
-                        ) : null}
-                        <Flex gap="md">
-                          <Button
-                            size="sm"
-                            type="submit"
-                            variant="secondary"
-                            isPending={updateReply.isPending}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            size="sm"
-                            type="button"
-                            variant="tertiary"
-                            onPress={() => {
-                              setEditingReplyId(null);
-                              setEditDraft("");
-                              setFormError(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </Flex>
-                      </Flex>
-                    </Form>
-                  ) : (
-                    <RestrictedMarkdownContent
-                      content={reply.text}
-                      paragraphStyle={styles.replyBodyParagraph}
-                    />
-                  )}
-                  <Text size="xs" variant="secondary" style={styles.reviewMeta}>
-                    {new Date(reply.replyCreatedAt).toLocaleString(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </Text>
-                </Flex>
-              ))}
-            </Flex>
-          )
-        ) : null}
-
-        {showComposerControls ? (
-          composerOpen ? (
-            <Form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const trimmed = draft.trim();
-                if (trimmed.length === 0) return;
-                setFormError(null);
-                createReply.mutate();
-              }}
-            >
-              <Flex direction="column" gap="md">
-                <TextArea
-                  aria-label="Write a reply"
-                  rows={4}
-                  value={draft}
-                  placeholder="Write a reply..."
-                  onChange={setDraft}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && e.metaKey) {
-                      e.preventDefault();
-                      if (draft.trim().length === 0) return;
-                      setFormError(null);
-                      createReply.mutate();
-                    }
-                  }}
-                />
-                {formError && editingReplyId == null ? (
-                  <Text size="xs" variant="secondary">
-                    {formError}
-                  </Text>
-                ) : null}
-                <Flex gap="md" wrap>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    variant="secondary"
-                    isPending={createReply.isPending}
-                  >
-                    Post reply
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="tertiary"
-                    onPress={() => {
-                      setComposerOpen(false);
-                      setDraft("");
-                      setFormError(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Flex>
-              </Flex>
-            </Form>
-          ) : (
-            <Button
-              size="sm"
-              variant="tertiary"
-              onPress={() => {
-                setComposerOpen(true);
-                setEditingReplyId(null);
-              }}
-            >
-              Reply
-            </Button>
-          )
+                </DisclosurePanel>
+              </>
+            )}
+          </Disclosure>
         ) : null}
       </Flex>
 
@@ -613,6 +722,7 @@ export function DirectoryListingReviewCard({
   const showReplyThreadChrome = review.replyCount > 0 || showReplyComposer;
 
   const authorLabel = authorLabelFor(review);
+  const reviewerHandleSubtitle = replyHandleLabel(review.authorHandle);
   const isAuthor =
     viewerDid != null && viewerDid !== "" && viewerDid === review.authorDid;
   const showAuthorMenu = isAuthor;
@@ -716,7 +826,6 @@ export function DirectoryListingReviewCard({
                       <IconButton
                         aria-label="Review actions"
                         variant="tertiary"
-                        size="lg"
                       >
                         <MoreVertical size={18} />
                       </IconButton>
@@ -789,7 +898,11 @@ export function DirectoryListingReviewCard({
                     >
                       <Flex style={styles.authorLinkRow}>
                         <Avatar
-                          alt={authorLabel}
+                          alt={
+                            reviewerHandleSubtitle
+                              ? `${authorLabel} (${reviewerHandleSubtitle})`
+                              : authorLabel
+                          }
                           fallback={getInitials(authorLabel)}
                           src={review.authorAvatarUrl || undefined}
                         />
@@ -799,22 +912,36 @@ export function DirectoryListingReviewCard({
                           style={styles.reviewAuthor}
                         >
                           <Text weight="semibold">{authorLabel}</Text>
+                          {reviewerHandleSubtitle ? (
+                            <Text size="xs" variant="secondary">
+                              {reviewerHandleSubtitle}
+                            </Text>
+                          ) : null}
                         </Flex>
                       </Flex>
                     </TanstackLink>
                   ) : (
                     <Flex style={styles.authorLinkRow}>
                       <Avatar
-                        alt={authorLabel}
+                        alt={
+                          reviewerHandleSubtitle
+                            ? `${authorLabel} (${reviewerHandleSubtitle})`
+                            : authorLabel
+                        }
                         fallback={getInitials(authorLabel)}
                         src={review.authorAvatarUrl || undefined}
                       />
                       <Flex
                         direction="column"
-                        gap="lg"
+                        gap="xxs"
                         style={styles.reviewAuthor}
                       >
                         <Text weight="semibold">{authorLabel}</Text>
+                        {reviewerHandleSubtitle ? (
+                          <Text size="xs" variant="secondary">
+                            {reviewerHandleSubtitle}
+                          </Text>
+                        ) : null}
                       </Flex>
                     </Flex>
                   )}
@@ -833,7 +960,6 @@ export function DirectoryListingReviewCard({
                         rel="noopener noreferrer"
                         aria-label="Share review on Bluesky"
                         variant="tertiary"
-                        size="lg"
                       >
                         <Share2 size={18} />
                       </IconButtonLink>
@@ -845,7 +971,6 @@ export function DirectoryListingReviewCard({
                           <IconButton
                             aria-label="Review actions"
                             variant="tertiary"
-                            size="lg"
                           >
                             <MoreVertical size={18} />
                           </IconButton>

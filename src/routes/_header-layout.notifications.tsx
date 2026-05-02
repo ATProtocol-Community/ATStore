@@ -13,6 +13,7 @@ import {
   Check,
   CircleCheck,
   Heart,
+  MessageCircle,
   Star,
 } from "lucide-react";
 
@@ -73,6 +74,11 @@ const styles = stylex.create({
     width: size["5xl"],
   },
   likedIcon: {
+    borderColor: primaryColor.border1,
+    backgroundColor: primaryColor.component1,
+    color: primaryColor.text1,
+  },
+  replyThreadIcon: {
     borderColor: primaryColor.border1,
     backgroundColor: primaryColor.component1,
     color: primaryColor.text1,
@@ -201,8 +207,8 @@ function NotificationsPage() {
 
       {notifications.length === 0 ? (
         <Text variant="secondary">
-          No notifications yet. Likes, reviews, directory moderation decisions,
-          and listing claim outcomes will show up here.
+          No notifications yet. Likes, reviews, review replies, directory
+          moderation decisions, and listing claim outcomes will show up here.
         </Text>
       ) : (
         <div {...stylex.props(styles.notificationsList)}>
@@ -212,29 +218,48 @@ function NotificationsPage() {
             const isListingRejected = item.type === "listing_rejected";
             const isClaimApproved = item.type === "claim_approved";
             const isClaimRejected = item.type === "claim_rejected";
+            const isReplyOwner = item.type === "listing_review_reply_owner";
+            const isReplyReviewer = item.type === "listing_review_reply_reviewer";
+            const isReplyDual = item.type === "listing_review_reply_dual";
+            const isReplyThread = isReplyOwner || isReplyReviewer || isReplyDual;
             const actor =
               item.actorHandle || item.actorDisplayName || "Someone";
             const productId = getDirectoryListingSlug({
               slug: item.listingSlug,
               name: item.listingName,
             });
+
+            const reviewThreadDeepLinkSearch =
+              isReplyThread &&
+              item.reviewThreadReviewId != null &&
+              item.reviewThreadReplyId != null
+                ? {
+                    review: item.reviewThreadReviewId,
+                    reply: item.reviewThreadReplyId,
+                  }
+                : null;
+
             return (
               <div key={item.id} {...stylex.props(styles.notificationCard)}>
                 <div
                   {...stylex.props(
                     styles.icon,
-                    isLike
-                      ? styles.likedIcon
-                      : isListingVerified || isClaimApproved
-                        ? styles.claimApprovedIcon
-                        : isListingRejected
-                          ? styles.reviewedIcon
-                          : isClaimRejected
-                            ? styles.claimRejectedIcon
-                            : styles.reviewedIcon,
+                    isReplyThread
+                      ? styles.replyThreadIcon
+                      : isLike
+                        ? styles.likedIcon
+                        : isListingVerified || isClaimApproved
+                          ? styles.claimApprovedIcon
+                          : isListingRejected
+                            ? styles.reviewedIcon
+                            : isClaimRejected
+                              ? styles.claimRejectedIcon
+                              : styles.reviewedIcon,
                   )}
                 >
-                  {isLike ? (
+                  {isReplyThread ? (
+                    <MessageCircle size={22} />
+                  ) : isLike ? (
                     <Heart size={22} />
                   ) : isListingVerified || isClaimApproved ? (
                     <CircleCheck size={22} />
@@ -262,9 +287,15 @@ function NotificationsPage() {
                             ? `Your claim for ${item.listingName} was approved`
                             : isClaimRejected
                               ? `Your claim for ${item.listingName} was declined`
-                              : isLike
-                                ? `${actor} liked ${item.listingName}`
-                                : `${actor} reviewed ${item.listingName}`}
+                              : isReplyDual
+                                ? `${actor} replied on your listing review thread for ${item.listingName}`
+                                : isReplyOwner
+                                  ? `${actor} replied on a review for ${item.listingName}`
+                                  : isReplyReviewer
+                                    ? `${actor} replied to your review on ${item.listingName}`
+                                    : isLike
+                                      ? `${actor} liked ${item.listingName}`
+                                      : `${actor} reviewed ${item.listingName}`}
                     </Text>
                     <Text size="sm" variant="secondary">
                       {formatRelativeTime(item.createdAt)}
@@ -285,7 +316,13 @@ function NotificationsPage() {
                       <strong>Note:</strong> {item.reviewText}
                     </Text>
                   ) : null}
-                  {!isLike &&
+                  {isReplyThread && item.reviewText ? (
+                    <Text size="sm" variant="secondary" style={styles.cardBody}>
+                      “{item.reviewText}”
+                    </Text>
+                  ) : null}
+                  {!isReplyThread &&
+                  !isLike &&
                   !isListingVerified &&
                   !isListingRejected &&
                   !isClaimApproved &&
@@ -318,6 +355,36 @@ function NotificationsPage() {
                       >
                         View claim page
                       </Button>
+                    ) : reviewThreadDeepLinkSearch ? (
+                      <Flex gap="md" wrap>
+                        <Button
+                          size="sm"
+                          onPress={() =>
+                            void navigate({
+                              to: "/products/$productId/reviews",
+                              params: { productId },
+                              search: {
+                                review: reviewThreadDeepLinkSearch.review,
+                                reply: reviewThreadDeepLinkSearch.reply,
+                              },
+                            })
+                          }
+                        >
+                          View thread
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onPress={() =>
+                            void navigate({
+                              to: "/products/$productId",
+                              params: { productId },
+                            })
+                          }
+                        >
+                          Open product
+                        </Button>
+                      </Flex>
                     ) : isListingVerified || isListingRejected ? (
                       <Flex gap="md" wrap>
                         <ButtonLink

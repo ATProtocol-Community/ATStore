@@ -505,8 +505,8 @@ const styles = stylex.create({
     justifyContent: "flex-end",
   },
   stickyFooterStack: {
-    width: "100%",
     boxSizing: "border-box",
+    width: "100%",
   },
   saveBlockedReasonsList: {
     gap: gap["xs"],
@@ -872,7 +872,7 @@ export function ProductListingForm({
   const hasRequiredImages = heroSatisfied && hasIconImage;
 
   const saveDisabledReasons = useMemo(() => {
-    const reasons: string[] = [];
+    const reasons: Array<string> = [];
     if (!hasValidCategoryInputs) {
       reasons.push(
         categoryKind === "app-tool"

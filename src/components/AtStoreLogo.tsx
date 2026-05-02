@@ -25,10 +25,10 @@ const styles = stylex.create({
     color: blue.solid1,
   },
   hero: {
+    flexDirection: "column",
     fontFamily: fontFamily.sans,
     fontSize: fontSize["6xl"],
     fontWeight: fontWeight.black,
-    flexDirection: "column",
   },
   mark: {
     blockSize: "1.5em",

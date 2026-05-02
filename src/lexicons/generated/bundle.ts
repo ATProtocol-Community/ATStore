@@ -65,7 +65,7 @@ export const lexicons = [
             },
             description: {
               type: "string",
-              maxLength: 20000,
+              maxLength: 20_000,
             },
             externalUrl: {
               type: "string",
@@ -82,7 +82,7 @@ export const lexicons = [
                 "image/gif",
                 "image/svg+xml",
               ],
-              maxSize: 2000000,
+              maxSize: 2_000_000,
               description:
                 "Square / app icon (uploaded to repo via com.atproto.repo.uploadBlob).",
             },
@@ -95,7 +95,7 @@ export const lexicons = [
                 "image/gif",
                 "image/svg+xml",
               ],
-              maxSize: 12000000,
+              maxSize: 12_000_000,
               description: "Hero / cover image blob.",
             },
             screenshots: {
@@ -110,7 +110,7 @@ export const lexicons = [
                   "image/gif",
                   "image/svg+xml",
                 ],
-                maxSize: 12000000,
+                maxSize: 12_000_000,
               },
             },
             categorySlug: {

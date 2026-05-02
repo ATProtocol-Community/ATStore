@@ -227,6 +227,7 @@ export function sqlReplyAuthorAllowedPredicate(
   reviews: typeof schema.storeListingReviews,
   listings: typeof schema.storeListings,
 ) {
+  // oxlint-disable-next-line typescript/no-non-null-assertion
   return or(
     eq(rep.authorDid, reviews.authorDid),
     and(isNotNull(listings.repoDid), eq(rep.authorDid, listings.repoDid)),

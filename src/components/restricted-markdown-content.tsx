@@ -119,6 +119,7 @@ const restrictedMarkdownBasics = {
   }: ComponentProps<"a">) => {
     const external = isExternalHref(href);
     return (
+      // oxlint-disable-next-line jsx_a11y/anchor-has-content
       <a
         {...props}
         href={href}

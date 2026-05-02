@@ -308,8 +308,8 @@ const styles = stylex.create({
     },
   },
   listingCard: {
-    boxSizing: "border-box",
     boxShadow: shadow.none,
+    boxSizing: "border-box",
     position: "relative",
     height: "100%",
   },
@@ -673,44 +673,4 @@ function StoreIcon({
       src={listing.iconUrl || undefined}
     />
   );
-}
-
-function getListingMetadataLabel(listing: DirectoryListingCard) {
-  const categoryLabel = formatMetadataLabel(listing.category);
-  const listingName = formatMetadataLabel(listing.name);
-
-  if (
-    categoryLabel.trim().length === 0 ||
-    categoryLabel.localeCompare(listingName, undefined, {
-      sensitivity: "base",
-    }) === 0
-  ) {
-    return "App";
-  }
-
-  return categoryLabel;
-}
-
-function formatMetadataLabel(value: string) {
-  const normalized = value
-    .trim()
-    .replaceAll(/[_-]+/g, " ")
-    .replaceAll(/\s+/g, " ");
-  if (normalized.length === 0) {
-    return value;
-  }
-
-  const shouldTitleCase =
-    /[_-]/.test(value) ||
-    value === value.toLowerCase() ||
-    value === value.toUpperCase();
-
-  if (!shouldTitleCase) {
-    return normalized;
-  }
-
-  return normalized
-    .split(" ")
-    .map((word) => word[0]?.toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
 }

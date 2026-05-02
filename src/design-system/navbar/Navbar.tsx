@@ -131,8 +131,8 @@ const styles = stylex.create({
       default: 0,
       ":is([aria-current=page])": 1,
       ":is([data-active])": 1,
-      ":is([data-status=active])": 1,
       ":is([data-has-underline=false])": "0 !important",
+      ":is([data-status=active])": 1,
     },
     gap: gap["md"],
     textDecoration: "none",
@@ -151,9 +151,9 @@ const styles = stylex.create({
     },
   },
   logoContent: {
-    position: "relative",
-    display: "flex",
     alignItems: "center",
+    display: "flex",
+    position: "relative",
 
     "::after": {
       backgroundColor: "currentColor",

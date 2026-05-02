@@ -98,12 +98,15 @@ function statusLabel(row: {
 }) {
   if (row.isClaimed) return "Claimed";
   switch (row.verificationStatus) {
-    case "verified":
+    case "verified": {
       return "Verified";
-    case "rejected":
+    }
+    case "rejected": {
       return "Rejected";
-    case "unverified":
+    }
+    case "unverified": {
       return "Submitted";
+    }
   }
 }
 

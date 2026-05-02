@@ -40,15 +40,15 @@ import {
   probeTapHealth,
 } from "#/lib/atproto/tap-railway-url";
 import {
-  deleteListingReviewFromTap,
-  tryParseListingReviewRecord,
-  upsertListingReviewFromTap,
-} from "#/lib/atproto/tap-review-sync";
-import {
   deleteListingReviewReplyFromTap,
   tryParseListingReviewReplyRecord,
   upsertListingReviewReplyFromTap,
 } from "#/lib/atproto/tap-review-reply-sync";
+import {
+  deleteListingReviewFromTap,
+  tryParseListingReviewRecord,
+  upsertListingReviewFromTap,
+} from "#/lib/atproto/tap-review-sync";
 
 import type { Database } from "../src/db/index.server";
 
