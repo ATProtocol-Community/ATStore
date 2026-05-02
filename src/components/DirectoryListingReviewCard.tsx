@@ -170,6 +170,9 @@ export type DirectoryListingReviewCardProps = {
   anchorId?: string;
   /** Canonical product slug — enables “Share” (Bluesky) for this review. */
   shareProductSlug?: string | null;
+  /** Listing publisher DIDs — Reply button is UI-gated to listing side on an empty thread. */
+  listingRepoDid?: string | null;
+  listingProductAccountDid?: string | null;
 };
 
 function authorLabelFor(review: DirectoryListingReview) {
@@ -190,16 +193,44 @@ function authorLabelForReply(reply: DirectoryListingReviewReply): string {
   );
 }
 
+/** UI-only: listing side can open the thread with Reply; reviewers wait until at least one reply exists. */
+function replyComposerShownUi(opts: {
+  apiCanReply: boolean;
+  viewerDid?: string | null;
+  reviewAuthorDid: string;
+  replyCount: number;
+  listingRepoDid?: string | null;
+  listingProductAccountDid?: string | null;
+}) {
+  if (!opts.apiCanReply) return false;
+  const v = opts.viewerDid?.trim();
+  if (!v) return false;
+
+  const listingRepo = opts.listingRepoDid?.trim();
+  const listingProd = opts.listingProductAccountDid?.trim();
+  const viewerIsListingSide =
+    (!!listingRepo && v === listingRepo) ||
+    (!!listingProd && v === listingProd);
+  if (viewerIsListingSide) return true;
+
+  const isReviewAuthor = v === opts.reviewAuthorDid.trim();
+  if (isReviewAuthor && opts.replyCount === 0) return false;
+
+  return true;
+}
+
 function ReviewConversationSection({
   listingId,
   review,
   viewerDid,
   linkAuthorProfile,
+  showReplyComposer,
 }: {
   listingId: string;
   review: DirectoryListingReview;
   viewerDid?: string | null;
   linkAuthorProfile: boolean;
+  showReplyComposer: boolean;
 }) {
   const queryClient = useQueryClient();
   const [composerOpen, setComposerOpen] = useState(false);
@@ -287,7 +318,7 @@ function ReviewConversationSection({
   });
 
   const replies = repliesQuery.data ?? [];
-  const showComposerControls = review.canReply;
+  const showComposerControls = showReplyComposer;
 
   const authorRowForReply = (reply: DirectoryListingReviewReply) => {
     const label = authorLabelForReply(reply);
@@ -560,9 +591,26 @@ export function DirectoryListingReviewCard({
   reviewedListing,
   anchorId,
   shareProductSlug,
+  listingRepoDid,
+  listingProductAccountDid,
 }: DirectoryListingReviewCardProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const mergedListingRepoDid =
+    listingRepoDid ?? reviewedListing?.repoDid ?? null;
+  const mergedListingProductAccountDid =
+    listingProductAccountDid ?? reviewedListing?.productAccountDid ?? null;
+
+  const showReplyComposer = replyComposerShownUi({
+    apiCanReply: review.canReply,
+    viewerDid,
+    reviewAuthorDid: review.authorDid,
+    replyCount: review.replyCount,
+    listingRepoDid: mergedListingRepoDid,
+    listingProductAccountDid: mergedListingProductAccountDid,
+  });
+  const showReplyThreadChrome = review.replyCount > 0 || showReplyComposer;
 
   const authorLabel = authorLabelFor(review);
   const isAuthor =
@@ -720,11 +768,12 @@ export function DirectoryListingReviewCard({
                     },
                   )}
                 </Text>
-                {review.replyCount > 0 || review.canReply ? (
+                {showReplyThreadChrome ? (
                   <ReviewConversationSection
                     listingId={listingId}
                     linkAuthorProfile={linkAuthorProfile}
                     review={review}
+                    showReplyComposer={showReplyComposer}
                     viewerDid={viewerDid ?? null}
                   />
                 ) : null}
@@ -834,11 +883,12 @@ export function DirectoryListingReviewCard({
                     },
                   )}
                 </Text>
-                {review.replyCount > 0 || review.canReply ? (
+                {showReplyThreadChrome ? (
                   <ReviewConversationSection
                     listingId={listingId}
                     linkAuthorProfile={linkAuthorProfile}
                     review={review}
+                    showReplyComposer={showReplyComposer}
                     viewerDid={viewerDid ?? null}
                   />
                 ) : null}

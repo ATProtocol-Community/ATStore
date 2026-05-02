@@ -302,7 +302,15 @@ function resolveListingVerificationStatus(input: {
 }): "verified" | "unverified" | "rejected" {
   if (input.trustedPublisher) return "verified";
 
-  /** Admin moderation — do not downgrade via ingest; only API changes this. */
+  /**
+   * Admin moderation — do not downgrade via ingest; only API changes this.
+   * Owner-driven resubmission flips the row to `unverified` via
+   * `updateOwnedProductListing` *before* this function sees the next firehose
+   * event, so this guard pinning `rejected` only fires when the row is still
+   * actually rejected (i.e. owner edited the PDS record directly outside our
+   * API). In that case keeping `rejected` is correct — the admin decision
+   * stands until the owner goes through the in-app resubmission flow.
+   */
   if (input.existingVerificationStatus === "rejected") return "rejected";
 
   const repoDid = input.ingestRepoDid.trim();

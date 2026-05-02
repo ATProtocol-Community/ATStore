@@ -19,6 +19,7 @@ import {
   gte,
   inArray,
   isNotNull,
+  isNull,
   ne,
   or,
   sql,
@@ -95,10 +96,11 @@ const getAdminDashboard = createServerFn({ method: "GET" })
 
     /**
      * Latest rejection event per listing — used to detect rows that were rejected
-     * by an admin and have since been republished by the owner (`updated_at` past
-     * the rejection). Tap ingest preserves `verification_status = 'rejected'`
-     * (see `tap-listing-sync.ts:resolveListingVerificationStatus`), so without
-     * this surface a resubmission is invisible to admins.
+     * by an admin and have since been resubmitted by the owner. Owner edits via
+     * `updateOwnedProductListing` flip the row back to `unverified` (so the owner
+     * sees "Pending review", not a stuck "Rejected"); we segregate those from
+     * fresh submissions in the queue below by joining on this latest-rejection
+     * subquery, so admins still see the prior rejection reason while re-reviewing.
      */
     const latestRejectionPerListing = db
       .select({
@@ -159,6 +161,10 @@ const getAdminDashboard = createServerFn({ method: "GET" })
       recentListingsRaw,
       reviewPreviewRows,
     ] = await Promise.all([
+      /**
+       * Fresh "Unverified queue": never been rejected before. Resubmissions are
+       * segregated below so admins can re-check them against the prior reason.
+       */
       db
         .select({
           id: listings.id,
@@ -178,8 +184,26 @@ const getAdminDashboard = createServerFn({ method: "GET" })
           updatedAt: listings.updatedAt,
         })
         .from(listings)
-        .where(eq(listings.verificationStatus, "unverified"))
+        .leftJoin(
+          latestRejectionPerListing,
+          and(
+            eq(latestRejectionPerListing.storeListingId, listings.id),
+            eq(latestRejectionPerListing.rn, 1),
+          ),
+        )
+        .where(
+          and(
+            eq(listings.verificationStatus, "unverified"),
+            isNull(latestRejectionPerListing.storeListingId),
+          ),
+        )
         .orderBy(desc(listings.updatedAt)),
+      /**
+       * "Resubmitted after rejection": owner edited a previously-rejected
+       * listing, which `updateOwnedProductListing` flips back to `unverified`.
+       * Inner-joining on the latest rejection event gives admins the prior
+       * reason while re-reviewing.
+       */
       db
         .select({
           id: listings.id,
@@ -208,17 +232,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
             eq(latestRejectionPerListing.rn, 1),
           ),
         )
-        .where(
-          and(
-            eq(listings.verificationStatus, "rejected"),
-            /**
-             * Buffer absorbs the same-transaction skew between the admin
-             * rejection's `updated_at` (JS `new Date()`) and the rejection
-             * event's `created_at` (Postgres `now()` of the transaction).
-             */
-            sql`${listings.updatedAt} > ${latestRejectionPerListing.rejectedAt} + interval '5 seconds'`,
-          ),
-        )
+        .where(eq(listings.verificationStatus, "unverified"))
         .orderBy(desc(listings.updatedAt)),
       db
         .select({

@@ -244,6 +244,8 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   isStoreManaged: boolean;
   /** Official product Bluesky DID (`fyi.atstore.listing.detail`). */
   productAccountDid: string | null;
+  /** Repo DID hosting `fyi.atstore.listing.detail` — used client-side for review-reply UX. */
+  repoDid: string | null;
   /** Raw `store_listings.tagline` for owner edit forms (display tagline may fall back to description). */
   sourceTagline: string | null;
   /** Raw `store_listings.full_description` for owner edit forms (display `description` is sanitized). */
@@ -479,6 +481,8 @@ export interface DirectoryUserReviewListing {
   sourceUrl: string;
   iconUrl: string | null;
   tagline: string | null;
+  repoDid: string | null;
+  productAccountDid: string | null;
 }
 
 export interface DirectoryUserReview extends DirectoryListingReview {
@@ -880,6 +884,7 @@ function toListingDetail(
     ...toListingCard(row),
     atUri: row.atUri,
     isStoreManaged: options.isStoreManaged,
+    repoDid: row.repoDid ?? null,
     productAccountDid: row.productAccountDid,
     sourceTagline: row.tagline ?? null,
     sourceFullDescription: row.fullDescription ?? null,
@@ -2518,6 +2523,8 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
             row.listingIconUrl?.trim() || null,
           ),
           tagline: row.listingTagline?.trim() || null,
+          repoDid: row.listingRepoDid ?? null,
+          productAccountDid: row.listingProductAccountDid ?? null,
         },
       };
     });
@@ -4637,6 +4644,20 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
 
     const now = new Date();
     const t = context.schema.storeListings;
+    /**
+     * An owner edit on a previously-rejected listing is a resubmission: flip the row
+     * back to `unverified` so (a) the owner stops seeing a stuck "Rejected" badge on
+     * `/products/manage` after they've revised, and (b) admins re-review it via the
+     * normal queue. Rejection history is preserved in `store_listing_rejection_events`
+     * and surfaced by the admin "Resubmitted after rejection" section
+     * (see `getAdminDashboard`). Tap re-ingest of the edited record will then read
+     * `unverified` and not re-pin to `rejected` (see `resolveListingVerificationStatus`).
+     */
+    const verificationStatusPatch =
+      full.verificationStatus === "rejected"
+        ? { verificationStatus: "unverified" as const }
+        : {};
+
     await context.db
       .update(t)
       .set({
@@ -4650,6 +4671,7 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
         atUri: uri,
         links,
         appTags,
+        ...verificationStatusPatch,
         updatedAt: now,
       })
       .where(eq(t.id, full.id));
@@ -4673,6 +4695,39 @@ const createOwnedProductListing = createServerFn({ method: "POST" })
     const categorySlug = normalizeEditableListingCategorySlug(
       data.categorySlug,
     );
+
+    /**
+     * `store_listings` has a unique index on `source_url`, so a second listing
+     * for the same product URL gets silently dropped by tap ingest (see
+     * `tap-listing-sync.ts:isSourceUrlUniqueViolation`). Detect that here and
+     * throw a friendly error pointing the owner at the edit flow — otherwise
+     * the PDS write succeeds, the directory row never appears, and the
+     * submission "goes into the void". This matters most when the existing row
+     * is the owner's own previously-rejected listing: edit-and-resubmit is the
+     * supported recovery path (see `updateOwnedProductListing`).
+     */
+    const conflictTable = context.schema.storeListings;
+    const [conflictingListing] = await context.db
+      .select({
+        id: conflictTable.id,
+        slug: conflictTable.slug,
+        repoDid: conflictTable.repoDid,
+        verificationStatus: conflictTable.verificationStatus,
+      })
+      .from(conflictTable)
+      .where(eq(conflictTable.sourceUrl, externalUrl))
+      .limit(1);
+    if (conflictingListing) {
+      if (conflictingListing.repoDid?.trim() === session.did) {
+        throw new Error(
+          "You already have a listing for this URL. Open it from \u201CManage listings\u201D and edit it to resubmit.",
+        );
+      }
+      throw new Error(
+        "Another listing already covers this URL. Reach out to support if you think this is a mistake.",
+      );
+    }
+
     const slug = await allocateUniqueStoreListingSlug(
       context.db,
       name,

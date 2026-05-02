@@ -184,6 +184,8 @@ function ProductReviewsListPage() {
             viewerDid={session?.user?.did ?? null}
             anchorId={`listing-review-${review.id}`}
             shareProductSlug={productSlug}
+            listingRepoDid={listing.repoDid}
+            listingProductAccountDid={listing.productAccountDid}
             onEditReview={() => {
               void navigate({
                 to: "/products/$productId/reviews/$reviewId/edit",
