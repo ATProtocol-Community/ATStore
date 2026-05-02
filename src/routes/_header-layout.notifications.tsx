@@ -219,9 +219,11 @@ function NotificationsPage() {
             const isClaimApproved = item.type === "claim_approved";
             const isClaimRejected = item.type === "claim_rejected";
             const isReplyOwner = item.type === "listing_review_reply_owner";
-            const isReplyReviewer = item.type === "listing_review_reply_reviewer";
+            const isReplyReviewer =
+              item.type === "listing_review_reply_reviewer";
             const isReplyDual = item.type === "listing_review_reply_dual";
-            const isReplyThread = isReplyOwner || isReplyReviewer || isReplyDual;
+            const isReplyThread =
+              isReplyOwner || isReplyReviewer || isReplyDual;
             const actor =
               item.actorHandle || item.actorDisplayName || "Someone";
             const productId = getDirectoryListingSlug({
