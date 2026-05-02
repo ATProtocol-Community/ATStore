@@ -92,10 +92,7 @@ function formatDate(iso: string) {
   });
 }
 
-function statusLabel(row: {
-  isClaimed: boolean;
-  verificationStatus: "verified" | "rejected" | "unverified";
-}) {
+function statusLabel(row: { isClaimed: boolean; verificationStatus: string }) {
   if (row.isClaimed) return "Claimed";
   switch (row.verificationStatus) {
     case "verified": {
@@ -106,6 +103,9 @@ function statusLabel(row: {
     }
     case "unverified": {
       return "Submitted";
+    }
+    default: {
+      return row.verificationStatus;
     }
   }
 }

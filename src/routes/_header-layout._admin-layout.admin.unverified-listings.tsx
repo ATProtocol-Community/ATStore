@@ -109,9 +109,7 @@ const styles = stylex.create({
   },
 });
 
-type DashboardData = ReturnType<
-  typeof useSuspenseQuery<typeof adminApi.getAdminDashboardQueryOptions>
->["data"];
+type DashboardData = Awaited<ReturnType<typeof adminApi.getAdminDashboard>>;
 
 type UnverifiedRow = DashboardData["unverified"][number];
 type ResubmittedRow = DashboardData["resubmittedAfterRejection"][number];
