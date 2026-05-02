@@ -437,6 +437,8 @@ export const storeListingReviews = pgTable(
     }).notNull(),
     authorDisplayName: text("author_display_name"),
     authorAvatarUrl: text("author_avatar_url"),
+    /** Mirrors count of mirrored `fyi.atstore.listing.reviewReply` rows (recomputed on ingest). */
+    replyCount: integer("reply_count").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -450,6 +452,60 @@ export const storeListingReviews = pgTable(
     ),
     atUriIdx: uniqueIndex("store_listing_reviews_at_uri_idx").on(table.atUri),
     repoRkeyIdx: uniqueIndex("store_listing_reviews_repo_rkey_idx").on(
+      table.authorDid,
+      table.rkey,
+    ),
+  }),
+);
+
+/** Tap-sync mirror of `fyi.atstore.listing.reviewReply` — one row per reply record. */
+export const storeListingReviewReplies = pgTable(
+  "store_listing_review_replies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    storeListingId: uuid("store_listing_id")
+      .notNull()
+      .references(() => storeListings.id, { onDelete: "cascade" }),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => storeListingReviews.id, { onDelete: "cascade" }),
+    /** Repo DID of the replier (`RecordEvent.did`). */
+    authorDid: text("author_did").notNull(),
+    rkey: text("rkey").notNull(),
+    atUri: text("at_uri").notNull(),
+    /** Lexicon record `subject` (review AT URI). */
+    subjectUri: text("subject_uri").notNull(),
+    text: text("text").notNull(),
+    replyCreatedAt: timestamp("reply_created_at", {
+      withTimezone: true,
+    }).notNull(),
+    indexedAt: timestamp("indexed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingIdx: index("store_listing_review_replies_store_listing_id_idx").on(
+      table.storeListingId,
+    ),
+    reviewIdx: index("store_listing_review_replies_review_id_idx").on(
+      table.reviewId,
+    ),
+    reviewCreatedIdx: index(
+      "store_listing_review_replies_review_created_idx",
+    ).on(table.reviewId, table.replyCreatedAt),
+    authorDidIdx: index("store_listing_review_replies_author_did_idx").on(
+      table.authorDid,
+    ),
+    atUriIdx: uniqueIndex("store_listing_review_replies_at_uri_idx").on(
+      table.atUri,
+    ),
+    repoRkeyIdx: uniqueIndex("store_listing_review_replies_repo_rkey_idx").on(
       table.authorDid,
       table.rkey,
     ),
@@ -599,6 +655,10 @@ export type HomePagePromoListing = typeof homePagePromoListing.$inferSelect;
 export type NewHomePagePromoListing = typeof homePagePromoListing.$inferInsert;
 export type StoreListingReview = typeof storeListingReviews.$inferSelect;
 export type NewStoreListingReview = typeof storeListingReviews.$inferInsert;
+export type StoreListingReviewReply =
+  typeof storeListingReviewReplies.$inferSelect;
+export type NewStoreListingReviewReply =
+  typeof storeListingReviewReplies.$inferInsert;
 export type StoreListingFavorite = typeof storeListingFavorites.$inferSelect;
 export type NewStoreListingFavorite = typeof storeListingFavorites.$inferInsert;
 export type JetstreamConsumerState = typeof jetstreamConsumerState.$inferSelect;

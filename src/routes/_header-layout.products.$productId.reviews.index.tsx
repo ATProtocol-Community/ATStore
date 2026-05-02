@@ -23,6 +23,7 @@ import { Route as ProductReviewsRoute } from "./_header-layout.products.$product
 
 const reviewsIndexSearchSchema = z.object({
   review: z.string().uuid().optional(),
+  reply: z.string().uuid().optional(),
 });
 
 export const Route = createFileRoute(
@@ -108,7 +109,7 @@ const styles = stylex.create({
 
 function ProductReviewsListPage() {
   const navigate = useNavigate();
-  const { review: reviewSearchId } = Route.useSearch();
+  const { review: reviewSearchId, reply: replySearchId } = Route.useSearch();
   const { productId, productSlug } = ProductReviewsRoute.useLoaderData();
   const detailQuery =
     directoryListingApi.getDirectoryListingDetailQueryOptions(productId);
@@ -120,13 +121,22 @@ function ProductReviewsListPage() {
   const { data: session } = useQuery(user.getSessionQueryOptions);
 
   useLayoutEffect(() => {
+    if (replySearchId) {
+      requestAnimationFrame(() => {
+        document
+          .querySelector(`#listing-review-reply-${replySearchId}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      return;
+    }
+
     if (!reviewSearchId) {
       return;
     }
 
     const el = document.querySelector(`#listing-review-${reviewSearchId}`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [reviewSearchId]);
+  }, [reviewSearchId, replySearchId]);
 
   if (!listing) {
     throw notFound();

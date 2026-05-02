@@ -137,6 +137,7 @@
       "properties": {
         "type": {
           "type": "string",
+          "maxLength": 32,
           "knownValues": [
             "privacy",
             "terms",
@@ -154,6 +155,7 @@
         "url": {
           "type": "string",
           "format": "uri",
+          "maxLength": 2048,
           "description": "The destination URL."
         },
         "label": {

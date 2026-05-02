@@ -1,11 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link as TanstackLink, createLink } from "@tanstack/react-router";
 import { MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import type {
   DirectoryListingReview,
+  DirectoryListingReviewReply,
   DirectoryUserReviewListing,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 
@@ -18,6 +19,7 @@ import {
   AlertDialogHeader,
 } from "../design-system/alert-dialog";
 import { Avatar } from "../design-system/avatar";
+import { Button } from "../design-system/button";
 import {
   Card,
   CardBody,
@@ -25,6 +27,7 @@ import {
   CardHeaderAction,
 } from "../design-system/card";
 import { Flex } from "../design-system/flex";
+import { Form } from "../design-system/form";
 import { IconButton } from "../design-system/icon-button";
 import { Menu, MenuItem } from "../design-system/menu";
 import { StarRating } from "../design-system/star-rating";
@@ -32,11 +35,13 @@ import { uiColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
   gap,
+  horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
 import { fontSize } from "../design-system/theme/typography.stylex";
 import { Text } from "../design-system/typography/text";
+import { TextArea } from "../design-system/text-area";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
@@ -130,6 +135,22 @@ const styles = stylex.create({
     WebkitLineClamp: 2,
     display: "-webkit-box",
   },
+  replyThread: {
+    marginTop: verticalSpace.md,
+    paddingLeft: horizontalSpace.md,
+    borderLeftWidth: 3,
+    borderLeftStyle: "solid",
+    borderLeftColor: uiColor.border2,
+    gap: gap.md,
+    display: "flex",
+    flexDirection: "column",
+  },
+  replyRow: {
+    gap: gap.xl,
+  },
+  replyBodyParagraph: {
+    fontSize: fontSize.sm,
+  },
 });
 
 export type DirectoryListingReviewCardProps = {
@@ -157,6 +178,375 @@ function authorLabelFor(review: DirectoryListingReview) {
     (review.authorDid.length > 16
       ? `${review.authorDid.slice(0, 10)}…`
       : review.authorDid)
+  );
+}
+
+function authorLabelForReply(reply: DirectoryListingReviewReply): string {
+  return (
+    reply.authorDisplayName?.trim() ||
+    (reply.authorDid.length > 16
+      ? `${reply.authorDid.slice(0, 10)}…`
+      : reply.authorDid)
+  );
+}
+
+function ReviewConversationSection({
+  listingId,
+  review,
+  viewerDid,
+  linkAuthorProfile,
+}: {
+  listingId: string;
+  review: DirectoryListingReview;
+  viewerDid?: string | null;
+  linkAuthorProfile: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [deleteReplyId, setDeleteReplyId] = useState<string | null>(null);
+
+  const repliesQuery = useQuery(
+    directoryListingApi.getDirectoryListingReviewRepliesQueryOptions(review.id),
+  );
+
+  async function invalidateAll() {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey:
+          directoryListingApi.getDirectoryListingReviewRepliesQueryOptions(
+            review.id,
+          ).queryKey,
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey:
+          directoryListingApi.getDirectoryListingReviewsQueryOptions(listingId)
+            .queryKey,
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey:
+          directoryListingApi.getDirectoryListingDetailQueryOptions(listingId)
+            .queryKey,
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["userProfileReviews"],
+      }),
+    ]);
+  }
+
+  const createReply = useMutation({
+    mutationFn: () =>
+      directoryListingApi.createDirectoryListingReviewReply({
+        data: { reviewId: review.id, text: draft.trim() },
+      }),
+    onSuccess: async () => {
+      setDraft("");
+      setComposerOpen(false);
+      setFormError(null);
+      await invalidateAll();
+    },
+    onError: (e: unknown) => {
+      setFormError(
+        e instanceof Error ? e.message : "Could not post your reply.",
+      );
+    },
+  });
+
+  const updateReply = useMutation({
+    mutationFn: ({ replyId, text }: { replyId: string; text: string }) =>
+      directoryListingApi.updateDirectoryListingReviewReply({
+        data: { replyId, text },
+      }),
+    onSuccess: async () => {
+      setEditingReplyId(null);
+      setEditDraft("");
+      await invalidateAll();
+    },
+    onError: (e: unknown) => {
+      setFormError(
+        e instanceof Error ? e.message : "Could not update your reply.",
+      );
+    },
+  });
+
+  const deleteReply = useMutation({
+    mutationFn: (replyId: string) =>
+      directoryListingApi.deleteDirectoryListingReviewReply({
+        data: { replyId },
+      }),
+    onSuccess: async () => {
+      setDeleteReplyId(null);
+      await invalidateAll();
+    },
+  });
+
+  const replies = repliesQuery.data ?? [];
+  const showComposerControls = review.canReply;
+
+  const authorRowForReply = (reply: DirectoryListingReviewReply) => {
+    const label = authorLabelForReply(reply);
+    const inner = (
+      <Flex style={styles.authorLinkRow}>
+        <Avatar
+          alt={label}
+          fallback={getInitials(label)}
+          src={reply.authorAvatarUrl || undefined}
+        />
+        <Flex direction="column" gap="sm" style={styles.reviewAuthor}>
+          <Text weight="medium" size="sm">
+            {label}
+          </Text>
+        </Flex>
+      </Flex>
+    );
+    return linkAuthorProfile ? (
+      <TanstackLink
+        to="/profile/$actor"
+        params={{ actor: reply.authorDid }}
+        {...stylex.props(styles.profileLink)}
+      >
+        {inner}
+      </TanstackLink>
+    ) : (
+      inner
+    );
+  };
+
+  const isReplyAuthor = (did: string) =>
+    viewerDid != null && viewerDid !== "" && viewerDid.trim() === did.trim();
+
+  return (
+    <>
+      <Flex direction="column" gap="xl" style={styles.replyThread}>
+        {review.replyCount > 0 ? (
+          repliesQuery.isPending ? (
+            <Text size="sm" variant="secondary">
+              Loading replies…
+            </Text>
+          ) : (
+            <Flex direction="column" gap="xl">
+              {replies.map((reply) => (
+                <Flex
+                  key={reply.id}
+                  direction="column"
+                  gap="md"
+                  id={`listing-review-reply-${reply.id}`}
+                  style={styles.replyRow}
+                >
+                  <Flex gap="xl" justify="between" align="start">
+                    <Flex style={styles.reviewAuthor}>
+                      {authorRowForReply(reply)}
+                    </Flex>
+                    {isReplyAuthor(reply.authorDid) ? (
+                      <Menu
+                        placement="bottom end"
+                        trigger={
+                          <IconButton
+                            aria-label="Reply actions"
+                            variant="tertiary"
+                            size="lg"
+                          >
+                            <MoreVertical size={18} />
+                          </IconButton>
+                        }
+                      >
+                        <MenuItem
+                          prefix={<Pencil size={16} />}
+                          onPress={() => {
+                            setEditingReplyId(reply.id);
+                            setEditDraft(reply.text);
+                            setComposerOpen(false);
+                          }}
+                        >
+                          Edit reply
+                        </MenuItem>
+                        <MenuItem
+                          variant="destructive"
+                          prefix={<Trash2 size={16} />}
+                          onPress={() => setDeleteReplyId(reply.id)}
+                        >
+                          Delete reply
+                        </MenuItem>
+                      </Menu>
+                    ) : null}
+                  </Flex>
+                  {editingReplyId === reply.id ? (
+                    <Form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const trimmed = editDraft.trim();
+                        if (trimmed.length === 0) return;
+                        setFormError(null);
+                        updateReply.mutate({
+                          replyId: reply.id,
+                          text: trimmed,
+                        });
+                      }}
+                    >
+                      <Flex direction="column" gap="md">
+                        <TextArea
+                          aria-label="Edit reply"
+                          value={editDraft}
+                          rows={4}
+                          onChange={setEditDraft}
+                        />
+                        {formError && editingReplyId === reply.id ? (
+                          <Text size="xs" variant="secondary">
+                            {formError}
+                          </Text>
+                        ) : null}
+                        <Flex gap="md">
+                          <Button
+                            size="sm"
+                            type="submit"
+                            variant="secondary"
+                            isPending={updateReply.isPending}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            type="button"
+                            variant="tertiary"
+                            onPress={() => {
+                              setEditingReplyId(null);
+                              setEditDraft("");
+                              setFormError(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </Flex>
+                      </Flex>
+                    </Form>
+                  ) : (
+                    <RestrictedMarkdownContent
+                      content={reply.text}
+                      paragraphStyle={styles.replyBodyParagraph}
+                    />
+                  )}
+                  <Text size="xs" variant="secondary" style={styles.reviewMeta}>
+                    {new Date(reply.replyCreatedAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </Text>
+                </Flex>
+              ))}
+            </Flex>
+          )
+        ) : null}
+
+        {showComposerControls ? (
+          composerOpen ? (
+            <Form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const trimmed = draft.trim();
+                if (trimmed.length === 0) return;
+                setFormError(null);
+                createReply.mutate();
+              }}
+            >
+              <Flex direction="column" gap="md">
+                <TextArea
+                  aria-label="Write a reply"
+                  rows={4}
+                  value={draft}
+                  placeholder="Write a reply..."
+                  onChange={setDraft}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.metaKey) {
+                      e.preventDefault();
+                      if (draft.trim().length === 0) return;
+                      setFormError(null);
+                      createReply.mutate();
+                    }
+                  }}
+                />
+                {formError && editingReplyId == null ? (
+                  <Text size="xs" variant="secondary">
+                    {formError}
+                  </Text>
+                ) : null}
+                <Flex gap="md" wrap>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="secondary"
+                    isPending={createReply.isPending}
+                  >
+                    Post reply
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="tertiary"
+                    onPress={() => {
+                      setComposerOpen(false);
+                      setDraft("");
+                      setFormError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Flex>
+              </Flex>
+            </Form>
+          ) : (
+            <Button
+              size="sm"
+              variant="tertiary"
+              onPress={() => {
+                setComposerOpen(true);
+                setEditingReplyId(null);
+              }}
+            >
+              Reply
+            </Button>
+          )
+        ) : null}
+      </Flex>
+
+      <AlertDialog
+        isOpen={deleteReplyId != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteReplyId(null);
+        }}
+        trigger={
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden
+            {...stylex.props(styles.dialogTriggerPlaceholder)}
+          />
+        }
+      >
+        <AlertDialogHeader>Delete this reply?</AlertDialogHeader>
+        <AlertDialogDescription>
+          This removes your reply from this review thread.
+        </AlertDialogDescription>
+        <AlertDialogFooter>
+          <AlertDialogCancelButton />
+          <AlertDialogActionButton
+            variant="critical"
+            closeOnPress={false}
+            isPending={deleteReply.isPending}
+            onPress={() => {
+              if (deleteReplyId != null) deleteReply.mutate(deleteReplyId);
+            }}
+          >
+            Delete reply
+          </AlertDialogActionButton>
+        </AlertDialogFooter>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -330,6 +720,14 @@ export function DirectoryListingReviewCard({
                     },
                   )}
                 </Text>
+                {review.replyCount > 0 || review.canReply ? (
+                  <ReviewConversationSection
+                    listingId={listingId}
+                    linkAuthorProfile={linkAuthorProfile}
+                    review={review}
+                    viewerDid={viewerDid ?? null}
+                  />
+                ) : null}
               </>
             ) : (
               <>
@@ -436,6 +834,14 @@ export function DirectoryListingReviewCard({
                     },
                   )}
                 </Text>
+                {review.replyCount > 0 || review.canReply ? (
+                  <ReviewConversationSection
+                    listingId={listingId}
+                    linkAuthorProfile={linkAuthorProfile}
+                    review={review}
+                    viewerDid={viewerDid ?? null}
+                  />
+                ) : null}
               </>
             )}
           </Flex>

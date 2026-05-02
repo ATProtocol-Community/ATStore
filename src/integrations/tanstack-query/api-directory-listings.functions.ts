@@ -26,12 +26,18 @@ import {
 import {
   createListingDetailRecord,
   createListingReviewRecord,
+  createListingReviewReplyRecord,
   deleteRecord,
   fetchListingDetailRecord,
   putListingFavoriteRecord,
   putListingReviewRecord,
+  putListingReviewReplyRecord,
 } from "#/lib/atproto/repo-records";
 import { resolveUrlToImageBytes } from "#/lib/atproto/resolve-image-bytes";
+import {
+  sqlReplyAuthorAllowedPredicate,
+  upsertListingReviewReplyFromTap,
+} from "#/lib/atproto/tap-review-reply-sync";
 import { upsertListingReviewFromTap } from "#/lib/atproto/tap-review-sync";
 import {
   fetchBlueskyHandleForDid,
@@ -118,6 +124,22 @@ const storeListingLegacyDetailColumns = {
 function listingPublicWhere(table: typeof dbSchema.storeListings, extra?: SQL) {
   const pub = eq(table.verificationStatus, "verified");
   return extra ? and(pub, extra) : pub;
+}
+
+function viewerMayReplyOnListingReview(opts: {
+  viewerDid?: string | null;
+  reviewAuthorDid: string;
+  listingRepoDid: string | null;
+  listingProductAccountDid: string | null;
+}) {
+  const viewer = opts.viewerDid?.trim();
+  if (!viewer) return false;
+  if (viewer === opts.reviewAuthorDid) return true;
+  const rd = opts.listingRepoDid?.trim();
+  if (rd && viewer === rd) return true;
+  const pd = opts.listingProductAccountDid?.trim();
+  if (pd && viewer === pd) return true;
+  return false;
 }
 
 /** "Popular" / trending ordering — uses `trending_score` when enabled, else legacy `updatedAt`. */
@@ -248,6 +270,15 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   verificationStatus?: string;
 }
 
+export interface DirectoryListingReviewReply {
+  id: string;
+  authorDid: string;
+  text: string;
+  replyCreatedAt: string;
+  authorDisplayName: string | null;
+  authorAvatarUrl: string | null;
+}
+
 export interface DirectoryListingReview {
   id: string;
   authorDid: string;
@@ -256,6 +287,10 @@ export interface DirectoryListingReview {
   reviewCreatedAt: string;
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
+  /** Mirrored reply rows for this review. */
+  replyCount: number;
+  /** True when the viewer may post in the reply thread for this listing. */
+  canReply: boolean;
 }
 
 /** Bluesky post stored from Jetstream mention matching. */
@@ -624,6 +659,24 @@ const updateDirectoryListingReviewInput = z.object({
 
 const deleteDirectoryListingReviewInput = z.object({
   reviewId: z.string().uuid(),
+});
+
+const getDirectoryListingReviewRepliesInput = z.object({
+  reviewId: z.string().uuid(),
+});
+
+const createDirectoryListingReviewReplyInput = z.object({
+  reviewId: z.string().uuid(),
+  text: z.string().min(1).max(8000),
+});
+
+const updateDirectoryListingReviewReplyInput = z.object({
+  replyId: z.string().uuid(),
+  text: z.string().min(1).max(8000),
+});
+
+const deleteDirectoryListingReviewReplyInput = z.object({
+  replyId: z.string().uuid(),
 });
 
 const getUserProfileReviewsPageDataInput = z.object({
@@ -2198,7 +2251,11 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
 
     const table = context.schema.storeListings;
     const [listing] = await context.db
-      .select({ id: table.id })
+      .select({
+        id: table.id,
+        repoDid: table.repoDid,
+        productAccountDid: table.productAccountDid,
+      })
       .from(table)
       .where(listingPublicWhere(table, eq(table.id, data.id)))
       .limit(1);
@@ -2206,6 +2263,9 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
     if (!listing) {
       return [];
     }
+
+    const session = await getAtprotoSessionForRequest(getRequest());
+    const viewerDid = session?.did ?? undefined;
 
     const rev = context.schema.storeListingReviews;
     const rows = await context.db
@@ -2217,6 +2277,7 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
         reviewCreatedAt: rev.reviewCreatedAt,
         authorDisplayName: rev.authorDisplayName,
         authorAvatarUrl: rev.authorAvatarUrl,
+        replyCount: rev.replyCount,
       })
       .from(rev)
       .where(eq(rev.storeListingId, listing.id))
@@ -2233,6 +2294,7 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
         const avatarUrl =
           row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
 
+        const replyCount = Number(row.replyCount ?? 0);
         return {
           id: row.id,
           authorDid: row.authorDid,
@@ -2241,6 +2303,13 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
           reviewCreatedAt: row.reviewCreatedAt.toISOString(),
           authorDisplayName: displayName,
           authorAvatarUrl: avatarUrl,
+          replyCount,
+          canReply: viewerMayReplyOnListingReview({
+            viewerDid,
+            reviewAuthorDid: row.authorDid,
+            listingRepoDid: listing.repoDid,
+            listingProductAccountDid: listing.productAccountDid,
+          }),
         };
       }),
     );
@@ -2385,6 +2454,9 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
 
     const profile = await fetchBlueskyPublicProfileFields(did);
 
+    const session = await getAtprotoSessionForRequest(getRequest());
+    const viewerDid = session?.did ?? undefined;
+
     const rev = context.schema.storeListingReviews;
     const list = context.schema.storeListings;
 
@@ -2397,12 +2469,15 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
         reviewCreatedAt: rev.reviewCreatedAt,
         authorDisplayName: rev.authorDisplayName,
         authorAvatarUrl: rev.authorAvatarUrl,
+        replyCount: rev.replyCount,
         listingId: list.id,
         listingName: list.name,
         listingSlug: list.slug,
         listingSourceUrl: list.sourceUrl,
         listingIconUrl: list.iconUrl,
         listingTagline: list.tagline,
+        listingRepoDid: list.repoDid,
+        listingProductAccountDid: list.productAccountDid,
       })
       .from(rev)
       .innerJoin(list, eq(rev.storeListingId, list.id))
@@ -2418,6 +2493,7 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
       const avatarUrl =
         row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
 
+      const replyCount = Number(row.replyCount ?? 0);
       return {
         id: row.id,
         authorDid: row.authorDid,
@@ -2426,6 +2502,13 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
         reviewCreatedAt: row.reviewCreatedAt.toISOString(),
         authorDisplayName: displayName,
         authorAvatarUrl: avatarUrl,
+        replyCount,
+        canReply: viewerMayReplyOnListingReview({
+          viewerDid,
+          reviewAuthorDid: row.authorDid,
+          listingRepoDid: row.listingRepoDid,
+          listingProductAccountDid: row.listingProductAccountDid,
+        }),
         listing: {
           id: row.listingId,
           name: row.listingName,
@@ -2814,6 +2897,270 @@ const deleteDirectoryListingReview = createServerFn({ method: "POST" })
       session.did,
       COLLECTION.listingReview,
       revRow.rkey,
+    );
+
+    return { ok: true as const };
+  });
+
+const getDirectoryListingReviewReplies = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getDirectoryListingReviewRepliesInput)
+  .handler(async ({ data, context }) => {
+    const rev = context.schema.storeListingReviews;
+    const list = context.schema.storeListings;
+    const rep = context.schema.storeListingReviewReplies;
+
+    const [ctxRow] = await context.db
+      .select({ reviewId: rev.id })
+      .from(rev)
+      .innerJoin(list, eq(rev.storeListingId, list.id))
+      .where(and(eq(rev.id, data.reviewId), listingPublicWhere(list)))
+      .limit(1);
+
+    if (!ctxRow) {
+      return [];
+    }
+
+    const authorAllowed = sqlReplyAuthorAllowedPredicate(rep, rev, list);
+
+    const rows = await context.db
+      .select({
+        id: rep.id,
+        authorDid: rep.authorDid,
+        text: rep.text,
+        replyCreatedAt: rep.replyCreatedAt,
+      })
+      .from(rep)
+      .innerJoin(rev, eq(rep.reviewId, rev.id))
+      .innerJoin(list, eq(rev.storeListingId, list.id))
+      .where(
+        and(
+          eq(rep.reviewId, data.reviewId),
+          listingPublicWhere(list),
+          authorAllowed,
+        ),
+      )
+      .orderBy(asc(rep.replyCreatedAt), asc(rep.id));
+
+    const enriched: Array<DirectoryListingReviewReply> = await Promise.all(
+      rows.map(async (row) => {
+        const profile = await fetchBlueskyPublicProfileFields(row.authorDid);
+        const displayName =
+          profile?.displayName?.trim() ||
+          profile?.handle ||
+          (row.authorDid.length > 16
+            ? `${row.authorDid.slice(0, 10)}…`
+            : row.authorDid);
+
+        const avatarUrl = profile?.avatarUrl ?? null;
+
+        return {
+          id: row.id,
+          authorDid: row.authorDid,
+          text: row.text,
+          replyCreatedAt: row.replyCreatedAt.toISOString(),
+          authorDisplayName: displayName,
+          authorAvatarUrl: avatarUrl,
+        };
+      }),
+    );
+
+    return enriched;
+  });
+
+function getDirectoryListingReviewRepliesQueryOptions(reviewId: string) {
+  return queryOptions({
+    queryKey: ["storeListings", "reviewReplies", reviewId],
+    queryFn: async () =>
+      getDirectoryListingReviewReplies({ data: { reviewId } }),
+  });
+}
+
+const createDirectoryListingReviewReply = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware])
+  .inputValidator(createDirectoryListingReviewReplyInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest());
+    if (!session) {
+      throw new Error("Sign in to post a reply.");
+    }
+
+    const revTable = context.schema.storeListingReviews;
+    const listTable = context.schema.storeListings;
+
+    const [row] = await context.db
+      .select({
+        reviewAtUri: revTable.atUri,
+        reviewAuthorDid: revTable.authorDid,
+        listingRepoDid: listTable.repoDid,
+        listingProductDid: listTable.productAccountDid,
+      })
+      .from(revTable)
+      .innerJoin(listTable, eq(revTable.storeListingId, listTable.id))
+      .where(and(eq(revTable.id, data.reviewId), listingPublicWhere(listTable)))
+      .limit(1);
+
+    if (!row) {
+      throw new Error("Review not found.");
+    }
+
+    if (
+      !viewerMayReplyOnListingReview({
+        viewerDid: session.did,
+        reviewAuthorDid: row.reviewAuthorDid,
+        listingRepoDid: row.listingRepoDid,
+        listingProductAccountDid: row.listingProductDid,
+      })
+    ) {
+      throw new Error("You cannot reply on this thread.");
+    }
+
+    const subject = row.reviewAtUri?.trim();
+    if (!subject) {
+      throw new Error(
+        "This listing has no AT Protocol URI yet; replies are unavailable until it is published to the network.",
+      );
+    }
+
+    const createdAt = new Date().toISOString();
+    const text = data.text.trim();
+    const { uri } = await createListingReviewReplyRecord(
+      session.client,
+      session.did,
+      { subject, text, createdAt },
+    );
+
+    const { repo, rkey } = parseAtUriParts(uri);
+    if (repo !== session.did) {
+      throw new Error("Unexpected reply record repo DID.");
+    }
+
+    const record: {
+      $type: typeof NSID.listingReviewReply;
+      subject: string;
+      text: string;
+      createdAt: string;
+    } = {
+      $type: NSID.listingReviewReply,
+      subject,
+      text,
+      createdAt,
+    };
+
+    await upsertListingReviewReplyFromTap({
+      db: context.db,
+      did: repo,
+      rkey,
+      record,
+    });
+
+    const repTable = context.schema.storeListingReviewReplies;
+    const [replyRow] = await context.db
+      .select({ id: repTable.id })
+      .from(repTable)
+      .where(eq(repTable.atUri, uri))
+      .limit(1);
+
+    if (!replyRow) {
+      throw new Error(
+        "Reply was created on the network but could not be mirrored locally.",
+      );
+    }
+
+    return { uri, replyId: replyRow.id };
+  });
+
+const updateDirectoryListingReviewReply = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware])
+  .inputValidator(updateDirectoryListingReviewReplyInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest());
+    if (!session) {
+      throw new Error("Sign in to edit your reply.");
+    }
+
+    const repTable = context.schema.storeListingReviewReplies;
+    const revTable = context.schema.storeListingReviews;
+    const listTable = context.schema.storeListings;
+
+    const [joined] = await context.db
+      .select({
+        rkey: repTable.rkey,
+        subjectUri: repTable.subjectUri,
+        replyCreatedAt: repTable.replyCreatedAt,
+      })
+      .from(repTable)
+      .innerJoin(revTable, eq(repTable.reviewId, revTable.id))
+      .innerJoin(listTable, eq(revTable.storeListingId, listTable.id))
+      .where(
+        and(
+          eq(repTable.id, data.replyId),
+          eq(repTable.authorDid, session.did),
+          listingPublicWhere(listTable),
+        ),
+      )
+      .limit(1);
+
+    if (!joined) {
+      throw new Error(
+        "Reply not found or you do not have permission to edit it.",
+      );
+    }
+
+    await putListingReviewReplyRecord(
+      session.client,
+      session.did,
+      joined.rkey,
+      {
+        subject: joined.subjectUri,
+        createdAt: joined.replyCreatedAt.toISOString(),
+        text: data.text.trim(),
+      },
+    );
+
+    return { ok: true as const };
+  });
+
+const deleteDirectoryListingReviewReply = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware])
+  .inputValidator(deleteDirectoryListingReviewReplyInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest());
+    if (!session) {
+      throw new Error("Sign in to delete your reply.");
+    }
+
+    const repTable = context.schema.storeListingReviewReplies;
+    const revTable = context.schema.storeListingReviews;
+    const listTable = context.schema.storeListings;
+
+    const [joined] = await context.db
+      .select({
+        rkey: repTable.rkey,
+      })
+      .from(repTable)
+      .innerJoin(revTable, eq(repTable.reviewId, revTable.id))
+      .innerJoin(listTable, eq(revTable.storeListingId, listTable.id))
+      .where(
+        and(
+          eq(repTable.id, data.replyId),
+          eq(repTable.authorDid, session.did),
+          listingPublicWhere(listTable),
+        ),
+      )
+      .limit(1);
+
+    if (!joined) {
+      throw new Error(
+        "Reply not found or you do not have permission to delete it.",
+      );
+    }
+
+    await deleteRecord(
+      session.client,
+      session.did,
+      COLLECTION.listingReviewReply,
+      joined.rkey,
     );
 
     return { ok: true as const };
@@ -5799,6 +6146,8 @@ export const directoryListingApi = {
   getDirectoryListingDetailForOwnerEditQueryOptions,
   getDirectoryListingReviews,
   getDirectoryListingReviewsQueryOptions,
+  getDirectoryListingReviewReplies,
+  getDirectoryListingReviewRepliesQueryOptions,
   getDirectoryListingMentions,
   getDirectoryListingMentionsQueryOptions,
   getUserProfileReviewsPageData,
@@ -5812,6 +6161,9 @@ export const directoryListingApi = {
   createDirectoryListingReview,
   updateDirectoryListingReview,
   deleteDirectoryListingReview,
+  createDirectoryListingReviewReply,
+  updateDirectoryListingReviewReply,
+  deleteDirectoryListingReviewReply,
   getRelatedDirectoryListings,
   getRelatedDirectoryListingsQueryOptions,
   listDirectoryListings,

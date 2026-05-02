@@ -15,6 +15,7 @@
             "fyi.atstore.profile",
             "fyi.atstore.listing.detail",
             "fyi.atstore.listing.review",
+            "fyi.atstore.listing.reviewReply",
             "fyi.atstore.listing.favorite"
           ],
           "action": ["create", "update", "delete"]

@@ -2,12 +2,15 @@
 /**
  * Tap consumer: WebSocket to your Tap deployment. Ingests `fyi.atstore.listing.detail`
  * into `store_listings`, `fyi.atstore.listing.review` into `store_listing_reviews`,
+ * `fyi.atstore.listing.reviewReply` into `store_listing_review_replies`,
  * and `fyi.atstore.listing.favorite` into `store_listing_favorites`.
  * Logs identity events; other record collections are skipped except `fyi.atstore.profile` (quiet).
  * Which repos and records appear is configured on the Tap *server* (indigo `cmd/tap`): set
  * `TAP_COLLECTION_FILTERS` to include `fyi.atstore.listing.detail`, `fyi.atstore.listing.review`,
- * and `fyi.atstore.listing.favorite` (or `fyi.atstore.*`). If the server only filters `listing.detail`,
- * review/favorite creates never reach
+ * `fyi.atstore.listing.reviewReply`, and `fyi.atstore.listing.favorite`
+ * (or `fyi.atstore.*`).
+ * If the server only filters `listing.detail`,
+ * review / reply / favorite creates never reach
  * this WebSocket — you will see no `[record]` lines for those records. This client has no per-DID allowlist.
  *
  * Env:
@@ -41,6 +44,11 @@ import {
   tryParseListingReviewRecord,
   upsertListingReviewFromTap,
 } from "#/lib/atproto/tap-review-sync";
+import {
+  deleteListingReviewReplyFromTap,
+  tryParseListingReviewReplyRecord,
+  upsertListingReviewReplyFromTap,
+} from "#/lib/atproto/tap-review-reply-sync";
 
 import type { Database } from "../src/db/index.server";
 
@@ -114,10 +122,12 @@ async function main() {
   const ingestCollections = new Set<string>([
     COLLECTION.listingDetail,
     COLLECTION.listingReview,
+    COLLECTION.listingReviewReply,
     COLLECTION.listingFavorite,
   ]);
   let firstListingDetailEvent = true;
   let firstListingReviewEvent = true;
+  let firstListingReviewReplyEvent = true;
   let firstListingFavoriteEvent = true;
 
   const indexer = new SimpleIndexer();
@@ -218,6 +228,81 @@ async function main() {
       } catch (error) {
         console.error(
           `[tap] review upsert failed rkey=${evt.rkey} did=${evt.did}`,
+          error,
+        );
+        throw error;
+      }
+      return;
+    }
+
+    if (evt.collection === COLLECTION.listingReviewReply) {
+      if (evt.action !== "delete" && !evt.live) {
+        console.log(
+          `[tap] listing.reviewReply backfill/non-live event (still ingesting) live=false rkey=${evt.rkey} did=${evt.did}`,
+        );
+      }
+
+      if (evt.action === "delete") {
+        console.log(
+          `[tap] delete store_listing_review_replies match author_did=${evt.did} rkey=${evt.rkey}`,
+        );
+        await deleteListingReviewReplyFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+        });
+        console.log(`[tap] reviewReply delete applied rkey=${evt.rkey}`);
+        return;
+      }
+
+      if (firstListingReviewReplyEvent) {
+        firstListingReviewReplyEvent = false;
+        console.log(
+          `[tap] first listing.reviewReply event — ensure Tap relays ${COLLECTION.listingReviewReply}`,
+        );
+      }
+
+      const raw = evt.record;
+      const body = raw === undefined ? undefined : cloneRecordForIngest(raw);
+      if (raw !== undefined && isVerbose()) {
+        const mode =
+          typeof structuredClone === "function" ? "structuredClone" : "JSON";
+        console.log(`[tap] record clone mode=${mode}`);
+      }
+      if (body === undefined) {
+        console.warn(
+          `[tap] listing.reviewReply missing record body rkey=${evt.rkey} did=${evt.did} action=${evt.action}`,
+        );
+        return;
+      }
+      const parseResult = tryParseListingReviewReplyRecord(body);
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip listing.reviewReply rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
+        );
+        if (parseResult.stage === "zod" && parseResult.zodError) {
+          console.warn(
+            "[tap] zod field errors:",
+            parseResult.zodError.flatten(),
+          );
+        }
+        return;
+      }
+
+      console.log(
+        `[tap] upsert store_listing_review_replies subject=${parseResult.record.subject} did=${evt.did} rkey=${evt.rkey}`,
+      );
+      try {
+        await upsertListingReviewReplyFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parseResult.record,
+        });
+        console.log(`[tap] reviewReply upsert ok rkey=${evt.rkey}`);
+      } catch (error) {
+        console.error(
+          `[tap] reviewReply upsert failed rkey=${evt.rkey} did=${evt.did}`,
           error,
         );
         throw error;

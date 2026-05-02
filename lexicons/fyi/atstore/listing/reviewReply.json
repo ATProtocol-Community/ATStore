@@ -1,0 +1,31 @@
+{
+  "lexicon": 1,
+  "id": "fyi.atstore.listing.reviewReply",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A reply on a fyi.atstore.listing.review. Threads are linear (no per-reply parent). By convention, only the listing owner or the review author should post replies; the AT Store app drops replies from any other DID at ingest and at render. The PDS does not enforce this — other indexers MAY surface unauthorized replies if they choose.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["subject", "text", "createdAt"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT URI of the fyi.atstore.listing.review this reply belongs to."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

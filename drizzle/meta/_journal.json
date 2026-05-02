@@ -225,6 +225,13 @@
       "when": 1778200000000,
       "tag": "0031_home_page_promo_listing",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1778300000000,
+      "tag": "0032_store_listing_review_replies",
+      "breakpoints": true
     }
   ]
 }

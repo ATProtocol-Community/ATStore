@@ -226,6 +226,61 @@ export async function createListingReviewRecord(
   return { uri: res.uri, cid: res.cid };
 }
 
+export async function createListingReviewReplyRecord(
+  client: Client,
+  repo: string,
+  input: {
+    subject: string;
+    createdAt: string;
+    text: string;
+  },
+): Promise<{ uri: string; cid: string }> {
+  const record: Record<string, unknown> = {
+    $type: NSID.listingReviewReply,
+    subject: input.subject,
+    createdAt: input.createdAt,
+    text: input.text.trim(),
+  };
+
+  const res = await ok(
+    client.call(ComAtprotoRepoCreateRecord, {
+      input: lexCreateRecordInput({
+        repo,
+        collection: COLLECTION.listingReviewReply,
+        rkey: TID.now(),
+        record,
+      }),
+    }),
+  );
+  return { uri: res.uri, cid: res.cid };
+}
+
+/** Replace an existing `fyi.atstore.listing.reviewReply` (same rkey). */
+export async function putListingReviewReplyRecord(
+  client: Client,
+  repo: string,
+  rkey: string,
+  input: {
+    subject: string;
+    createdAt: string;
+    text: string;
+  },
+): Promise<{ uri: string }> {
+  const record: Record<string, unknown> = {
+    $type: NSID.listingReviewReply,
+    subject: input.subject,
+    createdAt: input.createdAt,
+    text: input.text.trim(),
+  };
+
+  return repoUpsertRecord(client, {
+    repo,
+    collection: COLLECTION.listingReviewReply,
+    rkey,
+    record,
+  });
+}
+
 /** Replace an existing `fyi.atstore.listing.favorite` (same rkey). */
 export async function putListingFavoriteRecord(
   client: Client,

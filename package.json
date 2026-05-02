@@ -24,7 +24,7 @@
     "db:studio": "drizzle-kit studio",
     "db:backup": "tsx -r dotenv/config scripts/db-backup.ts",
     "db:seed": "tsx -r dotenv/config scripts/db-seed.ts",
-    "lex:gen": "bash -c 'mkdir -p src/lexicons/generated && pnpm exec lex gen-ts-obj src/lexicons/generated/bundle.ts lexicons/fyi/atstore/profile.json lexicons/fyi/atstore/listing/detail.json lexicons/fyi/atstore/listing/review.json lexicons/fyi/atstore/listing/favorite.json lexicons/fyi/atstore/auth/basic.json > src/lexicons/generated/bundle.ts'",
+    "lex:gen": "bash -c 'mkdir -p src/lexicons/generated && pnpm exec lex gen-ts-obj src/lexicons/generated/bundle.ts lexicons/fyi/atstore/profile.json lexicons/fyi/atstore/listing/detail.json lexicons/fyi/atstore/listing/review.json lexicons/fyi/atstore/listing/reviewReply.json lexicons/fyi/atstore/listing/favorite.json lexicons/fyi/atstore/auth/basic.json > src/lexicons/generated/bundle.ts'",
     "lex:lint": "node scripts/goat-lex.mjs lex lint",
     "lex:status": "node scripts/goat-lex.mjs lex status",
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
