@@ -1,9 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
-import { createLink, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { AtStoreLogo } from "./AtStoreLogo";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { NavbarAuth } from "./NavbarAuth";
+import { createLocaleLink } from "./LocaleLink";
 import { IconButton } from "../design-system/icon-button";
 import {
   Navbar,
@@ -16,9 +19,9 @@ import { containerBreakpoints } from "../design-system/theme/media-queries.style
 import { fontSize } from "../design-system/theme/typography.stylex";
 import { gap } from "../design-system/theme/semantic-spacing.stylex";
 
-const NavbarLogoLink = createLink(NavbarLogo);
-const NavbarLinkLink = createLink(NavbarLink);
-const IconButtonLink = createLink(IconButton);
+const NavbarLogoLink = createLocaleLink(NavbarLogo);
+const NavbarLinkLink = createLocaleLink(NavbarLink);
+const IconButtonLink = createLocaleLink(IconButton);
 
 const styles = stylex.create({
   logoContent: {
@@ -49,35 +52,40 @@ export function SiteHeader() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const { t } = useTranslation("common");
 
   return (
     <Navbar>
-      <NavbarLogoLink to="/" style={styles.logoContent}>
+      <NavbarLogoLink to="/$locale" style={styles.logoContent}>
         <AtStoreLogo variant="navbar" />
       </NavbarLogoLink>
       <NavbarNavigation justify="right">
-        <NavbarLinkLink to="/home" isActive={pathname.startsWith("/apps/")}>
-          Apps
+        <NavbarLinkLink
+          to="/$locale/home"
+          isActive={pathname.includes("/apps/")}
+        >
+          {t("siteHeader.apps")}
         </NavbarLinkLink>
         <NavbarLinkLink
-          to="/search"
-          isActive={pathname.startsWith("/search")}
+          to="/$locale/search"
+          isActive={pathname.includes("/search")}
           style={styles.mobileSearchLink}
           search={{ sort: "popular" }}
         >
-          Search
+          {t("siteHeader.search")}
         </NavbarLinkLink>
       </NavbarNavigation>
       <NavbarAction style={styles.navbarAction}>
         <IconButtonLink
-          to="/search"
+          to="/$locale/search"
           search={{ sort: "popular" }}
-          aria-label="Search listings"
+          aria-label={t("siteHeader.searchListingsAriaLabel")}
           variant="secondary"
           style={styles.desktopSearchLink}
         >
           <Search />
         </IconButtonLink>
+        <LanguageSwitcher />
         <NavbarAuth />
       </NavbarAction>
     </Navbar>

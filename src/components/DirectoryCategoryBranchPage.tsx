@@ -1,6 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Link as RouterLink, createLink } from "@tanstack/react-router";
+import { LocaleLink as RouterLink } from "./LocaleLink";
+import { createLocaleLink } from "./LocaleLink";
 import {
   AppWindow,
   BarChart3,
@@ -37,7 +38,7 @@ import {
 
 export type RootDirectoryCategoryId = "apps" | "protocol";
 
-const AppLink = createLink(Link);
+const AppLink = createLocaleLink(Link);
 
 const ROOT_CATEGORY_COPY = {
   apps: {
@@ -190,15 +191,17 @@ export function DirectoryCategoryBranchPage({
         <Page.Root variant="large" style={styles.page}>
           <Flex direction="column" style={styles.pageContent}>
             <Flex gap="xl" style={styles.navLinks}>
-              <AppLink to="/home">Back to home</AppLink>
+              <AppLink to="/$locale/home">Back to home</AppLink>
               <AppLink to={"/categories/all" as never}>All branches</AppLink>
               <AppLink to={copy.alternateHref as never}>
                 Browse {copy.alternateLabel}
               </AppLink>
               {import.meta.env.DEV ? (
                 <>
-                  <AppLink to="/dev/categories">Recategorize DB</AppLink>
-                  <AppLink to="/dev/app-tags">App tags</AppLink>
+                  <AppLink to="/$locale/dev/categories">
+                    Recategorize DB
+                  </AppLink>
+                  <AppLink to="/$locale/dev/app-tags">App tags</AppLink>
                 </>
               ) : null}
             </Flex>
@@ -228,7 +231,7 @@ function CategoryCard({ category }: { category: DirectoryCategoryTreeNode }) {
 
   return (
     <RouterLink
-      to="/categories/$categoryId"
+      to="/$locale/categories/$categoryId"
       params={{ categoryId: category.id }}
       {...stylex.props(styles.categoryCardLink)}
     >

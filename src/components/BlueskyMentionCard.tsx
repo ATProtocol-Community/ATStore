@@ -1,6 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { RichText } from "@atproto/api";
-import { createLink, Link as RouterLink } from "@tanstack/react-router";
+import { LocaleLink as RouterLink } from "./LocaleLink";
+import { createLocaleLink } from "./LocaleLink";
 import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -21,7 +22,7 @@ import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
 import { IconButton } from "#/design-system/icon-button";
 import { uiColor } from "../design-system/theme/color.stylex";
 
-const IconButtonLink = createLink(IconButton);
+const IconButtonLink = createLocaleLink(IconButton);
 
 const styles = stylex.create({
   mentionCard: {
@@ -189,7 +190,7 @@ export function BlueskyMentionCard({
     <Card size="lg" style={styles.mentionCard}>
       <CardHeader>
         <RouterLink
-          to="/profile/$actor"
+          to="/$locale/profile/$actor"
           params={{ actor: mention.authorDid }}
           {...stylex.props(styles.mentionProfileLink)}
         >

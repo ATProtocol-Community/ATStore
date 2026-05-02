@@ -1,24 +1,24 @@
-import { and, eq, gte, ne, sql } from 'drizzle-orm'
+import { and, eq, gte, ne, sql } from "drizzle-orm";
 
-import type { Database } from '#/db/index.server'
-import * as schema from '#/db/schema'
-import { shouldOmitUrlMentionsForBlueskyPlatformListing } from '#/lib/directory-categories'
+import type { Database } from "#/db/index.server";
+import * as schema from "#/db/schema";
+import { shouldOmitUrlMentionsForBlueskyPlatformListing } from "#/lib/directory-categories";
 import {
   trendingDecayWindowDays,
   trendingFavoriteHalfLifeDays,
   trendingMentionHalfLifeDays,
-} from '#/lib/trending/config'
+} from "#/lib/trending/config";
 import {
   bayesianAverageRating,
   combineTrendingScore,
   decayFactorForAgeMs,
   mentionVolumeSignal,
   ratingSignalFromAverage,
-} from '#/lib/trending/score'
+} from "#/lib/trending/score";
 
 function windowStart(): Date {
-  const days = trendingDecayWindowDays()
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+  const days = trendingDecayWindowDays();
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
 function storeListingMentionsInWindow(
@@ -29,11 +29,11 @@ function storeListingMentionsInWindow(
   const parts = [
     eq(schema.storeListingMentions.storeListingId, storeListingId),
     gte(schema.storeListingMentions.postCreatedAt, since),
-  ]
+  ];
   if (omitUrlMentions) {
-    parts.push(ne(schema.storeListingMentions.matchType, 'url'))
+    parts.push(ne(schema.storeListingMentions.matchType, "url"));
   }
-  return and(...parts)
+  return and(...parts);
 }
 
 /**
@@ -48,15 +48,15 @@ export async function recomputeListingFavoriteCount(
       cnt: sql<number>`count(*)::int`,
     })
     .from(schema.storeListingFavorites)
-    .where(eq(schema.storeListingFavorites.storeListingId, storeListingId))
+    .where(eq(schema.storeListingFavorites.storeListingId, storeListingId));
 
-  const count = Number(agg?.cnt ?? 0)
+  const count = Number(agg?.cnt ?? 0);
   await db
     .update(schema.storeListings)
     .set({
       favoriteCount: count,
     })
-    .where(eq(schema.storeListings.id, storeListingId))
+    .where(eq(schema.storeListings.id, storeListingId));
 }
 
 async function sumDecayedFavorites(
@@ -64,7 +64,7 @@ async function sumDecayedFavorites(
   storeListingId: string,
   halfLifeDays: number,
 ): Promise<number> {
-  const since = windowStart()
+  const since = windowStart();
   const rows = await db
     .select({
       t: schema.storeListingFavorites.favoriteCreatedAt,
@@ -75,15 +75,15 @@ async function sumDecayedFavorites(
         eq(schema.storeListingFavorites.storeListingId, storeListingId),
         gte(schema.storeListingFavorites.favoriteCreatedAt, since),
       ),
-    )
+    );
 
-  const now = Date.now()
-  let sum = 0
+  const now = Date.now();
+  let sum = 0;
   for (const row of rows) {
-    const ts = row.t?.getTime?.() ?? 0
-    sum += decayFactorForAgeMs(now - ts, halfLifeDays)
+    const ts = row.t?.getTime?.() ?? 0;
+    sum += decayFactorForAgeMs(now - ts, halfLifeDays);
   }
-  return sum
+  return sum;
 }
 
 async function sumDecayedMentions(
@@ -92,7 +92,7 @@ async function sumDecayedMentions(
   halfLifeDays: number,
   omitUrlMentions: boolean,
 ): Promise<number> {
-  const since = windowStart()
+  const since = windowStart();
   const rows = await db
     .select({
       t: schema.storeListingMentions.postCreatedAt,
@@ -100,15 +100,15 @@ async function sumDecayedMentions(
     .from(schema.storeListingMentions)
     .where(
       storeListingMentionsInWindow(storeListingId, since, omitUrlMentions),
-    )
+    );
 
-  const now = Date.now()
-  let sum = 0
+  const now = Date.now();
+  let sum = 0;
   for (const row of rows) {
-    const ts = row.t?.getTime?.() ?? 0
-    sum += decayFactorForAgeMs(now - ts, halfLifeDays)
+    const ts = row.t?.getTime?.() ?? 0;
+    sum += decayFactorForAgeMs(now - ts, halfLifeDays);
   }
-  return sum
+  return sum;
 }
 
 async function countMentionsSince(
@@ -124,14 +124,17 @@ async function countMentionsSince(
     .from(schema.storeListingMentions)
     .where(
       storeListingMentionsInWindow(storeListingId, since, omitUrlMentions),
-    )
-  return Number(agg?.cnt ?? 0)
+    );
+  return Number(agg?.cnt ?? 0);
 }
 
 /**
  * Recompute denormalized trending fields + cached score for one listing.
  */
-export async function recomputeListingTrending(db: Database, storeListingId: string) {
+export async function recomputeListingTrending(
+  db: Database,
+  storeListingId: string,
+) {
   const [listing] = await db
     .select({
       reviewCount: schema.storeListings.reviewCount,
@@ -140,17 +143,17 @@ export async function recomputeListingTrending(db: Database, storeListingId: str
     })
     .from(schema.storeListings)
     .where(eq(schema.storeListings.id, storeListingId))
-    .limit(1)
+    .limit(1);
 
-  if (!listing) return
+  if (!listing) return;
 
   const omitUrlMentions = shouldOmitUrlMentionsForBlueskyPlatformListing(
     listing.categorySlugs,
-  )
+  );
 
-  const now = new Date()
-  const d24 = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const now = new Date();
+  const d24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const [mention24, mention7, decayedFav, decayedMen] = await Promise.all([
     countMentionsSince(db, storeListingId, d24, omitUrlMentions),
@@ -162,26 +165,26 @@ export async function recomputeListingTrending(db: Database, storeListingId: str
       trendingMentionHalfLifeDays(),
       omitUrlMentions,
     ),
-  ])
+  ]);
 
   const [favRow] = await db
     .select({ cnt: sql<number>`count(*)::int` })
     .from(schema.storeListingFavorites)
-    .where(eq(schema.storeListingFavorites.storeListingId, storeListingId))
-  const favoriteCount = Number(favRow?.cnt ?? 0)
+    .where(eq(schema.storeListingFavorites.storeListingId, storeListingId));
+  const favoriteCount = Number(favRow?.cnt ?? 0);
 
   const bayes = bayesianAverageRating({
     reviewCount: listing.reviewCount,
     averageRating: listing.averageRating,
-  })
-  const rating01 = ratingSignalFromAverage(bayes)
+  });
+  const rating01 = ratingSignalFromAverage(bayes);
 
   const score = combineTrendingScore({
     decayedFavoriteWeight: decayedFav,
     ratingSignal01: rating01,
     decayedMentionWeight: decayedMen,
     mentionVolume01: mentionVolumeSignal(mention7),
-  })
+  });
 
   await db
     .update(schema.storeListings)
@@ -192,5 +195,5 @@ export async function recomputeListingTrending(db: Database, storeListingId: str
       trendingScore: score,
       trendingUpdatedAt: new Date(),
     })
-    .where(eq(schema.storeListings.id, storeListingId))
+    .where(eq(schema.storeListings.id, storeListingId));
 }

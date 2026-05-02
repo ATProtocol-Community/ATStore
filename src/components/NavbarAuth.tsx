@@ -1,6 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createLink, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { createLocaleLink } from "./LocaleLink";
 import { LogOut, Monitor, Moon, Shield, Sun } from "lucide-react";
 import Cookies from "universal-cookie";
 
@@ -24,7 +25,7 @@ import { useTheme } from "#/lib/ThemeContext";
 
 import { ThemeMenu, ThemeSubMenu } from "./ThemeMenu";
 
-const ButtonLink = createLink(Button);
+const ButtonLink = createLocaleLink(Button);
 
 const styles = stylex.create({
   avatarTriggerWrapper: {
@@ -96,7 +97,7 @@ export function NavbarAuth() {
       >
         <MenuItem
           onPress={() => {
-            void navigate({ to: "/notifications" });
+            void navigate({ to: "/$locale/notifications" });
           }}
         >
           <Flex align="center" gap="md">
@@ -118,7 +119,7 @@ export function NavbarAuth() {
             const actor =
               handle != null && handle !== "" ? handle.replace(/^@+/, "") : did;
             void navigate({
-              to: "/profile/$actor",
+              to: "/$locale/profile/$actor",
               params: { actor },
             });
           }}
@@ -127,14 +128,14 @@ export function NavbarAuth() {
         </MenuItem>
         <MenuItem
           onPress={() => {
-            void navigate({ to: "/products/create" });
+            void navigate({ to: "/$locale/products/create" });
           }}
         >
           Submit a listing
         </MenuItem>
         <MenuItem
           onPress={() => {
-            void navigate({ to: "/product/claim" });
+            void navigate({ to: "/$locale/product/claim" });
           }}
         >
           Claim a listing
@@ -142,7 +143,7 @@ export function NavbarAuth() {
         {session.user.isAdmin ? (
           <MenuItem
             onPress={() => {
-              void navigate({ to: "/admin" });
+              void navigate({ to: "/$locale/admin" });
             }}
             suffix={<Shield />}
           >
@@ -162,7 +163,7 @@ export function NavbarAuth() {
   return (
     <Flex align="center" gap="sm">
       <GuestThemeMenu />
-      <ButtonLink to="/login" variant="secondary" size="md">
+      <ButtonLink to="/$locale/login" variant="secondary" size="md">
         Log in
       </ButtonLink>
     </Flex>

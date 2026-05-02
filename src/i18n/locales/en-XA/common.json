@@ -1,0 +1,14 @@
+{
+  "siteHeader": {
+    "apps": "[~~ Åþþš ~~]",
+    "search": "[~~ Šéåŕçĥ ~~]",
+    "searchListingsAriaLabel": "[~~~~ Šéåŕçĥ ļîšţîñĝš ~~~~]"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "[~~~~ Çĥåñĝé ļåñĝüåĝé ~~~~]",
+    "languageName": {
+      "en": "[~~ Éñĝļîšĥ ~~]",
+      "en-XA": "[~~~~ Þšéüðö (éñ-ẊÅ) ~~~~]"
+    }
+  }
+}

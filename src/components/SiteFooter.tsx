@@ -1,10 +1,11 @@
-import { createLink } from "@tanstack/react-router";
+import {} from "@tanstack/react-router";
 
+import { createLocaleLink } from "./LocaleLink";
 import { Footer } from "../design-system/footer";
 import { Link } from "../design-system/link";
 import { AtStoreLogo } from "./AtStoreLogo";
 
-const FooterLink = createLink(Link);
+const FooterLink = createLocaleLink(Link);
 
 const FOOTER_LINK_GROUPS = [
   {

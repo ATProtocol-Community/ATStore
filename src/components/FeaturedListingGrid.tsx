@@ -113,10 +113,7 @@ function arrangeForFeaturing<T>({
     if (canFeature(arranged[i])) continue;
 
     while (swapCursor < arranged.length) {
-      if (
-        !featuredFlags[swapCursor] &&
-        canFeature(arranged[swapCursor])
-      ) {
+      if (!featuredFlags[swapCursor] && canFeature(arranged[swapCursor])) {
         const tmp = arranged[i];
         arranged[i] = arranged[swapCursor];
         arranged[swapCursor] = tmp;

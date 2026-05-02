@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { LocaleLink as RouterLink } from "./LocaleLink";
 import { ChevronRight } from "lucide-react";
 
 import { Flex } from "../design-system/flex";
@@ -117,7 +117,7 @@ export function ProtocolCategoryCard({ category }: ProtocolCategoryCardProps) {
   return (
     <RouterLink
       params={{ category: category.segment }}
-      to="/protocol/$category"
+      to="/$locale/protocol/$category"
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}
     >
       {coverSrc ? (

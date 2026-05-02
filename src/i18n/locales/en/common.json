@@ -1,0 +1,14 @@
+{
+  "siteHeader": {
+    "apps": "Apps",
+    "search": "Search",
+    "searchListingsAriaLabel": "Search listings"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Change language",
+    "languageName": {
+      "en": "English",
+      "en-XA": "Pseudo (en-XA)"
+    }
+  }
+}

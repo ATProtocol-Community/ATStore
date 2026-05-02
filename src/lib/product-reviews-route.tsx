@@ -1,7 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
-import { createLink, notFound, redirect } from "@tanstack/react-router";
+import { notFound, redirect } from "@tanstack/react-router";
+import { createLocaleLink } from "../components/LocaleLink";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -19,7 +20,7 @@ import {
 import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
 import { size } from "../design-system/theme/semantic-spacing.stylex";
 
-const AppLink = createLink(Link);
+const AppLink = createLocaleLink(Link);
 
 const styles = stylex.create({
   page: {
@@ -114,7 +115,7 @@ export function ProductReviewsPageChrome({
       <Flex direction="column" gap="7xl">
         <Flex style={styles.backLinkRow}>
           <AppLink
-            to="/products/$productId"
+            to="/$locale/products/$productId"
             params={{ productId: productSlug }}
           >
             <ChevronLeft />

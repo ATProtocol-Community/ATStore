@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { LocaleLink as RouterLink } from "./LocaleLink";
 import { ChevronRight } from "lucide-react";
 
 import { Flex } from "../design-system/flex";
@@ -139,7 +139,7 @@ export function EcosystemCategoryCard({
 
   return (
     <RouterLink
-      to="/categories/$categoryId"
+      to="/$locale/categories/$categoryId"
       params={{ categoryId: category.id }}
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}
     >

@@ -221,7 +221,7 @@ export function DirectoryListingReviewCard({
         {reviewedListing && listingProductId ? (
           <CardHeader hasBorder>
             <TanstackLink
-              to="/products/$productId"
+              to="/$locale/products/$productId"
               params={{ productId: listingProductId }}
               {...stylex.props(styles.reviewSubjectLink)}
             >
@@ -316,7 +316,7 @@ export function DirectoryListingReviewCard({
                 <Flex gap="2xl" style={styles.reviewHeader}>
                   {linkAuthorProfile ? (
                     <TanstackLink
-                      to="/profile/$actor"
+                      to="/$locale/profile/$actor"
                       params={{ actor: review.authorDid }}
                       {...stylex.props(styles.profileLink)}
                     >

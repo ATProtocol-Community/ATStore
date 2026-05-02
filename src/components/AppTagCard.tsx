@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { LocaleLink as RouterLink } from "./LocaleLink";
 import { ChevronRight } from "lucide-react";
 
 import { Flex } from "../design-system/flex";
@@ -115,7 +115,7 @@ export function AppTagCard({ tag }: AppTagCardProps) {
 
   return (
     <RouterLink
-      to="/apps/$tag"
+      to="/$locale/apps/$tag"
       params={{ tag: getAppTagSlug(tag.tag) }}
       search={{ sort: "popular" }}
       {...stylex.props(styles.card, getSoftAccentSurface(accent))}

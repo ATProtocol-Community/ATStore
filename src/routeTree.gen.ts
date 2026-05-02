@@ -9,67 +9,59 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as LocaleRouteImport } from './routes/$locale'
 import { Route as OgIndexRouteImport } from './routes/og.index'
-import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
-import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
-import { Route as HeaderLayoutHomeRouteImport } from './routes/_header-layout.home'
-import { Route as HeaderLayoutAboutRouteImport } from './routes/_header-layout.about'
-import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
+import { Route as LocaleIndexRouteImport } from './routes/$locale.index'
+import { Route as LocaleLoginRouteImport } from './routes/$locale.login'
+import { Route as LocaleHeaderLayoutRouteImport } from './routes/$locale._header-layout'
 import { Route as ApiAdminHeroCandidateImageRouteImport } from './routes/api.admin.hero-candidate-image'
-import { Route as HeaderLayoutProtocolTagsRouteImport } from './routes/_header-layout.protocol.tags'
-import { Route as HeaderLayoutProtocolListingsRouteImport } from './routes/_header-layout.protocol.listings'
-import { Route as HeaderLayoutProtocolCategoryRouteImport } from './routes/_header-layout.protocol.$category'
-import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
-import { Route as HeaderLayoutProductsCreateRouteImport } from './routes/_header-layout.products.create'
-import { Route as HeaderLayoutProductClaimRouteImport } from './routes/_header-layout.product.claim'
-import { Route as HeaderLayoutDevCategoriesRouteImport } from './routes/_header-layout.dev.categories'
-import { Route as HeaderLayoutDevAppTagsRouteImport } from './routes/_header-layout.dev.app-tags'
-import { Route as HeaderLayoutCategoriesCategoryIdRouteImport } from './routes/_header-layout.categories.$categoryId'
-import { Route as HeaderLayoutAppsTagsRouteImport } from './routes/_header-layout.apps.tags'
-import { Route as HeaderLayoutAppsAllRouteImport } from './routes/_header-layout.apps.all'
-import { Route as HeaderLayoutAppsTagRouteImport } from './routes/_header-layout.apps.$tag'
-import { Route as HeaderLayoutProductsProductIdIndexRouteImport } from './routes/_header-layout.products.$productId.index'
-import { Route as HeaderLayoutEcosystemsAppIndexRouteImport } from './routes/_header-layout.ecosystems.$app.index'
-import { Route as HeaderLayoutAdminLayoutAdminIndexRouteImport } from './routes/_header-layout._admin-layout.admin.index'
+import { Route as LocaleHeaderLayoutSearchRouteImport } from './routes/$locale._header-layout.search'
+import { Route as LocaleHeaderLayoutNotificationsRouteImport } from './routes/$locale._header-layout.notifications'
+import { Route as LocaleHeaderLayoutHomeRouteImport } from './routes/$locale._header-layout.home'
+import { Route as LocaleHeaderLayoutAboutRouteImport } from './routes/$locale._header-layout.about'
+import { Route as LocaleHeaderLayoutAdminLayoutRouteImport } from './routes/$locale._header-layout._admin-layout'
 import { Route as ApiAuthAtprotoSignupRouteImport } from './routes/api.auth.atproto.signup'
 import { Route as ApiAuthAtprotoMetadataDotjsonRouteImport } from './routes/api.auth.atproto.metadata[.]json'
 import { Route as ApiAuthAtprotoJwksDotjsonRouteImport } from './routes/api.auth.atproto.jwks[.]json'
 import { Route as ApiAuthAtprotoCallbackRouteImport } from './routes/api.auth.atproto.callback'
 import { Route as ApiAuthAtprotoAuthorizeRouteImport } from './routes/api.auth.atproto.authorize'
-import { Route as HeaderLayoutProductsProductIdReviewsRouteImport } from './routes/_header-layout.products.$productId.reviews'
-import { Route as HeaderLayoutProductsProductIdMentionsRouteImport } from './routes/_header-layout.products.$productId.mentions'
-import { Route as HeaderLayoutProductsProductIdEditRouteImport } from './routes/_header-layout.products.$productId.edit'
-import { Route as HeaderLayoutEcosystemsAppAllRouteImport } from './routes/_header-layout.ecosystems.$app.all'
-import { Route as HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.unverified-listings'
-import { Route as HeaderLayoutAdminLayoutAdminReviewsRouteImport } from './routes/_header-layout._admin-layout.admin.reviews'
-import { Route as HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport } from './routes/_header-layout._admin-layout.admin.recently-claimed'
-import { Route as HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport } from './routes/_header-layout._admin-layout.admin.pending-claims'
-import { Route as HeaderLayoutAdminLayoutAdminManagedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.managed-listings'
-import { Route as HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport } from './routes/_header-layout._admin-layout.admin.listing-product-accounts'
-import { Route as HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport } from './routes/_header-layout._admin-layout.admin.home-page-hero'
-import { Route as HeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport } from './routes/_header-layout._admin-layout.admin.hero-candidates'
-import { Route as HeaderLayoutAdminLayoutAdminHeroArtRouteImport } from './routes/_header-layout._admin-layout.admin.hero-art'
-import { Route as HeaderLayoutAdminLayoutAdminAdminsRouteImport } from './routes/_header-layout._admin-layout.admin.admins'
-import { Route as HeaderLayoutAdminLayoutAdminAddListingRouteImport } from './routes/_header-layout._admin-layout.admin.add-listing'
-import { Route as HeaderLayoutProductsProductIdReviewsIndexRouteImport } from './routes/_header-layout.products.$productId.reviews.index'
-import { Route as HeaderLayoutProductsProductIdReviewsWriteRouteImport } from './routes/_header-layout.products.$productId.reviews.write'
-import { Route as HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport } from './routes/_header-layout.products.$productId.reviews.$reviewId.edit'
+import { Route as LocaleHeaderLayoutProtocolTagsRouteImport } from './routes/$locale._header-layout.protocol.tags'
+import { Route as LocaleHeaderLayoutProtocolListingsRouteImport } from './routes/$locale._header-layout.protocol.listings'
+import { Route as LocaleHeaderLayoutProtocolCategoryRouteImport } from './routes/$locale._header-layout.protocol.$category'
+import { Route as LocaleHeaderLayoutProfileActorRouteImport } from './routes/$locale._header-layout.profile.$actor'
+import { Route as LocaleHeaderLayoutProductsCreateRouteImport } from './routes/$locale._header-layout.products.create'
+import { Route as LocaleHeaderLayoutProductClaimRouteImport } from './routes/$locale._header-layout.product.claim'
+import { Route as LocaleHeaderLayoutDevCategoriesRouteImport } from './routes/$locale._header-layout.dev.categories'
+import { Route as LocaleHeaderLayoutDevAppTagsRouteImport } from './routes/$locale._header-layout.dev.app-tags'
+import { Route as LocaleHeaderLayoutCategoriesCategoryIdRouteImport } from './routes/$locale._header-layout.categories.$categoryId'
+import { Route as LocaleHeaderLayoutAppsTagsRouteImport } from './routes/$locale._header-layout.apps.tags'
+import { Route as LocaleHeaderLayoutAppsAllRouteImport } from './routes/$locale._header-layout.apps.all'
+import { Route as LocaleHeaderLayoutAppsTagRouteImport } from './routes/$locale._header-layout.apps.$tag'
+import { Route as LocaleHeaderLayoutProductsProductIdIndexRouteImport } from './routes/$locale._header-layout.products.$productId.index'
+import { Route as LocaleHeaderLayoutEcosystemsAppIndexRouteImport } from './routes/$locale._header-layout.ecosystems.$app.index'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminIndexRouteImport } from './routes/$locale._header-layout._admin-layout.admin.index'
+import { Route as LocaleHeaderLayoutProductsProductIdReviewsRouteImport } from './routes/$locale._header-layout.products.$productId.reviews'
+import { Route as LocaleHeaderLayoutProductsProductIdMentionsRouteImport } from './routes/$locale._header-layout.products.$productId.mentions'
+import { Route as LocaleHeaderLayoutProductsProductIdEditRouteImport } from './routes/$locale._header-layout.products.$productId.edit'
+import { Route as LocaleHeaderLayoutEcosystemsAppAllRouteImport } from './routes/$locale._header-layout.ecosystems.$app.all'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport } from './routes/$locale._header-layout._admin-layout.admin.unverified-listings'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminReviewsRouteImport } from './routes/$locale._header-layout._admin-layout.admin.reviews'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport } from './routes/$locale._header-layout._admin-layout.admin.recently-claimed'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRouteImport } from './routes/$locale._header-layout._admin-layout.admin.pending-claims'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminManagedListingsRouteImport } from './routes/$locale._header-layout._admin-layout.admin.managed-listings'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport } from './routes/$locale._header-layout._admin-layout.admin.listing-product-accounts'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRouteImport } from './routes/$locale._header-layout._admin-layout.admin.home-page-hero'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport } from './routes/$locale._header-layout._admin-layout.admin.hero-candidates'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminHeroArtRouteImport } from './routes/$locale._header-layout._admin-layout.admin.hero-art'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminAdminsRouteImport } from './routes/$locale._header-layout._admin-layout.admin.admins'
+import { Route as LocaleHeaderLayoutAdminLayoutAdminAddListingRouteImport } from './routes/$locale._header-layout._admin-layout.admin.add-listing'
+import { Route as LocaleHeaderLayoutProductsProductIdReviewsIndexRouteImport } from './routes/$locale._header-layout.products.$productId.reviews.index'
+import { Route as LocaleHeaderLayoutProductsProductIdReviewsWriteRouteImport } from './routes/$locale._header-layout.products.$productId.reviews.write'
+import { Route as LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport } from './routes/$locale._header-layout.products.$productId.reviews.$reviewId.edit'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HeaderLayoutRoute = HeaderLayoutRouteImport.update({
-  id: '/_header-layout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LocaleRoute = LocaleRouteImport.update({
+  id: '/$locale',
+  path: '/$locale',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OgIndexRoute = OgIndexRouteImport.update({
@@ -77,30 +69,19 @@ const OgIndexRoute = OgIndexRouteImport.update({
   path: '/og/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeaderLayoutSearchRoute = HeaderLayoutSearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => HeaderLayoutRoute,
+const LocaleIndexRoute = LocaleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LocaleRoute,
 } as any)
-const HeaderLayoutNotificationsRoute =
-  HeaderLayoutNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutHomeRoute = HeaderLayoutHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => HeaderLayoutRoute,
+const LocaleLoginRoute = LocaleLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => LocaleRoute,
 } as any)
-const HeaderLayoutAboutRoute = HeaderLayoutAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => HeaderLayoutRoute,
-} as any)
-const HeaderLayoutAdminLayoutRoute = HeaderLayoutAdminLayoutRouteImport.update({
-  id: '/_admin-layout',
-  getParentRoute: () => HeaderLayoutRoute,
+const LocaleHeaderLayoutRoute = LocaleHeaderLayoutRouteImport.update({
+  id: '/_header-layout',
+  getParentRoute: () => LocaleRoute,
 } as any)
 const ApiAdminHeroCandidateImageRoute =
   ApiAdminHeroCandidateImageRouteImport.update({
@@ -108,91 +89,32 @@ const ApiAdminHeroCandidateImageRoute =
     path: '/api/admin/hero-candidate-image',
     getParentRoute: () => rootRouteImport,
   } as any)
-const HeaderLayoutProtocolTagsRoute =
-  HeaderLayoutProtocolTagsRouteImport.update({
-    id: '/protocol/tags',
-    path: '/protocol/tags',
-    getParentRoute: () => HeaderLayoutRoute,
+const LocaleHeaderLayoutSearchRoute =
+  LocaleHeaderLayoutSearchRouteImport.update({
+    id: '/search',
+    path: '/search',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
   } as any)
-const HeaderLayoutProtocolListingsRoute =
-  HeaderLayoutProtocolListingsRouteImport.update({
-    id: '/protocol/listings',
-    path: '/protocol/listings',
-    getParentRoute: () => HeaderLayoutRoute,
+const LocaleHeaderLayoutNotificationsRoute =
+  LocaleHeaderLayoutNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
   } as any)
-const HeaderLayoutProtocolCategoryRoute =
-  HeaderLayoutProtocolCategoryRouteImport.update({
-    id: '/protocol/$category',
-    path: '/protocol/$category',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutProfileActorRoute =
-  HeaderLayoutProfileActorRouteImport.update({
-    id: '/profile/$actor',
-    path: '/profile/$actor',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutProductsCreateRoute =
-  HeaderLayoutProductsCreateRouteImport.update({
-    id: '/products/create',
-    path: '/products/create',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutProductClaimRoute =
-  HeaderLayoutProductClaimRouteImport.update({
-    id: '/product/claim',
-    path: '/product/claim',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutDevCategoriesRoute =
-  HeaderLayoutDevCategoriesRouteImport.update({
-    id: '/dev/categories',
-    path: '/dev/categories',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutDevAppTagsRoute = HeaderLayoutDevAppTagsRouteImport.update({
-  id: '/dev/app-tags',
-  path: '/dev/app-tags',
-  getParentRoute: () => HeaderLayoutRoute,
+const LocaleHeaderLayoutHomeRoute = LocaleHeaderLayoutHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => LocaleHeaderLayoutRoute,
 } as any)
-const HeaderLayoutCategoriesCategoryIdRoute =
-  HeaderLayoutCategoriesCategoryIdRouteImport.update({
-    id: '/categories/$categoryId',
-    path: '/categories/$categoryId',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutAppsTagsRoute = HeaderLayoutAppsTagsRouteImport.update({
-  id: '/apps/tags',
-  path: '/apps/tags',
-  getParentRoute: () => HeaderLayoutRoute,
+const LocaleHeaderLayoutAboutRoute = LocaleHeaderLayoutAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => LocaleHeaderLayoutRoute,
 } as any)
-const HeaderLayoutAppsAllRoute = HeaderLayoutAppsAllRouteImport.update({
-  id: '/apps/all',
-  path: '/apps/all',
-  getParentRoute: () => HeaderLayoutRoute,
-} as any)
-const HeaderLayoutAppsTagRoute = HeaderLayoutAppsTagRouteImport.update({
-  id: '/apps/$tag',
-  path: '/apps/$tag',
-  getParentRoute: () => HeaderLayoutRoute,
-} as any)
-const HeaderLayoutProductsProductIdIndexRoute =
-  HeaderLayoutProductsProductIdIndexRouteImport.update({
-    id: '/products/$productId/',
-    path: '/products/$productId/',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutEcosystemsAppIndexRoute =
-  HeaderLayoutEcosystemsAppIndexRouteImport.update({
-    id: '/ecosystems/$app/',
-    path: '/ecosystems/$app/',
-    getParentRoute: () => HeaderLayoutRoute,
-  } as any)
-const HeaderLayoutAdminLayoutAdminIndexRoute =
-  HeaderLayoutAdminLayoutAdminIndexRouteImport.update({
-    id: '/admin/',
-    path: '/admin/',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+const LocaleHeaderLayoutAdminLayoutRoute =
+  LocaleHeaderLayoutAdminLayoutRouteImport.update({
+    id: '/_admin-layout',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
   } as any)
 const ApiAuthAtprotoSignupRoute = ApiAuthAtprotoSignupRouteImport.update({
   id: '/api/auth/atproto/signup',
@@ -221,413 +143,505 @@ const ApiAuthAtprotoAuthorizeRoute = ApiAuthAtprotoAuthorizeRouteImport.update({
   path: '/api/auth/atproto/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeaderLayoutProductsProductIdReviewsRoute =
-  HeaderLayoutProductsProductIdReviewsRouteImport.update({
+const LocaleHeaderLayoutProtocolTagsRoute =
+  LocaleHeaderLayoutProtocolTagsRouteImport.update({
+    id: '/protocol/tags',
+    path: '/protocol/tags',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutProtocolListingsRoute =
+  LocaleHeaderLayoutProtocolListingsRouteImport.update({
+    id: '/protocol/listings',
+    path: '/protocol/listings',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutProtocolCategoryRoute =
+  LocaleHeaderLayoutProtocolCategoryRouteImport.update({
+    id: '/protocol/$category',
+    path: '/protocol/$category',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutProfileActorRoute =
+  LocaleHeaderLayoutProfileActorRouteImport.update({
+    id: '/profile/$actor',
+    path: '/profile/$actor',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutProductsCreateRoute =
+  LocaleHeaderLayoutProductsCreateRouteImport.update({
+    id: '/products/create',
+    path: '/products/create',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutProductClaimRoute =
+  LocaleHeaderLayoutProductClaimRouteImport.update({
+    id: '/product/claim',
+    path: '/product/claim',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutDevCategoriesRoute =
+  LocaleHeaderLayoutDevCategoriesRouteImport.update({
+    id: '/dev/categories',
+    path: '/dev/categories',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutDevAppTagsRoute =
+  LocaleHeaderLayoutDevAppTagsRouteImport.update({
+    id: '/dev/app-tags',
+    path: '/dev/app-tags',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutCategoriesCategoryIdRoute =
+  LocaleHeaderLayoutCategoriesCategoryIdRouteImport.update({
+    id: '/categories/$categoryId',
+    path: '/categories/$categoryId',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutAppsTagsRoute =
+  LocaleHeaderLayoutAppsTagsRouteImport.update({
+    id: '/apps/tags',
+    path: '/apps/tags',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutAppsAllRoute =
+  LocaleHeaderLayoutAppsAllRouteImport.update({
+    id: '/apps/all',
+    path: '/apps/all',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutAppsTagRoute =
+  LocaleHeaderLayoutAppsTagRouteImport.update({
+    id: '/apps/$tag',
+    path: '/apps/$tag',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutProductsProductIdIndexRoute =
+  LocaleHeaderLayoutProductsProductIdIndexRouteImport.update({
+    id: '/products/$productId/',
+    path: '/products/$productId/',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutEcosystemsAppIndexRoute =
+  LocaleHeaderLayoutEcosystemsAppIndexRouteImport.update({
+    id: '/ecosystems/$app/',
+    path: '/ecosystems/$app/',
+    getParentRoute: () => LocaleHeaderLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutAdminLayoutAdminIndexRoute =
+  LocaleHeaderLayoutAdminLayoutAdminIndexRouteImport.update({
+    id: '/admin/',
+    path: '/admin/',
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
+  } as any)
+const LocaleHeaderLayoutProductsProductIdReviewsRoute =
+  LocaleHeaderLayoutProductsProductIdReviewsRouteImport.update({
     id: '/products/$productId/reviews',
     path: '/products/$productId/reviews',
-    getParentRoute: () => HeaderLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutRoute,
   } as any)
-const HeaderLayoutProductsProductIdMentionsRoute =
-  HeaderLayoutProductsProductIdMentionsRouteImport.update({
+const LocaleHeaderLayoutProductsProductIdMentionsRoute =
+  LocaleHeaderLayoutProductsProductIdMentionsRouteImport.update({
     id: '/products/$productId/mentions',
     path: '/products/$productId/mentions',
-    getParentRoute: () => HeaderLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutRoute,
   } as any)
-const HeaderLayoutProductsProductIdEditRoute =
-  HeaderLayoutProductsProductIdEditRouteImport.update({
+const LocaleHeaderLayoutProductsProductIdEditRoute =
+  LocaleHeaderLayoutProductsProductIdEditRouteImport.update({
     id: '/products/$productId/edit',
     path: '/products/$productId/edit',
-    getParentRoute: () => HeaderLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutRoute,
   } as any)
-const HeaderLayoutEcosystemsAppAllRoute =
-  HeaderLayoutEcosystemsAppAllRouteImport.update({
+const LocaleHeaderLayoutEcosystemsAppAllRoute =
+  LocaleHeaderLayoutEcosystemsAppAllRouteImport.update({
     id: '/ecosystems/$app/all',
     path: '/ecosystems/$app/all',
-    getParentRoute: () => HeaderLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute =
-  HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute =
+  LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport.update({
     id: '/admin/unverified-listings',
     path: '/admin/unverified-listings',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminReviewsRoute =
-  HeaderLayoutAdminLayoutAdminReviewsRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminReviewsRoute =
+  LocaleHeaderLayoutAdminLayoutAdminReviewsRouteImport.update({
     id: '/admin/reviews',
     path: '/admin/reviews',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute =
-  HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute =
+  LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport.update({
     id: '/admin/recently-claimed',
     path: '/admin/recently-claimed',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminPendingClaimsRoute =
-  HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute =
+  LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRouteImport.update({
     id: '/admin/pending-claims',
     path: '/admin/pending-claims',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminManagedListingsRoute =
-  HeaderLayoutAdminLayoutAdminManagedListingsRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute =
+  LocaleHeaderLayoutAdminLayoutAdminManagedListingsRouteImport.update({
     id: '/admin/managed-listings',
     path: '/admin/managed-listings',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminListingProductAccountsRoute =
-  HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute =
+  LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport.update({
     id: '/admin/listing-product-accounts',
     path: '/admin/listing-product-accounts',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminHomePageHeroRoute =
-  HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute =
+  LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRouteImport.update({
     id: '/admin/home-page-hero',
     path: '/admin/home-page-hero',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminHeroCandidatesRoute =
-  HeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute =
+  LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport.update({
     id: '/admin/hero-candidates',
     path: '/admin/hero-candidates',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminHeroArtRoute =
-  HeaderLayoutAdminLayoutAdminHeroArtRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute =
+  LocaleHeaderLayoutAdminLayoutAdminHeroArtRouteImport.update({
     id: '/admin/hero-art',
     path: '/admin/hero-art',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminAdminsRoute =
-  HeaderLayoutAdminLayoutAdminAdminsRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminAdminsRoute =
+  LocaleHeaderLayoutAdminLayoutAdminAdminsRouteImport.update({
     id: '/admin/admins',
     path: '/admin/admins',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutAdminLayoutAdminAddListingRoute =
-  HeaderLayoutAdminLayoutAdminAddListingRouteImport.update({
+const LocaleHeaderLayoutAdminLayoutAdminAddListingRoute =
+  LocaleHeaderLayoutAdminLayoutAdminAddListingRouteImport.update({
     id: '/admin/add-listing',
     path: '/admin/add-listing',
-    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+    getParentRoute: () => LocaleHeaderLayoutAdminLayoutRoute,
   } as any)
-const HeaderLayoutProductsProductIdReviewsIndexRoute =
-  HeaderLayoutProductsProductIdReviewsIndexRouteImport.update({
+const LocaleHeaderLayoutProductsProductIdReviewsIndexRoute =
+  LocaleHeaderLayoutProductsProductIdReviewsIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => HeaderLayoutProductsProductIdReviewsRoute,
+    getParentRoute: () => LocaleHeaderLayoutProductsProductIdReviewsRoute,
   } as any)
-const HeaderLayoutProductsProductIdReviewsWriteRoute =
-  HeaderLayoutProductsProductIdReviewsWriteRouteImport.update({
+const LocaleHeaderLayoutProductsProductIdReviewsWriteRoute =
+  LocaleHeaderLayoutProductsProductIdReviewsWriteRouteImport.update({
     id: '/write',
     path: '/write',
-    getParentRoute: () => HeaderLayoutProductsProductIdReviewsRoute,
+    getParentRoute: () => LocaleHeaderLayoutProductsProductIdReviewsRoute,
   } as any)
-const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
-  HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport.update({
+const LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
+  LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport.update({
     id: '/$reviewId/edit',
     path: '/$reviewId/edit',
-    getParentRoute: () => HeaderLayoutProductsProductIdReviewsRoute,
+    getParentRoute: () => LocaleHeaderLayoutProductsProductIdReviewsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/about': typeof HeaderLayoutAboutRoute
-  '/home': typeof HeaderLayoutHomeRoute
-  '/notifications': typeof HeaderLayoutNotificationsRoute
-  '/search': typeof HeaderLayoutSearchRoute
+  '/$locale': typeof LocaleHeaderLayoutAdminLayoutRouteWithChildren
+  '/$locale/login': typeof LocaleLoginRoute
+  '/$locale/': typeof LocaleIndexRoute
   '/og/': typeof OgIndexRoute
-  '/apps/$tag': typeof HeaderLayoutAppsTagRoute
-  '/apps/all': typeof HeaderLayoutAppsAllRoute
-  '/apps/tags': typeof HeaderLayoutAppsTagsRoute
-  '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
-  '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
-  '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
-  '/product/claim': typeof HeaderLayoutProductClaimRoute
-  '/products/create': typeof HeaderLayoutProductsCreateRoute
-  '/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
-  '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
-  '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/$locale/about': typeof LocaleHeaderLayoutAboutRoute
+  '/$locale/home': typeof LocaleHeaderLayoutHomeRoute
+  '/$locale/notifications': typeof LocaleHeaderLayoutNotificationsRoute
+  '/$locale/search': typeof LocaleHeaderLayoutSearchRoute
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
-  '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
-  '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  '/admin/hero-art': typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  '/admin/hero-candidates': typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
-  '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
-  '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
-  '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
-  '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
-  '/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
-  '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
-  '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
-  '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
-  '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
-  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
+  '/$locale/apps/$tag': typeof LocaleHeaderLayoutAppsTagRoute
+  '/$locale/apps/all': typeof LocaleHeaderLayoutAppsAllRoute
+  '/$locale/apps/tags': typeof LocaleHeaderLayoutAppsTagsRoute
+  '/$locale/categories/$categoryId': typeof LocaleHeaderLayoutCategoriesCategoryIdRoute
+  '/$locale/dev/app-tags': typeof LocaleHeaderLayoutDevAppTagsRoute
+  '/$locale/dev/categories': typeof LocaleHeaderLayoutDevCategoriesRoute
+  '/$locale/product/claim': typeof LocaleHeaderLayoutProductClaimRoute
+  '/$locale/products/create': typeof LocaleHeaderLayoutProductsCreateRoute
+  '/$locale/profile/$actor': typeof LocaleHeaderLayoutProfileActorRoute
+  '/$locale/protocol/$category': typeof LocaleHeaderLayoutProtocolCategoryRoute
+  '/$locale/protocol/listings': typeof LocaleHeaderLayoutProtocolListingsRoute
+  '/$locale/protocol/tags': typeof LocaleHeaderLayoutProtocolTagsRoute
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
   '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
-  '/admin/': typeof HeaderLayoutAdminLayoutAdminIndexRoute
-  '/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
-  '/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
-  '/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
-  '/products/$productId/reviews/': typeof HeaderLayoutProductsProductIdReviewsIndexRoute
-  '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
+  '/$locale/admin/add-listing': typeof LocaleHeaderLayoutAdminLayoutAdminAddListingRoute
+  '/$locale/admin/admins': typeof LocaleHeaderLayoutAdminLayoutAdminAdminsRoute
+  '/$locale/admin/hero-art': typeof LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute
+  '/$locale/admin/hero-candidates': typeof LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute
+  '/$locale/admin/home-page-hero': typeof LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  '/$locale/admin/listing-product-accounts': typeof LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  '/$locale/admin/managed-listings': typeof LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/$locale/admin/pending-claims': typeof LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/$locale/admin/recently-claimed': typeof LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  '/$locale/admin/reviews': typeof LocaleHeaderLayoutAdminLayoutAdminReviewsRoute
+  '/$locale/admin/unverified-listings': typeof LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
+  '/$locale/ecosystems/$app/all': typeof LocaleHeaderLayoutEcosystemsAppAllRoute
+  '/$locale/products/$productId/edit': typeof LocaleHeaderLayoutProductsProductIdEditRoute
+  '/$locale/products/$productId/mentions': typeof LocaleHeaderLayoutProductsProductIdMentionsRoute
+  '/$locale/products/$productId/reviews': typeof LocaleHeaderLayoutProductsProductIdReviewsRouteWithChildren
+  '/$locale/admin/': typeof LocaleHeaderLayoutAdminLayoutAdminIndexRoute
+  '/$locale/ecosystems/$app/': typeof LocaleHeaderLayoutEcosystemsAppIndexRoute
+  '/$locale/products/$productId/': typeof LocaleHeaderLayoutProductsProductIdIndexRoute
+  '/$locale/products/$productId/reviews/write': typeof LocaleHeaderLayoutProductsProductIdReviewsWriteRoute
+  '/$locale/products/$productId/reviews/': typeof LocaleHeaderLayoutProductsProductIdReviewsIndexRoute
+  '/$locale/products/$productId/reviews/$reviewId/edit': typeof LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/about': typeof HeaderLayoutAboutRoute
-  '/home': typeof HeaderLayoutHomeRoute
-  '/notifications': typeof HeaderLayoutNotificationsRoute
-  '/search': typeof HeaderLayoutSearchRoute
+  '/$locale': typeof LocaleHeaderLayoutAdminLayoutRouteWithChildren
+  '/$locale/login': typeof LocaleLoginRoute
   '/og': typeof OgIndexRoute
-  '/apps/$tag': typeof HeaderLayoutAppsTagRoute
-  '/apps/all': typeof HeaderLayoutAppsAllRoute
-  '/apps/tags': typeof HeaderLayoutAppsTagsRoute
-  '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
-  '/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
-  '/dev/categories': typeof HeaderLayoutDevCategoriesRoute
-  '/product/claim': typeof HeaderLayoutProductClaimRoute
-  '/products/create': typeof HeaderLayoutProductsCreateRoute
-  '/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
-  '/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
-  '/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/$locale/about': typeof LocaleHeaderLayoutAboutRoute
+  '/$locale/home': typeof LocaleHeaderLayoutHomeRoute
+  '/$locale/notifications': typeof LocaleHeaderLayoutNotificationsRoute
+  '/$locale/search': typeof LocaleHeaderLayoutSearchRoute
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
-  '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
-  '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  '/admin/hero-art': typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  '/admin/hero-candidates': typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
-  '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  '/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
-  '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
-  '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
-  '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
-  '/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
-  '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
-  '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
-  '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
-  '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
+  '/$locale/apps/$tag': typeof LocaleHeaderLayoutAppsTagRoute
+  '/$locale/apps/all': typeof LocaleHeaderLayoutAppsAllRoute
+  '/$locale/apps/tags': typeof LocaleHeaderLayoutAppsTagsRoute
+  '/$locale/categories/$categoryId': typeof LocaleHeaderLayoutCategoriesCategoryIdRoute
+  '/$locale/dev/app-tags': typeof LocaleHeaderLayoutDevAppTagsRoute
+  '/$locale/dev/categories': typeof LocaleHeaderLayoutDevCategoriesRoute
+  '/$locale/product/claim': typeof LocaleHeaderLayoutProductClaimRoute
+  '/$locale/products/create': typeof LocaleHeaderLayoutProductsCreateRoute
+  '/$locale/profile/$actor': typeof LocaleHeaderLayoutProfileActorRoute
+  '/$locale/protocol/$category': typeof LocaleHeaderLayoutProtocolCategoryRoute
+  '/$locale/protocol/listings': typeof LocaleHeaderLayoutProtocolListingsRoute
+  '/$locale/protocol/tags': typeof LocaleHeaderLayoutProtocolTagsRoute
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
   '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
-  '/admin': typeof HeaderLayoutAdminLayoutAdminIndexRoute
-  '/ecosystems/$app': typeof HeaderLayoutEcosystemsAppIndexRoute
-  '/products/$productId': typeof HeaderLayoutProductsProductIdIndexRoute
-  '/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
-  '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsIndexRoute
-  '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
+  '/$locale/admin/add-listing': typeof LocaleHeaderLayoutAdminLayoutAdminAddListingRoute
+  '/$locale/admin/admins': typeof LocaleHeaderLayoutAdminLayoutAdminAdminsRoute
+  '/$locale/admin/hero-art': typeof LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute
+  '/$locale/admin/hero-candidates': typeof LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute
+  '/$locale/admin/home-page-hero': typeof LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  '/$locale/admin/listing-product-accounts': typeof LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  '/$locale/admin/managed-listings': typeof LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/$locale/admin/pending-claims': typeof LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/$locale/admin/recently-claimed': typeof LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  '/$locale/admin/reviews': typeof LocaleHeaderLayoutAdminLayoutAdminReviewsRoute
+  '/$locale/admin/unverified-listings': typeof LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
+  '/$locale/ecosystems/$app/all': typeof LocaleHeaderLayoutEcosystemsAppAllRoute
+  '/$locale/products/$productId/edit': typeof LocaleHeaderLayoutProductsProductIdEditRoute
+  '/$locale/products/$productId/mentions': typeof LocaleHeaderLayoutProductsProductIdMentionsRoute
+  '/$locale/admin': typeof LocaleHeaderLayoutAdminLayoutAdminIndexRoute
+  '/$locale/ecosystems/$app': typeof LocaleHeaderLayoutEcosystemsAppIndexRoute
+  '/$locale/products/$productId': typeof LocaleHeaderLayoutProductsProductIdIndexRoute
+  '/$locale/products/$productId/reviews/write': typeof LocaleHeaderLayoutProductsProductIdReviewsWriteRoute
+  '/$locale/products/$productId/reviews': typeof LocaleHeaderLayoutProductsProductIdReviewsIndexRoute
+  '/$locale/products/$productId/reviews/$reviewId/edit': typeof LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/_header-layout': typeof HeaderLayoutRouteWithChildren
-  '/login': typeof LoginRoute
-  '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
-  '/_header-layout/about': typeof HeaderLayoutAboutRoute
-  '/_header-layout/home': typeof HeaderLayoutHomeRoute
-  '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
-  '/_header-layout/search': typeof HeaderLayoutSearchRoute
+  '/$locale': typeof LocaleRouteWithChildren
+  '/$locale/_header-layout': typeof LocaleHeaderLayoutRouteWithChildren
+  '/$locale/login': typeof LocaleLoginRoute
+  '/$locale/': typeof LocaleIndexRoute
   '/og/': typeof OgIndexRoute
-  '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
-  '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
-  '/_header-layout/apps/tags': typeof HeaderLayoutAppsTagsRoute
-  '/_header-layout/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
-  '/_header-layout/dev/app-tags': typeof HeaderLayoutDevAppTagsRoute
-  '/_header-layout/dev/categories': typeof HeaderLayoutDevCategoriesRoute
-  '/_header-layout/product/claim': typeof HeaderLayoutProductClaimRoute
-  '/_header-layout/products/create': typeof HeaderLayoutProductsCreateRoute
-  '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
-  '/_header-layout/protocol/$category': typeof HeaderLayoutProtocolCategoryRoute
-  '/_header-layout/protocol/listings': typeof HeaderLayoutProtocolListingsRoute
-  '/_header-layout/protocol/tags': typeof HeaderLayoutProtocolTagsRoute
+  '/$locale/_header-layout/_admin-layout': typeof LocaleHeaderLayoutAdminLayoutRouteWithChildren
+  '/$locale/_header-layout/about': typeof LocaleHeaderLayoutAboutRoute
+  '/$locale/_header-layout/home': typeof LocaleHeaderLayoutHomeRoute
+  '/$locale/_header-layout/notifications': typeof LocaleHeaderLayoutNotificationsRoute
+  '/$locale/_header-layout/search': typeof LocaleHeaderLayoutSearchRoute
   '/api/admin/hero-candidate-image': typeof ApiAdminHeroCandidateImageRoute
-  '/_header-layout/_admin-layout/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
-  '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  '/_header-layout/_admin-layout/admin/hero-art': typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  '/_header-layout/_admin-layout/admin/hero-candidates': typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
-  '/_header-layout/_admin-layout/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  '/_header-layout/_admin-layout/admin/listing-product-accounts': typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
-  '/_header-layout/_admin-layout/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
-  '/_header-layout/_admin-layout/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
-  '/_header-layout/_admin-layout/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
-  '/_header-layout/_admin-layout/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
-  '/_header-layout/_admin-layout/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
-  '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
-  '/_header-layout/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
-  '/_header-layout/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
-  '/_header-layout/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
+  '/$locale/_header-layout/apps/$tag': typeof LocaleHeaderLayoutAppsTagRoute
+  '/$locale/_header-layout/apps/all': typeof LocaleHeaderLayoutAppsAllRoute
+  '/$locale/_header-layout/apps/tags': typeof LocaleHeaderLayoutAppsTagsRoute
+  '/$locale/_header-layout/categories/$categoryId': typeof LocaleHeaderLayoutCategoriesCategoryIdRoute
+  '/$locale/_header-layout/dev/app-tags': typeof LocaleHeaderLayoutDevAppTagsRoute
+  '/$locale/_header-layout/dev/categories': typeof LocaleHeaderLayoutDevCategoriesRoute
+  '/$locale/_header-layout/product/claim': typeof LocaleHeaderLayoutProductClaimRoute
+  '/$locale/_header-layout/products/create': typeof LocaleHeaderLayoutProductsCreateRoute
+  '/$locale/_header-layout/profile/$actor': typeof LocaleHeaderLayoutProfileActorRoute
+  '/$locale/_header-layout/protocol/$category': typeof LocaleHeaderLayoutProtocolCategoryRoute
+  '/$locale/_header-layout/protocol/listings': typeof LocaleHeaderLayoutProtocolListingsRoute
+  '/$locale/_header-layout/protocol/tags': typeof LocaleHeaderLayoutProtocolTagsRoute
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
   '/api/auth/atproto/jwks.json': typeof ApiAuthAtprotoJwksDotjsonRoute
   '/api/auth/atproto/metadata.json': typeof ApiAuthAtprotoMetadataDotjsonRoute
   '/api/auth/atproto/signup': typeof ApiAuthAtprotoSignupRoute
-  '/_header-layout/_admin-layout/admin/': typeof HeaderLayoutAdminLayoutAdminIndexRoute
-  '/_header-layout/ecosystems/$app/': typeof HeaderLayoutEcosystemsAppIndexRoute
-  '/_header-layout/products/$productId/': typeof HeaderLayoutProductsProductIdIndexRoute
-  '/_header-layout/products/$productId/reviews/write': typeof HeaderLayoutProductsProductIdReviewsWriteRoute
-  '/_header-layout/products/$productId/reviews/': typeof HeaderLayoutProductsProductIdReviewsIndexRoute
-  '/_header-layout/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
+  '/$locale/_header-layout/_admin-layout/admin/add-listing': typeof LocaleHeaderLayoutAdminLayoutAdminAddListingRoute
+  '/$locale/_header-layout/_admin-layout/admin/admins': typeof LocaleHeaderLayoutAdminLayoutAdminAdminsRoute
+  '/$locale/_header-layout/_admin-layout/admin/hero-art': typeof LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute
+  '/$locale/_header-layout/_admin-layout/admin/hero-candidates': typeof LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute
+  '/$locale/_header-layout/_admin-layout/admin/home-page-hero': typeof LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  '/$locale/_header-layout/_admin-layout/admin/listing-product-accounts': typeof LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  '/$locale/_header-layout/_admin-layout/admin/managed-listings': typeof LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/$locale/_header-layout/_admin-layout/admin/pending-claims': typeof LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  '/$locale/_header-layout/_admin-layout/admin/recently-claimed': typeof LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  '/$locale/_header-layout/_admin-layout/admin/reviews': typeof LocaleHeaderLayoutAdminLayoutAdminReviewsRoute
+  '/$locale/_header-layout/_admin-layout/admin/unverified-listings': typeof LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
+  '/$locale/_header-layout/ecosystems/$app/all': typeof LocaleHeaderLayoutEcosystemsAppAllRoute
+  '/$locale/_header-layout/products/$productId/edit': typeof LocaleHeaderLayoutProductsProductIdEditRoute
+  '/$locale/_header-layout/products/$productId/mentions': typeof LocaleHeaderLayoutProductsProductIdMentionsRoute
+  '/$locale/_header-layout/products/$productId/reviews': typeof LocaleHeaderLayoutProductsProductIdReviewsRouteWithChildren
+  '/$locale/_header-layout/_admin-layout/admin/': typeof LocaleHeaderLayoutAdminLayoutAdminIndexRoute
+  '/$locale/_header-layout/ecosystems/$app/': typeof LocaleHeaderLayoutEcosystemsAppIndexRoute
+  '/$locale/_header-layout/products/$productId/': typeof LocaleHeaderLayoutProductsProductIdIndexRoute
+  '/$locale/_header-layout/products/$productId/reviews/write': typeof LocaleHeaderLayoutProductsProductIdReviewsWriteRoute
+  '/$locale/_header-layout/products/$productId/reviews/': typeof LocaleHeaderLayoutProductsProductIdReviewsIndexRoute
+  '/$locale/_header-layout/products/$productId/reviews/$reviewId/edit': typeof LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/login'
-    | '/about'
-    | '/home'
-    | '/notifications'
-    | '/search'
+    | '/$locale'
+    | '/$locale/login'
+    | '/$locale/'
     | '/og/'
-    | '/apps/$tag'
-    | '/apps/all'
-    | '/apps/tags'
-    | '/categories/$categoryId'
-    | '/dev/app-tags'
-    | '/dev/categories'
-    | '/product/claim'
-    | '/products/create'
-    | '/profile/$actor'
-    | '/protocol/$category'
-    | '/protocol/listings'
-    | '/protocol/tags'
+    | '/$locale/about'
+    | '/$locale/home'
+    | '/$locale/notifications'
+    | '/$locale/search'
     | '/api/admin/hero-candidate-image'
-    | '/admin/add-listing'
-    | '/admin/admins'
-    | '/admin/hero-art'
-    | '/admin/hero-candidates'
-    | '/admin/home-page-hero'
-    | '/admin/listing-product-accounts'
-    | '/admin/managed-listings'
-    | '/admin/pending-claims'
-    | '/admin/recently-claimed'
-    | '/admin/reviews'
-    | '/admin/unverified-listings'
-    | '/ecosystems/$app/all'
-    | '/products/$productId/edit'
-    | '/products/$productId/mentions'
-    | '/products/$productId/reviews'
+    | '/$locale/apps/$tag'
+    | '/$locale/apps/all'
+    | '/$locale/apps/tags'
+    | '/$locale/categories/$categoryId'
+    | '/$locale/dev/app-tags'
+    | '/$locale/dev/categories'
+    | '/$locale/product/claim'
+    | '/$locale/products/create'
+    | '/$locale/profile/$actor'
+    | '/$locale/protocol/$category'
+    | '/$locale/protocol/listings'
+    | '/$locale/protocol/tags'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
     | '/api/auth/atproto/jwks.json'
     | '/api/auth/atproto/metadata.json'
     | '/api/auth/atproto/signup'
-    | '/admin/'
-    | '/ecosystems/$app/'
-    | '/products/$productId/'
-    | '/products/$productId/reviews/write'
-    | '/products/$productId/reviews/'
-    | '/products/$productId/reviews/$reviewId/edit'
+    | '/$locale/admin/add-listing'
+    | '/$locale/admin/admins'
+    | '/$locale/admin/hero-art'
+    | '/$locale/admin/hero-candidates'
+    | '/$locale/admin/home-page-hero'
+    | '/$locale/admin/listing-product-accounts'
+    | '/$locale/admin/managed-listings'
+    | '/$locale/admin/pending-claims'
+    | '/$locale/admin/recently-claimed'
+    | '/$locale/admin/reviews'
+    | '/$locale/admin/unverified-listings'
+    | '/$locale/ecosystems/$app/all'
+    | '/$locale/products/$productId/edit'
+    | '/$locale/products/$productId/mentions'
+    | '/$locale/products/$productId/reviews'
+    | '/$locale/admin/'
+    | '/$locale/ecosystems/$app/'
+    | '/$locale/products/$productId/'
+    | '/$locale/products/$productId/reviews/write'
+    | '/$locale/products/$productId/reviews/'
+    | '/$locale/products/$productId/reviews/$reviewId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/login'
-    | '/about'
-    | '/home'
-    | '/notifications'
-    | '/search'
+    | '/$locale'
+    | '/$locale/login'
     | '/og'
-    | '/apps/$tag'
-    | '/apps/all'
-    | '/apps/tags'
-    | '/categories/$categoryId'
-    | '/dev/app-tags'
-    | '/dev/categories'
-    | '/product/claim'
-    | '/products/create'
-    | '/profile/$actor'
-    | '/protocol/$category'
-    | '/protocol/listings'
-    | '/protocol/tags'
+    | '/$locale/about'
+    | '/$locale/home'
+    | '/$locale/notifications'
+    | '/$locale/search'
     | '/api/admin/hero-candidate-image'
-    | '/admin/add-listing'
-    | '/admin/admins'
-    | '/admin/hero-art'
-    | '/admin/hero-candidates'
-    | '/admin/home-page-hero'
-    | '/admin/listing-product-accounts'
-    | '/admin/managed-listings'
-    | '/admin/pending-claims'
-    | '/admin/recently-claimed'
-    | '/admin/reviews'
-    | '/admin/unverified-listings'
-    | '/ecosystems/$app/all'
-    | '/products/$productId/edit'
-    | '/products/$productId/mentions'
+    | '/$locale/apps/$tag'
+    | '/$locale/apps/all'
+    | '/$locale/apps/tags'
+    | '/$locale/categories/$categoryId'
+    | '/$locale/dev/app-tags'
+    | '/$locale/dev/categories'
+    | '/$locale/product/claim'
+    | '/$locale/products/create'
+    | '/$locale/profile/$actor'
+    | '/$locale/protocol/$category'
+    | '/$locale/protocol/listings'
+    | '/$locale/protocol/tags'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
     | '/api/auth/atproto/jwks.json'
     | '/api/auth/atproto/metadata.json'
     | '/api/auth/atproto/signup'
-    | '/admin'
-    | '/ecosystems/$app'
-    | '/products/$productId'
-    | '/products/$productId/reviews/write'
-    | '/products/$productId/reviews'
-    | '/products/$productId/reviews/$reviewId/edit'
+    | '/$locale/admin/add-listing'
+    | '/$locale/admin/admins'
+    | '/$locale/admin/hero-art'
+    | '/$locale/admin/hero-candidates'
+    | '/$locale/admin/home-page-hero'
+    | '/$locale/admin/listing-product-accounts'
+    | '/$locale/admin/managed-listings'
+    | '/$locale/admin/pending-claims'
+    | '/$locale/admin/recently-claimed'
+    | '/$locale/admin/reviews'
+    | '/$locale/admin/unverified-listings'
+    | '/$locale/ecosystems/$app/all'
+    | '/$locale/products/$productId/edit'
+    | '/$locale/products/$productId/mentions'
+    | '/$locale/admin'
+    | '/$locale/ecosystems/$app'
+    | '/$locale/products/$productId'
+    | '/$locale/products/$productId/reviews/write'
+    | '/$locale/products/$productId/reviews'
+    | '/$locale/products/$productId/reviews/$reviewId/edit'
   id:
     | '__root__'
-    | '/'
-    | '/_header-layout'
-    | '/login'
-    | '/_header-layout/_admin-layout'
-    | '/_header-layout/about'
-    | '/_header-layout/home'
-    | '/_header-layout/notifications'
-    | '/_header-layout/search'
+    | '/$locale'
+    | '/$locale/_header-layout'
+    | '/$locale/login'
+    | '/$locale/'
     | '/og/'
-    | '/_header-layout/apps/$tag'
-    | '/_header-layout/apps/all'
-    | '/_header-layout/apps/tags'
-    | '/_header-layout/categories/$categoryId'
-    | '/_header-layout/dev/app-tags'
-    | '/_header-layout/dev/categories'
-    | '/_header-layout/product/claim'
-    | '/_header-layout/products/create'
-    | '/_header-layout/profile/$actor'
-    | '/_header-layout/protocol/$category'
-    | '/_header-layout/protocol/listings'
-    | '/_header-layout/protocol/tags'
+    | '/$locale/_header-layout/_admin-layout'
+    | '/$locale/_header-layout/about'
+    | '/$locale/_header-layout/home'
+    | '/$locale/_header-layout/notifications'
+    | '/$locale/_header-layout/search'
     | '/api/admin/hero-candidate-image'
-    | '/_header-layout/_admin-layout/admin/add-listing'
-    | '/_header-layout/_admin-layout/admin/admins'
-    | '/_header-layout/_admin-layout/admin/hero-art'
-    | '/_header-layout/_admin-layout/admin/hero-candidates'
-    | '/_header-layout/_admin-layout/admin/home-page-hero'
-    | '/_header-layout/_admin-layout/admin/listing-product-accounts'
-    | '/_header-layout/_admin-layout/admin/managed-listings'
-    | '/_header-layout/_admin-layout/admin/pending-claims'
-    | '/_header-layout/_admin-layout/admin/recently-claimed'
-    | '/_header-layout/_admin-layout/admin/reviews'
-    | '/_header-layout/_admin-layout/admin/unverified-listings'
-    | '/_header-layout/ecosystems/$app/all'
-    | '/_header-layout/products/$productId/edit'
-    | '/_header-layout/products/$productId/mentions'
-    | '/_header-layout/products/$productId/reviews'
+    | '/$locale/_header-layout/apps/$tag'
+    | '/$locale/_header-layout/apps/all'
+    | '/$locale/_header-layout/apps/tags'
+    | '/$locale/_header-layout/categories/$categoryId'
+    | '/$locale/_header-layout/dev/app-tags'
+    | '/$locale/_header-layout/dev/categories'
+    | '/$locale/_header-layout/product/claim'
+    | '/$locale/_header-layout/products/create'
+    | '/$locale/_header-layout/profile/$actor'
+    | '/$locale/_header-layout/protocol/$category'
+    | '/$locale/_header-layout/protocol/listings'
+    | '/$locale/_header-layout/protocol/tags'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
     | '/api/auth/atproto/jwks.json'
     | '/api/auth/atproto/metadata.json'
     | '/api/auth/atproto/signup'
-    | '/_header-layout/_admin-layout/admin/'
-    | '/_header-layout/ecosystems/$app/'
-    | '/_header-layout/products/$productId/'
-    | '/_header-layout/products/$productId/reviews/write'
-    | '/_header-layout/products/$productId/reviews/'
-    | '/_header-layout/products/$productId/reviews/$reviewId/edit'
+    | '/$locale/_header-layout/_admin-layout/admin/add-listing'
+    | '/$locale/_header-layout/_admin-layout/admin/admins'
+    | '/$locale/_header-layout/_admin-layout/admin/hero-art'
+    | '/$locale/_header-layout/_admin-layout/admin/hero-candidates'
+    | '/$locale/_header-layout/_admin-layout/admin/home-page-hero'
+    | '/$locale/_header-layout/_admin-layout/admin/listing-product-accounts'
+    | '/$locale/_header-layout/_admin-layout/admin/managed-listings'
+    | '/$locale/_header-layout/_admin-layout/admin/pending-claims'
+    | '/$locale/_header-layout/_admin-layout/admin/recently-claimed'
+    | '/$locale/_header-layout/_admin-layout/admin/reviews'
+    | '/$locale/_header-layout/_admin-layout/admin/unverified-listings'
+    | '/$locale/_header-layout/ecosystems/$app/all'
+    | '/$locale/_header-layout/products/$productId/edit'
+    | '/$locale/_header-layout/products/$productId/mentions'
+    | '/$locale/_header-layout/products/$productId/reviews'
+    | '/$locale/_header-layout/_admin-layout/admin/'
+    | '/$locale/_header-layout/ecosystems/$app/'
+    | '/$locale/_header-layout/products/$productId/'
+    | '/$locale/_header-layout/products/$productId/reviews/write'
+    | '/$locale/_header-layout/products/$productId/reviews/'
+    | '/$locale/_header-layout/products/$productId/reviews/$reviewId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  HeaderLayoutRoute: typeof HeaderLayoutRouteWithChildren
-  LoginRoute: typeof LoginRoute
+  LocaleRoute: typeof LocaleRouteWithChildren
   OgIndexRoute: typeof OgIndexRoute
   ApiAdminHeroCandidateImageRoute: typeof ApiAdminHeroCandidateImageRoute
   ApiAuthAtprotoAuthorizeRoute: typeof ApiAuthAtprotoAuthorizeRoute
@@ -639,25 +653,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_header-layout': {
-      id: '/_header-layout'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof HeaderLayoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/$locale': {
+      id: '/$locale'
+      path: '/$locale'
+      fullPath: '/$locale'
+      preLoaderRoute: typeof LocaleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/og/': {
@@ -667,40 +667,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_header-layout/search': {
-      id: '/_header-layout/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof HeaderLayoutSearchRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+    '/$locale/': {
+      id: '/$locale/'
+      path: '/'
+      fullPath: '/$locale/'
+      preLoaderRoute: typeof LocaleIndexRouteImport
+      parentRoute: typeof LocaleRoute
     }
-    '/_header-layout/notifications': {
-      id: '/_header-layout/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof HeaderLayoutNotificationsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+    '/$locale/login': {
+      id: '/$locale/login'
+      path: '/login'
+      fullPath: '/$locale/login'
+      preLoaderRoute: typeof LocaleLoginRouteImport
+      parentRoute: typeof LocaleRoute
     }
-    '/_header-layout/home': {
-      id: '/_header-layout/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof HeaderLayoutHomeRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/about': {
-      id: '/_header-layout/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof HeaderLayoutAboutRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/_admin-layout': {
-      id: '/_header-layout/_admin-layout'
+    '/$locale/_header-layout': {
+      id: '/$locale/_header-layout'
       path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+      fullPath: '/$locale'
+      preLoaderRoute: typeof LocaleHeaderLayoutRouteImport
+      parentRoute: typeof LocaleRoute
     }
     '/api/admin/hero-candidate-image': {
       id: '/api/admin/hero-candidate-image'
@@ -709,110 +695,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminHeroCandidateImageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_header-layout/protocol/tags': {
-      id: '/_header-layout/protocol/tags'
-      path: '/protocol/tags'
-      fullPath: '/protocol/tags'
-      preLoaderRoute: typeof HeaderLayoutProtocolTagsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+    '/$locale/_header-layout/search': {
+      id: '/$locale/_header-layout/search'
+      path: '/search'
+      fullPath: '/$locale/search'
+      preLoaderRoute: typeof LocaleHeaderLayoutSearchRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/protocol/listings': {
-      id: '/_header-layout/protocol/listings'
-      path: '/protocol/listings'
-      fullPath: '/protocol/listings'
-      preLoaderRoute: typeof HeaderLayoutProtocolListingsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+    '/$locale/_header-layout/notifications': {
+      id: '/$locale/_header-layout/notifications'
+      path: '/notifications'
+      fullPath: '/$locale/notifications'
+      preLoaderRoute: typeof LocaleHeaderLayoutNotificationsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/protocol/$category': {
-      id: '/_header-layout/protocol/$category'
-      path: '/protocol/$category'
-      fullPath: '/protocol/$category'
-      preLoaderRoute: typeof HeaderLayoutProtocolCategoryRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+    '/$locale/_header-layout/home': {
+      id: '/$locale/_header-layout/home'
+      path: '/home'
+      fullPath: '/$locale/home'
+      preLoaderRoute: typeof LocaleHeaderLayoutHomeRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/profile/$actor': {
-      id: '/_header-layout/profile/$actor'
-      path: '/profile/$actor'
-      fullPath: '/profile/$actor'
-      preLoaderRoute: typeof HeaderLayoutProfileActorRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+    '/$locale/_header-layout/about': {
+      id: '/$locale/_header-layout/about'
+      path: '/about'
+      fullPath: '/$locale/about'
+      preLoaderRoute: typeof LocaleHeaderLayoutAboutRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/products/create': {
-      id: '/_header-layout/products/create'
-      path: '/products/create'
-      fullPath: '/products/create'
-      preLoaderRoute: typeof HeaderLayoutProductsCreateRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/product/claim': {
-      id: '/_header-layout/product/claim'
-      path: '/product/claim'
-      fullPath: '/product/claim'
-      preLoaderRoute: typeof HeaderLayoutProductClaimRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/dev/categories': {
-      id: '/_header-layout/dev/categories'
-      path: '/dev/categories'
-      fullPath: '/dev/categories'
-      preLoaderRoute: typeof HeaderLayoutDevCategoriesRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/dev/app-tags': {
-      id: '/_header-layout/dev/app-tags'
-      path: '/dev/app-tags'
-      fullPath: '/dev/app-tags'
-      preLoaderRoute: typeof HeaderLayoutDevAppTagsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/categories/$categoryId': {
-      id: '/_header-layout/categories/$categoryId'
-      path: '/categories/$categoryId'
-      fullPath: '/categories/$categoryId'
-      preLoaderRoute: typeof HeaderLayoutCategoriesCategoryIdRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/apps/tags': {
-      id: '/_header-layout/apps/tags'
-      path: '/apps/tags'
-      fullPath: '/apps/tags'
-      preLoaderRoute: typeof HeaderLayoutAppsTagsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/apps/all': {
-      id: '/_header-layout/apps/all'
-      path: '/apps/all'
-      fullPath: '/apps/all'
-      preLoaderRoute: typeof HeaderLayoutAppsAllRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/apps/$tag': {
-      id: '/_header-layout/apps/$tag'
-      path: '/apps/$tag'
-      fullPath: '/apps/$tag'
-      preLoaderRoute: typeof HeaderLayoutAppsTagRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/products/$productId/': {
-      id: '/_header-layout/products/$productId/'
-      path: '/products/$productId'
-      fullPath: '/products/$productId/'
-      preLoaderRoute: typeof HeaderLayoutProductsProductIdIndexRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/ecosystems/$app/': {
-      id: '/_header-layout/ecosystems/$app/'
-      path: '/ecosystems/$app'
-      fullPath: '/ecosystems/$app/'
-      preLoaderRoute: typeof HeaderLayoutEcosystemsAppIndexRouteImport
-      parentRoute: typeof HeaderLayoutRoute
-    }
-    '/_header-layout/_admin-layout/admin/': {
-      id: '/_header-layout/_admin-layout/admin/'
-      path: '/admin'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminIndexRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    '/$locale/_header-layout/_admin-layout': {
+      id: '/$locale/_header-layout/_admin-layout'
+      path: ''
+      fullPath: '/$locale'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
     '/api/auth/atproto/signup': {
       id: '/api/auth/atproto/signup'
@@ -849,268 +765,391 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthAtprotoAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_header-layout/products/$productId/reviews': {
-      id: '/_header-layout/products/$productId/reviews'
+    '/$locale/_header-layout/protocol/tags': {
+      id: '/$locale/_header-layout/protocol/tags'
+      path: '/protocol/tags'
+      fullPath: '/$locale/protocol/tags'
+      preLoaderRoute: typeof LocaleHeaderLayoutProtocolTagsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/protocol/listings': {
+      id: '/$locale/_header-layout/protocol/listings'
+      path: '/protocol/listings'
+      fullPath: '/$locale/protocol/listings'
+      preLoaderRoute: typeof LocaleHeaderLayoutProtocolListingsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/protocol/$category': {
+      id: '/$locale/_header-layout/protocol/$category'
+      path: '/protocol/$category'
+      fullPath: '/$locale/protocol/$category'
+      preLoaderRoute: typeof LocaleHeaderLayoutProtocolCategoryRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/profile/$actor': {
+      id: '/$locale/_header-layout/profile/$actor'
+      path: '/profile/$actor'
+      fullPath: '/$locale/profile/$actor'
+      preLoaderRoute: typeof LocaleHeaderLayoutProfileActorRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/products/create': {
+      id: '/$locale/_header-layout/products/create'
+      path: '/products/create'
+      fullPath: '/$locale/products/create'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsCreateRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/product/claim': {
+      id: '/$locale/_header-layout/product/claim'
+      path: '/product/claim'
+      fullPath: '/$locale/product/claim'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductClaimRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/dev/categories': {
+      id: '/$locale/_header-layout/dev/categories'
+      path: '/dev/categories'
+      fullPath: '/$locale/dev/categories'
+      preLoaderRoute: typeof LocaleHeaderLayoutDevCategoriesRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/dev/app-tags': {
+      id: '/$locale/_header-layout/dev/app-tags'
+      path: '/dev/app-tags'
+      fullPath: '/$locale/dev/app-tags'
+      preLoaderRoute: typeof LocaleHeaderLayoutDevAppTagsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/categories/$categoryId': {
+      id: '/$locale/_header-layout/categories/$categoryId'
+      path: '/categories/$categoryId'
+      fullPath: '/$locale/categories/$categoryId'
+      preLoaderRoute: typeof LocaleHeaderLayoutCategoriesCategoryIdRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/apps/tags': {
+      id: '/$locale/_header-layout/apps/tags'
+      path: '/apps/tags'
+      fullPath: '/$locale/apps/tags'
+      preLoaderRoute: typeof LocaleHeaderLayoutAppsTagsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/apps/all': {
+      id: '/$locale/_header-layout/apps/all'
+      path: '/apps/all'
+      fullPath: '/$locale/apps/all'
+      preLoaderRoute: typeof LocaleHeaderLayoutAppsAllRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/apps/$tag': {
+      id: '/$locale/_header-layout/apps/$tag'
+      path: '/apps/$tag'
+      fullPath: '/$locale/apps/$tag'
+      preLoaderRoute: typeof LocaleHeaderLayoutAppsTagRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/products/$productId/': {
+      id: '/$locale/_header-layout/products/$productId/'
+      path: '/products/$productId'
+      fullPath: '/$locale/products/$productId/'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsProductIdIndexRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/ecosystems/$app/': {
+      id: '/$locale/_header-layout/ecosystems/$app/'
+      path: '/ecosystems/$app'
+      fullPath: '/$locale/ecosystems/$app/'
+      preLoaderRoute: typeof LocaleHeaderLayoutEcosystemsAppIndexRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
+    }
+    '/$locale/_header-layout/_admin-layout/admin/': {
+      id: '/$locale/_header-layout/_admin-layout/admin/'
+      path: '/admin'
+      fullPath: '/$locale/admin/'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminIndexRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
+    }
+    '/$locale/_header-layout/products/$productId/reviews': {
+      id: '/$locale/_header-layout/products/$productId/reviews'
       path: '/products/$productId/reviews'
-      fullPath: '/products/$productId/reviews'
-      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+      fullPath: '/$locale/products/$productId/reviews'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/products/$productId/mentions': {
-      id: '/_header-layout/products/$productId/mentions'
+    '/$locale/_header-layout/products/$productId/mentions': {
+      id: '/$locale/_header-layout/products/$productId/mentions'
       path: '/products/$productId/mentions'
-      fullPath: '/products/$productId/mentions'
-      preLoaderRoute: typeof HeaderLayoutProductsProductIdMentionsRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+      fullPath: '/$locale/products/$productId/mentions'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsProductIdMentionsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/products/$productId/edit': {
-      id: '/_header-layout/products/$productId/edit'
+    '/$locale/_header-layout/products/$productId/edit': {
+      id: '/$locale/_header-layout/products/$productId/edit'
       path: '/products/$productId/edit'
-      fullPath: '/products/$productId/edit'
-      preLoaderRoute: typeof HeaderLayoutProductsProductIdEditRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+      fullPath: '/$locale/products/$productId/edit'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsProductIdEditRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/ecosystems/$app/all': {
-      id: '/_header-layout/ecosystems/$app/all'
+    '/$locale/_header-layout/ecosystems/$app/all': {
+      id: '/$locale/_header-layout/ecosystems/$app/all'
       path: '/ecosystems/$app/all'
-      fullPath: '/ecosystems/$app/all'
-      preLoaderRoute: typeof HeaderLayoutEcosystemsAppAllRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+      fullPath: '/$locale/ecosystems/$app/all'
+      preLoaderRoute: typeof LocaleHeaderLayoutEcosystemsAppAllRouteImport
+      parentRoute: typeof LocaleHeaderLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/unverified-listings': {
-      id: '/_header-layout/_admin-layout/admin/unverified-listings'
+    '/$locale/_header-layout/_admin-layout/admin/unverified-listings': {
+      id: '/$locale/_header-layout/_admin-layout/admin/unverified-listings'
       path: '/admin/unverified-listings'
-      fullPath: '/admin/unverified-listings'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/unverified-listings'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/reviews': {
-      id: '/_header-layout/_admin-layout/admin/reviews'
+    '/$locale/_header-layout/_admin-layout/admin/reviews': {
+      id: '/$locale/_header-layout/_admin-layout/admin/reviews'
       path: '/admin/reviews'
-      fullPath: '/admin/reviews'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminReviewsRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/reviews'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminReviewsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/recently-claimed': {
-      id: '/_header-layout/_admin-layout/admin/recently-claimed'
+    '/$locale/_header-layout/_admin-layout/admin/recently-claimed': {
+      id: '/$locale/_header-layout/_admin-layout/admin/recently-claimed'
       path: '/admin/recently-claimed'
-      fullPath: '/admin/recently-claimed'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/recently-claimed'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/pending-claims': {
-      id: '/_header-layout/_admin-layout/admin/pending-claims'
+    '/$locale/_header-layout/_admin-layout/admin/pending-claims': {
+      id: '/$locale/_header-layout/_admin-layout/admin/pending-claims'
       path: '/admin/pending-claims'
-      fullPath: '/admin/pending-claims'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/pending-claims'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/managed-listings': {
-      id: '/_header-layout/_admin-layout/admin/managed-listings'
+    '/$locale/_header-layout/_admin-layout/admin/managed-listings': {
+      id: '/$locale/_header-layout/_admin-layout/admin/managed-listings'
       path: '/admin/managed-listings'
-      fullPath: '/admin/managed-listings'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/managed-listings'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminManagedListingsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/listing-product-accounts': {
-      id: '/_header-layout/_admin-layout/admin/listing-product-accounts'
+    '/$locale/_header-layout/_admin-layout/admin/listing-product-accounts': {
+      id: '/$locale/_header-layout/_admin-layout/admin/listing-product-accounts'
       path: '/admin/listing-product-accounts'
-      fullPath: '/admin/listing-product-accounts'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/listing-product-accounts'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/home-page-hero': {
-      id: '/_header-layout/_admin-layout/admin/home-page-hero'
+    '/$locale/_header-layout/_admin-layout/admin/home-page-hero': {
+      id: '/$locale/_header-layout/_admin-layout/admin/home-page-hero'
       path: '/admin/home-page-hero'
-      fullPath: '/admin/home-page-hero'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/home-page-hero'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/hero-candidates': {
-      id: '/_header-layout/_admin-layout/admin/hero-candidates'
+    '/$locale/_header-layout/_admin-layout/admin/hero-candidates': {
+      id: '/$locale/_header-layout/_admin-layout/admin/hero-candidates'
       path: '/admin/hero-candidates'
-      fullPath: '/admin/hero-candidates'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/hero-candidates'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/hero-art': {
-      id: '/_header-layout/_admin-layout/admin/hero-art'
+    '/$locale/_header-layout/_admin-layout/admin/hero-art': {
+      id: '/$locale/_header-layout/_admin-layout/admin/hero-art'
       path: '/admin/hero-art'
-      fullPath: '/admin/hero-art'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminHeroArtRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/hero-art'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminHeroArtRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/admins': {
-      id: '/_header-layout/_admin-layout/admin/admins'
+    '/$locale/_header-layout/_admin-layout/admin/admins': {
+      id: '/$locale/_header-layout/_admin-layout/admin/admins'
       path: '/admin/admins'
-      fullPath: '/admin/admins'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminAdminsRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/admins'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminAdminsRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/_admin-layout/admin/add-listing': {
-      id: '/_header-layout/_admin-layout/admin/add-listing'
+    '/$locale/_header-layout/_admin-layout/admin/add-listing': {
+      id: '/$locale/_header-layout/_admin-layout/admin/add-listing'
       path: '/admin/add-listing'
-      fullPath: '/admin/add-listing'
-      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminAddListingRouteImport
-      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+      fullPath: '/$locale/admin/add-listing'
+      preLoaderRoute: typeof LocaleHeaderLayoutAdminLayoutAdminAddListingRouteImport
+      parentRoute: typeof LocaleHeaderLayoutAdminLayoutRoute
     }
-    '/_header-layout/products/$productId/reviews/': {
-      id: '/_header-layout/products/$productId/reviews/'
+    '/$locale/_header-layout/products/$productId/reviews/': {
+      id: '/$locale/_header-layout/products/$productId/reviews/'
       path: '/'
-      fullPath: '/products/$productId/reviews/'
-      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsIndexRouteImport
-      parentRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+      fullPath: '/$locale/products/$productId/reviews/'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsIndexRouteImport
+      parentRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsRoute
     }
-    '/_header-layout/products/$productId/reviews/write': {
-      id: '/_header-layout/products/$productId/reviews/write'
+    '/$locale/_header-layout/products/$productId/reviews/write': {
+      id: '/$locale/_header-layout/products/$productId/reviews/write'
       path: '/write'
-      fullPath: '/products/$productId/reviews/write'
-      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsWriteRouteImport
-      parentRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+      fullPath: '/$locale/products/$productId/reviews/write'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsWriteRouteImport
+      parentRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsRoute
     }
-    '/_header-layout/products/$productId/reviews/$reviewId/edit': {
-      id: '/_header-layout/products/$productId/reviews/$reviewId/edit'
+    '/$locale/_header-layout/products/$productId/reviews/$reviewId/edit': {
+      id: '/$locale/_header-layout/products/$productId/reviews/$reviewId/edit'
       path: '/$reviewId/edit'
-      fullPath: '/products/$productId/reviews/$reviewId/edit'
-      preLoaderRoute: typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport
-      parentRoute: typeof HeaderLayoutProductsProductIdReviewsRoute
+      fullPath: '/$locale/products/$productId/reviews/$reviewId/edit'
+      preLoaderRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRouteImport
+      parentRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsRoute
     }
   }
 }
 
-interface HeaderLayoutAdminLayoutRouteChildren {
-  HeaderLayoutAdminLayoutAdminAddListingRoute: typeof HeaderLayoutAdminLayoutAdminAddListingRoute
-  HeaderLayoutAdminLayoutAdminAdminsRoute: typeof HeaderLayoutAdminLayoutAdminAdminsRoute
-  HeaderLayoutAdminLayoutAdminHeroArtRoute: typeof HeaderLayoutAdminLayoutAdminHeroArtRoute
-  HeaderLayoutAdminLayoutAdminHeroCandidatesRoute: typeof HeaderLayoutAdminLayoutAdminHeroCandidatesRoute
-  HeaderLayoutAdminLayoutAdminHomePageHeroRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
-  HeaderLayoutAdminLayoutAdminListingProductAccountsRoute: typeof HeaderLayoutAdminLayoutAdminListingProductAccountsRoute
-  HeaderLayoutAdminLayoutAdminManagedListingsRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
-  HeaderLayoutAdminLayoutAdminPendingClaimsRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
-  HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute: typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
-  HeaderLayoutAdminLayoutAdminReviewsRoute: typeof HeaderLayoutAdminLayoutAdminReviewsRoute
-  HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute: typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
-  HeaderLayoutAdminLayoutAdminIndexRoute: typeof HeaderLayoutAdminLayoutAdminIndexRoute
+interface LocaleHeaderLayoutAdminLayoutRouteChildren {
+  LocaleHeaderLayoutAdminLayoutAdminAddListingRoute: typeof LocaleHeaderLayoutAdminLayoutAdminAddListingRoute
+  LocaleHeaderLayoutAdminLayoutAdminAdminsRoute: typeof LocaleHeaderLayoutAdminLayoutAdminAdminsRoute
+  LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute: typeof LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute
+  LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute: typeof LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute
+  LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute: typeof LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute
+  LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute: typeof LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute
+  LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute: typeof LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute
+  LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute: typeof LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute
+  LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute: typeof LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
+  LocaleHeaderLayoutAdminLayoutAdminReviewsRoute: typeof LocaleHeaderLayoutAdminLayoutAdminReviewsRoute
+  LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute: typeof LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
+  LocaleHeaderLayoutAdminLayoutAdminIndexRoute: typeof LocaleHeaderLayoutAdminLayoutAdminIndexRoute
 }
 
-const HeaderLayoutAdminLayoutRouteChildren: HeaderLayoutAdminLayoutRouteChildren =
+const LocaleHeaderLayoutAdminLayoutRouteChildren: LocaleHeaderLayoutAdminLayoutRouteChildren =
   {
-    HeaderLayoutAdminLayoutAdminAddListingRoute:
-      HeaderLayoutAdminLayoutAdminAddListingRoute,
-    HeaderLayoutAdminLayoutAdminAdminsRoute:
-      HeaderLayoutAdminLayoutAdminAdminsRoute,
-    HeaderLayoutAdminLayoutAdminHeroArtRoute:
-      HeaderLayoutAdminLayoutAdminHeroArtRoute,
-    HeaderLayoutAdminLayoutAdminHeroCandidatesRoute:
-      HeaderLayoutAdminLayoutAdminHeroCandidatesRoute,
-    HeaderLayoutAdminLayoutAdminHomePageHeroRoute:
-      HeaderLayoutAdminLayoutAdminHomePageHeroRoute,
-    HeaderLayoutAdminLayoutAdminListingProductAccountsRoute:
-      HeaderLayoutAdminLayoutAdminListingProductAccountsRoute,
-    HeaderLayoutAdminLayoutAdminManagedListingsRoute:
-      HeaderLayoutAdminLayoutAdminManagedListingsRoute,
-    HeaderLayoutAdminLayoutAdminPendingClaimsRoute:
-      HeaderLayoutAdminLayoutAdminPendingClaimsRoute,
-    HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute:
-      HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute,
-    HeaderLayoutAdminLayoutAdminReviewsRoute:
-      HeaderLayoutAdminLayoutAdminReviewsRoute,
-    HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute:
-      HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute,
-    HeaderLayoutAdminLayoutAdminIndexRoute:
-      HeaderLayoutAdminLayoutAdminIndexRoute,
+    LocaleHeaderLayoutAdminLayoutAdminAddListingRoute:
+      LocaleHeaderLayoutAdminLayoutAdminAddListingRoute,
+    LocaleHeaderLayoutAdminLayoutAdminAdminsRoute:
+      LocaleHeaderLayoutAdminLayoutAdminAdminsRoute,
+    LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute:
+      LocaleHeaderLayoutAdminLayoutAdminHeroArtRoute,
+    LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute:
+      LocaleHeaderLayoutAdminLayoutAdminHeroCandidatesRoute,
+    LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute:
+      LocaleHeaderLayoutAdminLayoutAdminHomePageHeroRoute,
+    LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute:
+      LocaleHeaderLayoutAdminLayoutAdminListingProductAccountsRoute,
+    LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute:
+      LocaleHeaderLayoutAdminLayoutAdminManagedListingsRoute,
+    LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute:
+      LocaleHeaderLayoutAdminLayoutAdminPendingClaimsRoute,
+    LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute:
+      LocaleHeaderLayoutAdminLayoutAdminRecentlyClaimedRoute,
+    LocaleHeaderLayoutAdminLayoutAdminReviewsRoute:
+      LocaleHeaderLayoutAdminLayoutAdminReviewsRoute,
+    LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute:
+      LocaleHeaderLayoutAdminLayoutAdminUnverifiedListingsRoute,
+    LocaleHeaderLayoutAdminLayoutAdminIndexRoute:
+      LocaleHeaderLayoutAdminLayoutAdminIndexRoute,
   }
 
-const HeaderLayoutAdminLayoutRouteWithChildren =
-  HeaderLayoutAdminLayoutRoute._addFileChildren(
-    HeaderLayoutAdminLayoutRouteChildren,
+const LocaleHeaderLayoutAdminLayoutRouteWithChildren =
+  LocaleHeaderLayoutAdminLayoutRoute._addFileChildren(
+    LocaleHeaderLayoutAdminLayoutRouteChildren,
   )
 
-interface HeaderLayoutProductsProductIdReviewsRouteChildren {
-  HeaderLayoutProductsProductIdReviewsWriteRoute: typeof HeaderLayoutProductsProductIdReviewsWriteRoute
-  HeaderLayoutProductsProductIdReviewsIndexRoute: typeof HeaderLayoutProductsProductIdReviewsIndexRoute
-  HeaderLayoutProductsProductIdReviewsReviewIdEditRoute: typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
+interface LocaleHeaderLayoutProductsProductIdReviewsRouteChildren {
+  LocaleHeaderLayoutProductsProductIdReviewsWriteRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsWriteRoute
+  LocaleHeaderLayoutProductsProductIdReviewsIndexRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsIndexRoute
+  LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 
-const HeaderLayoutProductsProductIdReviewsRouteChildren: HeaderLayoutProductsProductIdReviewsRouteChildren =
+const LocaleHeaderLayoutProductsProductIdReviewsRouteChildren: LocaleHeaderLayoutProductsProductIdReviewsRouteChildren =
   {
-    HeaderLayoutProductsProductIdReviewsWriteRoute:
-      HeaderLayoutProductsProductIdReviewsWriteRoute,
-    HeaderLayoutProductsProductIdReviewsIndexRoute:
-      HeaderLayoutProductsProductIdReviewsIndexRoute,
-    HeaderLayoutProductsProductIdReviewsReviewIdEditRoute:
-      HeaderLayoutProductsProductIdReviewsReviewIdEditRoute,
+    LocaleHeaderLayoutProductsProductIdReviewsWriteRoute:
+      LocaleHeaderLayoutProductsProductIdReviewsWriteRoute,
+    LocaleHeaderLayoutProductsProductIdReviewsIndexRoute:
+      LocaleHeaderLayoutProductsProductIdReviewsIndexRoute,
+    LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute:
+      LocaleHeaderLayoutProductsProductIdReviewsReviewIdEditRoute,
   }
 
-const HeaderLayoutProductsProductIdReviewsRouteWithChildren =
-  HeaderLayoutProductsProductIdReviewsRoute._addFileChildren(
-    HeaderLayoutProductsProductIdReviewsRouteChildren,
+const LocaleHeaderLayoutProductsProductIdReviewsRouteWithChildren =
+  LocaleHeaderLayoutProductsProductIdReviewsRoute._addFileChildren(
+    LocaleHeaderLayoutProductsProductIdReviewsRouteChildren,
   )
 
-interface HeaderLayoutRouteChildren {
-  HeaderLayoutAdminLayoutRoute: typeof HeaderLayoutAdminLayoutRouteWithChildren
-  HeaderLayoutAboutRoute: typeof HeaderLayoutAboutRoute
-  HeaderLayoutHomeRoute: typeof HeaderLayoutHomeRoute
-  HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
-  HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
-  HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
-  HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
-  HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
-  HeaderLayoutCategoriesCategoryIdRoute: typeof HeaderLayoutCategoriesCategoryIdRoute
-  HeaderLayoutDevAppTagsRoute: typeof HeaderLayoutDevAppTagsRoute
-  HeaderLayoutDevCategoriesRoute: typeof HeaderLayoutDevCategoriesRoute
-  HeaderLayoutProductClaimRoute: typeof HeaderLayoutProductClaimRoute
-  HeaderLayoutProductsCreateRoute: typeof HeaderLayoutProductsCreateRoute
-  HeaderLayoutProfileActorRoute: typeof HeaderLayoutProfileActorRoute
-  HeaderLayoutProtocolCategoryRoute: typeof HeaderLayoutProtocolCategoryRoute
-  HeaderLayoutProtocolListingsRoute: typeof HeaderLayoutProtocolListingsRoute
-  HeaderLayoutProtocolTagsRoute: typeof HeaderLayoutProtocolTagsRoute
-  HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
-  HeaderLayoutProductsProductIdEditRoute: typeof HeaderLayoutProductsProductIdEditRoute
-  HeaderLayoutProductsProductIdMentionsRoute: typeof HeaderLayoutProductsProductIdMentionsRoute
-  HeaderLayoutProductsProductIdReviewsRoute: typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
-  HeaderLayoutEcosystemsAppIndexRoute: typeof HeaderLayoutEcosystemsAppIndexRoute
-  HeaderLayoutProductsProductIdIndexRoute: typeof HeaderLayoutProductsProductIdIndexRoute
+interface LocaleHeaderLayoutRouteChildren {
+  LocaleHeaderLayoutAdminLayoutRoute: typeof LocaleHeaderLayoutAdminLayoutRouteWithChildren
+  LocaleHeaderLayoutAboutRoute: typeof LocaleHeaderLayoutAboutRoute
+  LocaleHeaderLayoutHomeRoute: typeof LocaleHeaderLayoutHomeRoute
+  LocaleHeaderLayoutNotificationsRoute: typeof LocaleHeaderLayoutNotificationsRoute
+  LocaleHeaderLayoutSearchRoute: typeof LocaleHeaderLayoutSearchRoute
+  LocaleHeaderLayoutAppsTagRoute: typeof LocaleHeaderLayoutAppsTagRoute
+  LocaleHeaderLayoutAppsAllRoute: typeof LocaleHeaderLayoutAppsAllRoute
+  LocaleHeaderLayoutAppsTagsRoute: typeof LocaleHeaderLayoutAppsTagsRoute
+  LocaleHeaderLayoutCategoriesCategoryIdRoute: typeof LocaleHeaderLayoutCategoriesCategoryIdRoute
+  LocaleHeaderLayoutDevAppTagsRoute: typeof LocaleHeaderLayoutDevAppTagsRoute
+  LocaleHeaderLayoutDevCategoriesRoute: typeof LocaleHeaderLayoutDevCategoriesRoute
+  LocaleHeaderLayoutProductClaimRoute: typeof LocaleHeaderLayoutProductClaimRoute
+  LocaleHeaderLayoutProductsCreateRoute: typeof LocaleHeaderLayoutProductsCreateRoute
+  LocaleHeaderLayoutProfileActorRoute: typeof LocaleHeaderLayoutProfileActorRoute
+  LocaleHeaderLayoutProtocolCategoryRoute: typeof LocaleHeaderLayoutProtocolCategoryRoute
+  LocaleHeaderLayoutProtocolListingsRoute: typeof LocaleHeaderLayoutProtocolListingsRoute
+  LocaleHeaderLayoutProtocolTagsRoute: typeof LocaleHeaderLayoutProtocolTagsRoute
+  LocaleHeaderLayoutEcosystemsAppAllRoute: typeof LocaleHeaderLayoutEcosystemsAppAllRoute
+  LocaleHeaderLayoutProductsProductIdEditRoute: typeof LocaleHeaderLayoutProductsProductIdEditRoute
+  LocaleHeaderLayoutProductsProductIdMentionsRoute: typeof LocaleHeaderLayoutProductsProductIdMentionsRoute
+  LocaleHeaderLayoutProductsProductIdReviewsRoute: typeof LocaleHeaderLayoutProductsProductIdReviewsRouteWithChildren
+  LocaleHeaderLayoutEcosystemsAppIndexRoute: typeof LocaleHeaderLayoutEcosystemsAppIndexRoute
+  LocaleHeaderLayoutProductsProductIdIndexRoute: typeof LocaleHeaderLayoutProductsProductIdIndexRoute
 }
 
-const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
-  HeaderLayoutAdminLayoutRoute: HeaderLayoutAdminLayoutRouteWithChildren,
-  HeaderLayoutAboutRoute: HeaderLayoutAboutRoute,
-  HeaderLayoutHomeRoute: HeaderLayoutHomeRoute,
-  HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
-  HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
-  HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
-  HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
-  HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
-  HeaderLayoutCategoriesCategoryIdRoute: HeaderLayoutCategoriesCategoryIdRoute,
-  HeaderLayoutDevAppTagsRoute: HeaderLayoutDevAppTagsRoute,
-  HeaderLayoutDevCategoriesRoute: HeaderLayoutDevCategoriesRoute,
-  HeaderLayoutProductClaimRoute: HeaderLayoutProductClaimRoute,
-  HeaderLayoutProductsCreateRoute: HeaderLayoutProductsCreateRoute,
-  HeaderLayoutProfileActorRoute: HeaderLayoutProfileActorRoute,
-  HeaderLayoutProtocolCategoryRoute: HeaderLayoutProtocolCategoryRoute,
-  HeaderLayoutProtocolListingsRoute: HeaderLayoutProtocolListingsRoute,
-  HeaderLayoutProtocolTagsRoute: HeaderLayoutProtocolTagsRoute,
-  HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
-  HeaderLayoutProductsProductIdEditRoute:
-    HeaderLayoutProductsProductIdEditRoute,
-  HeaderLayoutProductsProductIdMentionsRoute:
-    HeaderLayoutProductsProductIdMentionsRoute,
-  HeaderLayoutProductsProductIdReviewsRoute:
-    HeaderLayoutProductsProductIdReviewsRouteWithChildren,
-  HeaderLayoutEcosystemsAppIndexRoute: HeaderLayoutEcosystemsAppIndexRoute,
-  HeaderLayoutProductsProductIdIndexRoute:
-    HeaderLayoutProductsProductIdIndexRoute,
+const LocaleHeaderLayoutRouteChildren: LocaleHeaderLayoutRouteChildren = {
+  LocaleHeaderLayoutAdminLayoutRoute:
+    LocaleHeaderLayoutAdminLayoutRouteWithChildren,
+  LocaleHeaderLayoutAboutRoute: LocaleHeaderLayoutAboutRoute,
+  LocaleHeaderLayoutHomeRoute: LocaleHeaderLayoutHomeRoute,
+  LocaleHeaderLayoutNotificationsRoute: LocaleHeaderLayoutNotificationsRoute,
+  LocaleHeaderLayoutSearchRoute: LocaleHeaderLayoutSearchRoute,
+  LocaleHeaderLayoutAppsTagRoute: LocaleHeaderLayoutAppsTagRoute,
+  LocaleHeaderLayoutAppsAllRoute: LocaleHeaderLayoutAppsAllRoute,
+  LocaleHeaderLayoutAppsTagsRoute: LocaleHeaderLayoutAppsTagsRoute,
+  LocaleHeaderLayoutCategoriesCategoryIdRoute:
+    LocaleHeaderLayoutCategoriesCategoryIdRoute,
+  LocaleHeaderLayoutDevAppTagsRoute: LocaleHeaderLayoutDevAppTagsRoute,
+  LocaleHeaderLayoutDevCategoriesRoute: LocaleHeaderLayoutDevCategoriesRoute,
+  LocaleHeaderLayoutProductClaimRoute: LocaleHeaderLayoutProductClaimRoute,
+  LocaleHeaderLayoutProductsCreateRoute: LocaleHeaderLayoutProductsCreateRoute,
+  LocaleHeaderLayoutProfileActorRoute: LocaleHeaderLayoutProfileActorRoute,
+  LocaleHeaderLayoutProtocolCategoryRoute:
+    LocaleHeaderLayoutProtocolCategoryRoute,
+  LocaleHeaderLayoutProtocolListingsRoute:
+    LocaleHeaderLayoutProtocolListingsRoute,
+  LocaleHeaderLayoutProtocolTagsRoute: LocaleHeaderLayoutProtocolTagsRoute,
+  LocaleHeaderLayoutEcosystemsAppAllRoute:
+    LocaleHeaderLayoutEcosystemsAppAllRoute,
+  LocaleHeaderLayoutProductsProductIdEditRoute:
+    LocaleHeaderLayoutProductsProductIdEditRoute,
+  LocaleHeaderLayoutProductsProductIdMentionsRoute:
+    LocaleHeaderLayoutProductsProductIdMentionsRoute,
+  LocaleHeaderLayoutProductsProductIdReviewsRoute:
+    LocaleHeaderLayoutProductsProductIdReviewsRouteWithChildren,
+  LocaleHeaderLayoutEcosystemsAppIndexRoute:
+    LocaleHeaderLayoutEcosystemsAppIndexRoute,
+  LocaleHeaderLayoutProductsProductIdIndexRoute:
+    LocaleHeaderLayoutProductsProductIdIndexRoute,
 }
 
-const HeaderLayoutRouteWithChildren = HeaderLayoutRoute._addFileChildren(
-  HeaderLayoutRouteChildren,
-)
+const LocaleHeaderLayoutRouteWithChildren =
+  LocaleHeaderLayoutRoute._addFileChildren(LocaleHeaderLayoutRouteChildren)
+
+interface LocaleRouteChildren {
+  LocaleHeaderLayoutRoute: typeof LocaleHeaderLayoutRouteWithChildren
+  LocaleLoginRoute: typeof LocaleLoginRoute
+  LocaleIndexRoute: typeof LocaleIndexRoute
+}
+
+const LocaleRouteChildren: LocaleRouteChildren = {
+  LocaleHeaderLayoutRoute: LocaleHeaderLayoutRouteWithChildren,
+  LocaleLoginRoute: LocaleLoginRoute,
+  LocaleIndexRoute: LocaleIndexRoute,
+}
+
+const LocaleRouteWithChildren =
+  LocaleRoute._addFileChildren(LocaleRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  HeaderLayoutRoute: HeaderLayoutRouteWithChildren,
-  LoginRoute: LoginRoute,
+  LocaleRoute: LocaleRouteWithChildren,
   OgIndexRoute: OgIndexRoute,
   ApiAdminHeroCandidateImageRoute: ApiAdminHeroCandidateImageRoute,
   ApiAuthAtprotoAuthorizeRoute: ApiAuthAtprotoAuthorizeRoute,

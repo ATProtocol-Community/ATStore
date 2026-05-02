@@ -2,10 +2,14 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  redirect,
+  useMatches,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
+import { getCookie, getRequest } from "@tanstack/react-start/server";
 import * as stylex from "@stylexjs/stylex";
 
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
@@ -18,6 +22,34 @@ import type { QueryClient } from "@tanstack/react-query";
 import { primaryColor } from "../design-system/theme/color.stylex";
 import { blue } from "../design-system/theme/colors/blue.stylex";
 import { DEFAULT_THEME_MODE } from "../lib/theme";
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  LOCALE_COOKIE,
+  localeDirection,
+  matchAcceptLanguage,
+  parseLocale,
+  type Locale,
+} from "../lib/locale";
+
+/**
+ * Server-side locale detection for unprefixed-path redirects. Cookie wins
+ * (manual choice persists), then `Accept-Language`, then default.
+ */
+const detectLocale = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ locale: Locale }> => {
+    const cookieValue = getCookie(LOCALE_COOKIE);
+    if (isLocale(cookieValue)) return { locale: cookieValue };
+    const acceptLanguage = getRequest().headers.get("accept-language");
+    return { locale: matchAcceptLanguage(acceptLanguage) };
+  },
+);
+
+/**
+ * Path prefixes that should NOT be redirected through a locale segment —
+ * server-only endpoints + locale-agnostic OG image generation.
+ */
+const LOCALE_REDIRECT_SKIP_PREFIXES = ["/api/", "/og", "/_"];
 
 const styles = stylex.create({
   body: {
@@ -75,7 +107,25 @@ function safeJsonForScript(value: unknown) {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
+    // Redirect any URL whose first path segment isn't a supported locale to
+    // `/<detected-locale>/<rest>`. Skip server endpoints / locale-agnostic
+    // assets so OAuth callbacks and OG images still work.
+    const pathname = location.pathname;
+    const skip = LOCALE_REDIRECT_SKIP_PREFIXES.some(
+      (p) => pathname === p.replace(/\/$/, "") || pathname.startsWith(p),
+    );
+    if (!skip) {
+      const firstSegment = pathname.split("/")[1] ?? "";
+      if (!isLocale(firstSegment)) {
+        const { locale: detected } = await detectLocale();
+        const rest = pathname === "/" ? "" : pathname;
+        throw redirect({
+          href: `/${detected}${rest}${location.searchStr ?? ""}`,
+        });
+      }
+    }
+
     await Promise.all([
       context.queryClient.ensureQueryData(user.getSessionQueryOptions),
       context.queryClient.ensureQueryData(
@@ -176,8 +226,28 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   });
   const themeMode = themePreference?.mode ?? DEFAULT_THEME_MODE;
 
+  // Read the current locale from the URL via `useMatches` — `$locale` is the
+  // first match below `__root__` for any user-facing page. API / OG paths
+  // won't match it, so we fall back to the default.
+  const matches = useMatches();
+  const localeMatch = matches.find(
+    (m) =>
+      typeof m.params === "object" &&
+      m.params !== null &&
+      "locale" in (m.params as Record<string, unknown>),
+  );
+  const currentLocale: Locale = parseLocale(
+    (localeMatch?.params as { locale?: string } | undefined)?.locale ??
+      DEFAULT_LOCALE,
+  );
+
   return (
-    <html lang="en" data-theme={themeMode} suppressHydrationWarning>
+    <html
+      lang={currentLocale}
+      dir={localeDirection(currentLocale)}
+      data-theme={themeMode}
+      suppressHydrationWarning
+    >
       <head>
         <style dangerouslySetInnerHTML={{ __html: COLOR_SCHEME_CSS }} />
         <script dangerouslySetInnerHTML={{ __html: bannerInitScript }} />

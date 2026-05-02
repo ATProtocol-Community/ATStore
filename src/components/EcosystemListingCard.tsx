@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { LocaleLink as RouterLink } from "./LocaleLink";
 
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
@@ -77,7 +77,7 @@ export function EcosystemListingCard({
 }) {
   return (
     <RouterLink
-      to="/products/$productId"
+      to="/$locale/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.listingLink)}
     >
