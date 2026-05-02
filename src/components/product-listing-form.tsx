@@ -18,7 +18,7 @@ import {
   LISTING_LINK_MAX_COUNT,
   LISTING_LINK_TYPES,
 } from "#/lib/atproto/listing-record";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Info, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Button as AriaButton,
@@ -40,6 +40,7 @@ import { Flex } from "../design-system/flex";
 import { Form } from "../design-system/form";
 import { IconButton } from "../design-system/icon-button";
 import { Page } from "../design-system/page";
+import { Popover } from "../design-system/popover";
 import { Select, SelectItem } from "../design-system/select";
 import { Separator } from "../design-system/separator";
 import { TextArea } from "../design-system/text-area";
@@ -503,14 +504,14 @@ const styles = stylex.create({
   },
   stickyFooterActions: {
     justifyContent: "flex-end",
-  },
-  stickyFooterStack: {
-    boxSizing: "border-box",
     width: "100%",
   },
   saveBlockedReasonsList: {
     gap: gap["xs"],
     paddingLeft: horizontalSpace["2xl"],
+  },
+  saveBlockedReasonsPopover: {
+    maxWidth: "20rem",
   },
   linksList: {
     gap: gap["xl"],
@@ -1526,17 +1527,20 @@ export function ProductListingForm({
                     <ListItem>
                       <Text size="sm" variant="secondary">
                         <Text weight="semibold" variant="primary">
-                          App
+                          Standalone App
                         </Text>
-                        : A standalone app that is used by users.
+                        : An app that typically defines its own lexicon and is
+                        viewed as a standalone product.
                       </Text>
                     </ListItem>
                     <ListItem>
                       <Text size="sm" variant="secondary">
                         <Text weight="semibold" variant="primary">
-                          App Tool
+                          Built on App
                         </Text>
-                        : A tool built on top of an app.
+                        : A tool built on top of an app that typically extends
+                        the app's functionality or provides additional features.
+                        An example is a Bluesky client or analytics tool.
                       </Text>
                     </ListItem>
                   </UnorderedList>
@@ -1553,8 +1557,8 @@ export function ProductListingForm({
                     <Select
                       label="Type"
                       items={[
-                        { id: "app", label: "App" },
-                        { id: "app-tool", label: "App Tool" },
+                        { id: "app", label: "Standalone App" },
+                        { id: "app-tool", label: "Built on App" },
                       ]}
                       placeholder="Select type"
                       value={categoryKind}
@@ -1735,27 +1739,40 @@ export function ProductListingForm({
           </Card>
         </Flex>
         <Page.StickyFooter>
-          <Flex
-            direction="row"
-            justify="between"
-            gap="md"
-            style={styles.stickyFooterStack}
-          >
+          <Flex align="center" justify="between" gap="2xl">
             {saveDisabledReasons.length > 0 && !isSubmitting ? (
-              <div role="status" aria-live="polite">
-                <UnorderedList style={styles.saveBlockedReasonsList}>
-                  {saveDisabledReasons.map((reason) => (
-                    <ListItem key={reason}>
-                      <Text size="sm" variant="secondary">
-                        {reason}
-                      </Text>
-                    </ListItem>
-                  ))}
-                </UnorderedList>
-              </div>
-            ) : (
-              <div />
-            )}
+              <Popover
+                placement="top center"
+                trigger={
+                  <IconButton
+                    size="lg"
+                    variant="secondary"
+                    label={`Why is ${submitLabel} disabled?`}
+                  >
+                    <Info size={16} />
+                  </IconButton>
+                }
+              >
+                <Flex
+                  direction="column"
+                  gap="md"
+                  style={styles.saveBlockedReasonsPopover}
+                >
+                  <Text size="sm" weight="semibold">
+                    To {submitLabel.toLowerCase()}, complete:
+                  </Text>
+                  <UnorderedList style={styles.saveBlockedReasonsList}>
+                    {saveDisabledReasons.map((reason) => (
+                      <ListItem key={reason}>
+                        <Text size="sm" variant="secondary">
+                          {reason}
+                        </Text>
+                      </ListItem>
+                    ))}
+                  </UnorderedList>
+                </Flex>
+              </Popover>
+            ) : null}
             <Flex gap="md" wrap style={styles.stickyFooterActions}>
               <Button
                 variant="secondary"
@@ -1765,6 +1782,7 @@ export function ProductListingForm({
               >
                 Cancel
               </Button>
+
               <Button
                 size="lg"
                 variant="primary"
