@@ -632,9 +632,7 @@ const setHomePagePromoListing = createServerFn({ method: "POST" })
         .limit(1);
 
       if (!selected || selected.verificationStatus !== "verified") {
-        throw new Error(
-          "Promo listing must reference a verified app listing.",
-        );
+        throw new Error("Promo listing must reference a verified app listing.");
       }
       if (!hasAppTwoSegmentCategory(selected.categorySlugs ?? [])) {
         throw new Error(

@@ -1753,7 +1753,9 @@ export function ProductListingForm({
                   ))}
                 </UnorderedList>
               </div>
-            ) : null}
+            ) : (
+              <div />
+            )}
             <Flex gap="md" wrap style={styles.stickyFooterActions}>
               <Button
                 variant="secondary"
