@@ -463,6 +463,7 @@ export interface NavbarProps extends StyleXComponentProps<
   React.ComponentProps<"div">
 > {
   size?: Size;
+  hideHamburgerButton?: boolean;
 }
 
 /**
@@ -473,6 +474,7 @@ export const Navbar = ({
   style,
   size: sizeProp,
   children,
+  hideHamburgerButton = false,
   ...props
 }: NavbarProps) => {
   const size = sizeProp || use(SizeContext);
@@ -527,15 +529,17 @@ export const Navbar = ({
             <Separator
               style={styles.separator as unknown as stylex.StyleXStyles}
             />
-            <IconButton
-              size="lg"
-              aria-label="Open menu"
-              variant="tertiary"
-              style={styles.hamburgerButton}
-              onPress={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X /> : <Menu />}
-            </IconButton>
+            {!hideHamburgerButton && (
+              <IconButton
+                size="lg"
+                aria-label="Open menu"
+                variant="tertiary"
+                style={styles.hamburgerButton}
+                onPress={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                {isMobileMenuOpen ? <X /> : <Menu />}
+              </IconButton>
+            )}
           </nav>
         </div>
       </MobileMenuContext>

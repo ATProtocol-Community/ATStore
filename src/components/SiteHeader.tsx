@@ -1,22 +1,20 @@
 import * as stylex from "@stylexjs/stylex";
-import { createLink, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { createLink } from "@tanstack/react-router";
+import { notificationApi } from "#/integrations/tanstack-query/api-notification.functions.ts";
+import { user } from "#/integrations/tanstack-query/api-user.functions.ts";
+import { useNotificationReadState } from "#/lib/notification-read-state.ts";
 import { Search } from "lucide-react";
 
+import { Flex } from "../design-system/flex";
 import { IconButton } from "../design-system/icon-button";
-import {
-  Navbar,
-  NavbarAction,
-  NavbarLink,
-  NavbarLogo,
-  NavbarNavigation,
-} from "../design-system/navbar";
-import { containerBreakpoints } from "../design-system/theme/media-queries.stylex";
+import { Navbar, NavbarAction, NavbarLogo } from "../design-system/navbar";
 import { fontSize } from "../design-system/theme/typography.stylex";
 import { AtStoreLogo } from "./AtStoreLogo";
 import { NavbarAuth } from "./NavbarAuth";
+import { NotificationsBell } from "./NotificationsBell";
 
 const NavbarLogoLink = createLink(NavbarLogo);
-const NavbarLinkLink = createLink(NavbarLink);
 const IconButtonLink = createLink(IconButton);
 
 const styles = stylex.create({
@@ -27,59 +25,39 @@ const styles = stylex.create({
     fontSize: fontSize["2xl"],
     rowGap: "8px",
   },
-  mobileSearchLink: {
-    display: {
-      default: "flex",
-      [containerBreakpoints.sm]: "none",
-    },
-  },
-  desktopSearchLink: {
-    display: {
-      default: "none",
-      [containerBreakpoints.sm]: "inline-flex",
-    },
-  },
 });
 
 export function SiteHeader() {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+  const { data: session } = useQuery(user.getSessionQueryOptions);
+  const { data: notifications } = useQuery({
+    ...notificationApi.getProductNotificationsQueryOptions({ limit: 50 }),
+    enabled: session?.user != null,
   });
+  const { unreadCount } = useNotificationReadState(
+    session?.user?.did ?? null,
+    notifications ?? [],
+  );
 
   return (
-    <Navbar>
+    <Navbar hideHamburgerButton={true}>
       <NavbarLogoLink to="/" style={styles.logoContent} hasUnderline={false}>
         <AtStoreLogo variant="navbar" />
       </NavbarLogoLink>
-      <NavbarNavigation justify="right">
-        <NavbarLinkLink to="/about" isActive={pathname.startsWith("/about")}>
-          About
-        </NavbarLinkLink>
-        <NavbarLinkLink
-          to="/search"
-          isActive={pathname.startsWith("/search")}
-          style={styles.mobileSearchLink}
-          search={{ sort: "popular" }}
-        >
-          Search
-        </NavbarLinkLink>
-        <div {...stylex.props(styles.mobileSearchLink)}>
-          <NavbarAuth />
-        </div>
-      </NavbarNavigation>
+
       <NavbarAction alwaysVisible={true}>
-        <IconButtonLink
-          to="/search"
-          search={{ sort: "popular" }}
-          aria-label="Search listings"
-          variant="tertiary"
-          size="lg"
-        >
-          <Search />
-        </IconButtonLink>
-        <div {...stylex.props(styles.desktopSearchLink)}>
+        <Flex align="center" gap="md">
+          <IconButtonLink
+            to="/search"
+            search={{ sort: "popular" }}
+            label="Search"
+            variant="tertiary"
+            size="lg"
+          >
+            <Search />
+          </IconButtonLink>
+          <NotificationsBell unreadCount={unreadCount} />
           <NavbarAuth />
-        </div>
+        </Flex>
       </NavbarAction>
     </Navbar>
   );
