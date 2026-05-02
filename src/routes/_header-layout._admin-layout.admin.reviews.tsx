@@ -71,6 +71,30 @@ const styles = stylex.create({
     paddingRight: horizontalSpace.lg,
     paddingTop: verticalSpace.lg,
   },
+  replyThread: {
+    borderLeftWidth: 3,
+    borderLeftStyle: "solid",
+    borderLeftColor: uiColor.border2,
+    gap: gap.lg,
+    marginTop: verticalSpace.md,
+    display: "flex",
+    flexDirection: "column",
+    paddingLeft: horizontalSpace.md,
+    paddingTop: verticalSpace.sm,
+    maxWidth: "100%",
+  },
+  replyItem: {
+    borderRadius: radius.md,
+    backgroundColor: uiColor.bgSubtle,
+    display: "flex",
+    flexDirection: "column",
+    gap: gap.md,
+    maxWidth: "100%",
+    paddingBottom: verticalSpace.md,
+    paddingLeft: horizontalSpace.lg,
+    paddingRight: horizontalSpace.lg,
+    paddingTop: verticalSpace.md,
+  },
   listingRow: {
     gap: gap.md,
     alignItems: "center",
@@ -112,8 +136,9 @@ function AdminReviewsPage() {
       <Flex direction="column" gap="6xl" style={styles.section}>
         <Heading1>Recent reviews</Heading1>
         <SmallBody>
-          All product reviews across the directory, newest first. Use this to
-          spot abuse, spam, or missing context that needs moderation.
+          All product reviews across the directory, newest first — including
+          full reply threads mirrored from AT Protocol. Use this to spot abuse,
+          spam, or missing context that needs moderation.
         </SmallBody>
 
         <Card>
@@ -215,6 +240,88 @@ function AdminReviewsPage() {
                             (No review text.)
                           </Text>
                         )}
+
+                        <Flex direction="column" style={styles.replyThread}>
+                          <Text size="sm" weight="semibold">
+                            Replies ({r.replies.length})
+                          </Text>
+                          {r.replies.length === 0 ? (
+                            <Text size="xs" variant="secondary">
+                              None yet.
+                            </Text>
+                          ) : (
+                            <Flex direction="column" gap="lg">
+                              {r.replies.map((reply) => {
+                                const rHandle =
+                                  reply.authorHandle?.trim() || null;
+                                const rDisplay =
+                                  reply.authorDisplayName?.trim() || null;
+                                const replyAuthorLabel =
+                                  rDisplay ||
+                                  (rHandle ? `@${rHandle}` : null) ||
+                                  (reply.authorDid.length > 16
+                                    ? `${reply.authorDid.slice(0, 10)}…`
+                                    : reply.authorDid);
+                                const replyProfileActor =
+                                  rHandle || reply.authorDid;
+                                return (
+                                  <div
+                                    key={reply.id}
+                                    {...stylex.props(styles.replyItem)}
+                                  >
+                                    <Flex gap="xl" justify="between" wrap>
+                                      <Flex style={styles.authorRow}>
+                                        <Avatar
+                                          alt={replyAuthorLabel}
+                                          fallback={getInitials(
+                                            replyAuthorLabel,
+                                          )}
+                                          size="sm"
+                                          src={
+                                            reply.authorAvatarUrl || undefined
+                                          }
+                                        />
+                                        <Flex
+                                          direction="column"
+                                          gap="xs"
+                                          style={styles.authorMeta}
+                                        >
+                                          <Link
+                                            href={bskyProfileUrl(
+                                              replyProfileActor,
+                                            )}
+                                            rel="noopener noreferrer"
+                                            target="_blank"
+                                          >
+                                            <Text size="sm" weight="semibold">
+                                              {replyAuthorLabel}
+                                            </Text>
+                                          </Link>
+                                          {rHandle ? (
+                                            <Text size="xs" variant="secondary">
+                                              @{rHandle}
+                                            </Text>
+                                          ) : null}
+                                          <Text size="xs" variant="secondary">
+                                            {reply.authorDid}
+                                          </Text>
+                                        </Flex>
+                                      </Flex>
+                                      <Text size="xs" variant="secondary">
+                                        {formatDate(reply.replyCreatedAt)}
+                                      </Text>
+                                    </Flex>
+                                    <RestrictedMarkdownContent
+                                      compact
+                                      content={reply.text}
+                                      paragraphVariant="secondary"
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </Flex>
+                          )}
+                        </Flex>
                       </Flex>
                       {i < data.length - 1 && <Separator />}
                     </Fragment>

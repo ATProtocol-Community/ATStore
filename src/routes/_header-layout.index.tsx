@@ -79,12 +79,13 @@ const styles = stylex.create({
   },
   bentoLink: {
     textDecoration: "none",
+    color: uiColor.text2,
     display: "block",
     position: "relative",
     zIndex: 1,
-    height: "100%",
   },
   bentoLinkFeatured: {
+    aspectRatio: "16 / 9",
     zIndex: 0,
   },
   listingCardLink: {
@@ -316,7 +317,6 @@ const styles = stylex.create({
   listingCardContent: {
     display: "flex",
     flexDirection: "column",
-    height: "100%",
     paddingBottom: verticalSpace["4xl"],
     paddingLeft: horizontalSpace["4xl"],
     paddingRight: horizontalSpace["4xl"],
@@ -330,6 +330,17 @@ const styles = stylex.create({
     borderRadius: radius.full,
     cornerShape: "unset",
     cursor: "pointer",
+  },
+  heroImage: {
+    // aspectRatio: "16 / 9",
+    width: "auto",
+  },
+  heroImagePlaceholder: {
+    flexGrow: 1,
+    minHeight: 0,
+  },
+  heroCardContent: {
+    height: "100%",
   },
 });
 
@@ -525,21 +536,37 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
     <RouterLink
       to="/products/$productId"
       params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(
-        styles.bentoLink,
-        styles.bentoLinkFeatured,
-        stylex.defaultMarker(),
-      )}
+      {...stylex.props(styles.bentoLink, stylex.defaultMarker())}
     >
-      {listing.heroImageUrl ? (
-        <HeroImage
-          alt={getDirectoryListingHeroImageAlt(listing)}
-          glowIntensity={0.8}
-          src={listing.heroImageUrl}
-        />
-      ) : (
-        <FeaturedListingFallbackCard listing={listing} />
-      )}
+      <Card size="lg" style={styles.bentoLinkFeatured}>
+        <Flex direction="column" gap="4xl" style={styles.heroCardContent}>
+          <div {...stylex.props(styles.heroImagePlaceholder)}>
+            <HeroImage
+              alt={getDirectoryListingHeroImageAlt(listing)}
+              glowIntensity={0}
+              src={listing.heroImageUrl}
+              style={styles.heroImage}
+            />
+          </div>
+          <Flex direction="column" gap="4xl" style={styles.listingCardContent}>
+            <Flex align="center" gap="2xl">
+              <StoreIcon listing={listing} size="xl" />
+              <Flex direction="column" gap="xl">
+                <Text size="3xl" weight="semibold">
+                  {listing.name}
+                </Text>
+                <Text size="lg" variant="secondary">
+                  @
+                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
+                </Text>
+              </Flex>
+            </Flex>
+            <Body variant="secondary" style={styles.listItemTagline}>
+              {listing.tagline}
+            </Body>
+          </Flex>
+        </Flex>
+      </Card>
     </RouterLink>
   );
 }

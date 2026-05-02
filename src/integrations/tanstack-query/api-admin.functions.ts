@@ -660,6 +660,7 @@ const getRecentReviews = createServerFn({ method: "GET" })
     const { db, schema } = context;
     const reviews = schema.storeListingReviews;
     const listings = schema.storeListings;
+    const rep = schema.storeListingReviewReplies;
 
     const rows = await db
       .select({
@@ -675,13 +676,35 @@ const getRecentReviews = createServerFn({ method: "GET" })
         listingName: listings.name,
         listingSlug: listings.slug,
         listingIconUrl: listings.iconUrl,
+        replyCount: reviews.replyCount,
       })
       .from(reviews)
       .innerJoin(listings, eq(reviews.storeListingId, listings.id))
       .orderBy(desc(reviews.reviewCreatedAt))
       .limit(RECENT_REVIEWS_LIMIT);
 
-    const uniqueDids = [...new Set(rows.map((r) => r.authorDid))];
+    const reviewIds = rows.map((r) => r.id);
+    const replyRows =
+      reviewIds.length === 0
+        ? []
+        : await db
+            .select({
+              id: rep.id,
+              reviewId: rep.reviewId,
+              authorDid: rep.authorDid,
+              text: rep.text,
+              replyCreatedAt: rep.replyCreatedAt,
+            })
+            .from(rep)
+            .where(inArray(rep.reviewId, reviewIds))
+            .orderBy(asc(rep.replyCreatedAt), asc(rep.id));
+
+    const uniqueDids = [
+      ...new Set([
+        ...rows.map((r) => r.authorDid),
+        ...replyRows.map((r) => r.authorDid),
+      ]),
+    ];
     const profileEntries = await Promise.all(
       uniqueDids.map(
         async (did) =>
@@ -689,6 +712,47 @@ const getRecentReviews = createServerFn({ method: "GET" })
       ),
     );
     const profileByDid = new Map(profileEntries);
+
+    const repliesByReviewId = new Map<
+      string,
+      Array<{
+        id: string;
+        replyCreatedAt: string;
+        text: string;
+        authorDid: string;
+        authorDisplayName: string | null;
+        authorHandle: string | null;
+        authorAvatarUrl: string | null;
+      }>
+    >();
+
+    for (const rr of replyRows) {
+      const profile = profileByDid.get(rr.authorDid) ?? null;
+      const displayName =
+        profile?.displayName?.trim() ||
+        profile?.handle ||
+        (rr.authorDid.length > 16
+          ? `${rr.authorDid.slice(0, 10)}…`
+          : rr.authorDid);
+      const avatarUrl =
+        profile?.avatarUrl != null &&
+        typeof profile.avatarUrl === "string" &&
+        profile.avatarUrl.trim() !== ""
+          ? profile.avatarUrl.trim()
+          : null;
+
+      const list = repliesByReviewId.get(rr.reviewId) ?? [];
+      list.push({
+        id: rr.id,
+        replyCreatedAt: rr.replyCreatedAt.toISOString(),
+        text: rr.text.trim(),
+        authorDid: rr.authorDid,
+        authorDisplayName: displayName,
+        authorHandle: profile?.handle ?? null,
+        authorAvatarUrl: avatarUrl,
+      });
+      repliesByReviewId.set(rr.reviewId, list);
+    }
 
     return rows.map((row) => {
       const profile = profileByDid.get(row.authorDid) ?? null;
@@ -707,6 +771,7 @@ const getRecentReviews = createServerFn({ method: "GET" })
         authorDisplayName: displayName,
         authorAvatarUrl: avatarUrl,
         authorHandle: handle,
+        replies: repliesByReviewId.get(row.id) ?? [],
       };
     });
   });
