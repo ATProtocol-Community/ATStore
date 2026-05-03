@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { db } from "#/db/index.server";
 import * as schema from "#/db/schema";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
+import { loadAppleEmojiAsset } from "#/lib/og-emoji.server";
 import {
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
@@ -70,68 +71,7 @@ async function getFonts() {
   return fontPromise;
 }
 
-/**
- * Twemoji loader for Satori (same approach as `/og/tag`). Lets emoji render instead of tofu.
- */
-function emojiToTwemojiCodepoints(emoji: string): string {
-  const ZWJ = "\u200D";
-  const VS16 = /\uFE0F/g;
-  const normalized = emoji.includes(ZWJ) ? emoji : emoji.replace(VS16, "");
-
-  const codepoints: Array<string> = [];
-  let highSurrogate = 0;
-  for (let i = 0; i < normalized.length; i++) {
-    const c = normalized.codePointAt(i);
-    if (c === undefined) continue;
-    if (highSurrogate) {
-      codepoints.push(
-        (
-          0x1_00_00 +
-          ((highSurrogate - 0xd8_00) << 10) +
-          (c - 0xdc_00)
-        ).toString(16),
-      );
-      highSurrogate = 0;
-    } else if (c >= 0xd8_00 && c <= 0xdb_ff) {
-      highSurrogate = c;
-    } else {
-      codepoints.push(c.toString(16));
-    }
-  }
-
-  return codepoints.join("-");
-}
-
-const twemojiSvgCache = new Map<string, string>();
-
-async function twemojiLoadAdditionalAsset(
-  code: string,
-  segment: string,
-): Promise<string | undefined> {
-  if (code !== "emoji") return undefined;
-  if (typeof segment !== "string" || segment.length === 0) return undefined;
-  const codepoints = emojiToTwemojiCodepoints(segment);
-  if (!codepoints) return undefined;
-
-  const cached = twemojiSvgCache.get(codepoints);
-  if (cached) return cached;
-
-  try {
-    const response = await fetch(
-      `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg`,
-    );
-    if (!response.ok) return undefined;
-    const svg = await response.text();
-    const base64 = Buffer.from(svg, "utf8").toString("base64");
-    const dataUrl = `data:image/svg+xml;base64,${base64}`;
-    twemojiSvgCache.set(codepoints, dataUrl);
-    return dataUrl;
-  } catch {
-    return undefined;
-  }
-}
-
-/** Collapse whitespace only — emoji and other characters pass through for Twemoji rendering. */
+/** Collapse whitespace only — emoji and other characters pass through for Apple-emoji rendering. */
 function normalizeOgText(value: string) {
   const s = typeof value === "string" ? value : String(value ?? "");
   return s.replaceAll(/\s+/g, " ").trim();
@@ -626,7 +566,7 @@ export const Route = createFileRoute("/og/review")({
                 { name: "Inter", data: regular, weight: 400, style: "normal" },
                 { name: "Inter", data: bold, weight: 700, style: "normal" },
               ],
-              loadAdditionalAsset: twemojiLoadAdditionalAsset as NonNullable<
+              loadAdditionalAsset: loadAppleEmojiAsset as NonNullable<
                 SatoriOptions["loadAdditionalAsset"]
               >,
             },

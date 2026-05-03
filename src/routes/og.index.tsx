@@ -1,4 +1,7 @@
+import type { SatoriOptions } from "satori";
+
 import { createFileRoute } from "@tanstack/react-router";
+import { loadAppleEmojiAsset } from "#/lib/og-emoji.server";
 import {
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
@@ -62,40 +65,19 @@ function getQueryText(
     : value;
 }
 
-/**
- * Strip emoji + emoji modifiers from a string. Satori can't render color emoji from the bundled
- * Inter font, so without an explicit Twemoji loader emojis come out as missing-glyph rectangles.
- * The emoji-rich variant lives at `/og/tag` (used for tag/category cards). The general OG just
- * leads with the ATStore wordmark, so dropping emojis here keeps the title clean rather than
- * pretending we have emoji rendering.
- */
-function stripEmoji(value: string) {
-  const withoutEmoji = value
-    .replaceAll(/\p{Extended_Pictographic}/gu, "")
-    .replaceAll(/\p{Emoji_Component}/gu, "");
-  const collapsedWhitespace = withoutEmoji.replaceAll(/\s+/g, " ").trim();
-  return collapsedWhitespace || "ATStore";
-}
-
 export const Route = createFileRoute("/og/")({
   server: {
     handlers: {
       GET: async ({ request }) => {
         try {
           const url = new URL(request.url);
-          const rawTitle = getQueryText(
-            url.searchParams,
-            "title",
-            "ATStore",
-            90,
-          );
+          const title = getQueryText(url.searchParams, "title", "ATStore", 90);
           const description = getQueryText(
             url.searchParams,
             "description",
             "Discover apps and tools across the Atmosphere ecosystem.",
             220,
           );
-          const title = stripEmoji(rawTitle);
           /**
            * Detect whether the title is just our brand name. If so we drop the redundant
            * "ATStore" subtitle line — the wordmark already carries it. Otherwise we show the
@@ -210,6 +192,9 @@ export const Route = createFileRoute("/og/")({
                 { name: "Inter", data: regular, weight: 400, style: "normal" },
                 { name: "Inter", data: bold, weight: 700, style: "normal" },
               ],
+              loadAdditionalAsset: loadAppleEmojiAsset as NonNullable<
+                SatoriOptions["loadAdditionalAsset"]
+              >,
             },
           );
 
