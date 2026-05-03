@@ -1,6 +1,7 @@
 import type { Database } from "#/db/index.server";
 import type { StoreListing } from "#/db/schema";
 import type { ListingLink } from "#/lib/atproto/listing-record";
+import type { SummaryScopeHumanRow } from "#/lib/oauth-listing-auth-probe";
 import type { SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
@@ -49,6 +50,7 @@ import {
   httpsListingImageUrlOrNull,
   publicMediaUrlOrNull,
 } from "#/lib/listing-image-url";
+import { oauthClientDistinctTokensFromPublishedScopeLine } from "#/lib/oauth-listing-auth-probe";
 import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
@@ -265,11 +267,35 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   updatedAt: string | null;
   /** Trust/compliance/support/project links (see `fyi.atstore.listing.detail#link`). */
   links: Array<ListingLink>;
+  /** OAuth / authorization metadata sampled from storefront link (see cron sync). Null if never probed. */
+  oauthProbe: DirectoryListingOAuthProbe | null;
   /**
    * Only set by `getDirectoryListingDetailForOwnerEdit` — sync with Postgres
    * `verification_status` for routing (e.g. back to Manage when not live).
    */
   verificationStatus?: string;
+}
+
+/** Public-safe snapshot from `store_listing_oauth_probes` (+ optional human-readable scopes from report). */
+export interface DirectoryListingOAuthProbe {
+  status: string;
+  probedAt: string | null;
+  probedUrl: string | null;
+  probeError: string | null;
+  oauthScopesDistinct: Array<string>;
+  transitionalScopes: Array<string>;
+  publishesAtprotoScope: boolean | null;
+  clientScopeRawLine: string | null;
+  clientScopeSyntaxOk: boolean | null;
+  /**
+   * Tokens from OAuth client_metadata only. When non-empty, storefront UI prefers this over
+   * {@link oauthScopesDistinct} (merged with AS `scopes_supported` / resource metadata).
+   */
+  oauthClientScopesDistinct: Array<string>;
+  hasProtectedResourceMetadata: boolean;
+  hasAuthorizationServerMetadata: boolean;
+  successfulClientMetadataUrl: string | null;
+  scopeHumanReadable: Array<SummaryScopeHumanRow>;
 }
 
 export interface DirectoryListingReviewReply {
@@ -877,9 +903,78 @@ type ExtractedPageCopy = {
   paragraphs: Array<string>;
 };
 
+async function fetchStoreListingOAuthProbe(
+  listingId: string,
+  ctx: {
+    db: Database;
+    schema: typeof dbSchema;
+  },
+): Promise<DirectoryListingOAuthProbe | null> {
+  const probes = ctx.schema.storeListingOAuthProbes;
+  const [row] = await ctx.db
+    .select({
+      status: probes.status,
+      probeError: probes.probeError,
+      probedUrl: probes.probedUrl,
+      probedAt: probes.probedAt,
+      oauthScopesDistinct: probes.oauthScopesDistinct,
+      transitionalScopes: probes.transitionalScopes,
+      publishesAtprotoScope: probes.publishesAtprotoScope,
+      clientScopeRawLine: probes.clientScopeRawLine,
+      clientScopeSyntaxOk: probes.clientScopeSyntaxOk,
+      hasProtectedResourceMetadata: probes.hasProtectedResourceMetadata,
+      hasAuthorizationServerMetadata: probes.hasAuthorizationServerMetadata,
+      successfulClientMetadataUrl: probes.successfulClientMetadataUrl,
+      reportJson: probes.reportJson,
+    })
+    .from(probes)
+    .where(eq(probes.storeListingId, listingId))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  const reportValue = row.reportJson;
+  const scopeHumanReadable: Array<SummaryScopeHumanRow> =
+    reportValue?.summary?.scopeHumanReadable != null &&
+    Array.isArray(reportValue.summary.scopeHumanReadable)
+      ? reportValue.summary.scopeHumanReadable
+      : [];
+
+  const oauthClientDistinctFromSummary =
+    reportValue?.summary?.oauthClientScopesDistinct;
+
+  const oauthClientScopesDistinct = Array.isArray(
+    oauthClientDistinctFromSummary,
+  )
+    ? oauthClientDistinctFromSummary
+    : oauthClientDistinctTokensFromPublishedScopeLine(row.clientScopeRawLine);
+
+  return {
+    status: row.status,
+    probedAt: row.probedAt.toISOString(),
+    probedUrl: row.probedUrl,
+    probeError: row.probeError,
+    oauthScopesDistinct: row.oauthScopesDistinct ?? [],
+    transitionalScopes: row.transitionalScopes ?? [],
+    publishesAtprotoScope: row.publishesAtprotoScope,
+    clientScopeRawLine: row.clientScopeRawLine,
+    clientScopeSyntaxOk: row.clientScopeSyntaxOk,
+    oauthClientScopesDistinct,
+    hasProtectedResourceMetadata: row.hasProtectedResourceMetadata,
+    hasAuthorizationServerMetadata: row.hasAuthorizationServerMetadata,
+    successfulClientMetadataUrl: row.successfulClientMetadataUrl,
+    scopeHumanReadable,
+  };
+}
+
 function toListingDetail(
   row: DirectoryListingDetailRow,
-  options: { isStoreManaged: boolean },
+  options: {
+    isStoreManaged: boolean;
+    oauthProbe: DirectoryListingOAuthProbe | null;
+  },
 ): DirectoryListingDetail {
   const primary = primaryCategorySlug(row.categorySlugs);
   const assignedCategory = getDirectoryCategoryOption(primary);
@@ -910,6 +1005,7 @@ function toListingDetail(
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     links: normalizeListingLinks(row.links ?? null),
+    oauthProbe: options.oauthProbe,
   };
 }
 
@@ -2071,8 +2167,14 @@ const getDirectoryListingDetail = createServerFn({ method: "GET" })
       return null;
     }
 
+    const [oauthProbe, isStoreManaged] = await Promise.all([
+      fetchStoreListingOAuthProbe(row.id, context),
+      computeIsStoreManaged(row),
+    ]);
+
     return toListingDetail(row, {
-      isStoreManaged: await computeIsStoreManaged(row),
+      isStoreManaged,
+      oauthProbe,
     });
   });
 
@@ -2120,8 +2222,14 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: "GET" })
       return null;
     }
 
+    const [oauthProbe, isStoreManaged] = await Promise.all([
+      fetchStoreListingOAuthProbe(row.id, context),
+      computeIsStoreManaged(row),
+    ]);
+
     return toListingDetail(row, {
-      isStoreManaged: await computeIsStoreManaged(row),
+      isStoreManaged,
+      oauthProbe,
     });
   });
 
@@ -2232,9 +2340,15 @@ const getDirectoryListingDetailForOwnerEdit = createServerFn({
 
     const { verificationStatus: _removed, ...detailRow } = row;
 
+    const [oauthProbe, isStoreManaged] = await Promise.all([
+      fetchStoreListingOAuthProbe(row.id, context),
+      computeIsStoreManaged(row),
+    ]);
+
     return {
       ...toListingDetail(detailRow as DirectoryListingDetailRow, {
-        isStoreManaged: await computeIsStoreManaged(row),
+        isStoreManaged,
+        oauthProbe,
       }),
       verificationStatus: row.verificationStatus,
     };

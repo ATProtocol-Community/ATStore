@@ -43,6 +43,7 @@ import { Link as AriaLink, Pressable } from "react-aria-components";
 import type {
   DirectoryListingCard,
   DirectoryListingDetail,
+  DirectoryListingOAuthProbe,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import type { DirectoryCategoryOption } from "../lib/directory-categories";
 
@@ -50,6 +51,7 @@ import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
 import { HeroImage } from "../components/HeroImage";
+import { ListingOAuthScopesPopoverChip } from "../components/ListingOAuthScopesPopoverChip";
 import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
@@ -513,10 +515,29 @@ function getListingLinkIcon(type: string) {
     : LISTING_LINK_ICONS.other;
 }
 
-function ListingLinksRow({ links }: { links: Array<ListingLink> }) {
-  if (links.length === 0) return null;
+function ListingLinksRow({
+  links,
+  externalUrl,
+  oauthProbe,
+}: {
+  links: Array<ListingLink>;
+  externalUrl: string | null | undefined;
+  oauthProbe: DirectoryListingOAuthProbe | null;
+}) {
+  const trimmedStorefront = externalUrl?.trim() ?? "";
+  const showScopesChip = trimmedStorefront.length > 0;
+  if (links.length === 0 && !showScopesChip) {
+    return null;
+  }
+
   return (
-    <Flex gap="md" style={styles.linksRow} aria-label="Project links">
+    <Flex
+      align="center"
+      gap="md"
+      wrap
+      style={styles.linksRow}
+      aria-label="Project links and OAuth scopes"
+    >
       {links.map((link, index) => {
         const Icon = getListingLinkIcon(link.type);
         return (
@@ -532,6 +553,12 @@ function ListingLinksRow({ links }: { links: Array<ListingLink> }) {
           </AriaLink>
         );
       })}
+      {showScopesChip ? (
+        <ListingOAuthScopesPopoverChip
+          oauthProbe={oauthProbe}
+          storefrontUrl={trimmedStorefront}
+        />
+      ) : null}
     </Flex>
   );
 }
@@ -693,9 +720,11 @@ function ProductPage() {
           content={listing.description}
           paragraphStyle={styles.descriptionText}
         />
-        {listing.links.length > 0 ? (
-          <ListingLinksRow links={listing.links} />
-        ) : null}
+        <ListingLinksRow
+          externalUrl={listing.externalUrl}
+          links={listing.links}
+          oauthProbe={listing.oauthProbe}
+        />
         {/* screenshots */}
         {listing.screenshots.length > 0 ? (
           <Flex direction="column" gap="3xl" style={styles.screenshotsSection}>
