@@ -519,10 +519,14 @@ function ListingLinksRow({
   links,
   externalUrl,
   oauthProbe,
+  devListingId,
+  devListingSlug,
 }: {
   links: Array<ListingLink>;
   externalUrl: string | null | undefined;
   oauthProbe: DirectoryListingOAuthProbe | null;
+  devListingId?: string;
+  devListingSlug?: string | null;
 }) {
   const trimmedStorefront = externalUrl?.trim() ?? "";
   const showScopesChip = trimmedStorefront.length > 0;
@@ -557,6 +561,8 @@ function ListingLinksRow({
         <ListingOAuthScopesPopoverChip
           oauthProbe={oauthProbe}
           storefrontUrl={trimmedStorefront}
+          devListingId={devListingId}
+          devListingSlug={devListingSlug}
         />
       ) : null}
     </Flex>
@@ -724,6 +730,8 @@ function ProductPage() {
           externalUrl={listing.externalUrl}
           links={listing.links}
           oauthProbe={listing.oauthProbe}
+          devListingId={listing.id}
+          devListingSlug={productSlug}
         />
         {/* screenshots */}
         {listing.screenshots.length > 0 ? (

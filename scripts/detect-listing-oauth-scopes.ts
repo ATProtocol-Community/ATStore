@@ -116,7 +116,39 @@ function printOAuthAuthProbeReport(
         }
         console.log(`      lexicon JSON: ${ps.sourceUrl}`);
         for (const line of ps.structuredLines) {
-          console.log(`        · ${line}`);
+          if (typeof line === "string") {
+            console.log(`        · ${line}`);
+          } else if (
+            line &&
+            typeof line === "object" &&
+            "kind" in line &&
+            line.kind === "sectionGap"
+          ) {
+            console.log(`        · [permission grant separator]`);
+          } else if (
+            line &&
+            typeof line === "object" &&
+            "kind" in line &&
+            line.kind === "unorderedList"
+          ) {
+            const labelled = line as {
+              label: unknown;
+              items: unknown;
+            };
+            const label =
+              typeof labelled.label === "string" ? labelled.label : "?";
+            console.log(`        · ${label}:`);
+            const itemsArr = Array.isArray(labelled.items)
+              ? labelled.items
+              : [];
+            for (const it of itemsArr) {
+              const text =
+                typeof it === "string" ? it : (JSON.stringify(it) ?? "?");
+              console.log(`           • ${text}`);
+            }
+          } else {
+            console.log(`        · ${JSON.stringify(line)}`);
+          }
         }
       }
       if ("includePermissionSetUnresolved" in row) {

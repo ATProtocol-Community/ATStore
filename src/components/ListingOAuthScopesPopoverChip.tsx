@@ -1,12 +1,16 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { Shield } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
+import { RefreshCw, Shield } from "lucide-react";
 import { Button } from "react-aria-components";
 
 import type { DirectoryListingOAuthProbe } from "../integrations/tanstack-query/api-directory-listings.functions";
 import type { SummaryScopeHumanRow } from "../lib/oauth-listing-auth-probe";
+import type { PermissionGrantStructuredLine } from "../lib/oauth-permission-grant-ui";
 
+import { Button as DsButton } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Popover } from "../design-system/popover";
 import { Separator } from "../design-system/separator";
@@ -20,14 +24,27 @@ import {
 import {
   fontFamily,
   fontSize,
-  fontWeight,
   lineHeight,
 } from "../design-system/theme/typography.stylex";
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
-import { parseIncludeScopeToken } from "../lib/oauth-scope-include-parse";
+import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import {
+  PERMISSION_GRANT_SECTION_HEADINGS,
+  isPermissionGrantSectionGap,
+  isPermissionGrantUnorderedList,
+} from "../lib/oauth-permission-grant-ui";
+import {
+  atprotoPermissionScopeResource,
+  capRepoCollectionConsentLinesForUi,
+  mergeRepoScopesIntoCollectionConsentLines,
+  parseIncludeScopeToken,
+} from "../lib/oauth-scope-include-parse";
 
 const PERMISSION_DETAIL_MAX_LINES = 12;
+
+/** Limits very long unordered lists (records, verbs, RPC names) inside one bundle section. */
+const PERMISSION_DETAIL_MAX_ITEMS_PER_ACTION_LIST = 42;
 
 /** Baseline OAuth scope token; surfaced as plain-language consent (matches typical host consent screen). */
 const BASELINE_ACCOUNT_SCOPE = "atproto";
@@ -44,8 +61,8 @@ type ScopeBucket =
 const BUCKET_LABEL: Record<ScopeBucket, string> = {
   profile: "Wants access to your account",
   bundle: "Included permission bundles",
-  repo: "May read or change data",
-  blob: "May read or upload files & media",
+  repo: "Manage records",
+  blob: "Files & blobs",
   transitional: "Legacy broad access",
   other: "Other",
 };
@@ -86,24 +103,73 @@ function baselineConsentSyntheticRow(): SummaryScopeHumanRow {
 const styles = stylex.create({
   bundlePanel: {
     borderColor: uiColor.border2,
-    borderRadius: radius.md,
+    borderRadius: radius.xs,
     borderStyle: "solid",
     borderWidth: 1,
     paddingBlock: verticalSpace.md,
     paddingInline: horizontalSpace.md,
     backgroundColor: uiColor.bgSubtle,
   },
-  bundleBulletList: {
-    gap: verticalSpace.sm,
+  bundleStructuredStack: {
     marginBlock: 0,
     marginInline: 0,
     display: "flex",
     flexDirection: "column",
-    listStyleType: "none",
-    paddingInlineStart: horizontalSpace["lg"],
+    minWidth: 0,
+  },
+  bundleStructuredSectionGap: {
+    display: "block",
+    flexShrink: 0,
+    marginBlockStart: verticalSpace["lg"],
+  },
+  bundleDetail: {
+    marginBlock: 0,
+    marginInline: 0,
+    borderBlockEndColor: uiColor.border2,
+    borderBlockEndStyle: "solid",
+    borderBlockEndWidth: 1,
+    display: "block",
+    paddingBlockEnd: verticalSpace.xl,
+    minWidth: 0,
+  },
+  bundleLineBlock: {
+    display: "block",
+    paddingBlockEnd: verticalSpace.xl,
+    minWidth: 0,
+  },
+  bundleLineBlockLast: {
+    paddingBlockEnd: 0,
   },
   bundleLineText: {
     display: "block",
+  },
+  bundleLabeledGroupList: {
+    marginBlock: 0,
+    marginInline: 0,
+    listStyleType: "none",
+    paddingInlineStart: horizontalSpace.lg,
+  },
+  bundleLabeledGroupItem: {
+    gap: gap.sm,
+    display: "flex",
+    flexDirection: "column",
+  },
+  bundleNestedItemText: {
+    display: "block",
+    fontFamily: fontFamily.mono,
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+  },
+  bundleNestedList: {
+    gap: verticalSpace.sm,
+    marginBlock: 0,
+    display: "flex",
+    flexDirection: "column",
+    listStylePosition: "outside",
+    listStyleType: "disc",
+    marginInlineEnd: 0,
+    marginInlineStart: horizontalSpace.sm,
+    paddingInlineStart: horizontalSpace.lg,
   },
   bundleTokenFooter: {
     borderBlockStartColor: uiColor.border2,
@@ -111,15 +177,6 @@ const styles = stylex.create({
     borderBlockStartWidth: 1,
     marginBlockStart: verticalSpace.sm,
     paddingBlockStart: verticalSpace.sm,
-  },
-  bundleTokenLabel: {
-    color: uiColor.text2,
-    display: "block",
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
-    lineHeight: lineHeight.sm,
-    marginBlockEnd: verticalSpace.xs,
   },
   bundleTokenValue: {
     color: uiColor.text2,
@@ -189,7 +246,7 @@ const styles = stylex.create({
     color: warningColor.text2,
   },
   sectionList: {
-    gap: verticalSpace.md,
+    gap: verticalSpace.xl,
     listStyle: "none",
     marginBlock: 0,
     display: "flex",
@@ -199,6 +256,34 @@ const styles = stylex.create({
   scopeRowInner: {
     minWidth: 0,
     width: "100%",
+  },
+  repoScopesRecordsWrap: {
+    gap: gap.xs,
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+  },
+  repoScopesCollectionList: {
+    gap: verticalSpace.sm,
+    marginBlock: 0,
+    display: "flex",
+    flexDirection: "column",
+    listStylePosition: "outside",
+    listStyleType: "disc",
+    marginInlineEnd: 0,
+    marginInlineStart: horizontalSpace.sm,
+    paddingInlineStart: horizontalSpace.lg,
+    minWidth: 0,
+  },
+  repoConsentCollectionLine: {
+    gap: verticalSpace.sm,
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+  },
+  repoCollectionVerbPhrase: {
+    fontFamily: fontFamily.sans,
+    whiteSpace: "pre-wrap",
   },
   tokenChip: {
     color: uiColor.text1,
@@ -237,9 +322,10 @@ function scopeTokenBucket(token: string): ScopeBucket {
   if (!t) return "other";
   if (parseIncludeScopeToken(t) !== null) return "bundle";
   if (t === "atproto") return "profile";
-  if (t.startsWith("repo:")) return "repo";
-  if (t.startsWith("blob:")) return "blob";
   if (t.startsWith("transition:")) return "transitional";
+  const res = atprotoPermissionScopeResource(t);
+  if (res === "repo") return "repo";
+  if (res === "blob") return "blob";
   return "other";
 }
 
@@ -279,10 +365,66 @@ function groupPlainTokens(tokens: Array<string>): Array<{
   }));
 }
 
-function bundleStructuredLines(row: SummaryScopeHumanRow): Array<string> {
-  return "includePermissionSet" in row
-    ? row.includePermissionSet.structuredLines
-    : [];
+function coerceStructuredLine(
+  raw: unknown,
+): PermissionGrantStructuredLine | undefined {
+  if (typeof raw === "string") {
+    return raw;
+  }
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return undefined;
+  }
+
+  const o = raw as Record<string, unknown>;
+  if (o.kind === "sectionGap") {
+    return { kind: "sectionGap" };
+  }
+  if (o.kind !== "unorderedList") return undefined;
+  if (typeof o.label !== "string" || !o.label.trim()) return undefined;
+  if (!Array.isArray(o.items)) return undefined;
+
+  const items = o.items.flatMap((x) => {
+    if (typeof x === "string") {
+      const t = x.trim();
+      return t ? [t] : [];
+    }
+    if (typeof x === "number" && Number.isFinite(x)) return [String(x)];
+    return [];
+  });
+
+  if (items.length === 0) return undefined;
+
+  return { kind: "unorderedList", label: o.label.trim(), items };
+}
+
+function bundleStructuredLines(
+  row: SummaryScopeHumanRow,
+): Array<PermissionGrantStructuredLine> {
+  const raw =
+    "includePermissionSet" in row
+      ? row.includePermissionSet.structuredLines
+      : [];
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((x) => {
+    const normalized = coerceStructuredLine(x);
+    return normalized === undefined ? [] : [normalized];
+  });
+}
+
+function clippedBundleStructuredLines(
+  lines: ReadonlyArray<PermissionGrantStructuredLine>,
+): Array<PermissionGrantStructuredLine> {
+  if (lines.length <= PERMISSION_DETAIL_MAX_LINES) return [...lines];
+  return [...lines.slice(0, PERMISSION_DETAIL_MAX_LINES), "…"];
+}
+
+function unorderedListDisplayItems(
+  items: ReadonlyArray<string>,
+): Array<string> {
+  const cap = PERMISSION_DETAIL_MAX_ITEMS_PER_ACTION_LIST;
+  if (items.length <= cap) return [...items];
+  return [...items.slice(0, cap - 1), "…"];
 }
 
 /** Last NSID segment as a short heading, e.g. `app.bsky.authCreatePosts` → "Auth Create Posts". */
@@ -306,6 +448,63 @@ function readableNameFromBundleNsid(nsid: string): string {
     .join(" ");
 }
 
+/** Consolidates repo probe rows — explicit actions only annotate the collections from the same token */
+function MergedRepoScopesListItem({
+  rows,
+}: {
+  rows: ReadonlyArray<SummaryScopeHumanRow>;
+}) {
+  const consentLines = mergeRepoScopesIntoCollectionConsentLines(
+    rows.map((r) => r.token.trim()).filter(Boolean),
+  );
+  const capped = capRepoCollectionConsentLinesForUi(consentLines);
+
+  const ariaScopes = [...new Set(rows.map((r) => r.token.trim()))]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <li aria-label={`OAuth repo scopes · ${ariaScopes}`}>
+      <Flex direction="column" gap="sm" style={styles.scopeRowInner}>
+        {consentLines.length === 0 ? (
+          <Text size="xs" variant="secondary">
+            Published metadata doesn&apos;t spell out record collections here.
+          </Text>
+        ) : (
+          <div {...stylex.props(styles.repoScopesRecordsWrap)}>
+            <ul {...stylex.props(styles.repoScopesCollectionList)}>
+              {capped.items.map((line) => (
+                <li key={line.nsid}>
+                  <Text
+                    size="xs"
+                    variant="secondary"
+                    style={styles.repoConsentCollectionLine}
+                  >
+                    <span {...stylex.props(styles.bundleNestedItemText)}>
+                      {line.nsid}
+                    </span>
+                    {line.verbPhrase ? (
+                      <span {...stylex.props(styles.repoCollectionVerbPhrase)}>
+                        {" "}
+                        {line.verbPhrase}
+                      </span>
+                    ) : null}
+                  </Text>
+                </li>
+              ))}
+            </ul>
+            {capped.moreCount > 0 ? (
+              <Text size="xs" variant="secondary">
+                +{String(capped.moreCount)} more
+              </Text>
+            ) : null}
+          </div>
+        )}
+      </Flex>
+    </li>
+  );
+}
+
 function CompactScopeHumanRow({ row }: { row: SummaryScopeHumanRow }) {
   const unresolved =
     "includePermissionSetUnresolved" in row
@@ -318,10 +517,7 @@ function CompactScopeHumanRow({ row }: { row: SummaryScopeHumanRow }) {
   const isBundleRow = includeScope !== null || unresolved !== null;
 
   const lines = bundleStructuredLines(row);
-  const clipped =
-    lines.length > PERMISSION_DETAIL_MAX_LINES
-      ? [...lines.slice(0, PERMISSION_DETAIL_MAX_LINES), "…"]
-      : lines;
+  const clipped = clippedBundleStructuredLines(lines);
 
   const nsid = resolved?.nsid ?? unresolved?.nsid ?? includeScope?.nsid ?? null;
 
@@ -334,8 +530,13 @@ function CompactScopeHumanRow({ row }: { row: SummaryScopeHumanRow }) {
   if (!isBundleRow) {
     return (
       <li>
-        <Flex direction="column" gap="xs" style={styles.scopeRowInner}>
+        <Flex direction="column" gap="lg" style={styles.scopeRowInner}>
           <SmallBody style={styles.tokenChip}>{row.token}</SmallBody>
+          {row.description.trim().length > 0 ? (
+            <Text size="xs" variant="secondary">
+              {row.description}
+            </Text>
+          ) : null}
         </Flex>
       </li>
     );
@@ -349,30 +550,91 @@ function CompactScopeHumanRow({ row }: { row: SummaryScopeHumanRow }) {
             {headline}
           </Text>
         ) : null}
-        {detail ? <SmallBody variant="secondary">{detail}</SmallBody> : null}
+        {detail ? (
+          <div {...stylex.props(styles.bundleDetail)}>
+            <SmallBody variant="secondary">{detail}</SmallBody>
+          </div>
+        ) : null}
         {clipped.length > 0 ? (
-          <ul {...stylex.props(styles.bundleBulletList)}>
-            {clipped.map((line, index) => (
-              <li key={`bundle-${line.slice(0, 48)}-${String(index)}`}>
-                <Text
-                  size="sm"
-                  variant="secondary"
-                  leading="lg"
-                  style={styles.bundleLineText}
+          <div {...stylex.props(styles.bundleStructuredStack)}>
+            {clipped.map((line, index) =>
+              isPermissionGrantSectionGap(line) ? (
+                <div
+                  aria-hidden
+                  key={`bundle-section-gap-${String(index)}`}
+                  {...stylex.props(styles.bundleStructuredSectionGap)}
+                />
+              ) : typeof line === "string" ? (
+                <div
+                  key={`bundle-${line.slice(0, 48)}-${String(index)}`}
+                  {...stylex.props(
+                    styles.bundleLineBlock,
+                    index === clipped.length - 1
+                      ? styles.bundleLineBlockLast
+                      : null,
+                  )}
                 >
-                  {line}
-                </Text>
-              </li>
-            ))}
-          </ul>
+                  <Text
+                    size="sm"
+                    variant="secondary"
+                    weight={
+                      PERMISSION_GRANT_SECTION_HEADINGS.has(line)
+                        ? "semibold"
+                        : undefined
+                    }
+                    style={styles.bundleLineText}
+                  >
+                    {line}
+                  </Text>
+                </div>
+              ) : isPermissionGrantUnorderedList(line) ? (
+                <div
+                  key={`bundle-ul-${line.label}-${String(index)}`}
+                  {...stylex.props(
+                    styles.bundleLineBlock,
+                    index === clipped.length - 1
+                      ? styles.bundleLineBlockLast
+                      : null,
+                  )}
+                >
+                  <ul {...stylex.props(styles.bundleLabeledGroupList)}>
+                    <li {...stylex.props(styles.bundleLabeledGroupItem)}>
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        variant="secondary"
+                        style={styles.bundleLineText}
+                      >
+                        {line.label}
+                      </Text>
+                      <ul {...stylex.props(styles.bundleNestedList)}>
+                        {unorderedListDisplayItems(line.items).map(
+                          (entry, nestedIndex) => (
+                            <li
+                              key={`${line.label}-item-${entry.slice(0, 56)}-${String(nestedIndex)}`}
+                            >
+                              <Text
+                                size="xs"
+                                variant="secondary"
+                                style={styles.bundleNestedItemText}
+                              >
+                                {entry}
+                              </Text>
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    </li>
+                  </ul>
+                </div>
+              ) : null,
+            )}
+          </div>
         ) : null}
         {unresolved?.reason?.trim() ? (
           <SmallBody variant="secondary">{unresolved.reason}</SmallBody>
         ) : null}
         <div {...stylex.props(styles.bundleTokenFooter)}>
-          <span {...stylex.props(styles.bundleTokenLabel)}>
-            OAuth scope token
-          </span>
           <span {...stylex.props(styles.bundleTokenValue)}>{row.token}</span>
         </div>
       </Flex>
@@ -493,12 +755,19 @@ function storefrontScopesPopoverBody(props: {
               </Text>
               {baselineProfileTitleOnly ? null : (
                 <ul {...stylex.props(styles.sectionList)}>
-                  {rows.map((row, index) => (
-                    <CompactScopeHumanRow
-                      key={`${row.token}-${String(index)}`}
-                      row={row}
+                  {bucket === "repo" ? (
+                    <MergedRepoScopesListItem
+                      key={`${bucket}-merged`}
+                      rows={rows}
                     />
-                  ))}
+                  ) : (
+                    rows.map((row, index) => (
+                      <CompactScopeHumanRow
+                        key={`${row.token}-${String(index)}`}
+                        row={row}
+                      />
+                    ))
+                  )}
                 </ul>
               )}
             </Flex>
@@ -561,7 +830,48 @@ function storefrontScopesPopoverBody(props: {
 export function ListingOAuthScopesPopoverChip(props: {
   storefrontUrl: string;
   oauthProbe: DirectoryListingOAuthProbe | null;
+  /** When set in dev, shows a control to re-run the storefront OAuth probe and refresh listing data. */
+  devListingId?: string;
+  devListingSlug?: string | null;
 }) {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  const rescanOAuthProbeDev = useMutation({
+    mutationFn: async () => {
+      const listingId = props.devListingId?.trim();
+      if (!listingId) {
+        throw new Error("Listing id missing.");
+      }
+      return directoryListingApi.rescanListingOAuthProbeDev({
+        data: { listingId },
+      });
+    },
+    onSuccess: async () => {
+      const id = props.devListingId?.trim();
+      const slug = props.devListingSlug?.trim();
+      if (id) {
+        await queryClient.invalidateQueries({
+          queryKey:
+            directoryListingApi.getDirectoryListingDetailQueryOptions(id)
+              .queryKey,
+        });
+      }
+      if (slug) {
+        await queryClient.invalidateQueries({
+          queryKey:
+            directoryListingApi.getDirectoryListingDetailBySlugQueryOptions(
+              slug,
+            ).queryKey,
+        });
+      }
+      await router.invalidate();
+    },
+  });
+
+  const showDevRescan =
+    import.meta.env.DEV && Boolean(props.devListingId?.trim());
+
   const elevated = Boolean(
     props.oauthProbe &&
     oauthProbeClientListsTransitionGeneric(props.oauthProbe),
@@ -635,6 +945,39 @@ export function ListingOAuthScopesPopoverChip(props: {
             {storefrontScopesPopoverBody({ probe: props.oauthProbe })}
           </>
         )}
+
+        {showDevRescan ? (
+          <>
+            <Separator />
+            <Flex direction="column" gap="sm">
+              <Flex align="center" gap="md" justify="between" wrap>
+                <SmallBody variant="secondary">
+                  Dev — re-run the storefront OAuth probe and sync results to
+                  the DB.
+                </SmallBody>
+                <DsButton
+                  variant="secondary"
+                  size="sm"
+                  isPending={rescanOAuthProbeDev.isPending}
+                  isDisabled={rescanOAuthProbeDev.isPending}
+                  onPress={() => rescanOAuthProbeDev.mutate()}
+                >
+                  <Flex align="center" gap="xs">
+                    <RefreshCw aria-hidden size={14} strokeWidth={2} />
+                    Rescan permissions
+                  </Flex>
+                </DsButton>
+              </Flex>
+              {rescanOAuthProbeDev.isError ? (
+                <SmallBody variant="critical">
+                  {rescanOAuthProbeDev.error instanceof Error
+                    ? rescanOAuthProbeDev.error.message
+                    : "Rescan failed."}
+                </SmallBody>
+              ) : null}
+            </Flex>
+          </>
+        ) : null}
 
         {props.oauthProbe == null ||
         props.oauthProbe.status === "skipped_no_url" ? null : (

@@ -15,7 +15,26 @@ import { access, constants, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
 
-import { parseIncludeScopeToken } from "./oauth-scope-include-parse";
+import type { PermissionGrantStructuredLine } from "./oauth-permission-grant-ui";
+
+import {
+  PERMISSION_GRANT_ACCOUNT_RELATED_HEADING,
+  PERMISSION_GRANT_ALLOWED_VERBS_LIST_LABEL,
+  PERMISSION_GRANT_BACKEND_CALLS_LIST_LABEL,
+  PERMISSION_GRANT_FILE_UPLOADS_HEADING,
+  PERMISSION_GRANT_IDENTITY_HEADING,
+  PERMISSION_GRANT_OTHER_TECHNICAL_HEADING,
+  PERMISSION_GRANT_POSTS_STORED_RECORDS_HEADING,
+  PERMISSION_GRANT_RECORDS_LIST_LABEL,
+  PERMISSION_GRANT_REMOTE_ACTIONS_HEADING,
+  PERMISSION_GRANT_UNRECOGNIZED_ENTRY_HEADING,
+} from "./oauth-permission-grant-ui";
+import {
+  parseIncludeScopeToken,
+  parseRepoScopeForStorefront,
+} from "./oauth-scope-include-parse";
+
+export type { PermissionGrantStructuredLine } from "./oauth-permission-grant-ui";
 
 const FETCH_TIMEOUT_MS = 15_000;
 const LEXICON_DNS_TIMEOUT_MS = 5 * 1000;
@@ -72,20 +91,54 @@ function authorizationServerMetadataUrl(issuer: string): string {
 
 const CLIENT_METADATA_PATHS = [
   "/.well-known/oauth-client-metadata.json",
-  /** Some stacks use this shorter well-known path (same role as oauth-client-metadata). */
   "/.well-known/client-metadata.json",
-  /** ATProto / XRPC apps: OAuth `client_id` is often `{origin}/client-metadata.json`. */
+  "/.well-known/client-metadata",
   "/client-metadata.json",
   "/api/auth/atproto/metadata.json",
   "/oauth-client-metadata.json",
   "/oauth/client-metadata.json",
+  "/oauth/upstream/client-metadata.json",
+  "/oauth/bluesky/client-metadata.json",
   "/api/oauth/client-metadata.json",
+  "/api/oauth/metadata",
   "/oauth-client.json",
 ];
 
 function clientMetadataCandidates(originHref: string): Array<string> {
   const origin = new URL(originHref).origin;
   return CLIENT_METADATA_PATHS.map((p) => `${origin}${p}`);
+}
+
+/**
+ * Many ATProto apps advertise OAuth client_metadata on an `api.` host while the storefront
+ * `external_url` points at marketing apex (`semble.so` vs `api.semble.so`).
+ */
+export function tryAlternateApiHostnameOriginForOAuthProbe(
+  storefrontUrl: URL,
+): string | null {
+  try {
+    const hostname = storefrontUrl.hostname.toLowerCase();
+    if (
+      hostname.length === 0 ||
+      hostname === "localhost" ||
+      hostname.startsWith("api.") ||
+      !hostname.includes(".")
+    ) {
+      return null;
+    }
+    const withoutWww = hostname.replace(/^www\./, "");
+    const alternate = new URL(storefrontUrl.href);
+    alternate.hostname = `api.${withoutWww}`;
+    alternate.pathname = "";
+    alternate.search = "";
+    alternate.hash = "";
+    if (alternate.origin === storefrontUrl.origin) {
+      return null;
+    }
+    return alternate.origin;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchJson(url: string): Promise<AttemptResult<JsonRecord>> {
@@ -379,6 +432,37 @@ function splitAtprotoPermissionScopeParts(token: string): {
   };
 }
 
+function decodeScopeQueryValue(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  const s = raw.trim();
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
+/** `app.bsky.authViewAll` → “Auth View All”. */
+function humanizeDottedIdentifiersLastSegment(id: string): string {
+  const segments = id
+    .split(".")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const last = segments.at(-1);
+  if (!last) return id;
+  const words = last
+    .replaceAll("_", " ")
+    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return id;
+  return words
+    .map((w) =>
+      w.length === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+    )
+    .join(" ");
+}
+
 /**
  * Plain-language summaries for storefront UI; the monospace token stays in its own column.
  * Semantics align with https://atproto.com/specs/permission .
@@ -409,11 +493,11 @@ function describeAtprotoScopeToken(token: string): string {
 
   const incl = parseIncludeScopeToken(t);
   if (incl) {
-    const label = `checklist labeled “${incl.nsid}”`;
-    const audience = incl.aud
-      ? ` Only applies when signing in with “${incl.aud}”.`
-      : "";
-    return `Bundles a fuller permission breakdown (${label}).${audience} Bullets expand below when we fetched it.`.trimEnd();
+    const friendly = humanizeDottedIdentifiersLastSegment(incl.nsid);
+    const checklist =
+      friendly === incl.nsid ? incl.nsid : `${friendly} (${incl.nsid})`;
+    const audience = incl.aud ? ` · aud ${incl.aud}` : "";
+    return `Bundle ${checklist}${audience}`.trimEnd();
   }
 
   const {
@@ -427,48 +511,101 @@ function describeAtprotoScopeToken(token: string): string {
       const fromQuery = sp.getAll("accept");
       const types =
         positional === null ? fromQuery : [positional, ...fromQuery];
-      return types.length > 0
-        ? `Upload files to your account, limited to types: ${types.join(", ")}.`
-        : "Upload images and files to your account.";
+      return types.length > 0 ? `Upload · ${types.join(", ")}` : "Upload blobs";
     }
     case "repo": {
-      const fromQueryCols = sp.getAll("collection");
-      const cols =
-        positional === null
-          ? fromQueryCols.length > 0
-            ? fromQueryCols
-            : []
-          : [positional];
-      const acts = sp.getAll("action");
-      const kinds = cols.length > 0 ? cols.join(", ") : "not specified here";
-      const verbs =
-        acts.length > 0
-          ? acts.join(", ")
-          : cols.length > 0
-            ? "create, update, delete"
-            : "not specified here";
-      return `Read or update your saved posts and data. Data categories: ${kinds}; allowed operations: ${verbs}.`;
+      const parsed = parseRepoScopeForStorefront(t);
+      if (parsed === null) {
+        return "Repo access · unspecified in summary";
+      }
+
+      const n = parsed.collectionsSorted.length;
+      const hasActs =
+        parsed.hasExplicitActions && parsed.explicitActionsSorted.length > 0;
+
+      if (n === 0 && !hasActs) {
+        return "Repo access · unspecified in summary";
+      }
+
+      if (!hasActs) {
+        if (n === 1) return "";
+        if (n > 1) return `${String(n)} collections · create · update · delete`;
+        return "Repo access · unspecified in summary";
+      }
+
+      return parsed.explicitActionsSorted.join(" · ");
     }
     case "rpc": {
       const lxms = positional === null ? sp.getAll("lxm") : [positional];
-      const aud = sp.get("aud");
-      const what =
-        lxms.length > 0 ? lxms.join(", ") : "specific backend features";
-      const tail = aud ? `, only against “${aud}”.` : ".";
-      return `Runs backend actions (${what})${tail}`;
+      const names = lxms.map((s) => s.trim()).filter(Boolean);
+      const aud = decodeScopeQueryValue(sp.get("aud"));
+
+      if (names.length === 0) {
+        if (aud === "*" || !aud) {
+          return "Backend API · not narrowed in token";
+        }
+        return `Backend · ${aud}`;
+      }
+
+      const headLxm = names[0];
+      const pretty = headLxm
+        ? humanizeDottedIdentifiersLastSegment(headLxm)
+        : "";
+      const head =
+        names.length === 1 && headLxm !== undefined && pretty !== headLxm
+          ? `${pretty} (${headLxm})`
+          : names.join(", ");
+
+      if (aud === "*" || aud === "") {
+        return `${head} · any aud`;
+      }
+      if (aud) {
+        return `${head} · ${aud}`;
+      }
+      return head;
     }
     case "account": {
-      const attr = positional ?? sp.get("attr") ?? "";
-      const action = sp.get("action");
-      const field = attr ? `“${attr}”` : "account preferences or limits";
-      const how = action ? `: ${action}` : "";
-      return `View or tweak account-related info — ${field}${how}.`;
+      const attr = (positional ?? sp.get("attr") ?? "").trim();
+      const actionRaw = (sp.get("action") ?? "").trim().toLowerCase();
+
+      const field =
+        attr === "email"
+          ? "your account email"
+          : attr === "phone"
+            ? "your phone number"
+            : attr
+              ? `the “${attr}” field`
+              : "account fields";
+
+      if (actionRaw === "read" || actionRaw === "") {
+        if (attr === "email") {
+          return "Read the email address on your account (as exposed by your host).";
+        }
+        return `Read-only access to ${field}.`;
+      }
+      if (actionRaw === "write" || actionRaw === "update") {
+        if (attr === "email") return "Update your account email address.";
+        if (attr === "phone") return "Update your phone number.";
+        return attr
+          ? `Update the “${attr}” account field.`
+          : "Update account fields.";
+      }
+      if (actionRaw === "*") {
+        if (attr === "email") {
+          return "Full access to read and change your account email.";
+        }
+        if (attr === "phone") {
+          return "Full access to read and change your phone number.";
+        }
+        return attr
+          ? `Full read/write access to the “${attr}” account field.`
+          : "Full access to account fields spelled out here.";
+      }
+      return `Account access (${actionRaw}) for ${field}.`;
     }
     case "identity": {
       const attr = positional ?? sp.get("attr");
-      return attr
-        ? `Read identity/profile fields such as ${attr}.`
-        : "Read identity or profile-related information.";
+      return attr ? `Reads identity · ${attr}` : "Reads identity-linked data.";
     }
     default: {
       return `Technical scope we didn’t summarize: ${token}`;
@@ -551,21 +688,65 @@ function extractPermissionMainDef(
   };
 }
 
-/** Plain-language bullets for inlined permission-set documents (popover detail). */
-function formatPermissionGrant(p: JsonRecord): string {
+/** Lexicon fields may be arrays or comma-separated strings. */
+function normalizedCommaSeparatedLexiconList(raw: unknown): Array<string> {
+  if (raw === undefined || raw === null) {
+    return [];
+  }
+  if (Array.isArray(raw)) {
+    return raw.flatMap((x) => normalizedCommaSeparatedLexiconList(x));
+  }
+  if (typeof raw === "string") {
+    return raw
+      .split(/\s*,\s*/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return [String(raw)];
+  }
+  return [];
+}
+
+function linesForPermissionGrant(
+  p: JsonRecord,
+): Array<PermissionGrantStructuredLine> {
   if (p.type !== "permission") {
-    return `Unrecognized checklist entry (${safeCompactJson(p)})`;
+    return [PERMISSION_GRANT_UNRECOGNIZED_ENTRY_HEADING, safeCompactJson(p)];
   }
 
   switch (p.resource) {
     case "repo": {
-      const cols = Array.isArray(p.collection)
-        ? p.collection.map(String).join(", ")
-        : "not narrowed here";
-      const acts = Array.isArray(p.action)
-        ? p.action.map(String).join(", ")
-        : "not narrowed here";
-      return `Posts / stored records — kinds covered: ${cols}; allowed verbs: ${acts}.`;
+      const colTokens = normalizedCommaSeparatedLexiconList(p.collection);
+      const actTokens = normalizedCommaSeparatedLexiconList(p.action);
+      const colItems = colTokens.length > 0 ? colTokens : null;
+      const actItems = actTokens.length > 0 ? actTokens : null;
+
+      const out: Array<PermissionGrantStructuredLine> = [
+        PERMISSION_GRANT_POSTS_STORED_RECORDS_HEADING,
+      ];
+
+      if (colItems) {
+        out.push({
+          kind: "unorderedList",
+          label: PERMISSION_GRANT_RECORDS_LIST_LABEL,
+          items: colItems,
+        });
+      } else {
+        out.push("Records — not narrowed here.");
+      }
+
+      if (actItems) {
+        out.push({
+          kind: "unorderedList",
+          label: PERMISSION_GRANT_ALLOWED_VERBS_LIST_LABEL,
+          items: actItems,
+        });
+      } else {
+        out.push("Allowed verbs — not narrowed here.");
+      }
+
+      return out;
     }
     case "blob": {
       const acc = Array.isArray(p.accept)
@@ -577,33 +758,56 @@ function formatPermissionGrant(p: JsonRecord): string {
         acc && `accepted types ${acc}`,
         types && `type pattern ${types}`,
       ].filter(Boolean);
-      return hints.length > 0
-        ? `File uploads (${hints.join("; ")}).`
-        : "File uploads (bundled rules not summarized line-by-line here).";
+      return [
+        PERMISSION_GRANT_FILE_UPLOADS_HEADING,
+        hints.length > 0
+          ? `${hints.join("; ")}.`
+          : "Bundled rules not summarized line-by-line here.",
+      ];
     }
     case "rpc": {
-      const lxms = Array.isArray(p.lxm) ? p.lxm.map(String).join(", ") : "";
-      const aud = typeof p.aud === "string" ? p.aud : "";
-      const parts = [
-        lxms && `backend calls ${lxms}`,
-        aud && `hosts like ${aud}`,
-      ].filter(Boolean);
-      return parts.length > 0
-        ? `Remote actions (${parts.join("; ")}).`
-        : "Remote/backend actions (details not spelled out here).";
+      const lxmParts = normalizedCommaSeparatedLexiconList(p.lxm);
+      const aud = typeof p.aud === "string" ? p.aud.trim() : "";
+
+      const out: Array<PermissionGrantStructuredLine> = [
+        PERMISSION_GRANT_REMOTE_ACTIONS_HEADING,
+      ];
+
+      if (lxmParts.length > 0) {
+        out.push({
+          kind: "unorderedList",
+          label: PERMISSION_GRANT_BACKEND_CALLS_LIST_LABEL,
+          items: lxmParts,
+        });
+      }
+
+      if (aud.length > 0) {
+        out.push(`Hosts like ${aud}.`);
+      }
+
+      if (lxmParts.length === 0 && aud.length === 0) {
+        out.push("Details not spelled out here.");
+      }
+
+      return out;
     }
     case "account": {
       const attr = typeof p.attr === "string" ? p.attr : "account fields";
       const action =
         typeof p.action === "string" ? p.action : "read or manage as listed";
-      return `Account-related data — ${attr}: ${action}.`;
+      return [PERMISSION_GRANT_ACCOUNT_RELATED_HEADING, `${attr}: ${action}.`];
     }
     case "identity": {
-      const attr = typeof p.attr === "string" ? p.attr : "profile-related";
-      return `Identity / profile (${attr}).`;
+      const raw =
+        typeof p.attr === "string" ? p.attr.trim() : "profile-related";
+      const detail = raw.endsWith(".") ? raw : `${raw}.`;
+      return [PERMISSION_GRANT_IDENTITY_HEADING, detail];
     }
     default: {
-      return `Technical checklist item (${String(p.resource)}).`;
+      return [
+        PERMISSION_GRANT_OTHER_TECHNICAL_HEADING,
+        `resource: ${String(p.resource)}.`,
+      ];
     }
   }
 }
@@ -636,7 +840,7 @@ export type PermissionLexiconLookup =
       sourceUrl: string;
       title?: string;
       detail?: string;
-      structuredLines: Array<string>;
+      structuredLines: Array<PermissionGrantStructuredLine>;
     }
   | {
       resolved: false;
@@ -798,11 +1002,20 @@ async function resolveIncludedPermissionLexicon(
 
   const perms = bundleMain.permissions;
   const structuredLines = Array.isArray(perms)
-    ? perms.map((row) =>
-        row && typeof row === "object" && !Array.isArray(row)
-          ? formatPermissionGrant(row as JsonRecord)
-          : safeCompactJson(row),
-      )
+    ? perms.flatMap((row, permIndex) => {
+        const chunk =
+          row && typeof row === "object" && !Array.isArray(row)
+            ? linesForPermissionGrant(row as JsonRecord)
+            : [safeCompactJson(row)];
+        if (chunk.length === 0) return chunk;
+        const gap =
+          permIndex > 0
+            ? ([
+                { kind: "sectionGap" as const },
+              ] satisfies Array<PermissionGrantStructuredLine>)
+            : [];
+        return [...gap, ...chunk];
+      })
     : [
         "The permission checklist inside the bundle isn’t laid out how we expected.",
       ];
@@ -859,6 +1072,28 @@ async function probeAuthorizationServer(
   originOrIssuer: string,
 ): Promise<AttemptResult<JsonRecord>> {
   return fetchJson(authorizationServerMetadataUrl(originOrIssuer));
+}
+
+async function ingestOAuthClientMetadataAttemptsForOrigin(
+  originHref: string,
+  clientAttempts: OAuthAuthProbeReport["clientMetadata"],
+): Promise<void> {
+  for (const u of clientMetadataCandidates(originHref)) {
+    const result = await fetchJson(u);
+    let scope_field: string | undefined;
+    if (result.ok) {
+      const s = result.data.scope;
+      if (typeof s === "string") scope_field = normalizeScopeWhitespace(s);
+      const cid = result.data.client_id;
+      if (!scope_field && typeof cid === "string") {
+        const fromQ = extractScopeHintsFromQuery(cid);
+        if (fromQ) scope_field = normalizeScopeWhitespace(fromQ);
+      }
+    }
+    if (result.ok || result.status !== 404) {
+      clientAttempts.push({ url: u, result, scope_field });
+    }
+  }
 }
 
 export async function probeOAuthListingAuth(
@@ -947,20 +1182,57 @@ export async function probeOAuthListingAuth(
 
   const clientAttempts: OAuthAuthProbeReport["clientMetadata"] = [];
 
-  for (const u of clientMetadataCandidates(listingUrl.origin)) {
-    const result = await fetchJson(u);
-    let scope_field: string | undefined;
-    if (result.ok) {
-      const s = result.data.scope;
-      if (typeof s === "string") scope_field = normalizeScopeWhitespace(s);
-      const cid = result.data.client_id;
-      if (!scope_field && typeof cid === "string") {
-        const fromQ = extractScopeHintsFromQuery(cid);
-        if (fromQ) scope_field = normalizeScopeWhitespace(fromQ);
+  await ingestOAuthClientMetadataAttemptsForOrigin(
+    listingUrl.origin,
+    clientAttempts,
+  );
+
+  const storefrontHadReachableOAuthClientMetadata = clientAttempts.some(
+    (c) => c.result.ok,
+  );
+
+  const alternateApiOrigin = storefrontHadReachableOAuthClientMetadata
+    ? null
+    : tryAlternateApiHostnameOriginForOAuthProbe(listingUrl);
+
+  if (alternateApiOrigin !== null) {
+    notes.push(
+      "No reachable OAuth client metadata documents on `" +
+        listingUrl.origin +
+        "`; probing `" +
+        alternateApiOrigin +
+        "` — many ATProto integrations publish OAuth client metadata only on their `api.` host while the storefront link targets marketing HTTPS.",
+    );
+
+    await ingestOAuthClientMetadataAttemptsForOrigin(
+      alternateApiOrigin,
+      clientAttempts,
+    );
+
+    const altAuthorizationServerMetaUrl =
+      authorizationServerMetadataUrl(alternateApiOrigin);
+
+    const asAlt = await probeAuthorizationServer(alternateApiOrigin);
+
+    if (asAlt.ok) {
+      const altScopesSupported =
+        pickStringArray(asAlt.data, ["scopes_supported", "scopesSupported"]) ??
+        ([] as Array<string>);
+
+      const duplicateAuthorizationServerRow = asDetails.some(
+        (row) =>
+          row.metadataUrl.replace(/\/+$/, "").toLowerCase() ===
+          altAuthorizationServerMetaUrl.replace(/\/+$/, "").toLowerCase(),
+      );
+
+      if (!duplicateAuthorizationServerRow) {
+        asDetails.push({
+          issuerInput: alternateApiOrigin,
+          metadataUrl: altAuthorizationServerMetaUrl,
+          result: asAlt,
+          scopes_supported: altScopesSupported,
+        });
       }
-    }
-    if (result.ok || result.status !== 404) {
-      clientAttempts.push({ url: u, result, scope_field });
     }
   }
 

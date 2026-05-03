@@ -50,7 +50,10 @@ import {
   httpsListingImageUrlOrNull,
   publicMediaUrlOrNull,
 } from "#/lib/listing-image-url";
-import { oauthClientDistinctTokensFromPublishedScopeLine } from "#/lib/oauth-listing-auth-probe";
+import {
+  oauthClientDistinctTokensFromPublishedScopeLine,
+  probeOAuthListingAuth,
+} from "#/lib/oauth-listing-auth-probe";
 import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
@@ -98,6 +101,7 @@ import {
 } from "../../lib/directory-categories";
 import {
   buildDirectoryListingSlug,
+  getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../../lib/directory-listing-slugs";
 import {
@@ -968,6 +972,144 @@ async function fetchStoreListingOAuthProbe(
     scopeHumanReadable,
   };
 }
+
+const rescanListingOAuthProbeDevInput = z.object({
+  listingId: z.string().uuid(),
+});
+
+/**
+ * Re-run `probeOAuthListingAuth` against the listing's storefront URL and upsert
+ * `store_listing_oauth_probes` — mirrors `scripts/sync-listing-oauth-probes.ts`.
+ * Development only.
+ */
+const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware])
+  .inputValidator(rescanListingOAuthProbeDevInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly();
+
+    const listings = context.schema.storeListings;
+    const probes = context.schema.storeListingOAuthProbes;
+
+    const [listingRow] = await context.db
+      .select({
+        id: listings.id,
+        slug: listings.slug,
+        name: listings.name,
+        sourceUrl: listings.sourceUrl,
+        externalUrl: listings.externalUrl,
+      })
+      .from(listings)
+      .where(eq(listings.id, data.listingId))
+      .limit(1);
+
+    if (!listingRow) {
+      throw new Error("Listing not found.");
+    }
+
+    const slugText = getDirectoryListingSlug({
+      name: listingRow.name,
+      slug: listingRow.slug,
+      sourceUrl: listingRow.sourceUrl,
+    });
+
+    const storefrontUrl = listingRow.externalUrl?.trim() ?? "";
+    const now = new Date();
+
+    async function upsertProbe(
+      payload: typeof dbSchema.storeListingOAuthProbes.$inferInsert,
+    ): Promise<void> {
+      const { storeListingId: _listingPk, ...rest } = payload;
+      void _listingPk;
+      await context.db.insert(probes).values(payload).onConflictDoUpdate({
+        target: probes.storeListingId,
+        set: rest,
+      });
+    }
+
+    if (!storefrontUrl) {
+      await upsertProbe({
+        storeListingId: listingRow.id,
+        slug: slugText,
+        status: "skipped_no_url",
+        probeError: null,
+        probedUrl: null,
+        probedAt: now,
+        oauthScopesDistinct: [],
+        transitionalScopes: [],
+        publishesAtprotoScope: null,
+        clientScopeRawLine: null,
+        clientScopeSyntaxOk: null,
+        hasProtectedResourceMetadata: false,
+        hasAuthorizationServerMetadata: false,
+        successfulClientMetadataUrl: null,
+        reportJson: null,
+        updatedAt: now,
+      });
+      const skippedSnapshot = await fetchStoreListingOAuthProbe(
+        listingRow.id,
+        context,
+      );
+      if (!skippedSnapshot) {
+        throw new Error("OAuth probe snapshot missing after rescan.");
+      }
+      return skippedSnapshot;
+    }
+
+    try {
+      const report = await probeOAuthListingAuth(storefrontUrl);
+      const successfulClientUrl = report.clientMetadata.find(
+        (c) => c.result.ok,
+      )?.url;
+
+      await upsertProbe({
+        storeListingId: listingRow.id,
+        slug: slugText,
+        status: "completed",
+        probeError: null,
+        probedUrl: report.inputUrl,
+        probedAt: now,
+        oauthScopesDistinct: report.summary.oauthScopesDistinct,
+        transitionalScopes: report.summary.transitionalScopesPresent,
+        publishesAtprotoScope: report.summary.publishesAtprotoAs,
+        clientScopeRawLine: report.summary.clientScopeRawLine,
+        clientScopeSyntaxOk: report.summary.clientScopeSyntaxOk,
+        hasProtectedResourceMetadata: Boolean(report.protectedResource.raw),
+        hasAuthorizationServerMetadata: report.authorizationServersDetail.some(
+          (r) => r.result.ok,
+        ),
+        successfulClientMetadataUrl: successfulClientUrl ?? null,
+        reportJson: report,
+        updatedAt: now,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await upsertProbe({
+        storeListingId: listingRow.id,
+        slug: slugText,
+        status: "error",
+        probeError: message,
+        probedUrl: storefrontUrl,
+        probedAt: now,
+        oauthScopesDistinct: [],
+        transitionalScopes: [],
+        publishesAtprotoScope: null,
+        clientScopeRawLine: null,
+        clientScopeSyntaxOk: null,
+        hasProtectedResourceMetadata: false,
+        hasAuthorizationServerMetadata: false,
+        successfulClientMetadataUrl: null,
+        reportJson: null,
+        updatedAt: now,
+      });
+    }
+
+    const snapshot = await fetchStoreListingOAuthProbe(listingRow.id, context);
+    if (!snapshot) {
+      throw new Error("OAuth probe snapshot missing after rescan.");
+    }
+    return snapshot;
+  });
 
 function toListingDetail(
   row: DirectoryListingDetailRow,
@@ -6378,6 +6520,7 @@ export const directoryListingApi = {
   setProductAccountHandleDev,
   ignoreMissingProductAccountHandleDev,
   unignoreMissingProductAccountHandleDev,
+  rescanListingOAuthProbeDev,
   applyProductAccountCandidatesBatch,
   confirmProductAccountCandidate,
   rejectProductAccountCandidate,
