@@ -291,6 +291,83 @@ export const storeListings = pgTable(
 );
 
 /**
+ * Tap / backfill mirror of `site.standard.publication` for product repos (`store_listings.product_account_did`).
+ * One row per publication record; canonical permalink uses `baseUrl` + document `path`.
+ */
+export const productSitePublications = pgTable(
+  "product_site_publications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    repoDid: text("repo_did").notNull(),
+    rkey: text("rkey").notNull(),
+    atUri: text("at_uri").notNull(),
+    baseUrl: text("base_url").notNull(),
+    publicationName: text("publication_name"),
+    recordJson: jsonb("record_json"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => ({
+    atUriIdx: uniqueIndex("product_site_publications_at_uri_idx").on(
+      table.atUri,
+    ),
+    repoRkeyIdx: uniqueIndex("product_site_publications_repo_did_rkey_idx").on(
+      table.repoDid,
+      table.rkey,
+    ),
+    repoDidIdx: index("product_site_publications_repo_did_idx").on(
+      table.repoDid,
+    ),
+  }),
+);
+
+/**
+ * Tap / backfill mirror of `site.standard.document` for product repos.
+ */
+export const productSiteDocuments = pgTable(
+  "product_site_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    repoDid: text("repo_did").notNull(),
+    rkey: text("rkey").notNull(),
+    atUri: text("at_uri").notNull(),
+    publicationAtUri: text("publication_at_uri"),
+    title: text("title"),
+    description: text("description"),
+    path: text("path").notNull(),
+    documentPublishedAt: timestamp("document_published_at", {
+      withTimezone: true,
+    }).notNull(),
+    /** Bluesky CDN URL from `site.standard.document#coverImage` (see `blobLikeToBskyCdnUrl`). */
+    coverImageUrl: text("cover_image_url"),
+    recordJson: jsonb("record_json"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => ({
+    atUriIdx: uniqueIndex("product_site_documents_at_uri_idx").on(table.atUri),
+    repoRkeyIdx: uniqueIndex("product_site_documents_repo_did_rkey_idx").on(
+      table.repoDid,
+      table.rkey,
+    ),
+    repoPublishedIdx: index("product_site_documents_repo_published_idx").on(
+      table.repoDid,
+      table.documentPublishedAt,
+    ),
+  }),
+);
+
+/**
  * Append-only moderation log: each row is one admin rejection with a human-readable reason.
  * Not touched by Tap ingest. Cleared from the active UX by moving status off `rejected`, not by DELETE.
  */

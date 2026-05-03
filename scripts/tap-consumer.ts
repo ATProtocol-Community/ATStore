@@ -3,12 +3,15 @@
  * Tap consumer: WebSocket to your Tap deployment. Ingests `fyi.atstore.listing.detail`
  * into `store_listings`, `fyi.atstore.listing.review` into `store_listing_reviews`,
  * `fyi.atstore.listing.reviewReply` into `store_listing_review_replies`,
- * and `fyi.atstore.listing.favorite` into `store_listing_favorites`.
+ * `fyi.atstore.listing.favorite` into `store_listing_favorites`,
+ * `site.standard.publication` into `product_site_publications`, and
+ * `site.standard.document` into `product_site_documents`.
  * Logs identity events; other record collections are skipped except `fyi.atstore.profile` (quiet).
  * Which repos and records appear is configured on the Tap *server* (indigo `cmd/tap`): set
  * `TAP_COLLECTION_FILTERS` to include `fyi.atstore.listing.detail`, `fyi.atstore.listing.review`,
- * `fyi.atstore.listing.reviewReply`, and `fyi.atstore.listing.favorite`
- * (or `fyi.atstore.*`).
+ * `fyi.atstore.listing.reviewReply`, `fyi.atstore.listing.favorite`,
+ * `site.standard.publication`, `site.standard.document`
+ * (or `fyi.atstore.*` plus standard.site collections).
  * If the server only filters `listing.detail`,
  * review / reply / favorite creates never reach
  * this WebSocket — you will see no `[record]` lines for those records. This client has no per-DID allowlist.
@@ -49,6 +52,16 @@ import {
   tryParseListingReviewRecord,
   upsertListingReviewFromTap,
 } from "#/lib/atproto/tap-review-sync";
+import {
+  deleteStandardDocumentFromTap,
+  tryParseStandardDocumentRecord,
+  upsertStandardDocumentFromTap,
+} from "#/lib/atproto/tap-standard-document-sync";
+import {
+  deleteStandardPublicationFromTap,
+  tryParseStandardPublicationRecord,
+  upsertStandardPublicationFromTap,
+} from "#/lib/atproto/tap-standard-publication-sync";
 
 import type { Database } from "../src/db/index.server";
 
@@ -124,11 +137,15 @@ async function main() {
     COLLECTION.listingReview,
     COLLECTION.listingReviewReply,
     COLLECTION.listingFavorite,
+    COLLECTION.standardPublication,
+    COLLECTION.standardDocument,
   ]);
   let firstListingDetailEvent = true;
   let firstListingReviewEvent = true;
   let firstListingReviewReplyEvent = true;
   let firstListingFavoriteEvent = true;
+  let firstStandardPublicationEvent = true;
+  let firstStandardDocumentEvent = true;
 
   const indexer = new SimpleIndexer();
 
@@ -149,6 +166,10 @@ async function main() {
       if (evt.collection.startsWith("fyi.atstore.")) {
         console.warn(
           `[tap] unexpected fyi.atstore collection (ingest ${[...ingestCollections].join(", ")}): ${evt.collection} rkey=${evt.rkey} did=${evt.did}`,
+        );
+      } else if (evt.collection.startsWith("site.standard.")) {
+        console.warn(
+          `[tap] unexpected site.standard collection (ingest ${[...ingestCollections].join(", ")}): ${evt.collection} rkey=${evt.rkey} did=${evt.did}`,
         );
       } else if (isVerbose()) {
         console.log(
@@ -385,6 +406,138 @@ async function main() {
       return;
     }
 
+    if (evt.collection === COLLECTION.standardPublication) {
+      if (evt.action !== "delete" && !evt.live) {
+        console.log(
+          `[tap] standard.publication backfill/non-live event (still ingesting) live=false rkey=${evt.rkey} did=${evt.did}`,
+        );
+      }
+
+      if (evt.action === "delete") {
+        console.log(
+          `[tap] delete product_site_publications match repo_did=${evt.did} rkey=${evt.rkey}`,
+        );
+        await deleteStandardPublicationFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+        });
+        return;
+      }
+
+      if (firstStandardPublicationEvent) {
+        firstStandardPublicationEvent = false;
+        console.log(
+          `[tap] first site.standard.publication event — ensure Tap relays ${COLLECTION.standardPublication}`,
+        );
+      }
+
+      const raw = evt.record;
+      const body = raw === undefined ? undefined : cloneRecordForIngest(raw);
+      if (body === undefined) {
+        console.warn(
+          `[tap] standard.publication missing record body rkey=${evt.rkey} did=${evt.did}`,
+        );
+        return;
+      }
+      const parseResult = tryParseStandardPublicationRecord(body);
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip standard.publication rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
+        );
+        if (parseResult.stage === "zod" && parseResult.zodError) {
+          console.warn(
+            "[tap] zod field errors:",
+            parseResult.zodError.flatten(),
+          );
+        }
+        return;
+      }
+
+      try {
+        await upsertStandardPublicationFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parseResult.record,
+          recordSource: body,
+        });
+      } catch (error) {
+        console.error(
+          `[tap] standard.publication upsert failed rkey=${evt.rkey} did=${evt.did}`,
+          error,
+        );
+        throw error;
+      }
+      return;
+    }
+
+    if (evt.collection === COLLECTION.standardDocument) {
+      if (evt.action !== "delete" && !evt.live) {
+        console.log(
+          `[tap] standard.document backfill/non-live event (still ingesting) live=false rkey=${evt.rkey} did=${evt.did}`,
+        );
+      }
+
+      if (evt.action === "delete") {
+        console.log(
+          `[tap] delete product_site_documents match repo_did=${evt.did} rkey=${evt.rkey}`,
+        );
+        await deleteStandardDocumentFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+        });
+        return;
+      }
+
+      if (firstStandardDocumentEvent) {
+        firstStandardDocumentEvent = false;
+        console.log(
+          `[tap] first site.standard.document event — ensure Tap relays ${COLLECTION.standardDocument}`,
+        );
+      }
+
+      const raw = evt.record;
+      const body = raw === undefined ? undefined : cloneRecordForIngest(raw);
+      if (body === undefined) {
+        console.warn(
+          `[tap] standard.document missing record body rkey=${evt.rkey} did=${evt.did}`,
+        );
+        return;
+      }
+      const parseResult = tryParseStandardDocumentRecord(body);
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip standard.document rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
+        );
+        if (parseResult.stage === "zod" && parseResult.zodError) {
+          console.warn(
+            "[tap] zod field errors:",
+            parseResult.zodError.flatten(),
+          );
+        }
+        return;
+      }
+
+      try {
+        await upsertStandardDocumentFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parseResult.record,
+          recordSource: body,
+        });
+      } catch (error) {
+        console.error(
+          `[tap] standard.document upsert failed rkey=${evt.rkey} did=${evt.did}`,
+          error,
+        );
+        throw error;
+      }
+      return;
+    }
+
     if (evt.collection === COLLECTION.listingDetail) {
       if (evt.action !== "delete" && !evt.live) {
         console.log(
@@ -512,7 +665,7 @@ async function main() {
     `[tap] config: url=${url} ingestCollections=${[...ingestCollections].join(", ")} trustedPublishers=${trusted.size} verbose=${isVerbose()}`,
   );
   console.log(
-    `[tap] hint: Tap server TAP_COLLECTION_FILTERS must include listing.review + listing.favorite (or fyi.atstore.*) or those events never arrive here`,
+    `[tap] hint: Tap server TAP_COLLECTION_FILTERS must include listing.review + listing.favorite + site.standard.* (or fyi.atstore.* and Standard.site collections) or those events never arrive here`,
   );
   console.log(
     `[tap] WebSocket channel starting (blocking) — you should see [record] lines as repos update…`,

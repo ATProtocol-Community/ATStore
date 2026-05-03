@@ -232,6 +232,20 @@
       "when": 1778400000000,
       "tag": "0033_store_listing_oauth_probes",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1778500000000,
+      "tag": "0034_product_site_standard",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1778600000000,
+      "tag": "0035_product_site_documents_cover_image",
+      "breakpoints": true
     }
   ]
 }

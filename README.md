@@ -159,11 +159,11 @@ The app is split into one frontend + a few optional background workers.
 None of the workers are required to develop the UI — they only matter if
 you want live ATProto data flowing into your local DB.
 
-| Command                   | What it does                                                                                                                                                     | Required for local UI? |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `pnpm dev`                | TanStack Start dev server on `:3000`                                                                                                                             | **Yes**                |
-| `pnpm tap:consumer`       | Ingests `fyi.atstore.listing.*` records into Postgres (needs a [Tap](https://github.com/bluesky-social/indigo/tree/main/cmd/tap) server reachable via `TAP_URL`) | No                     |
-| `pnpm jetstream:consumer` | Tracks Bluesky post mentions → trending scores                                                                                                                   | No                     |
+| Command                   | What it does                                                                                                                                                                                                        | Required for local UI? |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `pnpm dev`                | TanStack Start dev server on `:3000`                                                                                                                                                                                | **Yes**                |
+| `pnpm tap:consumer`       | Ingests `fyi.atstore.listing.*`, `site.standard.publication`, and `site.standard.document` into Postgres (needs a [Tap](https://github.com/bluesky-social/indigo/tree/main/cmd/tap) server reachable via `TAP_URL`) | No                     |
+| `pnpm jetstream:consumer` | Tracks Bluesky post mentions → trending scores                                                                                                                                                                      | No                     |
 
 Each consumer is meant to run in its own terminal. They are restart-safe:
 both keep cursor state in Postgres so you can stop and start them freely.

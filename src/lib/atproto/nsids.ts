@@ -9,6 +9,12 @@ export const NSID = {
   lexiconSchema: "com.atproto.lexicon.schema",
 } as const;
 
+/** Standard.site (product updates / permalinks). */
+export const STANDARD_SITE_NSID = {
+  document: "site.standard.document",
+  publication: "site.standard.publication",
+} as const;
+
 export const COLLECTION = {
   authBasic: NSID.authBasic,
   profile: NSID.profile,
@@ -17,4 +23,6 @@ export const COLLECTION = {
   listingReviewReply: NSID.listingReviewReply,
   listingFavorite: NSID.listingFavorite,
   lexiconSchema: NSID.lexiconSchema,
+  standardDocument: STANDARD_SITE_NSID.document,
+  standardPublication: STANDARD_SITE_NSID.publication,
 } as const;
