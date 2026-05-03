@@ -350,30 +350,6 @@ const styles = stylex.create({
   reviewsActions: {
     flexWrap: "wrap",
   },
-  productUpdateRow: {
-    gap: gap["lg"],
-    alignItems: "flex-start",
-    display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    width: "100%",
-  },
-  productUpdateCover: {
-    borderRadius: radius.lg,
-    overflow: "hidden",
-    flexShrink: 0,
-    width: {
-      default: "100%",
-      [breakpoints.md]: 200,
-    },
-  },
-  productUpdateCoverImg: {
-    aspectRatio: "16 / 10",
-    display: "block",
-    objectFit: "cover",
-    height: "auto",
-    width: "100%",
-  },
   grow: {
     flexGrow: 1,
   },
@@ -384,18 +360,15 @@ const styles = stylex.create({
     minWidth: 0,
   },
   productUpdateDescriptionWrap: {
+    // oxlint-disable-next-line @stylexjs/valid-styles
+    lineClamp: 2,
     overflow: "hidden",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 2,
+    display: "-webkit-box",
+    textOverflow: "ellipsis",
     maxHeight: "7.5rem",
     minWidth: 0,
-    lineClamp: 2,
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  productUpdateMdRoot: {
-    gap: verticalSpace.md,
   },
   productUpdatesGrid: {
     gap: gap["xl"],
