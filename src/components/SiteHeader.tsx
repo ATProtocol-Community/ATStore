@@ -5,12 +5,14 @@ import { notificationApi } from "#/integrations/tanstack-query/api-notification.
 import { user } from "#/integrations/tanstack-query/api-user.functions.ts";
 import { useNotificationReadState } from "#/lib/notification-read-state.ts";
 import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Flex } from "../design-system/flex";
 import { IconButton } from "../design-system/icon-button";
 import { Navbar, NavbarAction, NavbarLogo } from "../design-system/navbar";
 import { fontSize } from "../design-system/theme/typography.stylex";
 import { AtStoreLogo } from "./AtStoreLogo";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { NavbarAuth } from "./NavbarAuth";
 import { NotificationsBell } from "./NotificationsBell";
 
@@ -37,6 +39,7 @@ export function SiteHeader() {
     session?.user?.did ?? null,
     notifications ?? [],
   );
+  const { t } = useTranslation("common");
 
   return (
     <Navbar hideHamburgerButton={true}>
@@ -49,13 +52,14 @@ export function SiteHeader() {
           <IconButtonLink
             to="/search"
             search={{ sort: "popular" }}
-            label="Search"
+            label={t("siteHeader.searchListingsLabel")}
             variant="tertiary"
             size="lg"
           >
             <Search />
           </IconButtonLink>
           <NotificationsBell unreadCount={unreadCount} />
+          <LanguageSwitcher />
           <NavbarAuth />
         </Flex>
       </NavbarAction>

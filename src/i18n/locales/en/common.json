@@ -1,0 +1,12 @@
+{
+  "siteHeader": {
+    "searchListingsLabel": "Search listings"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Change language",
+    "languageName": {
+      "en": "English",
+      "en-XA": "Pseudo (en-XA)"
+    }
+  }
+}
