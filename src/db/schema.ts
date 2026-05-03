@@ -343,6 +343,8 @@ export const productSiteDocuments = pgTable(
     documentPublishedAt: timestamp("document_published_at", {
       withTimezone: true,
     }).notNull(),
+    /** Bluesky CDN URL from `site.standard.document#coverImage` (see `blobLikeToBskyCdnUrl`). */
+    coverImageUrl: text("cover_image_url"),
     recordJson: jsonb("record_json"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

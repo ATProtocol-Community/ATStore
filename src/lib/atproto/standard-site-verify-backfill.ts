@@ -59,7 +59,7 @@ async function* paginateListRecords(
   } while (cursor);
 }
 
-async function backfillStandardSiteForProductDid(
+export async function backfillStandardSiteForProductDid(
   db: Database,
   productDid: string,
 ): Promise<void> {

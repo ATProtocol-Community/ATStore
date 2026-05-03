@@ -340,6 +340,14 @@ export interface DirectoryListingProductUpdate {
   publishedAt: string;
   /** HTTPS permalink when publication URL + document path resolve; otherwise null. */
   canonicalPostUrl: string | null;
+  /** Resolved cover image (Bluesky CDN); null when absent or not an image. */
+  coverImageUrl: string | null;
+}
+
+export interface DirectoryListingProductUpdatesPayload {
+  updates: Array<DirectoryListingProductUpdate>;
+  /** Standard.site publication base URL for the newest document (trimmed, no trailing slash); null when unknown. */
+  publicationBaseUrl: string | null;
 }
 
 /** Bluesky post stored from Jetstream mention matching. */
@@ -2617,8 +2625,13 @@ const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryListingProductUpdatesInput)
   .handler(async ({ data, context }) => {
+    const empty: DirectoryListingProductUpdatesPayload = {
+      updates: [],
+      publicationBaseUrl: null,
+    };
+
     if (!isUuid(data.id)) {
-      return [];
+      return empty;
     }
 
     const table = context.schema.storeListings;
@@ -2629,12 +2642,12 @@ const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
       .limit(1);
 
     if (!listing) {
-      return [];
+      return empty;
     }
 
     const productDid = listing.productAccountDid?.trim();
     if (!productDid?.startsWith("did:")) {
-      return [];
+      return empty;
     }
 
     const docs = context.schema.productSiteDocuments;
@@ -2663,6 +2676,7 @@ const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
         path: docs.path,
         documentPublishedAt: docs.documentPublishedAt,
         publicationAtUri: docs.publicationAtUri,
+        coverImageUrl: docs.coverImageUrl,
       })
       .from(docs)
       .where(eq(docs.repoDid, productDid))
@@ -2670,6 +2684,7 @@ const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
       .limit(PRODUCT_SITE_UPDATES_LIMIT);
 
     const out: Array<DirectoryListingProductUpdate> = [];
+    let publicationBaseUrl: string | null = null;
     for (const row of docRows) {
       let baseUrl: string | null = null;
       const pAt = row.publicationAtUri?.trim();
@@ -2679,6 +2694,9 @@ const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
         baseUrl = fallbackBase;
       } else if (publicationRows.length > 0) {
         baseUrl = publicationRows[0].baseUrl;
+      }
+      if (publicationBaseUrl === null && baseUrl?.trim()) {
+        publicationBaseUrl = baseUrl.trim().replace(/\/+$/, "");
       }
       const canonicalPostUrl =
         baseUrl != null && baseUrl.length > 0
@@ -2693,16 +2711,18 @@ const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
         path: row.path,
         publishedAt: row.documentPublishedAt.toISOString(),
         canonicalPostUrl,
+        coverImageUrl: httpsListingImageUrlOrNull(row.coverImageUrl),
       });
     }
 
-    return out;
+    return { updates: out, publicationBaseUrl };
   });
 
 function getDirectoryListingProductUpdatesQueryOptions(id: string) {
   return queryOptions({
     queryKey: ["storeListings", "productUpdates", id],
-    queryFn: async () => getDirectoryListingProductUpdates({ data: { id } }),
+    queryFn: async (): Promise<DirectoryListingProductUpdatesPayload> =>
+      getDirectoryListingProductUpdates({ data: { id } }),
   });
 }
 

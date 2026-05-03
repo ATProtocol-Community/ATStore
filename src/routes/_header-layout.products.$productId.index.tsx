@@ -58,7 +58,7 @@ import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
-import { Card, CardBody } from "../design-system/card";
+import { Card, CardBody, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Lightbox } from "../design-system/lightbox";
@@ -95,6 +95,8 @@ import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
 import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
+
+const PRODUCT_UPDATES_PREVIEW_COUNT = 3;
 
 const ButtonLink = createLink(Button);
 const AppLink = createLink(Link);
@@ -140,13 +142,16 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
     const listingReviews = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
     );
-    const listingProductUpdates = listing.productAccountDid?.trim()
+    const listingProductUpdatesPayload = listing.productAccountDid?.trim()
       ? await context.queryClient.ensureQueryData(
           directoryListingApi.getDirectoryListingProductUpdatesQueryOptions(
             listing.id,
           ),
         )
-      : [];
+      : { updates: [], publicationBaseUrl: null };
+    const listingProductUpdates = listingProductUpdatesPayload.updates;
+    const productUpdatesPublicationUrl =
+      listingProductUpdatesPayload.publicationBaseUrl;
     const listingMentionsResult = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingMentionsQueryOptions(
         listing.id,
@@ -211,6 +216,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       relatedCategoryListings,
       listingReviews,
       listingProductUpdates,
+      productUpdatesPublicationUrl,
       listingMentions: listingMentionsResult.mentions,
       listingMentionTotal: listingMentionsResult.total,
       session,
@@ -343,6 +349,76 @@ const styles = stylex.create({
   },
   reviewsActions: {
     flexWrap: "wrap",
+  },
+  productUpdateRow: {
+    gap: gap["lg"],
+    alignItems: "flex-start",
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+  },
+  productUpdateCover: {
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    flexShrink: 0,
+    width: {
+      default: "100%",
+      [breakpoints.md]: 200,
+    },
+  },
+  productUpdateCoverImg: {
+    aspectRatio: "16 / 10",
+    display: "block",
+    objectFit: "cover",
+    height: "auto",
+    width: "100%",
+  },
+  grow: {
+    flexGrow: 1,
+  },
+  productUpdateTextCol: {
+    flexBasis: "0%",
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  productUpdateDescriptionWrap: {
+    overflow: "hidden",
+    maxHeight: "7.5rem",
+    minWidth: 0,
+    lineClamp: 2,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  productUpdateMdRoot: {
+    gap: verticalSpace.md,
+  },
+  productUpdatesGrid: {
+    gap: gap["xl"],
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+  },
+  productUpdateCardWrap: {
+    textDecoration: "none",
+    display: "flex",
+    flexBasis: 240,
+    flexGrow: 1,
+    flexShrink: 1,
+    maxWidth: "100%",
+    minWidth: 0,
+    width: {
+      default: "100%",
+      [breakpoints.sm]: "auto",
+    },
+  },
+  card: {
+    width: "100%",
   },
   relatedSection: {
     paddingTop: verticalSpace["6xl"],
@@ -618,6 +694,7 @@ function ProductPage() {
     relatedCategoryListings,
     listingReviews,
     listingProductUpdates,
+    productUpdatesPublicationUrl,
     listingMentions,
     listingMentionTotal,
     session,
@@ -629,6 +706,14 @@ function ProductPage() {
   }
 
   const previewReviews = listingReviews.slice(0, PRODUCT_REVIEW_PREVIEW_COUNT);
+  const previewProductUpdates = listingProductUpdates.slice(
+    0,
+    PRODUCT_UPDATES_PREVIEW_COUNT,
+  );
+  const showProductUpdatesViewMore =
+    listingProductUpdates.length > PRODUCT_UPDATES_PREVIEW_COUNT &&
+    productUpdatesPublicationUrl != null &&
+    productUpdatesPublicationUrl.length > 0;
   const relatedSectionTitle =
     relatedCategoryListings.length > 0 ? "More in this category" : "More Apps";
   const relatedSectionListings =
@@ -793,66 +878,6 @@ function ProductPage() {
           <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
         ) : null}
 
-        {listing.productAccountDid && listingProductUpdates.length > 0 ? (
-          <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
-            <Text size="2xl" weight="semibold" style={styles.header}>
-              Updates
-            </Text>
-            <Flex direction="column" gap="xl">
-              {listingProductUpdates.map((update) => (
-                <Card key={update.id} size="sm">
-                  <CardBody>
-                    <Flex direction="column" gap="md">
-                      <Flex align="center" justify="between" gap="xl" wrap>
-                        <Text weight="semibold">
-                          {update.title?.trim() ||
-                            update.path.replace(/^\//, "")}
-                        </Text>
-                        <SmallBody variant="secondary">
-                          {new Date(update.publishedAt).toLocaleDateString(
-                            undefined,
-                            {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            },
-                          )}
-                        </SmallBody>
-                      </Flex>
-                      {update.description?.trim() ? (
-                        <SmallBody variant="secondary">
-                          {update.description.length > 280
-                            ? `${update.description.slice(0, 280)}…`
-                            : update.description}
-                        </SmallBody>
-                      ) : null}
-                      <Link
-                        href={productUpdateExternalHref(update)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Flex align="center" gap="sm">
-                          {update.canonicalPostUrl ? (
-                            <>
-                              <ExternalLink size={16} aria-hidden />
-                              Read post
-                            </>
-                          ) : (
-                            <>
-                              <Newspaper size={16} aria-hidden />
-                              View on PDSls
-                            </>
-                          )}
-                        </Flex>
-                      </Link>
-                    </Flex>
-                  </CardBody>
-                </Card>
-              ))}
-            </Flex>
-          </Flex>
-        ) : null}
-
         <Flex gap="4xl" direction="column">
           <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
             <Flex
@@ -937,6 +962,89 @@ function ProductPage() {
             </ButtonLink>
           ) : null}
         </Flex>
+
+        {listing.productAccountDid && listingProductUpdates.length > 0 ? (
+          <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
+            <Flex
+              align="center"
+              gap="2xl"
+              justify="between"
+              style={styles.reviewsHeaderTop}
+            >
+              <Text size="2xl" weight="semibold" style={styles.header}>
+                Updates
+              </Text>
+              {showProductUpdatesViewMore ? (
+                <ButtonLink
+                  to={productUpdatesPublicationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="secondary"
+                >
+                  View all
+                </ButtonLink>
+              ) : null}
+            </Flex>
+            <div {...stylex.props(styles.productUpdatesGrid)}>
+              {previewProductUpdates.map((update) => (
+                <a
+                  key={update.id}
+                  href={productUpdateExternalHref(update)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  {...stylex.props(styles.productUpdateCardWrap)}
+                >
+                  <Card size="sm" style={styles.card}>
+                    {update.coverImageUrl ? (
+                      <CardImage
+                        src={update.coverImageUrl}
+                        alt={
+                          update.title?.trim() || update.path.replace(/^\//, "")
+                        }
+                        aspectRatio={1.91 / 1}
+                      />
+                    ) : null}
+                    <CardBody style={styles.grow}>
+                      <Flex
+                        direction="column"
+                        gap="lg"
+                        style={styles.productUpdateTextCol}
+                      >
+                        <Flex direction="column" gap="md" style={styles.grow}>
+                          <Text weight="semibold" size="base">
+                            {update.title?.trim() ||
+                              update.path.replace(/^\//, "")}
+                          </Text>
+                          {update.description?.trim() ? (
+                            <Text
+                              variant="secondary"
+                              size="sm"
+                              leading="sm"
+                              style={styles.productUpdateDescriptionWrap}
+                            >
+                              {update.description}
+                            </Text>
+                          ) : null}
+                        </Flex>
+
+                        <Text size="xs" variant="secondary">
+                          {new Date(update.publishedAt).toLocaleDateString(
+                            undefined,
+                            {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )}
+                        </Text>
+                      </Flex>
+                    </CardBody>
+                  </Card>
+                </a>
+              ))}
+            </div>
+          </Flex>
+        ) : null}
 
         {listingMentions.length > 0 ? (
           <Flex direction="column" gap="3xl">

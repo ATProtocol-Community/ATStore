@@ -1,18 +1,58 @@
 import type { Database } from "#/db/index.server";
 
 import * as schema from "#/db/schema";
+import { blobLikeToBskyCdnUrl } from "#/lib/atproto/blob-cdn-url";
 import { COLLECTION, STANDARD_SITE_NSID } from "#/lib/atproto/nsids";
 import { hasStoreListingForProductDid } from "#/lib/atproto/standard-site-product-did-gate";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 const DOCUMENT_DESC_MAX = 12_000;
+const DOCUMENT_CONTENT_ZOD_MAX = 200_000;
+
+/**
+ * `site.standard.document#content` is usually a markdown string; pckt.blog uses
+ * structured `blog.pckt.content` (blocks with `plaintext` fields).
+ */
+function coerceDocumentContentToPlainString(raw: unknown): string | undefined {
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    return s.length > 0 ? s : undefined;
+  }
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  if (o.$type === "blog.pckt.content" && Array.isArray(o.items)) {
+    const parts: Array<string> = [];
+    for (const item of o.items) {
+      if (!item || typeof item !== "object") continue;
+      const pt = (item as Record<string, unknown>).plaintext;
+      if (typeof pt === "string") {
+        const t = pt.trim();
+        if (t.length > 0) parts.push(t);
+      }
+    }
+    const joined = parts.join("\n\n").trim();
+    return joined.length > 0 ? joined : undefined;
+  }
+  return undefined;
+}
 
 const documentBodySchema = z.object({
   path: z.string().min(1),
   publishedAt: z.string().min(1),
   title: z.string().max(5000).optional(),
+  /** Plain-text body when provided (preferred for excerpts). */
   textContent: z.string().max(100_000).optional(),
+  /** Markdown string or structured vendor content coerced to plain text (see preprocess). */
+  content: z.preprocess((val) => {
+    const coerced = coerceDocumentContentToPlainString(val);
+    if (coerced != null && coerced.length > DOCUMENT_CONTENT_ZOD_MAX) {
+      return coerced.slice(0, DOCUMENT_CONTENT_ZOD_MAX);
+    }
+    return coerced;
+  }, z.string().max(DOCUMENT_CONTENT_ZOD_MAX).optional()),
+  /** Short plain summary when present. */
+  description: z.string().max(20_000).optional(),
   site: z
     .string()
     .min(1)
@@ -80,7 +120,10 @@ export function tryParseStandardDocumentRecord(
   };
   const title = parsed.data.title?.trim();
   if (title) rec.title = title;
-  const tx = parsed.data.textContent?.trim();
+  const tx =
+    parsed.data.textContent?.trim() ||
+    parsed.data.description?.trim() ||
+    parsed.data.content?.trim();
   if (tx) {
     rec.textContent =
       tx.length > DOCUMENT_DESC_MAX ? tx.slice(0, DOCUMENT_DESC_MAX) : tx;
@@ -120,6 +163,10 @@ export async function upsertStandardDocumentIntoDb(input: {
   const recordJson = input.recordSource
     ? recordJsonValue(input.recordSource)
     : null;
+  const coverImageUrl = blobLikeToBskyCdnUrl(
+    input.recordSource?.coverImage,
+    repoDid,
+  );
 
   await db
     .insert(schema.productSiteDocuments)
@@ -132,6 +179,7 @@ export async function upsertStandardDocumentIntoDb(input: {
       description,
       path: record.path,
       documentPublishedAt: published,
+      coverImageUrl,
       recordJson,
       updatedAt: new Date(),
     })
@@ -145,6 +193,7 @@ export async function upsertStandardDocumentIntoDb(input: {
         description,
         path: record.path,
         documentPublishedAt: published,
+        coverImageUrl,
         recordJson,
         updatedAt: new Date(),
       },
