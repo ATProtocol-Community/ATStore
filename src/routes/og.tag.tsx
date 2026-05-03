@@ -1,6 +1,7 @@
 import type { SatoriOptions } from "satori";
 
 import { createFileRoute } from "@tanstack/react-router";
+import { loadAppleEmojiAsset } from "#/lib/og-emoji.server";
 import {
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
@@ -62,85 +63,6 @@ async function getFonts() {
   }
 
   return fontPromise;
-}
-
-/**
- * Convert an emoji string into the hyphenated hex codepoint sequence Twemoji uses for its
- * SVG asset filenames. This is the standard "Vercel/og + Twemoji" recipe:
- *   - drop variation selectors (\uFE0F) unless the emoji contains a ZWJ sequence
- *     (some ZWJ emojis require the FE0F to be retained for the asset to exist),
- *   - decode UTF-16 surrogate pairs into a single codepoint,
- *   - join codepoints with `-`.
- *
- * Mirrors logic from `@vercel/og`'s emoji loader so emoji like `🪪` (single codepoint),
- * `👨‍💻` (ZWJ sequence), and `✨` (basic) all resolve to a real Twemoji SVG.
- */
-function emojiToTwemojiCodepoints(emoji: string): string {
-  const ZWJ = "\u200D";
-  const VS16 = /\uFE0F/g;
-  const normalized = emoji.includes(ZWJ) ? emoji : emoji.replace(VS16, "");
-
-  const codepoints: Array<string> = [];
-  let highSurrogate = 0;
-  for (let i = 0; i < normalized.length; i++) {
-    const c = normalized.codePointAt(i);
-    if (c === undefined) continue;
-    if (highSurrogate) {
-      codepoints.push(
-        (
-          0x1_00_00 +
-          ((highSurrogate - 0xd8_00) << 10) +
-          (c - 0xdc_00)
-        ).toString(16),
-      );
-      highSurrogate = 0;
-    } else if (c >= 0xd8_00 && c <= 0xdb_ff) {
-      highSurrogate = c;
-    } else {
-      codepoints.push(c.toString(16));
-    }
-  }
-
-  return codepoints.join("-");
-}
-
-/**
- * Cache fetched Twemoji SVGs so a single OG response (which may render the same emoji five
- * times) only hits the CDN once, and so subsequent requests reuse the same data URL.
- */
-const emojiAssetCache = new Map<string, string>();
-
-/**
- * Satori's emoji hook: when it tokenizes the JSX text and finds an emoji glyph, it calls this
- * with `code === "emoji"` and the actual segment string. Satori 0.26 expects the returned
- * value to be a data URL (it inlines the bytes during render). Returning a remote URL string
- * triggers an internal `.trim()` on `undefined` because Satori's fetch path assumes data was
- * preloaded — so we fetch + base64-encode here and hand back a data URL.
- */
-async function loadAdditionalAsset(
-  code: string,
-  segment: string,
-): Promise<string | undefined> {
-  if (code !== "emoji") return undefined;
-  const codepoints = emojiToTwemojiCodepoints(segment);
-  if (!codepoints) return undefined;
-
-  const cached = emojiAssetCache.get(codepoints);
-  if (cached) return cached;
-
-  try {
-    const response = await fetch(
-      `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg`,
-    );
-    if (!response.ok) return undefined;
-    const svg = await response.text();
-    const base64 = Buffer.from(svg, "utf8").toString("base64");
-    const dataUrl = `data:image/svg+xml;base64,${base64}`;
-    emojiAssetCache.set(codepoints, dataUrl);
-    return dataUrl;
-  } catch {
-    return undefined;
-  }
 }
 
 function getQueryText(
@@ -368,7 +290,7 @@ export const Route = createFileRoute("/og/tag")({
                 { name: "Inter", data: regular, weight: 400, style: "normal" },
                 { name: "Inter", data: bold, weight: 700, style: "normal" },
               ],
-              loadAdditionalAsset: loadAdditionalAsset as NonNullable<
+              loadAdditionalAsset: loadAppleEmojiAsset as NonNullable<
                 SatoriOptions["loadAdditionalAsset"]
               >,
             },
