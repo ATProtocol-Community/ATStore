@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { getAtstoreRepoDid } from "#/lib/atproto/publish-directory-listing";
+import { scheduleStandardSiteBackfillForProductDid } from "#/lib/atproto/standard-site-verify-backfill";
 import {
   fetchBlueskyHandleForDid,
   fetchBlueskyPublicProfileFields,
@@ -468,12 +469,21 @@ const setListingVerification = createServerFn({ method: "POST" })
     const events = context.schema.storeListingRejectionEvents;
     const approvals = context.schema.storeListingVerificationApprovalEvents;
 
+    let priorVerificationStatus: string | null | undefined;
+    let priorProductAccountDid: string | null | undefined;
+
     await context.db.transaction(async (tx) => {
       const [beforeRow] = await tx
-        .select({ verificationStatus: table.verificationStatus })
+        .select({
+          verificationStatus: table.verificationStatus,
+          productAccountDid: table.productAccountDid,
+        })
         .from(table)
         .where(eq(table.id, data.listingId))
         .limit(1);
+
+      priorVerificationStatus = beforeRow?.verificationStatus ?? undefined;
+      priorProductAccountDid = beforeRow?.productAccountDid ?? undefined;
 
       await tx
         .update(table)
@@ -503,6 +513,17 @@ const setListingVerification = createServerFn({ method: "POST" })
         });
       }
     });
+
+    if (
+      data.status === "verified" &&
+      priorVerificationStatus != null &&
+      priorVerificationStatus !== "verified"
+    ) {
+      const productDid = priorProductAccountDid?.trim();
+      if (productDid?.startsWith("did:")) {
+        scheduleStandardSiteBackfillForProductDid(context.db, productDid);
+      }
+    }
 
     return { ok: true as const };
   });

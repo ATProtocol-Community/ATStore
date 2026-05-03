@@ -35,6 +35,8 @@ import {
   putListingReviewReplyRecord,
 } from "#/lib/atproto/repo-records";
 import { resolveUrlToImageBytes } from "#/lib/atproto/resolve-image-bytes";
+import { canonicalStandardSitePostUrl } from "#/lib/atproto/standard-site-canonical-url";
+import { scheduleStandardSiteBackfillForProductDid } from "#/lib/atproto/standard-site-verify-backfill";
 import {
   sqlReplyAuthorAllowedPredicate,
   upsertListingReviewReplyFromTap,
@@ -327,6 +329,17 @@ export interface DirectoryListingReview {
   replyCount: number;
   /** True when the viewer may post in the reply thread for this listing. */
   canReply: boolean;
+}
+
+export interface DirectoryListingProductUpdate {
+  id: string;
+  atUri: string;
+  title: string | null;
+  description: string | null;
+  path: string;
+  publishedAt: string;
+  /** HTTPS permalink when publication URL + document path resolve; otherwise null. */
+  canonicalPostUrl: string | null;
 }
 
 /** Bluesky post stored from Jetstream mention matching. */
@@ -675,6 +688,12 @@ const getRelatedDirectoryListingsInput = z.object({
 });
 
 const getDirectoryListingReviewsInput = z.object({
+  id: z.string().min(1),
+});
+
+const PRODUCT_SITE_UPDATES_LIMIT = 40;
+
+const getDirectoryListingProductUpdatesInput = z.object({
   id: z.string().min(1),
 });
 
@@ -2591,6 +2610,99 @@ function getDirectoryListingReviewsQueryOptions(id: string) {
   return queryOptions({
     queryKey: ["storeListings", "reviews", id],
     queryFn: async () => getDirectoryListingReviews({ data: { id } }),
+  });
+}
+
+const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getDirectoryListingProductUpdatesInput)
+  .handler(async ({ data, context }) => {
+    if (!isUuid(data.id)) {
+      return [];
+    }
+
+    const table = context.schema.storeListings;
+    const [listing] = await context.db
+      .select({ id: table.id, productAccountDid: table.productAccountDid })
+      .from(table)
+      .where(listingPublicWhere(table, eq(table.id, data.id)))
+      .limit(1);
+
+    if (!listing) {
+      return [];
+    }
+
+    const productDid = listing.productAccountDid?.trim();
+    if (!productDid?.startsWith("did:")) {
+      return [];
+    }
+
+    const docs = context.schema.productSiteDocuments;
+    const pubs = context.schema.productSitePublications;
+
+    const publicationRows = await context.db
+      .select({
+        atUri: pubs.atUri,
+        baseUrl: pubs.baseUrl,
+      })
+      .from(pubs)
+      .where(eq(pubs.repoDid, productDid));
+
+    const pubByAtUri = new Map(
+      publicationRows.map((r) => [r.atUri, r.baseUrl] as const),
+    );
+    const fallbackBase =
+      publicationRows.length === 1 ? publicationRows[0].baseUrl : null;
+
+    const docRows = await context.db
+      .select({
+        id: docs.id,
+        atUri: docs.atUri,
+        title: docs.title,
+        description: docs.description,
+        path: docs.path,
+        documentPublishedAt: docs.documentPublishedAt,
+        publicationAtUri: docs.publicationAtUri,
+      })
+      .from(docs)
+      .where(eq(docs.repoDid, productDid))
+      .orderBy(desc(docs.documentPublishedAt))
+      .limit(PRODUCT_SITE_UPDATES_LIMIT);
+
+    const out: Array<DirectoryListingProductUpdate> = [];
+    for (const row of docRows) {
+      let baseUrl: string | null = null;
+      const pAt = row.publicationAtUri?.trim();
+      if (pAt && pubByAtUri.has(pAt)) {
+        baseUrl = pubByAtUri.get(pAt) ?? null;
+      } else if (fallbackBase) {
+        baseUrl = fallbackBase;
+      } else if (publicationRows.length > 0) {
+        baseUrl = publicationRows[0].baseUrl;
+      }
+      const canonicalPostUrl =
+        baseUrl != null && baseUrl.length > 0
+          ? canonicalStandardSitePostUrl(baseUrl, row.path)
+          : null;
+
+      out.push({
+        id: row.id,
+        atUri: row.atUri,
+        title: row.title,
+        description: row.description,
+        path: row.path,
+        publishedAt: row.documentPublishedAt.toISOString(),
+        canonicalPostUrl,
+      });
+    }
+
+    return out;
+  });
+
+function getDirectoryListingProductUpdatesQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["storeListings", "productUpdates", id],
+    queryFn: async () => getDirectoryListingProductUpdates({ data: { id } }),
   });
 }
 
@@ -5614,6 +5726,8 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
         })
         .where(eq(t.id, full.id));
 
+      scheduleStandardSiteBackfillForProductDid(context.db, session.did);
+
       return { slug: inheritedSlug };
     } catch (error) {
       await context.db
@@ -6477,6 +6591,8 @@ export const directoryListingApi = {
   getDirectoryListingDetailForOwnerEditQueryOptions,
   getDirectoryListingReviews,
   getDirectoryListingReviewsQueryOptions,
+  getDirectoryListingProductUpdates,
+  getDirectoryListingProductUpdatesQueryOptions,
   getDirectoryListingReviewReplies,
   getDirectoryListingReviewRepliesQueryOptions,
   getDirectoryListingMentions,

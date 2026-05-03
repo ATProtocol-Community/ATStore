@@ -44,6 +44,7 @@ import type {
   DirectoryListingCard,
   DirectoryListingDetail,
   DirectoryListingOAuthProbe,
+  DirectoryListingProductUpdate,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
 import type { DirectoryCategoryOption } from "../lib/directory-categories";
 
@@ -57,7 +58,7 @@ import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
-import { Card } from "../design-system/card";
+import { Card, CardBody } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Lightbox } from "../design-system/lightbox";
@@ -139,6 +140,13 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
     const listingReviews = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingReviewsQueryOptions(listing.id),
     );
+    const listingProductUpdates = listing.productAccountDid?.trim()
+      ? await context.queryClient.ensureQueryData(
+          directoryListingApi.getDirectoryListingProductUpdatesQueryOptions(
+            listing.id,
+          ),
+        )
+      : [];
     const listingMentionsResult = await context.queryClient.ensureQueryData(
       directoryListingApi.getDirectoryListingMentionsQueryOptions(
         listing.id,
@@ -202,6 +210,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       relatedProducts,
       relatedCategoryListings,
       listingReviews,
+      listingProductUpdates,
       listingMentions: listingMentionsResult.mentions,
       listingMentionTotal: listingMentionsResult.total,
       session,
@@ -592,6 +601,13 @@ function formatSubproductBadgeLabel(option: DirectoryCategoryOption): string {
   return `${appLabel} ${subLabel.toLowerCase()}`;
 }
 
+function productUpdateExternalHref(update: DirectoryListingProductUpdate) {
+  return (
+    update.canonicalPostUrl ??
+    `https://pdsls.dev/${encodeURIComponent(update.atUri)}`
+  );
+}
+
 function ProductPage() {
   const {
     productId,
@@ -601,6 +617,7 @@ function ProductPage() {
     relatedProducts,
     relatedCategoryListings,
     listingReviews,
+    listingProductUpdates,
     listingMentions,
     listingMentionTotal,
     session,
@@ -774,6 +791,66 @@ function ProductPage() {
 
         {ecosystemRootId && isRootApp ? (
           <ProductEcosystemSection ecosystemRootId={ecosystemRootId} />
+        ) : null}
+
+        {listing.productAccountDid && listingProductUpdates.length > 0 ? (
+          <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
+            <Text size="2xl" weight="semibold" style={styles.header}>
+              Updates
+            </Text>
+            <Flex direction="column" gap="xl">
+              {listingProductUpdates.map((update) => (
+                <Card key={update.id} size="sm">
+                  <CardBody>
+                    <Flex direction="column" gap="md">
+                      <Flex align="center" justify="between" gap="xl" wrap>
+                        <Text weight="semibold">
+                          {update.title?.trim() ||
+                            update.path.replace(/^\//, "")}
+                        </Text>
+                        <SmallBody variant="secondary">
+                          {new Date(update.publishedAt).toLocaleDateString(
+                            undefined,
+                            {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )}
+                        </SmallBody>
+                      </Flex>
+                      {update.description?.trim() ? (
+                        <SmallBody variant="secondary">
+                          {update.description.length > 280
+                            ? `${update.description.slice(0, 280)}…`
+                            : update.description}
+                        </SmallBody>
+                      ) : null}
+                      <Link
+                        href={productUpdateExternalHref(update)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Flex align="center" gap="sm">
+                          {update.canonicalPostUrl ? (
+                            <>
+                              <ExternalLink size={16} aria-hidden />
+                              Read post
+                            </>
+                          ) : (
+                            <>
+                              <Newspaper size={16} aria-hidden />
+                              View on PDSls
+                            </>
+                          )}
+                        </Flex>
+                      </Link>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              ))}
+            </Flex>
+          </Flex>
         ) : null}
 
         <Flex gap="4xl" direction="column">
