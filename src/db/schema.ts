@@ -1,4 +1,5 @@
 import type { ListingLink } from "#/lib/atproto/listing-record";
+import type { OAuthAuthProbeReport } from "#/lib/oauth-listing-auth-probe";
 
 import { relations, sql } from "drizzle-orm";
 import {
@@ -337,6 +338,64 @@ export const storeListingVerificationApprovalEvents = pgTable(
       "store_listing_verification_approval_events_listing_created_idx",
     ).on(table.storeListingId, table.createdAt),
   }),
+);
+
+/**
+ * Periodic OAuth / auth-metadata probe keyed by storefront `external_url` (see
+ * `scripts/sync-listing-oauth-probes.ts`). Intended for dashboards (issue #19) and alerting.
+ */
+export const storeListingOAuthProbes = pgTable(
+  "store_listing_oauth_probes",
+  {
+    /** One persisted snapshot per listing. */
+    storeListingId: uuid("store_listing_id")
+      .primaryKey()
+      .references(() => storeListings.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    /**
+     * `completed`: probe ran
+     * `skipped_no_url`: listing has no usable `external_url`
+     * `error`: threw before completing (see `probeError`)
+     */
+    status: text("status").notNull(),
+    probeError: text("probe_error"),
+    probedUrl: text("probed_url"),
+    probedAt: timestamp("probed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+
+    oauthScopesDistinct: text("oauth_scopes_distinct")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    transitionalScopes: text("transitional_scopes")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    publishesAtprotoScope: boolean("publishes_atproto_scope"),
+
+    clientScopeRawLine: text("client_scope_raw_line"),
+    clientScopeSyntaxOk: boolean("client_scope_syntax_ok"),
+
+    hasProtectedResourceMetadata: boolean(
+      "has_protected_resource_metadata",
+    ).notNull(),
+    hasAuthorizationServerMetadata: boolean(
+      "has_authorization_server_metadata",
+    ).notNull(),
+    successfulClientMetadataUrl: text("successful_client_metadata_url"),
+
+    reportJson: jsonb("report_json").$type<OAuthAuthProbeReport>(),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("store_listing_oauth_probes_probed_at_idx").on(table.probedAt),
+    index("store_listing_oauth_probes_slug_idx").on(table.slug),
+  ],
 );
 
 /** Ordered homepage hero slots managed from admin. */

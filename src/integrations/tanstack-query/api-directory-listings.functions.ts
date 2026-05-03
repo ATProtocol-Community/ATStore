@@ -1,6 +1,7 @@
 import type { Database } from "#/db/index.server";
 import type { StoreListing } from "#/db/schema";
 import type { ListingLink } from "#/lib/atproto/listing-record";
+import type { SummaryScopeHumanRow } from "#/lib/oauth-listing-auth-probe";
 import type { SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
@@ -49,6 +50,10 @@ import {
   httpsListingImageUrlOrNull,
   publicMediaUrlOrNull,
 } from "#/lib/listing-image-url";
+import {
+  oauthClientDistinctTokensFromPublishedScopeLine,
+  probeOAuthListingAuth,
+} from "#/lib/oauth-listing-auth-probe";
 import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
@@ -96,6 +101,7 @@ import {
 } from "../../lib/directory-categories";
 import {
   buildDirectoryListingSlug,
+  getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../../lib/directory-listing-slugs";
 import {
@@ -265,11 +271,35 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
   updatedAt: string | null;
   /** Trust/compliance/support/project links (see `fyi.atstore.listing.detail#link`). */
   links: Array<ListingLink>;
+  /** OAuth / authorization metadata sampled from storefront link (see cron sync). Null if never probed. */
+  oauthProbe: DirectoryListingOAuthProbe | null;
   /**
    * Only set by `getDirectoryListingDetailForOwnerEdit` — sync with Postgres
    * `verification_status` for routing (e.g. back to Manage when not live).
    */
   verificationStatus?: string;
+}
+
+/** Public-safe snapshot from `store_listing_oauth_probes` (+ optional human-readable scopes from report). */
+export interface DirectoryListingOAuthProbe {
+  status: string;
+  probedAt: string | null;
+  probedUrl: string | null;
+  probeError: string | null;
+  oauthScopesDistinct: Array<string>;
+  transitionalScopes: Array<string>;
+  publishesAtprotoScope: boolean | null;
+  clientScopeRawLine: string | null;
+  clientScopeSyntaxOk: boolean | null;
+  /**
+   * Tokens from OAuth client_metadata only. When non-empty, storefront UI prefers this over
+   * {@link oauthScopesDistinct} (merged with AS `scopes_supported` / resource metadata).
+   */
+  oauthClientScopesDistinct: Array<string>;
+  hasProtectedResourceMetadata: boolean;
+  hasAuthorizationServerMetadata: boolean;
+  successfulClientMetadataUrl: string | null;
+  scopeHumanReadable: Array<SummaryScopeHumanRow>;
 }
 
 export interface DirectoryListingReviewReply {
@@ -877,9 +907,216 @@ type ExtractedPageCopy = {
   paragraphs: Array<string>;
 };
 
+async function fetchStoreListingOAuthProbe(
+  listingId: string,
+  ctx: {
+    db: Database;
+    schema: typeof dbSchema;
+  },
+): Promise<DirectoryListingOAuthProbe | null> {
+  const probes = ctx.schema.storeListingOAuthProbes;
+  const [row] = await ctx.db
+    .select({
+      status: probes.status,
+      probeError: probes.probeError,
+      probedUrl: probes.probedUrl,
+      probedAt: probes.probedAt,
+      oauthScopesDistinct: probes.oauthScopesDistinct,
+      transitionalScopes: probes.transitionalScopes,
+      publishesAtprotoScope: probes.publishesAtprotoScope,
+      clientScopeRawLine: probes.clientScopeRawLine,
+      clientScopeSyntaxOk: probes.clientScopeSyntaxOk,
+      hasProtectedResourceMetadata: probes.hasProtectedResourceMetadata,
+      hasAuthorizationServerMetadata: probes.hasAuthorizationServerMetadata,
+      successfulClientMetadataUrl: probes.successfulClientMetadataUrl,
+      reportJson: probes.reportJson,
+    })
+    .from(probes)
+    .where(eq(probes.storeListingId, listingId))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  const reportValue = row.reportJson;
+  const scopeHumanReadable: Array<SummaryScopeHumanRow> =
+    reportValue?.summary?.scopeHumanReadable != null &&
+    Array.isArray(reportValue.summary.scopeHumanReadable)
+      ? reportValue.summary.scopeHumanReadable
+      : [];
+
+  const oauthClientDistinctFromSummary =
+    reportValue?.summary?.oauthClientScopesDistinct;
+
+  const oauthClientScopesDistinct = Array.isArray(
+    oauthClientDistinctFromSummary,
+  )
+    ? oauthClientDistinctFromSummary
+    : oauthClientDistinctTokensFromPublishedScopeLine(row.clientScopeRawLine);
+
+  return {
+    status: row.status,
+    probedAt: row.probedAt.toISOString(),
+    probedUrl: row.probedUrl,
+    probeError: row.probeError,
+    oauthScopesDistinct: row.oauthScopesDistinct ?? [],
+    transitionalScopes: row.transitionalScopes ?? [],
+    publishesAtprotoScope: row.publishesAtprotoScope,
+    clientScopeRawLine: row.clientScopeRawLine,
+    clientScopeSyntaxOk: row.clientScopeSyntaxOk,
+    oauthClientScopesDistinct,
+    hasProtectedResourceMetadata: row.hasProtectedResourceMetadata,
+    hasAuthorizationServerMetadata: row.hasAuthorizationServerMetadata,
+    successfulClientMetadataUrl: row.successfulClientMetadataUrl,
+    scopeHumanReadable,
+  };
+}
+
+const rescanListingOAuthProbeDevInput = z.object({
+  listingId: z.string().uuid(),
+});
+
+/**
+ * Re-run `probeOAuthListingAuth` against the listing's storefront URL and upsert
+ * `store_listing_oauth_probes` — mirrors `scripts/sync-listing-oauth-probes.ts`.
+ * Development only.
+ */
+const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware])
+  .inputValidator(rescanListingOAuthProbeDevInput)
+  .handler(async ({ data, context }) => {
+    assertDevelopmentOnly();
+
+    const listings = context.schema.storeListings;
+    const probes = context.schema.storeListingOAuthProbes;
+
+    const [listingRow] = await context.db
+      .select({
+        id: listings.id,
+        slug: listings.slug,
+        name: listings.name,
+        sourceUrl: listings.sourceUrl,
+        externalUrl: listings.externalUrl,
+      })
+      .from(listings)
+      .where(eq(listings.id, data.listingId))
+      .limit(1);
+
+    if (!listingRow) {
+      throw new Error("Listing not found.");
+    }
+
+    const slugText = getDirectoryListingSlug({
+      name: listingRow.name,
+      slug: listingRow.slug,
+      sourceUrl: listingRow.sourceUrl,
+    });
+
+    const storefrontUrl = listingRow.externalUrl?.trim() ?? "";
+    const now = new Date();
+
+    async function upsertProbe(
+      payload: typeof dbSchema.storeListingOAuthProbes.$inferInsert,
+    ): Promise<void> {
+      const { storeListingId: _listingPk, ...rest } = payload;
+      void _listingPk;
+      await context.db.insert(probes).values(payload).onConflictDoUpdate({
+        target: probes.storeListingId,
+        set: rest,
+      });
+    }
+
+    if (!storefrontUrl) {
+      await upsertProbe({
+        storeListingId: listingRow.id,
+        slug: slugText,
+        status: "skipped_no_url",
+        probeError: null,
+        probedUrl: null,
+        probedAt: now,
+        oauthScopesDistinct: [],
+        transitionalScopes: [],
+        publishesAtprotoScope: null,
+        clientScopeRawLine: null,
+        clientScopeSyntaxOk: null,
+        hasProtectedResourceMetadata: false,
+        hasAuthorizationServerMetadata: false,
+        successfulClientMetadataUrl: null,
+        reportJson: null,
+        updatedAt: now,
+      });
+      const skippedSnapshot = await fetchStoreListingOAuthProbe(
+        listingRow.id,
+        context,
+      );
+      if (!skippedSnapshot) {
+        throw new Error("OAuth probe snapshot missing after rescan.");
+      }
+      return skippedSnapshot;
+    }
+
+    try {
+      const report = await probeOAuthListingAuth(storefrontUrl);
+      const successfulClientUrl = report.clientMetadata.find(
+        (c) => c.result.ok,
+      )?.url;
+
+      await upsertProbe({
+        storeListingId: listingRow.id,
+        slug: slugText,
+        status: "completed",
+        probeError: null,
+        probedUrl: report.inputUrl,
+        probedAt: now,
+        oauthScopesDistinct: report.summary.oauthScopesDistinct,
+        transitionalScopes: report.summary.transitionalScopesPresent,
+        publishesAtprotoScope: report.summary.publishesAtprotoAs,
+        clientScopeRawLine: report.summary.clientScopeRawLine,
+        clientScopeSyntaxOk: report.summary.clientScopeSyntaxOk,
+        hasProtectedResourceMetadata: Boolean(report.protectedResource.raw),
+        hasAuthorizationServerMetadata: report.authorizationServersDetail.some(
+          (r) => r.result.ok,
+        ),
+        successfulClientMetadataUrl: successfulClientUrl ?? null,
+        reportJson: report,
+        updatedAt: now,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await upsertProbe({
+        storeListingId: listingRow.id,
+        slug: slugText,
+        status: "error",
+        probeError: message,
+        probedUrl: storefrontUrl,
+        probedAt: now,
+        oauthScopesDistinct: [],
+        transitionalScopes: [],
+        publishesAtprotoScope: null,
+        clientScopeRawLine: null,
+        clientScopeSyntaxOk: null,
+        hasProtectedResourceMetadata: false,
+        hasAuthorizationServerMetadata: false,
+        successfulClientMetadataUrl: null,
+        reportJson: null,
+        updatedAt: now,
+      });
+    }
+
+    const snapshot = await fetchStoreListingOAuthProbe(listingRow.id, context);
+    if (!snapshot) {
+      throw new Error("OAuth probe snapshot missing after rescan.");
+    }
+    return snapshot;
+  });
+
 function toListingDetail(
   row: DirectoryListingDetailRow,
-  options: { isStoreManaged: boolean },
+  options: {
+    isStoreManaged: boolean;
+    oauthProbe: DirectoryListingOAuthProbe | null;
+  },
 ): DirectoryListingDetail {
   const primary = primaryCategorySlug(row.categorySlugs);
   const assignedCategory = getDirectoryCategoryOption(primary);
@@ -910,6 +1147,7 @@ function toListingDetail(
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     links: normalizeListingLinks(row.links ?? null),
+    oauthProbe: options.oauthProbe,
   };
 }
 
@@ -2071,8 +2309,14 @@ const getDirectoryListingDetail = createServerFn({ method: "GET" })
       return null;
     }
 
+    const [oauthProbe, isStoreManaged] = await Promise.all([
+      fetchStoreListingOAuthProbe(row.id, context),
+      computeIsStoreManaged(row),
+    ]);
+
     return toListingDetail(row, {
-      isStoreManaged: await computeIsStoreManaged(row),
+      isStoreManaged,
+      oauthProbe,
     });
   });
 
@@ -2120,8 +2364,14 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: "GET" })
       return null;
     }
 
+    const [oauthProbe, isStoreManaged] = await Promise.all([
+      fetchStoreListingOAuthProbe(row.id, context),
+      computeIsStoreManaged(row),
+    ]);
+
     return toListingDetail(row, {
-      isStoreManaged: await computeIsStoreManaged(row),
+      isStoreManaged,
+      oauthProbe,
     });
   });
 
@@ -2232,9 +2482,15 @@ const getDirectoryListingDetailForOwnerEdit = createServerFn({
 
     const { verificationStatus: _removed, ...detailRow } = row;
 
+    const [oauthProbe, isStoreManaged] = await Promise.all([
+      fetchStoreListingOAuthProbe(row.id, context),
+      computeIsStoreManaged(row),
+    ]);
+
     return {
       ...toListingDetail(detailRow as DirectoryListingDetailRow, {
-        isStoreManaged: await computeIsStoreManaged(row),
+        isStoreManaged,
+        oauthProbe,
       }),
       verificationStatus: row.verificationStatus,
     };
@@ -6264,6 +6520,7 @@ export const directoryListingApi = {
   setProductAccountHandleDev,
   ignoreMissingProductAccountHandleDev,
   unignoreMissingProductAccountHandleDev,
+  rescanListingOAuthProbeDev,
   applyProductAccountCandidatesBatch,
   confirmProductAccountCandidate,
   rejectProductAccountCandidate,
