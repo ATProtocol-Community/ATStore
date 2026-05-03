@@ -83,6 +83,17 @@ export function buildListingReviewOgImageUrl(input: {
 }
 
 /**
+ * Dynamic OG image for a user profile (`/og/profile` — server-rendered PNG via Satori).
+ * Crawlers load this when sharing a `/profile/<actor>` page; the route resolves the actor
+ * to a DID server-side before passing it here.
+ */
+export function buildAppProfileOgImageUrl(input: { did: string }) {
+  const params = new URLSearchParams();
+  params.set("did", input.did);
+  return `/og/profile?${params.toString()}`;
+}
+
+/**
  * Build an OG image URL for the tag-card style preview (`/og/tag`). Used by both app-tag and
  * directory/protocol category routes — pass the `tag` (used for accent + emoji lookup), an
  * optional `label` (for human-friendly title casing like "Account Tool" vs the slug

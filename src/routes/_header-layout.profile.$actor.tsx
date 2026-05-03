@@ -30,7 +30,7 @@ import { directoryListingApi } from "../integrations/tanstack-query/api-director
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { resolveProfilePathActorToDid } from "../lib/bluesky-public-profile";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { buildRouteOgMeta } from "../lib/og-meta";
+import { buildAppProfileOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 
 const RouterLink = createLink(AriaLink);
 const FAVORITES_PREVIEW_LIMIT = 4;
@@ -163,6 +163,7 @@ export const Route = createFileRoute("/_header-layout/profile/$actor")({
       ogAvatar: data.avatarUrl ?? null,
       ogOwnedProducts: ownedProducts?.length ?? 0,
       ogReviews: data.reviews.length,
+      ogImage: buildAppProfileOgImageUrl({ did: resolvedDid }),
     };
   },
   head: ({ loaderData }) =>
@@ -171,6 +172,7 @@ export const Route = createFileRoute("/_header-layout/profile/$actor")({
       description:
         loaderData?.ogDescription ||
         "Read reviews and discover products published on at-store.",
+      image: loaderData?.ogImage,
       avatar: loaderData?.ogAvatar,
       ownedProducts: loaderData?.ogOwnedProducts,
       reviews: loaderData?.ogReviews,

@@ -14,7 +14,7 @@ import {
 const styles = stylex.create({
   root: {
     alignItems: "center",
-    columnGap: "0.1em",
+    columnGap: "0.3em",
     display: "inline-flex",
   },
   atNavbar: {
@@ -31,9 +31,9 @@ const styles = stylex.create({
     fontWeight: fontWeight.black,
   },
   mark: {
-    blockSize: "1.5em",
+    blockSize: "1.2em",
     flexShrink: 0,
-    inlineSize: "1.5em",
+    inlineSize: "1.2em",
   },
 });
 
