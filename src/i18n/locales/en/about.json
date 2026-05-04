@@ -1,0 +1,78 @@
+{
+  "ogTitle": "About | ATStore",
+  "ogDescription": "The open social web (the Atmosphere) and ATStore: an open directory of apps and tools on the AT Protocol, how it works, and how to get involved.",
+  "heroTitle": "An open directory of Atmosphere Apps",
+  "heroBody": "Browse, discover, and explore the Atmosphere ecosystem.",
+  "atmosphereSection": {
+    "eyebrow": "The Big Idea",
+    "title": "What is the Atmosphere?",
+    "para1": "The Atmosphere is a new open network of apps and services that all work together. Think of it like truly owning your Google Account. Instead of every app being its own walled garden, Atmosphere apps share a common foundation — so you only need one account to use them all, and they can easily share data.",
+    "para2": "Your Atmosphere Account is your passport to this entire ecosystem. One account unlocks every app — no more creating new logins, no more losing your stuff when you switch. Sign in once, and you're home everywhere."
+  },
+  "introFeatures": {
+    "openNetwork": {
+      "title": "Open Network",
+      "subtitle": "Shared social graph and data."
+    },
+    "sharedFoundation": {
+      "title": "Shared Foundation",
+      "subtitle": "Build once, usable everywhere."
+    },
+    "oneAccount": {
+      "title": "One Account",
+      "subtitle": "One identity across all apps."
+    },
+    "alwaysYours": {
+      "title": "Always Yours",
+      "subtitle": "Portable and owned by you."
+    }
+  },
+  "howSection": {
+    "eyebrow": "Under the hood",
+    "title": "How ATStore works",
+    "description": "ATStore is built on the same primitives as the apps it lists.",
+    "items": {
+      "listings": {
+        "title": "Listings as records",
+        "body": "Every product is a fyi.atstore.listing.detail record on someone's PDS. ATStore ingests these records via a tap-sync consumer, so the directory stays in sync with whoever owns the listing."
+      },
+      "claiming": {
+        "title": "Claiming your listing",
+        "body": "Anyone with an ATProto account can claim and manage the listing for a product they represent. Once claimed, the listing's record lives on the owner's PDS — not ours — so it's portable and revocable."
+      },
+      "reviews": {
+        "title": "Reviews & trending",
+        "body": "Reviews are public records too. A separate consumer watches Bluesky for posts that mention listings to surface what the community is actually using and talking about right now."
+      },
+      "categories": {
+        "title": "Categories & tags",
+        "body": "Listings are organized by the app they build on (e.g. Bluesky) and by cross-cutting workflow tags like analytics, moderation, or automation. Browse by whatever lens fits the question you're asking."
+      }
+    }
+  },
+  "peopleSection": {
+    "eyebrow": "People",
+    "title": "Who built it & who runs it",
+    "builtBy": "ATStore was built by <builderLink>Andrew Lisowski</builderLink>, an independent developer working on tools for the open social web.",
+    "maintained": "It's maintained as a community project under the <communityLink>AT Protocol Community</communityLink> — a community-hosted, community-moderated home for AT Protocol documentation, working groups, and shared infrastructure. Editorial decisions about categories, taxonomy, and curation happen in the open alongside the wider community."
+  },
+  "getInTouch": {
+    "heading": "Get in touch",
+    "manage": {
+      "label": "Manage your listing.",
+      "body": "If you build on ATProto <manageLink>Open manage listings</manageLink> to submit, edit, or track review status—it only takes a minute."
+    },
+    "bluesky": {
+      "label": "On Bluesky.",
+      "body": "Reach out to <blueskyLink>@atstore.fyi</blueskyLink> with feedback, corrections, or suggestions."
+    },
+    "openSource": {
+      "label": "Open source.",
+      "body": "File issues or open a PR on <githubLink>GitHub</githubLink>."
+    },
+    "community": {
+      "label": "Community.",
+      "body": "Join the conversation on the <communityLink>AT Protocol Community</communityLink>."
+    }
+  }
+}

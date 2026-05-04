@@ -3,12 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
 import { user } from "#/integrations/tanstack-query/api-user.functions";
 import { LogOut, Shield } from "lucide-react";
+import { useState } from "react";
 
 import { AvatarButton } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
 import { size } from "../design-system/theme/semantic-spacing.stylex";
+import { LanguageDrawer, LanguageSubMenu } from "./LanguageSwitcher";
 import { ThemeSubMenu } from "./ThemeMenu";
 
 const ButtonLink = createLink(Button);
@@ -29,6 +31,7 @@ export function NavbarAuth() {
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [langDrawerOpen, setLangDrawerOpen] = useState(false);
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -43,66 +46,75 @@ export function NavbarAuth() {
   if (session?.user) {
     const initial = session.user.name?.charAt(0).toUpperCase() ?? "U";
     return (
-      <Menu
-        size="lg"
-        trigger={
-          <AvatarButton
-            size="md"
-            src={session.user.image ?? undefined}
-            fallback={initial}
-            avatarStyle={styles.avatar}
-          />
-        }
-        placement="bottom end"
-      >
-        <MenuItem
-          onPress={() => {
-            const did = session.user.did;
-            if (did == null || did === "") {
-              return;
-            }
-            const handle = userProfile?.blueskyHandle?.trim();
-            const actor =
-              handle != null && handle !== "" ? handle.replace(/^@+/, "") : did;
-            void navigate({
-              to: "/profile/$actor",
-              params: { actor },
-            });
-          }}
+      <>
+        <Menu
+          size="lg"
+          trigger={
+            <AvatarButton
+              size="md"
+              src={session.user.image ?? undefined}
+              fallback={initial}
+              avatarStyle={styles.avatar}
+            />
+          }
+          placement="bottom end"
         >
-          Profile
-        </MenuItem>
-        <MenuItem
-          onPress={() => {
-            void navigate({ to: "/products/manage" });
-          }}
-        >
-          Manage listings
-        </MenuItem>
-        <MenuItem
-          onPress={() => {
-            void navigate({ to: "/product/claim" });
-          }}
-        >
-          Claim a listing
-        </MenuItem>
-        {session.user.isAdmin ? (
           <MenuItem
             onPress={() => {
-              void navigate({ to: "/admin" });
+              const did = session.user.did;
+              if (did == null || did === "") {
+                return;
+              }
+              const handle = userProfile?.blueskyHandle?.trim();
+              const actor =
+                handle != null && handle !== ""
+                  ? handle.replace(/^@+/, "")
+                  : did;
+              void navigate({
+                to: "/profile/$actor",
+                params: { actor },
+              });
             }}
-            suffix={<Shield />}
           >
-            Admin
+            Profile
           </MenuItem>
-        ) : null}
-        <MenuSeparator />
-        <ThemeSubMenu />
-        <MenuSeparator />
-        <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
-          Log out
-        </MenuItem>
-      </Menu>
+          <MenuItem
+            onPress={() => {
+              void navigate({ to: "/products/manage" });
+            }}
+          >
+            Manage listings
+          </MenuItem>
+          <MenuItem
+            onPress={() => {
+              void navigate({ to: "/product/claim" });
+            }}
+          >
+            Claim a listing
+          </MenuItem>
+          {session.user.isAdmin ? (
+            <MenuItem
+              onPress={() => {
+                void navigate({ to: "/admin" });
+              }}
+              suffix={<Shield />}
+            >
+              Admin
+            </MenuItem>
+          ) : null}
+          <MenuSeparator />
+          <LanguageSubMenu onOpenDrawer={() => setLangDrawerOpen(true)} />
+          <ThemeSubMenu />
+          <MenuSeparator />
+          <MenuItem onPress={() => logoutMutation.mutate()} suffix={<LogOut />}>
+            Log out
+          </MenuItem>
+        </Menu>
+        <LanguageDrawer
+          isOpen={langDrawerOpen}
+          onOpenChange={setLangDrawerOpen}
+        />
+      </>
     );
   }
 

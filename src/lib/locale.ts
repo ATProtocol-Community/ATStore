@@ -11,8 +11,11 @@
  * shown in production builds outside of dev.
  */
 
-export const LOCALES = ["en", "en-XA"] as const;
-export type Locale = (typeof LOCALES)[number];
+export const PROD_LOCALES = ["en"] as const;
+export type Locale = (typeof PROD_LOCALES)[number] | "en-XA";
+export const LOCALES: ReadonlyArray<Locale> = import.meta.env.DEV
+  ? [...PROD_LOCALES, "en-XA"]
+  : PROD_LOCALES;
 
 export const DEFAULT_LOCALE: Locale = "en";
 

@@ -11,7 +11,13 @@ export {
   type Locale,
 } from "../lib/locale";
 
-export const NAMESPACES = ["common"] as const;
+/**
+ * Namespaces are translation buckets. Split per surface area as string volume
+ * grows — keeps merge-conflict surface small when contributors translate
+ * different surfaces in parallel. `common` is for site-wide chrome (header,
+ * footer, switcher); page-specific surfaces get their own namespace.
+ */
+export const NAMESPACES = ["common", "about"] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
 export const DEFAULT_NAMESPACE: Namespace = "common";

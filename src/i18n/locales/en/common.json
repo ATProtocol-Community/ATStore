@@ -4,6 +4,7 @@
   },
   "languageSwitcher": {
     "ariaLabel": "Change language",
+    "userMenuLabel": "Language",
     "languageName": {
       "en": "English",
       "en-XA": "Pseudo (en-XA)"

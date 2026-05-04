@@ -1,12 +1,13 @@
 {
   "siteHeader": {
-    "searchListingsLabel": "[~~~~ Šéåŕçĥ ļîšţîñĝš ~~~~]"
+    "searchListingsLabel": "[~~ Šéåŕçĥ ļîšţîñĝš ~~]"
   },
   "languageSwitcher": {
-    "ariaLabel": "[~~~~ Çĥåñĝé ļåñĝüåĝé ~~~~]",
+    "ariaLabel": "[~~ Çĥåñĝé ļåñĝüåĝé ~~]",
+    "userMenuLabel": "[~~ Ļåñĝüåĝé ~~]",
     "languageName": {
       "en": "[~~ Éñĝļîšĥ ~~]",
-      "en-XA": "[~~~~ Þšéüðö (éñ-ẊÅ) ~~~~]"
+      "en-XA": "[~~ Þšéüðö (éñ-ẊÅ) ~~]"
     }
   }
 }
