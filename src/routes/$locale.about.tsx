@@ -21,6 +21,7 @@ import {
   UserCheck,
   UserRound,
 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 
 import { Page } from "../design-system/page";
 import { uiColor } from "../design-system/theme/color.stylex";
@@ -41,6 +42,7 @@ import {
   lineHeight,
   tracking,
 } from "../design-system/theme/typography.stylex";
+import { i18next } from "../i18n";
 
 const LinkLink = createLink(Link);
 
@@ -61,65 +63,38 @@ export const Route = createFileRoute("/$locale/about")({
       ),
     };
   },
-  head: ({ loaderData }) => ({
-    ...buildRouteOgMeta({
-      title: "About | ATStore",
-      description:
-        "The open social web (the Atmosphere) and ATStore: an open directory of apps and tools on the AT Protocol, how it works, and how to get involved.",
-    }),
-    links: (loaderData?.preloadHeroImages ?? []).map((href) => ({
-      rel: "preload",
-      as: "image",
-      href,
-    })),
-  }),
+  head: ({ loaderData, params }) => {
+    // `head` runs outside React (no `useTranslation` available). The eager
+    // `initI18n()` call in `__root.tsx` guarantees i18next is initialized by
+    // the time this fires, so `getFixedT(lng, ns)` is safe and locale-aware.
+    const t = i18next.getFixedT(params.locale, "about");
+    return {
+      ...buildRouteOgMeta({
+        title: t("ogTitle"),
+        description: t("ogDescription"),
+      }),
+      links: (loaderData?.preloadHeroImages ?? []).map((href) => ({
+        rel: "preload",
+        as: "image",
+        href,
+      })),
+    };
+  },
   component: AboutPage,
 });
 
 const INTRO_FEATURES = [
-  {
-    title: "Open Network",
-    subtitle: "Shared social graph and data.",
-    icon: Globe,
-  },
-  {
-    title: "Shared Foundation",
-    subtitle: "Build once, usable everywhere.",
-    icon: Layers3,
-  },
-  {
-    title: "One Account",
-    subtitle: "One identity across all apps.",
-    icon: UserRound,
-  },
-  {
-    title: "Always Yours",
-    subtitle: "Portable and owned by you.",
-    icon: ShieldCheck,
-  },
+  { id: "openNetwork", icon: Globe },
+  { id: "sharedFoundation", icon: Layers3 },
+  { id: "oneAccount", icon: UserRound },
+  { id: "alwaysYours", icon: ShieldCheck },
 ] as const;
 
 const HOW_ATSTORE_WORKS = [
-  {
-    title: "Listings as records",
-    body: "Every product is a fyi.atstore.listing.detail record on someone's PDS. ATStore ingests these records via a tap-sync consumer, so the directory stays in sync with whoever owns the listing.",
-    icon: Database,
-  },
-  {
-    title: "Claiming your listing",
-    body: "Anyone with an ATProto account can claim and manage the listing for a product they represent. Once claimed, the listing's record lives on the owner's PDS — not ours — so it's portable and revocable.",
-    icon: UserCheck,
-  },
-  {
-    title: "Reviews & trending",
-    body: "Reviews are public records too. A separate consumer watches Bluesky for posts that mention listings to surface what the community is actually using and talking about right now.",
-    icon: TrendingUp,
-  },
-  {
-    title: "Categories & tags",
-    body: "Listings are organized by the app they build on (e.g. Bluesky) and by cross-cutting workflow tags like analytics, moderation, or automation. Browse by whatever lens fits the question you're asking.",
-    icon: Tags,
-  },
+  { id: "listings", icon: Database },
+  { id: "claiming", icon: UserCheck },
+  { id: "reviews", icon: TrendingUp },
+  { id: "categories", icon: Tags },
 ] as const;
 
 const styles = stylex.create({
@@ -434,6 +409,7 @@ const styles = stylex.create({
 });
 
 function AboutPage() {
+  const { t } = useTranslation("about");
   return (
     <HeaderLayout.Root style={styles.shell}>
       <HeaderLayout.Header>
@@ -447,12 +423,8 @@ function AboutPage() {
               <Sparkles size={20} />
               ATStore
             </span>
-            <h1 {...stylex.props(styles.h1)}>
-              An open directory of Atmosphere Apps
-            </h1>
-            <p {...stylex.props(styles.heroBody)}>
-              Browse, discover, and explore the Atmosphere ecosystem.
-            </p>
+            <h1 {...stylex.props(styles.h1)}>{t("heroTitle")}</h1>
+            <p {...stylex.props(styles.heroBody)}>{t("heroBody")}</p>
           </div>
         </Flex>
       </Page.Hero>
@@ -461,9 +433,11 @@ function AboutPage() {
         <Flex direction="column" gap="2xl" style={styles.twoCol}>
           <Flex direction="column" gap="2xl">
             <Flex direction="column" gap="md">
-              <div {...stylex.props(styles.sectionEyebrow)}>The Big Idea</div>
+              <div {...stylex.props(styles.sectionEyebrow)}>
+                {t("atmosphereSection.eyebrow")}
+              </div>
               <h2 {...stylex.props(styles.sectionHeading)}>
-                What is the Atmosphere?
+                {t("atmosphereSection.title")}
               </h2>
             </Flex>
           </Flex>
@@ -474,26 +448,16 @@ function AboutPage() {
               style={[styles.grow, styles.sectionBodyContainer]}
             >
               <p {...stylex.props(styles.sectionBody)}>
-                The Atmosphere is a new open network of apps and services that
-                all work together. Think of it like truly owning your Google
-                Account. Instead of every app being its own walled garden,
-                Atmosphere apps share a common foundation — so you only need one
-                account to use them all, and they can easily share data.
+                {t("atmosphereSection.para1")}
               </p>
               <p {...stylex.props(styles.sectionBody)}>
-                Your Atmosphere Account is your passport to this entire
-                ecosystem. One account unlocks every app — no more creating new
-                logins, no more losing your stuff when you switch. Sign in once,
-                and you're home everywhere.
+                {t("atmosphereSection.para2")}
               </p>
             </Flex>
             <div {...stylex.props(styles.grow, styles.fit)}>
               <div {...stylex.props(styles.cardGrid2, styles.grow)}>
                 {INTRO_FEATURES.map((item) => (
-                  <article
-                    key={item.title}
-                    {...stylex.props(styles.featureCard)}
-                  >
+                  <article key={item.id} {...stylex.props(styles.featureCard)}>
                     <span {...stylex.props(styles.featureIcon)}>
                       <item.icon size={20} />
                     </span>
@@ -504,11 +468,11 @@ function AboutPage() {
                           size="lg"
                           style={styles.featureTitle}
                         >
-                          {item.title}
+                          {t(`introFeatures.${item.id}.title`)}
                         </Text>
                       </div>
                       <Text size="base" style={styles.featureBody}>
-                        {item.subtitle}
+                        {t(`introFeatures.${item.id}.subtitle`)}
                       </Text>
                     </Flex>
                   </article>
@@ -523,24 +487,30 @@ function AboutPage() {
         <Flex direction="column" gap="6xl" style={styles.twoCol}>
           <Flex direction="column" gap="4xl" style={styles.appBrowserHeader}>
             <div {...stylex.props(styles.appBrowserEyebrow)}>
-              Under the hood
+              {t("howSection.eyebrow")}
             </div>
-            <h2 {...stylex.props(styles.sectionHeading)}>How ATStore works</h2>
+            <h2 {...stylex.props(styles.sectionHeading)}>
+              {t("howSection.title")}
+            </h2>
             <p {...stylex.props(styles.appBrowserDescription)}>
-              ATStore is built on the same primitives as the apps it lists.
+              {t("howSection.description")}
             </p>
           </Flex>
           <Flex gap="lg" wrap>
             {HOW_ATSTORE_WORKS.map((item) => (
-              <article key={item.title} {...stylex.props(styles.featureCard)}>
+              <article key={item.id} {...stylex.props(styles.featureCard)}>
                 <span {...stylex.props(styles.featureIcon)}>
                   <item.icon size={20} />
                 </span>
                 <Flex direction="column" gap="md">
                   <div {...stylex.props(styles.featureTitleRow)}>
-                    <h3 {...stylex.props(styles.featureTitle)}>{item.title}</h3>
+                    <h3 {...stylex.props(styles.featureTitle)}>
+                      {t(`howSection.items.${item.id}.title`)}
+                    </h3>
                   </div>
-                  <p {...stylex.props(styles.featureBody)}>{item.body}</p>
+                  <p {...stylex.props(styles.featureBody)}>
+                    {t(`howSection.items.${item.id}.body`)}
+                  </p>
                 </Flex>
               </article>
             ))}
@@ -552,100 +522,136 @@ function AboutPage() {
         <Flex direction="column" gap="6xl">
           <Flex direction="column" gap="4xl" style={styles.twoCol}>
             <Flex direction="column" gap="md">
-              <div {...stylex.props(styles.sectionEyebrow)}>People</div>
+              <div {...stylex.props(styles.sectionEyebrow)}>
+                {t("peopleSection.eyebrow")}
+              </div>
               <h2 {...stylex.props(styles.sectionHeading)}>
-                Who built it &amp; who runs it
+                {t("peopleSection.title")}
               </h2>
             </Flex>
             <p {...stylex.props(styles.sectionBody)}>
-              ATStore was built by{" "}
-              <Link
-                href="https://github.com/hipstersmoothie"
-                target="_blank"
-                rel="noreferrer"
-                style={styles.proseLink}
-              >
-                Andrew Lisowski
-              </Link>
-              , an independent developer working on tools for the open social
-              web.
+              <Trans
+                ns="about"
+                i18nKey="peopleSection.builtBy"
+                components={{
+                  builderLink: (
+                    <Link
+                      href="https://github.com/hipstersmoothie"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={styles.proseLink}
+                    >
+                      {""}
+                    </Link>
+                  ),
+                }}
+              />
             </p>
             <p {...stylex.props(styles.sectionBody)}>
-              It&apos;s maintained as a community project under the{" "}
-              <Link
-                href="https://discourse.atprotocol.community"
-                target="_blank"
-                rel="noreferrer"
-                style={styles.proseLink}
-              >
-                AT Protocol Community
-              </Link>{" "}
-              — a community-hosted, community-moderated home for AT Protocol
-              documentation, working groups, and shared infrastructure.
-              Editorial decisions about categories, taxonomy, and curation
-              happen in the open alongside the wider community.
+              <Trans
+                ns="about"
+                i18nKey="peopleSection.maintained"
+                components={{
+                  communityLink: (
+                    <Link
+                      href="https://discourse.atprotocol.community"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={styles.proseLink}
+                    >
+                      {""}
+                    </Link>
+                  ),
+                }}
+              />
             </p>
           </Flex>
 
           <div {...stylex.props(styles.callout)}>
             <Text size="3xl" weight="bold">
-              Get in touch
+              {t("getInTouch.heading")}
             </Text>
             <div {...stylex.props(styles.calloutStack)}>
               <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">Manage your listing.</Text>
+                <Text weight="bold">{t("getInTouch.manage.label")}</Text>
                 <Text size="base">
-                  If you build on ATProto{" "}
-                  <LinkLink to="/products/manage" style={styles.proseLink}>
-                    Open manage listings
-                  </LinkLink>{" "}
-                  to submit, edit, or track review status—it only takes a
-                  minute.
+                  <Trans
+                    ns="about"
+                    i18nKey="getInTouch.manage.body"
+                    components={{
+                      manageLink: (
+                        <LinkLink
+                          to="/products/manage"
+                          style={styles.proseLink}
+                        >
+                          {""}
+                        </LinkLink>
+                      ),
+                    }}
+                  />
                 </Text>
               </p>
               <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">On Bluesky.</Text>
+                <Text weight="bold">{t("getInTouch.bluesky.label")}</Text>
                 <Text size="base">
-                  Reach out to{" "}
-                  <Link
-                    href="https://bsky.app/profile/atstore.fyi"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={styles.proseLink}
-                  >
-                    @atstore.fyi
-                  </Link>{" "}
-                  with feedback, corrections, or suggestions.
+                  <Trans
+                    ns="about"
+                    i18nKey="getInTouch.bluesky.body"
+                    components={{
+                      blueskyLink: (
+                        <Link
+                          href="https://bsky.app/profile/atstore.fyi"
+                          target="_blank"
+                          rel="noreferrer"
+                          style={styles.proseLink}
+                        >
+                          {""}
+                        </Link>
+                      ),
+                    }}
+                  />
                 </Text>
               </p>
               <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">Open source.</Text>
+                <Text weight="bold">{t("getInTouch.openSource.label")}</Text>
                 <Text size="base">
-                  File issues or open a PR on{" "}
-                  <Link
-                    href="https://github.com/ATProtocol-Community/ATStore"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={styles.proseLink}
-                  >
-                    GitHub
-                  </Link>
-                  .
+                  <Trans
+                    ns="about"
+                    i18nKey="getInTouch.openSource.body"
+                    components={{
+                      githubLink: (
+                        <Link
+                          href="https://github.com/ATProtocol-Community/ATStore"
+                          target="_blank"
+                          rel="noreferrer"
+                          style={styles.proseLink}
+                        >
+                          {""}
+                        </Link>
+                      ),
+                    }}
+                  />
                 </Text>
               </p>
               <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">Community.</Text>
+                <Text weight="bold">{t("getInTouch.community.label")}</Text>
                 <Text size="base">
-                  Join the conversation on the{" "}
-                  <Link
-                    href="https://discourse.atprotocol.community"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={styles.proseLink}
-                  >
-                    AT Protocol Community
-                  </Link>
-                  .
+                  <Trans
+                    ns="about"
+                    i18nKey="getInTouch.community.body"
+                    components={{
+                      communityLink: (
+                        <Link
+                          href="https://discourse.atprotocol.community"
+                          target="_blank"
+                          rel="noreferrer"
+                          style={styles.proseLink}
+                        >
+                          {""}
+                        </Link>
+                      ),
+                    }}
+                  />
                 </Text>
               </p>
             </div>
