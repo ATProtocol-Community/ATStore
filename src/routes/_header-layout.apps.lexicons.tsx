@@ -12,6 +12,11 @@ import type { DirectoryOAuthLexiconClusterSummary } from "../integrations/tansta
 
 import { AppTagHero } from "../components/AppTagHero";
 import { Card } from "../design-system/card";
+import {
+  Disclosure,
+  DisclosurePanel,
+  DisclosureTitle,
+} from "../design-system/disclosure";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
@@ -74,12 +79,6 @@ const styles = stylex.create({
     paddingRight: verticalSpace["3xl"],
     paddingTop: verticalSpace["2xl"],
   },
-  gap: {
-    gap: {
-      default: 40,
-      [breakpoints.sm]: 64,
-    },
-  },
   emptyState: {
     gap: gap["lg"],
     maxWidth: "40rem",
@@ -96,23 +95,27 @@ const styles = stylex.create({
     display: "-webkit-box",
   },
   siteSection: {
-    gap: gap["2xl"],
+    width: "100%",
   },
-  siteHeaderRow: {
+  disclosureTitleInner: {
     gap: gap.md,
     alignItems: "center",
-    flexWrap: "wrap",
+    display: "flex",
+    flexBasis: "0%",
+    flexGrow: 1,
+    flexShrink: 1,
+    textAlign: "start",
+    minWidth: 0,
+  },
+  siteExternalLink: {
+    display: "inline-flex",
+    flexShrink: 0,
   },
   siteHeadingLink: {
     gap: gap.sm,
     textDecoration: "none",
     alignItems: "center",
     color: "inherit",
-    display: "inline-flex",
-  },
-  siteHeadingStatic: {
-    gap: gap.sm,
-    alignItems: "center",
     display: "inline-flex",
   },
 });
@@ -279,7 +282,7 @@ function AppsLexiconsHubPage() {
 
   return (
     <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" style={styles.gap}>
+      <Flex direction="column" gap="6xl">
         <Flex direction="column" gap="4xl">
           <Flex gap="xl" justify="between" style={styles.navLinks}>
             <LinkLink to="/apps/tags">
@@ -300,45 +303,55 @@ function AppsLexiconsHubPage() {
         </Flex>
 
         {hub.clusters.length > 0 ? (
-          <Flex direction="column" gap="7xl">
+          <Flex direction="column" gap="md">
             {siteSections.map((section) => (
-              <Flex
+              <Disclosure
                 key={section.groupKey}
-                direction="column"
+                defaultExpanded
+                size="lg"
                 style={styles.siteSection}
               >
-                <Flex style={styles.siteHeaderRow}>
-                  {section.siteOrigin ? (
-                    <a
-                      href={section.siteOrigin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Open ${section.siteLabel} (opens in new tab)`}
-                      {...stylex.props(styles.siteHeadingLink)}
-                    >
-                      <Text weight="semibold" size="xl">
-                        {section.siteLabel}
-                      </Text>
-                      <ExternalLink size={18} aria-hidden />
-                    </a>
-                  ) : (
-                    <Flex style={styles.siteHeadingStatic}>
-                      <Text weight="semibold" size="xl">
-                        {section.siteLabel}
-                      </Text>
-                    </Flex>
-                  )}
-                </Flex>
-                <Grid style={styles.grid}>
-                  {section.clusters.map((row) => (
-                    <LexiconClusterHubCard
-                      key={row.keys.join("\u001F")}
-                      row={row}
-                      descriptionsByRepoNsid={hub.descriptionsByRepoNsid}
-                    />
-                  ))}
-                </Grid>
-              </Flex>
+                <DisclosureTitle
+                  aria-label={`${section.siteLabel}, ${String(section.clusters.length)} collection group${section.clusters.length === 1 ? "" : "s"}`}
+                >
+                  <Flex style={styles.disclosureTitleInner}>
+                    <Text weight="semibold" size="xl">
+                      {section.siteLabel}
+                    </Text>
+                    {section.siteOrigin ? (
+                      <a
+                        href={section.siteOrigin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Open ${section.siteLabel} (opens in new tab)`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        {...stylex.props(
+                          styles.siteHeadingLink,
+                          styles.siteExternalLink,
+                        )}
+                      >
+                        <ExternalLink size={18} aria-hidden />
+                      </a>
+                    ) : null}
+                  </Flex>
+                </DisclosureTitle>
+                <DisclosurePanel>
+                  <Grid style={styles.grid}>
+                    {section.clusters.map((row) => (
+                      <LexiconClusterHubCard
+                        key={row.keys.join("\u001F")}
+                        row={row}
+                        descriptionsByRepoNsid={hub.descriptionsByRepoNsid}
+                      />
+                    ))}
+                  </Grid>
+                </DisclosurePanel>
+              </Disclosure>
             ))}
           </Flex>
         ) : (
