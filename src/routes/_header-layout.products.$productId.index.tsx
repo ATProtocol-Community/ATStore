@@ -742,14 +742,20 @@ function ProductPage() {
     listingProductUpdates.length > PRODUCT_UPDATES_PREVIEW_COUNT &&
     productUpdatesPublicationUrl != null &&
     productUpdatesPublicationUrl.length > 0;
+  const compatibleRelatedIds = new Set(
+    relatedAppsByOAuthLexicon.listings.map((l) => l.id),
+  );
+  const relatedSectionListingsBase =
+    relatedCategoryListings.length > 0
+      ? relatedCategoryListings
+      : relatedProducts;
+  const relatedSectionListings = relatedSectionListingsBase.filter(
+    (l) => !compatibleRelatedIds.has(l.id),
+  );
   const relatedSectionTitle =
     relatedCategoryListings.length > 0
       ? "More in this category"
       : "Similar apps";
-  const relatedSectionListings =
-    relatedCategoryListings.length > 0
-      ? relatedCategoryListings
-      : relatedProducts;
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
