@@ -170,10 +170,10 @@ export const Route = createFileRoute("/_header-layout/apps/lexicon")({
   },
   head: ({ loaderData }) =>
     buildRouteOgMeta({
-      title: loaderData?.ogTitle ?? "OAuth lexicon | at-store",
+      title: loaderData?.ogTitle ?? "Lexicon | at-store",
       description:
         loaderData?.ogDescription ||
-        "Explore apps grouped by overlapping OAuth lexicon identifiers.",
+        "Explore apps grouped by overlapping data type identifiers.",
     }),
   component: AppsLexiconPage,
 });

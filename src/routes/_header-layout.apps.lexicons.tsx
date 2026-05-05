@@ -127,7 +127,7 @@ export const Route = createFileRoute("/_header-layout/apps/lexicons")({
     ),
   head: () =>
     buildRouteOgMeta({
-      title: "OAuth lexicon collections | at-store",
+      title: "Lexicons | at-store",
       description:
         "Browse verified apps that share repo record collection lexicons from OAuth scopes.",
     }),

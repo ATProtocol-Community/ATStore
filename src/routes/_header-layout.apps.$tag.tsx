@@ -214,7 +214,6 @@ function AppsTagPage() {
               <ChevronLeft />
               All tags
             </LinkLink>
-            <LinkLink to="/apps/lexicons">OAuth lexicons</LinkLink>
           </Flex>
 
           <AppTagHero

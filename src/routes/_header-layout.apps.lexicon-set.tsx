@@ -209,16 +209,16 @@ export const Route = createFileRoute("/_header-layout/apps/lexicon-set")({
     return {
       clusterKeys: data.keys,
       lexiconRecordDescription,
-      ogTitle: `${titleSuffix} · shared OAuth lexicons | at-store`,
+      ogTitle: `${titleSuffix} · shared data | at-store`,
       ogDescription,
     };
   },
   head: ({ loaderData }) =>
     buildRouteOgMeta({
-      title: loaderData?.ogTitle ?? "OAuth lexicon cluster | at-store",
+      title: loaderData?.ogTitle ?? "Shared data | at-store",
       description:
         loaderData?.ogDescription ??
-        "Explore apps grouped by overlapping OAuth lexicon identifiers.",
+        "Explore apps grouped by overlapping data type identifiers.",
     }),
   component: AppsLexiconSetPage,
 });
