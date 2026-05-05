@@ -22,8 +22,8 @@
  */
 import "dotenv/config";
 import * as schema from "#/db/schema";
-import { probeOAuthListingAuth } from "#/lib/oauth-listing-auth-probe";
 import { refreshOAuthLexiconHubSnapshot } from "#/lib/oauth-lexicon-hub-snapshot.server";
+import { probeOAuthListingAuth } from "#/lib/oauth-listing-auth-probe";
 import { extractOAuthLexiconKeysForStorefrontProbe } from "#/lib/oauth-scope-lexicon-keys";
 import { asc, isNotNull } from "drizzle-orm";
 

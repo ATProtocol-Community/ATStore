@@ -153,9 +153,9 @@ const styles = stylex.create({
   badgeLabel: {
     display: "block",
     flexShrink: 1,
-    minWidth: 0,
     whiteSpace: "normal",
     wordBreak: "break-word",
+    minWidth: 0,
   },
   badgeCount: {
     flexShrink: 0,

@@ -1,17 +1,18 @@
 import type { Database } from "#/db/index.server";
-import * as dbSchema from "#/db/schema";
-import { loadLexiconRecordDescriptionsForWorkspace } from "#/lib/lexicon-local-record-description";
 import type {
   DirectoryOAuthLexiconClusterSummary,
   DirectoryOAuthLexiconHubData,
 } from "#/lib/oauth-lexicon-hub.types";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+
+import * as dbSchema from "#/db/schema";
+import { loadLexiconRecordDescriptionsForWorkspace } from "#/lib/lexicon-local-record-description";
 import {
   compareOAuthLexiconKeysForDisplayOrder,
   isRepoLexiconKeyForLexiconHub,
   parseOAuthLexiconKey,
 } from "#/lib/oauth-scope-lexicon-keys";
 import { and, eq, sql } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 const HUB_SNAPSHOT_KEY = "default" as const;
 

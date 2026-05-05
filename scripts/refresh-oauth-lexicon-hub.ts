@@ -5,7 +5,6 @@
  *   pnpm listing:oauth-lexicon-hub-refresh
  */
 import "dotenv/config";
-
 import { refreshOAuthLexiconHubSnapshot } from "#/lib/oauth-lexicon-hub-snapshot.server";
 
 function ts(): string {
