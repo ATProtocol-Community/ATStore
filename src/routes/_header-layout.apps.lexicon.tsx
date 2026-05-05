@@ -36,7 +36,7 @@ import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import {
-  formatOAuthLexiconKeyHeadline,
+  formatOAuthLexiconKeyClusterStyleHeadline,
   oauthLexiconKeyKindLabel,
   parseOAuthLexiconKey,
 } from "../lib/oauth-scope-lexicon-keys";
@@ -146,12 +146,26 @@ export const Route = createFileRoute("/_header-layout/apps/lexicon")({
       }),
     );
     const parsed = parseOAuthLexiconKey(key);
-    const headline = formatOAuthLexiconKeyHeadline(key);
+    const headline = formatOAuthLexiconKeyClusterStyleHeadline(key);
     const kind = parsed ? oauthLexiconKeyKindLabel(parsed.kind) : "Lexicon";
+    const nsid = parsed?.nsid?.trim() ?? "";
+    const lexiconRecordDescription =
+      nsid.length > 0
+        ? await context.queryClient.ensureQueryData(
+            directoryListingApi.getLexiconRecordMainDescriptionForNsidQueryOptions(
+              nsid,
+            ),
+          )
+        : null;
+    const baseOg = `Verified apps that advertise overlapping OAuth scope vocabulary for ${headline} (${kind.toLowerCase()}). ${String(data.count)} listing${data.count === 1 ? "" : "s"}.`;
+    const ogDescription = lexiconRecordDescription?.trim()
+      ? `${lexiconRecordDescription.trim()} ${baseOg}`
+      : baseOg;
     return {
       key,
+      lexiconRecordDescription,
       ogTitle: `${headline} · ${kind} | at-store`,
-      ogDescription: `Verified apps that advertise overlapping OAuth scope vocabulary for ${headline} (${kind.toLowerCase()}). ${String(data.count)} listing${data.count === 1 ? "" : "s"}.`,
+      ogDescription,
     };
   },
   head: ({ loaderData }) =>
@@ -167,7 +181,7 @@ export const Route = createFileRoute("/_header-layout/apps/lexicon")({
 function AppsLexiconPage() {
   const search = Route.useSearch();
   const router = useRouter();
-  const { key } = Route.useLoaderData();
+  const { key, lexiconRecordDescription } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getAppsByLexiconPageQueryOptions({
       key,
@@ -177,7 +191,11 @@ function AppsLexiconPage() {
 
   const parsed = parseOAuthLexiconKey(key);
   const kindLabel = parsed ? oauthLexiconKeyKindLabel(parsed.kind) : "Lexicon";
-  const headline = formatOAuthLexiconKeyHeadline(key);
+  const headline = formatOAuthLexiconKeyClusterStyleHeadline(key);
+  const heroDescription =
+    lexiconRecordDescription != null && lexiconRecordDescription.trim() !== ""
+      ? lexiconRecordDescription.trim()
+      : `These verified apps include ${headline} in their published OAuth scope vocabulary, so they may interoperate with the same AT Protocol permissions layer.`;
 
   return (
     <Page.Root variant="large" style={styles.page}>
@@ -193,7 +211,7 @@ function AppsLexiconPage() {
           <AppTagHero
             eyebrow={kindLabel}
             title={headline}
-            description={`These verified apps include ${headline} in their published OAuth scope vocabulary, so they may interoperate with the same AT Protocol permissions layer.`}
+            description={heroDescription}
             action={
               <Select
                 aria-label="Sort apps in lexicon collection"

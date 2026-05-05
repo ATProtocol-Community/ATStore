@@ -28,6 +28,7 @@ import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
   horizontalSpace,
+  size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, SmallBody } from "../design-system/typography";
@@ -40,7 +41,7 @@ import {
 import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import {
-  formatOAuthLexiconKeyHeadline,
+  formatOAuthLexiconKeyClusterStyleHeadline,
   oauthLexiconKeyKindLabel,
   parseOAuthLexiconKey,
 } from "../lib/oauth-scope-lexicon-keys";
@@ -119,6 +120,13 @@ const styles = stylex.create({
     gap: gap["lg"],
     maxWidth: "40rem",
   },
+  lexiconBadgeGrow: {
+    alignItems: "center",
+    height: "auto",
+    minHeight: size.lg,
+    paddingBottom: verticalSpace.xs,
+    paddingTop: verticalSpace.xs,
+  },
   badgeRow: {
     gap: gap.md,
     alignItems: "center",
@@ -137,17 +145,17 @@ const styles = stylex.create({
     alignItems: "center",
     display: "flex",
     maxWidth: {
-      default: "18rem",
-      [breakpoints.sm]: "22rem",
+      default: "24rem",
+      [breakpoints.sm]: "36rem",
     },
     minWidth: 0,
   },
   badgeLabel: {
-    overflow: "hidden",
+    display: "block",
     flexShrink: 1,
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     minWidth: 0,
+    whiteSpace: "normal",
+    wordBreak: "break-word",
   },
   badgeCount: {
     flexShrink: 0,
@@ -346,8 +354,8 @@ function LexiconMatchBadge({
 }) {
   const parsed = parseOAuthLexiconKey(lexiconKey);
   const kindLabel = parsed ? oauthLexiconKeyKindLabel(parsed.kind) : "Lexicon";
-  const headline = formatOAuthLexiconKeyHeadline(lexiconKey);
-  const title = `${kindLabel}: ${lexiconKey} — ${String(otherAppCount)} other app${otherAppCount === 1 ? "" : "s"}`;
+  const headline = formatOAuthLexiconKeyClusterStyleHeadline(lexiconKey);
+  const title = `${headline} — ${String(otherAppCount)} other app${otherAppCount === 1 ? "" : "s"} (${kindLabel}: ${lexiconKey})`;
 
   return (
     <RouterLink
@@ -357,7 +365,7 @@ function LexiconMatchBadge({
       aria-label={title}
       {...stylex.props(styles.badgeLink)}
     >
-      <Badge size="sm" variant="default">
+      <Badge size="sm" variant="default" style={styles.lexiconBadgeGrow}>
         <span {...stylex.props(styles.badgeInner)}>
           <span {...stylex.props(styles.badgeLabel)}>{headline}</span>
           <span {...stylex.props(styles.badgeCount)}>{otherAppCount}</span>

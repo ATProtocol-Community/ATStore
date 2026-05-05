@@ -28,6 +28,7 @@ import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
   horizontalSpace,
+  size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, SmallBody } from "../design-system/typography";
@@ -39,6 +40,7 @@ import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import {
   formatLexiconClusterPageTitle,
   formatOAuthLexiconKeyClusterStyleHeadline,
+  parseOAuthLexiconKey,
   tryParseLexiconClusterSearchParam,
 } from "../lib/oauth-scope-lexicon-keys";
 import { buildRouteOgMeta } from "../lib/og-meta";
@@ -128,14 +130,20 @@ const styles = stylex.create({
     display: "block",
     maxWidth: "100%",
   },
+  lexiconBadgeGrow: {
+    alignItems: "center",
+    height: "auto",
+    minHeight: size.lg,
+    paddingBottom: verticalSpace.xs,
+    paddingTop: verticalSpace.xs,
+  },
   badgeLabel: {
-    overflow: "hidden",
     display: "block",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    whiteSpace: "normal",
+    wordBreak: "break-word",
     maxWidth: {
-      default: "18rem",
-      [breakpoints.sm]: "22rem",
+      default: "24rem",
+      [breakpoints.sm]: "36rem",
     },
     minWidth: 0,
   },
@@ -179,10 +187,30 @@ export const Route = createFileRoute("/_header-layout/apps/lexicon-set")({
     );
     const titleSuffix = formatLexiconClusterPageTitle(data.keys);
 
+    let lexiconRecordDescription: string | null = null;
+    if (data.keys.length === 1) {
+      const onlyKey = data.keys[0];
+      const parsed = onlyKey ? parseOAuthLexiconKey(onlyKey) : null;
+      const nsid = parsed?.nsid?.trim() ?? "";
+      if (nsid.length > 0) {
+        lexiconRecordDescription = await context.queryClient.ensureQueryData(
+          directoryListingApi.getLexiconRecordMainDescriptionForNsidQueryOptions(
+            nsid,
+          ),
+        );
+      }
+    }
+
+    const baseOg = `Verified apps that advertise all of these repo record lexicons in OAuth scopes (${String(data.count)} listing${data.count === 1 ? "" : "s"}): ${keyLabels.join(", ")}.`;
+    const ogDescription = lexiconRecordDescription?.trim()
+      ? `${lexiconRecordDescription.trim()} ${baseOg}`
+      : baseOg;
+
     return {
       clusterKeys: data.keys,
+      lexiconRecordDescription,
       ogTitle: `${titleSuffix} · shared OAuth lexicons | at-store`,
-      ogDescription: `Verified apps that advertise all of these repo record lexicons in OAuth scopes (${String(data.count)} listing${data.count === 1 ? "" : "s"}): ${keyLabels.join(", ")}.`,
+      ogDescription,
     };
   },
   head: ({ loaderData }) =>
@@ -198,7 +226,7 @@ export const Route = createFileRoute("/_header-layout/apps/lexicon-set")({
 function AppsLexiconSetPage() {
   const search = Route.useSearch();
   const router = useRouter();
-  const { clusterKeys } = Route.useLoaderData();
+  const { clusterKeys, lexiconRecordDescription } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getAppsByLexiconClusterPageQueryOptions({
       keys: clusterKeys,
@@ -211,6 +239,15 @@ function AppsLexiconSetPage() {
   }
 
   const gridKey = data.keys.join("\u001F");
+
+  const defaultHeroDescription =
+    "These apps use the same data sources, so they can interoperate with each other.";
+  const heroDescription =
+    data.keys.length === 1 &&
+    lexiconRecordDescription != null &&
+    lexiconRecordDescription.trim() !== ""
+      ? lexiconRecordDescription.trim()
+      : defaultHeroDescription;
 
   return (
     <Page.Root variant="large" style={styles.page}>
@@ -226,7 +263,7 @@ function AppsLexiconSetPage() {
           <AppTagHero
             eyebrow="Compatible data"
             title={formatLexiconClusterPageTitle(data.keys)}
-            description="These apps use the same data sources, so they can interoperate with each other."
+            description={heroDescription}
             action={
               <Select
                 aria-label="Sort apps in lexicon cluster"
@@ -268,7 +305,11 @@ function AppsLexiconSetPage() {
                     aria-label={`Browse apps for ${label}`}
                     {...stylex.props(styles.badgeLink)}
                   >
-                    <Badge size="sm" variant="default">
+                    <Badge
+                      size="sm"
+                      variant="default"
+                      style={styles.lexiconBadgeGrow}
+                    >
                       <span {...stylex.props(styles.badgeLabel)}>{label}</span>
                     </Badge>
                   </RouterLink>

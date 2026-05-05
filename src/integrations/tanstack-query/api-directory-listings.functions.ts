@@ -2554,6 +2554,28 @@ function getAppsByLexiconPageQueryOptions(
   });
 }
 
+const getLexiconRecordMainDescriptionForNsidInput = z.object({
+  nsid: z.string().min(1),
+});
+
+const getLexiconRecordMainDescriptionForNsid = createServerFn({
+  method: "GET",
+})
+  .inputValidator(getLexiconRecordMainDescriptionForNsidInput)
+  .handler(async ({ data }) => {
+    const { nsid } = getLexiconRecordMainDescriptionForNsidInput.parse(data);
+    const map = await loadLexiconRecordDescriptionsForWorkspace([nsid]);
+    return map[nsid] ?? null;
+  });
+
+function getLexiconRecordMainDescriptionForNsidQueryOptions(nsid: string) {
+  return queryOptions({
+    queryKey: ["lexiconRecordMainDescription", nsid],
+    queryFn: async () =>
+      getLexiconRecordMainDescriptionForNsid({ data: { nsid } }),
+  });
+}
+
 const getAppsByLexiconClusterPageInput = z.object({
   keys: z.array(z.string().min(1)).min(1).max(48),
   sort: listingSortInput,
@@ -7258,6 +7280,7 @@ export const directoryListingApi = {
   getAppsOAuthLexiconSummariesQueryOptions,
   getAppsByLexiconPage,
   getAppsByLexiconPageQueryOptions,
+  getLexiconRecordMainDescriptionForNsidQueryOptions,
   getAppsByLexiconClusterPage,
   getAppsByLexiconClusterPageQueryOptions,
   getRelatedAppsBySharedLexiconKeys,

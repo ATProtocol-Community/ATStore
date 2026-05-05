@@ -269,7 +269,7 @@ export function oauthLexiconKeyKindLabel(kind: OAuthLexiconKeyKind): string {
       return "Permission set";
     }
     case "repo": {
-      return "Repo records";
+      return "Data type";
     }
     case "rpc": {
       return "RPC";
