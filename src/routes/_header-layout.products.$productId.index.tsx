@@ -131,6 +131,20 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
         limit: 3,
       }),
     );
+    const relatedAppsByOAuthLexicon = await context.queryClient.ensureQueryData(
+      directoryListingApi.getRelatedAppsBySharedLexiconKeysQueryOptions({
+        listingId: listing.id,
+        limit: 6,
+      }),
+    );
+    if (relatedAppsByOAuthLexicon.listings.length > 0) {
+      await context.queryClient.ensureQueryData(
+        directoryListingApi.getLexiconCompatibleAppsPageQueryOptions({
+          listingId: listing.id,
+          sort: "popular",
+        }),
+      );
+    }
     const categoryGroup = listing.categorySlug
       ? await context.queryClient.ensureQueryData(
           directoryListingApi.getDirectoryCategoryPageQueryOptions({
@@ -218,6 +232,7 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
       ecosystemRootId,
       listing,
       relatedProducts,
+      relatedAppsByOAuthLexicon,
       relatedCategoryListings,
       listingReviews,
       listingProductUpdates,
@@ -703,6 +718,7 @@ function ProductPage() {
     ecosystemRootId,
     listing,
     relatedProducts,
+    relatedAppsByOAuthLexicon,
     relatedCategoryListings,
     listingReviews,
     listingProductUpdates,
@@ -726,12 +742,20 @@ function ProductPage() {
     listingProductUpdates.length > PRODUCT_UPDATES_PREVIEW_COUNT &&
     productUpdatesPublicationUrl != null &&
     productUpdatesPublicationUrl.length > 0;
-  const relatedSectionTitle =
-    relatedCategoryListings.length > 0 ? "More in this category" : "More Apps";
-  const relatedSectionListings =
+  const compatibleRelatedIds = new Set(
+    relatedAppsByOAuthLexicon.listings.map((l) => l.id),
+  );
+  const relatedSectionListingsBase =
     relatedCategoryListings.length > 0
       ? relatedCategoryListings
       : relatedProducts;
+  const relatedSectionListings = relatedSectionListingsBase.filter(
+    (l) => !compatibleRelatedIds.has(l.id),
+  );
+  const relatedSectionTitle =
+    relatedCategoryListings.length > 0
+      ? "More in this category"
+      : "Similar apps";
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
@@ -1093,6 +1117,35 @@ function ProductPage() {
           </Flex>
         ) : null}
 
+        {relatedAppsByOAuthLexicon.listings.length > 0 ? (
+          <Flex direction="column" gap="3xl" style={styles.relatedSection}>
+            <Flex
+              align="center"
+              justify="between"
+              gap="2xl"
+              wrap
+              style={styles.reviewsHeader}
+            >
+              <Text size="2xl" weight="semibold" style={styles.header}>
+                Compatible apps
+              </Text>
+              <ButtonLink
+                to="/products/$productId/lexicon-compatible"
+                params={{ productId: productSlug }}
+                search={{ sort: "popular" }}
+                variant="secondary"
+              >
+                View all
+              </ButtonLink>
+            </Flex>
+            <Grid style={styles.relatedGrid}>
+              {relatedAppsByOAuthLexicon.listings.map((lexListing) => (
+                <RelatedProductCard key={lexListing.id} listing={lexListing} />
+              ))}
+            </Grid>
+          </Flex>
+        ) : null}
+
         {relatedSectionListings.length > 0 ? (
           <RelatedProductsSection
             listings={relatedSectionListings}
@@ -1401,7 +1454,7 @@ function ProductEcosystemSection({
 
 function RelatedProductsSection({
   listings,
-  title = "More Apps",
+  title = "Similar apps",
 }: {
   listings: Array<DirectoryListingCard>;
   title?: string;

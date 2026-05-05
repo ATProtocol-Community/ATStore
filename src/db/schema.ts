@@ -1,4 +1,5 @@
 import type { ListingLink } from "#/lib/atproto/listing-record";
+import type { DirectoryOAuthLexiconHubData } from "#/lib/oauth-lexicon-hub.types";
 import type { OAuthAuthProbeReport } from "#/lib/oauth-listing-auth-probe";
 
 import { relations, sql } from "drizzle-orm";
@@ -674,6 +675,15 @@ export const storeListingOAuthProbes = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    /**
+     * Normalized lexicon identifiers from {@link oauthScopesDistinct} and from
+     * resolved `include:` permission-set checklists in {@link reportJson}
+     * (`repo:…` / `rpc:…` NSIDs inside bundles). See `extractOAuthLexiconKeysForStorefrontProbe`.
+     */
+    oauthLexiconKeys: text("oauth_lexicon_keys")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     publishesAtprotoScope: boolean("publishes_atproto_scope"),
 
     clientScopeRawLine: text("client_scope_raw_line"),
@@ -697,8 +707,22 @@ export const storeListingOAuthProbes = pgTable(
   (table) => [
     index("store_listing_oauth_probes_probed_at_idx").on(table.probedAt),
     index("store_listing_oauth_probes_slug_idx").on(table.slug),
+    index("store_listing_oauth_probes_oauth_lexicon_keys_idx").using(
+      "gin",
+      table.oauthLexiconKeys,
+    ),
   ],
 );
+
+/**
+ * Precomputed payload for `/apps/lexicons` (clusters + resolved lexicon descriptions).
+ * Rebuilt by `scripts/sync-listing-oauth-probes.ts` after OAuth probes complete, or manually.
+ */
+export const oauthLexiconHubSnapshot = pgTable("oauth_lexicon_hub_snapshot", {
+  singletonKey: text("singleton_key").primaryKey().notNull(),
+  payload: jsonb("payload").$type<DirectoryOAuthLexiconHubData>().notNull(),
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull(),
+});
 
 /** Ordered homepage hero slots managed from admin. */
 export const homePageHeroListings = pgTable(

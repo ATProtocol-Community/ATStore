@@ -80,6 +80,8 @@ function AppsAllPage() {
             <LinkLink to="/apps/all" search={{ sort: "popular" }}>
               All apps
             </LinkLink>
+
+            <LinkLink to="/apps/lexicons">OAuth lexicons</LinkLink>
           </Flex>
 
           <AppTagHero
