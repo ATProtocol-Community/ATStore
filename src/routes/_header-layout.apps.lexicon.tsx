@@ -5,17 +5,14 @@ import {
   createFileRoute,
   createLink,
   notFound,
+  redirect,
   useRouter,
 } from "@tanstack/react-router";
 import { StarRating } from "#/design-system/star-rating";
 import { ChevronLeft } from "lucide-react";
 
-import type {
-  DirectoryAppTagGroup,
-  DirectoryListingCard,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
-import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
 import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
@@ -23,7 +20,6 @@ import { HeroImage } from "../components/HeroImage";
 import { Avatar } from "../design-system/avatar";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { Select, SelectItem } from "../design-system/select";
@@ -36,71 +32,21 @@ import {
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import {
-  formatAppTagCount,
-  formatAppTagLabel,
-  getAppTagDescription,
-} from "../lib/app-tag-metadata";
-import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
-import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
+import {
+  formatOAuthLexiconKeyHeadline,
+  oauthLexiconKeyKindLabel,
+  parseOAuthLexiconKey,
+} from "../lib/oauth-scope-lexicon-keys";
+import { buildRouteOgMeta } from "../lib/og-meta";
 
 const sortOptions = [
   { id: "popular", label: "Popular" },
   { id: "newest", label: "Newest" },
   { id: "alphabetical", label: "Alphabetical" },
 ] as const;
-
-export const Route = createFileRoute("/_header-layout/apps/$tag")({
-  validateSearch: (
-    search,
-  ): { sort: "popular" | "newest" | "alphabetical" } => ({
-    sort:
-      search.sort === "newest"
-        ? "newest"
-        : search.sort === "alphabetical"
-          ? "alphabetical"
-          : "popular",
-  }),
-  loaderDeps: ({ search }) => ({
-    sort: search.sort,
-  }),
-  loader: async ({ context, params, deps }) => {
-    const data = await context.queryClient.ensureQueryData(
-      directoryListingApi.getAppsByTagPageQueryOptions({
-        tag: params.tag,
-        sort: deps.sort,
-      }),
-    );
-
-    if (!data) {
-      throw notFound();
-    }
-
-    return {
-      tag: params.tag,
-      ogTitle: `${formatAppTagLabel(data.tag)} apps | at-store`,
-      ogDescription: getAppTagDescription(data.tag),
-      ogImage: buildAppTagOgImageUrl({
-        tag: data.tag,
-        label: formatAppTagLabel(data.tag),
-        kind: "App Tag",
-        count: data.count,
-      }),
-    };
-  },
-  head: ({ loaderData }) =>
-    buildRouteOgMeta({
-      title: loaderData?.ogTitle ?? "App tag | at-store",
-      description:
-        loaderData?.ogDescription ||
-        "Explore listings grouped under this app workflow tag.",
-      image: loaderData?.ogImage,
-    }),
-  component: AppsTagPage,
-});
 
 const LinkLink = createLink(Link);
 
@@ -143,7 +89,6 @@ const styles = stylex.create({
     height: "100%",
     width: "100%",
   },
-
   listingCardBody: {
     gap: gap["4xl"],
     position: "relative",
@@ -164,87 +109,112 @@ const styles = stylex.create({
     flexShrink: "1",
     minWidth: 0,
   },
-  relatedSection: {
-    gap: gap["5xl"],
-    paddingTop: verticalSpace["6xl"],
-  },
-  relatedHeader: {
-    maxWidth: "44rem",
-  },
-  relatedDescription: {
+  emptyState: {
+    gap: gap["lg"],
     maxWidth: "40rem",
-  },
-  relatedGrid: {
-    gap: gap["2xl"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.md]: "repeat(4, minmax(0, 1fr))",
-    },
   },
 });
 
-function AppsTagPage() {
+export const Route = createFileRoute("/_header-layout/apps/lexicon")({
+  validateSearch: (
+    search,
+  ): { key: string; sort: "popular" | "newest" | "alphabetical" } => ({
+    key: typeof search.key === "string" ? search.key : "",
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
+  }),
+  loaderDeps: ({ search }) => ({
+    key: search.key,
+    sort: search.sort,
+  }),
+  loader: async ({ context, deps }) => {
+    const key = deps.key.trim();
+    if (!key) {
+      throw redirect({ to: "/apps/lexicons" });
+    }
+    if (!parseOAuthLexiconKey(key)) {
+      throw notFound();
+    }
+    const data = await context.queryClient.ensureQueryData(
+      directoryListingApi.getAppsByLexiconPageQueryOptions({
+        key,
+        sort: deps.sort,
+      }),
+    );
+    const parsed = parseOAuthLexiconKey(key);
+    const headline = formatOAuthLexiconKeyHeadline(key);
+    const kind = parsed ? oauthLexiconKeyKindLabel(parsed.kind) : "Lexicon";
+    return {
+      key,
+      ogTitle: `${headline} · ${kind} | at-store`,
+      ogDescription: `Verified apps that advertise overlapping OAuth scope vocabulary for ${headline} (${kind.toLowerCase()}). ${String(data.count)} listing${data.count === 1 ? "" : "s"}.`,
+    };
+  },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "OAuth lexicon | at-store",
+      description:
+        loaderData?.ogDescription ||
+        "Explore apps grouped by overlapping OAuth lexicon identifiers.",
+    }),
+  component: AppsLexiconPage,
+});
+
+function AppsLexiconPage() {
   const search = Route.useSearch();
   const router = useRouter();
-  const { tag } = Route.useLoaderData();
+  const { key } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
-    directoryListingApi.getAppsByTagPageQueryOptions({
-      tag,
+    directoryListingApi.getAppsByLexiconPageQueryOptions({
+      key,
       sort: search.sort,
     }),
   );
-  const { data: allGroups } = useSuspenseQuery(
-    directoryListingApi.getAppsByTagQueryOptions,
-  );
 
-  if (!data) {
-    throw notFound();
-  }
-
-  const relatedTags = getRelatedAppTagGroups(data, allGroups);
+  const parsed = parseOAuthLexiconKey(key);
+  const kindLabel = parsed ? oauthLexiconKeyKindLabel(parsed.kind) : "Lexicon";
+  const headline = formatOAuthLexiconKeyHeadline(key);
 
   return (
     <Page.Root variant="large" style={styles.page}>
       <Flex direction="column" style={styles.pageContent}>
         <Flex direction="column" gap="4xl">
           <Flex gap="xl" style={styles.navLinks}>
-            <LinkLink to="/apps/tags">
+            <LinkLink to="/apps/lexicons">
               <ChevronLeft />
-              All tags
+              All lexicon collections
             </LinkLink>
-            <LinkLink to="/apps/lexicons">OAuth lexicons</LinkLink>
           </Flex>
 
           <AppTagHero
-            eyebrow={formatAppTagCount(data.count)}
-            title={formatAppTagLabel(data.tag)}
-            description={getAppTagDescription(data.tag)}
-            accent={getAppTagAccent(data.tag)}
-            emojis={[getAppTagEmoji(data.tag)]}
+            eyebrow={kindLabel}
+            title={headline}
+            description={`These verified apps include ${headline} in their published OAuth scope vocabulary, so they may interoperate with the same AT Protocol permissions layer.`}
             action={
               <Select
-                aria-label="Sort apps in tag"
+                aria-label="Sort apps in lexicon collection"
                 items={sortOptions}
                 placeholder="Sort apps"
                 size="lg"
                 style={styles.sortSelect}
                 value={search.sort}
                 variant="secondary"
-                onChange={(key) => {
+                onChange={(sortKey) => {
                   if (
-                    key !== "popular" &&
-                    key !== "newest" &&
-                    key !== "alphabetical"
+                    sortKey !== "popular" &&
+                    sortKey !== "newest" &&
+                    sortKey !== "alphabetical"
                   ) {
                     return;
                   }
 
                   void router.navigate({
-                    to: "/apps/$tag",
-                    params: { tag },
-                    search: { sort: key },
+                    to: "/apps/lexicon",
+                    search: { key, sort: sortKey },
                   });
                 }}
               >
@@ -254,24 +224,30 @@ function AppsTagPage() {
           />
         </Flex>
 
-        <FeaturedListingGrid
-          items={data.listings}
-          getKey={(listing) => `${data.tag}-${listing.id}`}
-          canFeature={(listing) => Boolean(listing.heroImageUrl)}
-          renderItem={(listing, { featured }) => (
-            <AppTagListingCard featured={featured} listing={listing} />
-          )}
-        />
-
-        {relatedTags.length > 0 ? (
-          <RelatedTagsSection groups={relatedTags} />
-        ) : null}
+        {data.listings.length > 0 ? (
+          <FeaturedListingGrid
+            items={data.listings}
+            getKey={(listing) => `${key}-${listing.id}`}
+            canFeature={(listing) => Boolean(listing.heroImageUrl)}
+            renderItem={(listing, { featured }) => (
+              <LexiconListingCard featured={featured} listing={listing} />
+            )}
+          />
+        ) : (
+          <Flex direction="column" style={styles.emptyState}>
+            <Body variant="secondary">
+              No verified app listings reference this lexicon key yet. Lexicon
+              keys are populated from storefront OAuth probes — try again after
+              the next sync, or pick another collection from the hub.
+            </Body>
+          </Flex>
+        )}
       </Flex>
     </Page.Root>
   );
 }
 
-function AppTagListingCard({
+function LexiconListingCard({
   listing,
   featured = false,
 }: {
@@ -335,62 +311,4 @@ function AppTagListingCard({
       )}
     </RouterLink>
   );
-}
-
-function RelatedTagsSection({
-  groups,
-}: {
-  groups: Array<DirectoryAppTagGroup>;
-}) {
-  return (
-    <Flex direction="column" style={styles.relatedSection}>
-      <Flex direction="column" gap="4xl" style={styles.relatedHeader}>
-        <Text size="3xl" weight="semibold">
-          Related tags to explore
-        </Text>
-        <Body variant="secondary" style={styles.relatedDescription}>
-          Explore adjacent workflows and neighboring collections that share apps
-          with this tag.
-        </Body>
-      </Flex>
-      <Grid style={styles.relatedGrid}>
-        {groups.map((group) => (
-          <AppTagCard key={group.tag} tag={group} />
-        ))}
-      </Grid>
-    </Flex>
-  );
-}
-
-function getRelatedAppTagGroups(
-  currentGroup: DirectoryAppTagGroup,
-  groups: Array<DirectoryAppTagGroup>,
-) {
-  const currentListingIds = new Set(
-    currentGroup.listings.map((listing) => listing.id),
-  );
-
-  return groups
-    .filter((group) => group.tag !== currentGroup.tag)
-    .toSorted((left, right) => {
-      const leftOverlap = left.listings.reduce(
-        (count, listing) => count + Number(currentListingIds.has(listing.id)),
-        0,
-      );
-      const rightOverlap = right.listings.reduce(
-        (count, listing) => count + Number(currentListingIds.has(listing.id)),
-        0,
-      );
-
-      if (rightOverlap !== leftOverlap) {
-        return rightOverlap - leftOverlap;
-      }
-
-      if (right.count !== left.count) {
-        return right.count - left.count;
-      }
-
-      return left.tag.localeCompare(right.tag);
-    })
-    .slice(0, 4);
 }

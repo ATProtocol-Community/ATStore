@@ -674,6 +674,15 @@ export const storeListingOAuthProbes = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    /**
+     * Normalized lexicon identifiers from {@link oauthScopesDistinct} and from
+     * resolved `include:` permission-set checklists in {@link reportJson}
+     * (`repo:…` / `rpc:…` NSIDs inside bundles). See `extractOAuthLexiconKeysForStorefrontProbe`.
+     */
+    oauthLexiconKeys: text("oauth_lexicon_keys")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     publishesAtprotoScope: boolean("publishes_atproto_scope"),
 
     clientScopeRawLine: text("client_scope_raw_line"),
@@ -697,6 +706,10 @@ export const storeListingOAuthProbes = pgTable(
   (table) => [
     index("store_listing_oauth_probes_probed_at_idx").on(table.probedAt),
     index("store_listing_oauth_probes_slug_idx").on(table.slug),
+    index("store_listing_oauth_probes_oauth_lexicon_keys_idx").using(
+      "gin",
+      table.oauthLexiconKeys,
+    ),
   ],
 );
 

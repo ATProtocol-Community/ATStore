@@ -55,6 +55,7 @@ import {
 } from "#/lib/bluesky-public-profile";
 import { bskyAppPostUrlFromAtUri } from "#/lib/bsky-app-urls";
 import { resolveGermDmHrefFromRecordJson } from "#/lib/germ-network-dm";
+import { loadLexiconRecordDescriptionsForWorkspace } from "#/lib/lexicon-local-record-description";
 import {
   httpsListingImageUrlOrNull,
   publicMediaUrlOrNull,
@@ -63,7 +64,14 @@ import {
   oauthClientDistinctTokensFromPublishedScopeLine,
   probeOAuthListingAuth,
 } from "#/lib/oauth-listing-auth-probe";
-import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
+import {
+  compareOAuthLexiconKeysForDisplayOrder,
+  extractOAuthLexiconKeysForStorefrontProbe,
+  filterLexiconKeysForCrossAppMatching,
+  isRepoLexiconKeyForLexiconHub,
+  normalizeLexiconClusterKeysForHub,
+  parseOAuthLexiconKey,
+} from "#/lib/oauth-scope-lexicon-keys";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
   adminFnMiddleware,
@@ -71,6 +79,7 @@ import {
 } from "#/middleware/auth";
 import {
   and,
+  arrayOverlaps,
   asc,
   count,
   desc,
@@ -124,6 +133,7 @@ import {
 } from "../../lib/listing-copy";
 import { buildFallbackOgImageUrl } from "../../lib/og-meta";
 import { dbMiddleware } from "./db-middleware";
+import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility.ts";
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -342,6 +352,52 @@ export interface DirectoryListingOAuthProbe {
   hasAuthorizationServerMetadata: boolean;
   successfulClientMetadataUrl: string | null;
   scopeHumanReadable: Array<SummaryScopeHumanRow>;
+  /** Normalized lexicon keys derived from OAuth scopes (`include:…`, `repo:…`, `rpc:…`). */
+  oauthLexiconKeys: Array<string>;
+}
+
+/**
+ * Hub row for /apps/lexicons — a cluster of repo collection NSIDs that appear
+ * on exactly the same set of listings (≥2 apps). `include:` and `rpc:` are omitted.
+ */
+export interface DirectoryOAuthLexiconClusterSummary {
+  keys: Array<string>;
+  /** Number of app listings in this cluster (same for every key in `keys`). */
+  appCount: number;
+  /**
+   * Store listing IDs in this cluster — the same sorted set for every key in `keys`
+   * (used to dedupe apps across clusters when grouping by lexicon producer).
+   */
+  listingIds: Array<string>;
+}
+
+/** Hub payload for `/apps/lexicons` — clusters plus optional local lexicon descriptions. */
+export interface DirectoryOAuthLexiconHubData {
+  clusters: Array<DirectoryOAuthLexiconClusterSummary>;
+  /** Repo NSID (no `repo:` prefix) -> `defs.main.description` when present under `lexicons/`. */
+  descriptionsByRepoNsid: Record<string, string>;
+}
+
+export interface DirectoryOAuthLexiconClusterPagePayload {
+  keys: Array<string>;
+  count: number;
+  listings: Array<DirectoryListingCard>;
+}
+
+export interface RelatedAppsByOAuthLexiconPayload {
+  listings: Array<DirectoryListingCard>;
+}
+
+/** Full list of public app listings that share any OAuth lexicon key with the source listing. */
+export interface LexiconCompatibleAppsPagePayload {
+  /**
+   * Repo record collection lexicon keys from this listing’s OAuth probe (`repo:…`
+   * only—permission sets and RPC keys are omitted). Each entry counts **other**
+   * public app listings that declare that key. Zero-match entries are omitted.
+   */
+  matchLexiconEntries: Array<{ key: string; otherAppCount: number }>;
+  count: number;
+  listings: Array<DirectoryListingCard>;
 }
 
 export interface DirectoryListingReviewReply {
@@ -1009,6 +1065,7 @@ async function fetchStoreListingOAuthProbe(
       hasAuthorizationServerMetadata: probes.hasAuthorizationServerMetadata,
       successfulClientMetadataUrl: probes.successfulClientMetadataUrl,
       reportJson: probes.reportJson,
+      oauthLexiconKeys: probes.oauthLexiconKeys,
     })
     .from(probes)
     .where(eq(probes.storeListingId, listingId))
@@ -1063,6 +1120,7 @@ async function fetchStoreListingOAuthProbe(
     hasAuthorizationServerMetadata: row.hasAuthorizationServerMetadata,
     successfulClientMetadataUrl: row.successfulClientMetadataUrl,
     scopeHumanReadable,
+    oauthLexiconKeys: row.oauthLexiconKeys ?? [],
   };
 }
 
@@ -1153,6 +1211,7 @@ const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
         probedUrl: null,
         probedAt: now,
         oauthScopesDistinct: [],
+        oauthLexiconKeys: [],
         transitionalScopes: [],
         publishesAtprotoScope: null,
         clientScopeRawLine: null,
@@ -1187,6 +1246,10 @@ const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
         probedUrl: report.inputUrl,
         probedAt: now,
         oauthScopesDistinct: report.summary.oauthScopesDistinct,
+        oauthLexiconKeys: extractOAuthLexiconKeysForStorefrontProbe({
+          oauthScopesDistinct: report.summary.oauthScopesDistinct,
+          scopeHumanReadable: report.summary.scopeHumanReadable,
+        }),
         transitionalScopes: report.summary.transitionalScopesPresent,
         publishesAtprotoScope: report.summary.publishesAtprotoAs,
         clientScopeRawLine: report.summary.clientScopeRawLine,
@@ -1209,6 +1272,7 @@ const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
         probedUrl: storefrontUrl,
         probedAt: now,
         oauthScopesDistinct: [],
+        oauthLexiconKeys: [],
         transitionalScopes: [],
         publishesAtprotoScope: null,
         clientScopeRawLine: null,
@@ -2345,6 +2409,412 @@ function getAppsByTagPageQueryOptions(
   return queryOptions({
     queryKey: ["storeListings", "appsByTagPage", normalizedInput],
     queryFn: async () => getAppsByTagPage({ data: normalizedInput }),
+  });
+}
+
+const getAppsOAuthLexiconSummaries = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const list = context.schema.storeListings;
+    const probe = context.schema.storeListingOAuthProbes;
+
+    const rows = await context.db
+      .select({ id: list.id, keys: probe.oauthLexiconKeys })
+      .from(list)
+      .innerJoin(probe, eq(probe.storeListingId, list.id))
+      .where(
+        and(
+          listingPublicWhere(list),
+          sqlCategorySlugsMatchesLike(list.categorySlugs, "apps/%"),
+          sql`cardinality(${probe.oauthLexiconKeys}) > 0`,
+        ),
+      );
+
+    const keyToListings = new Map<string, Set<string>>();
+    for (const row of rows) {
+      for (const k of row.keys) {
+        if (!isRepoLexiconKeyForLexiconHub(k)) continue;
+        let set = keyToListings.get(k);
+        if (!set) {
+          set = new Set();
+          keyToListings.set(k, set);
+        }
+        set.add(row.id);
+      }
+    }
+
+    const clusterMap = new Map<
+      string,
+      { keys: Array<string>; appCount: number; listingIds: Array<string> }
+    >();
+    for (const [key, listingSet] of keyToListings) {
+      if (listingSet.size < 2) continue;
+      const sig = [...listingSet].toSorted().join("\u001F");
+      let entry = clusterMap.get(sig);
+      if (!entry) {
+        entry = {
+          keys: [],
+          appCount: listingSet.size,
+          listingIds: [...listingSet].toSorted(),
+        };
+        clusterMap.set(sig, entry);
+      }
+      entry.keys.push(key);
+    }
+
+    const clustersUnsorted = [...clusterMap.values()].map(
+      (row): DirectoryOAuthLexiconClusterSummary => ({
+        keys: row.keys.toSorted(compareOAuthLexiconKeysForDisplayOrder),
+        appCount: row.appCount,
+        listingIds: row.listingIds,
+      }),
+    );
+
+    const clusters = clustersUnsorted.toSorted((a, b) => {
+      if (b.appCount !== a.appCount) return b.appCount - a.appCount;
+      const ak = a.keys[0] ?? "";
+      const bk = b.keys[0] ?? "";
+      return compareOAuthLexiconKeysForDisplayOrder(ak, bk);
+    });
+
+    const repoNsids = new Set<string>();
+    for (const c of clusters) {
+      for (const k of c.keys) {
+        const p = parseOAuthLexiconKey(k);
+        if (p?.kind === "repo" && p.nsid) {
+          repoNsids.add(p.nsid);
+        }
+      }
+    }
+    const descriptionsByRepoNsid =
+      await loadLexiconRecordDescriptionsForWorkspace([...repoNsids]);
+
+    return {
+      clusters,
+      descriptionsByRepoNsid,
+    } satisfies DirectoryOAuthLexiconHubData;
+  });
+
+const getAppsOAuthLexiconSummariesQueryOptions = queryOptions({
+  queryKey: ["storeListings", "appsOAuthLexiconSummaries"],
+  queryFn: async () => getAppsOAuthLexiconSummaries(),
+});
+
+const getAppsByLexiconPageInput = z.object({
+  key: z.string().min(1),
+  sort: listingSortInput,
+});
+
+const getAppsByLexiconPage = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getAppsByLexiconPageInput)
+  .handler(async ({ data, context }) => {
+    const input = getAppsByLexiconPageInput.parse(data);
+    const table = context.schema.storeListings;
+    const probe = context.schema.storeListingOAuthProbes;
+
+    const rows = await context.db
+      .select({
+        ...getListingSelect(table),
+        updatedAt: table.updatedAt,
+        createdAt: table.createdAt,
+      })
+      .from(table)
+      .innerJoin(probe, eq(probe.storeListingId, table.id))
+      .where(
+        and(
+          listingPublicWhere(table),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "apps/%"),
+          arrayOverlaps(probe.oauthLexiconKeys, [input.key]),
+        ),
+      )
+      .orderBy(
+        ...(input.sort === "newest"
+          ? [desc(table.createdAt)]
+          : input.sort === "alphabetical"
+            ? [asc(table.name)]
+            : orderByPopularListingSort(table)),
+      );
+
+    return {
+      key: input.key,
+      count: rows.length,
+      listings: rows.map((row) => toListingCard(row)),
+    };
+  });
+
+function getAppsByLexiconPageQueryOptions(
+  input: z.input<typeof getAppsByLexiconPageInput>,
+) {
+  const normalizedInput = getAppsByLexiconPageInput.parse(input);
+
+  return queryOptions({
+    queryKey: ["storeListings", "appsByLexiconPage", normalizedInput],
+    queryFn: async () => getAppsByLexiconPage({ data: normalizedInput }),
+  });
+}
+
+const getAppsByLexiconClusterPageInput = z.object({
+  keys: z.array(z.string().min(1)).min(1).max(48),
+  sort: listingSortInput,
+});
+
+const getAppsByLexiconClusterPage = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getAppsByLexiconClusterPageInput)
+  .handler(async ({ data, context }) => {
+    const input = getAppsByLexiconClusterPageInput.parse(data);
+    const normalizedKeys = normalizeLexiconClusterKeysForHub(input.keys);
+    if (normalizedKeys.length === 0) {
+      return null;
+    }
+
+    const table = context.schema.storeListings;
+    const probe = context.schema.storeListingOAuthProbes;
+
+    const overlapPredicates = normalizedKeys.map((k) =>
+      arrayOverlaps(probe.oauthLexiconKeys, [k]),
+    );
+
+    const rows = await context.db
+      .select({
+        ...getListingSelect(table),
+        updatedAt: table.updatedAt,
+        createdAt: table.createdAt,
+      })
+      .from(table)
+      .innerJoin(probe, eq(probe.storeListingId, table.id))
+      .where(
+        and(
+          listingPublicWhere(table),
+          sqlCategorySlugsMatchesLike(table.categorySlugs, "apps/%"),
+          ...overlapPredicates,
+        ),
+      )
+      .orderBy(
+        ...(input.sort === "newest"
+          ? [desc(table.createdAt)]
+          : input.sort === "alphabetical"
+            ? [asc(table.name)]
+            : orderByPopularListingSort(table)),
+      );
+
+    return {
+      keys: normalizedKeys,
+      count: rows.length,
+      listings: rows.map((row) => toListingCard(row)),
+    } satisfies DirectoryOAuthLexiconClusterPagePayload;
+  });
+
+function getAppsByLexiconClusterPageQueryOptions(
+  input: z.input<typeof getAppsByLexiconClusterPageInput>,
+) {
+  const normalizedInput = getAppsByLexiconClusterPageInput.parse(input);
+
+  return queryOptions({
+    queryKey: ["storeListings", "appsByLexiconClusterPage", normalizedInput],
+    queryFn: async () => getAppsByLexiconClusterPage({ data: normalizedInput }),
+  });
+}
+
+const OAUTH_LEXICON_COMPATIBLE_APPS_PAGE_LIMIT = 250;
+
+async function loadCrossAppMatchingOAuthLexiconKeysForListing(
+  context: { db: Database; schema: typeof dbSchema },
+  listingId: string,
+): Promise<Array<string> | null> {
+  const listTable = context.schema.storeListings;
+  const probeTable = context.schema.storeListingOAuthProbes;
+
+  const [[probeRow], [listingRow]] = await Promise.all([
+    context.db
+      .select({
+        keys: probeTable.oauthLexiconKeys,
+        oauthScopesDistinct: probeTable.oauthScopesDistinct,
+        reportJson: probeTable.reportJson,
+      })
+      .from(probeTable)
+      .where(eq(probeTable.storeListingId, listingId))
+      .limit(1),
+    context.db
+      .select({ categorySlugs: listTable.categorySlugs })
+      .from(listTable)
+      .where(eq(listTable.id, listingId))
+      .limit(1),
+  ]);
+
+  const keysRaw =
+    probeRow && probeRow.keys.length > 0
+      ? probeRow.keys
+      : probeRow
+        ? extractOAuthLexiconKeysForStorefrontProbe({
+            oauthScopesDistinct: probeRow.oauthScopesDistinct ?? [],
+            scopeHumanReadable:
+              probeRow.reportJson?.summary?.scopeHumanReadable,
+          })
+        : [];
+
+  const isBlueskyPlatformListing =
+    primaryCategorySlug(listingRow?.categorySlugs ?? []) === "apps/bluesky";
+
+  const keys = filterLexiconKeysForCrossAppMatching(keysRaw, {
+    isBlueskyPlatformListing,
+  });
+
+  return keys.length > 0 ? keys : null;
+}
+
+const getRelatedAppsBySharedLexiconKeysInput = z.object({
+  listingId: z.string().uuid(),
+  limit: z.number().int().min(1).max(24).optional().default(6),
+});
+
+const getRelatedAppsBySharedLexiconKeys = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getRelatedAppsBySharedLexiconKeysInput)
+  .handler(async ({ data, context }) => {
+    const input = getRelatedAppsBySharedLexiconKeysInput.parse(data);
+    const listTable = context.schema.storeListings;
+    const probeTable = context.schema.storeListingOAuthProbes;
+
+    const keys = await loadCrossAppMatchingOAuthLexiconKeysForListing(
+      context,
+      input.listingId,
+    );
+
+    if (keys == null) {
+      return {
+        listings: [],
+      } satisfies RelatedAppsByOAuthLexiconPayload;
+    }
+
+    /** Require materialized keys so overlap queries stay index-friendly. */
+    const candidateRows = await context.db
+      .select(getListingSelect(listTable))
+      .from(listTable)
+      .innerJoin(probeTable, eq(probeTable.storeListingId, listTable.id))
+      .where(
+        and(
+          listingPublicWhere(listTable),
+          sqlCategorySlugsMatchesLike(listTable.categorySlugs, "apps/%"),
+          ne(listTable.id, input.listingId),
+          sql`cardinality(${probeTable.oauthLexiconKeys}) > 0`,
+          arrayOverlaps(probeTable.oauthLexiconKeys, keys),
+        ),
+      )
+      .orderBy(...orderByPopularListingSort(listTable))
+      .limit(input.limit);
+
+    return {
+      listings: candidateRows.map((row) => toListingCard(row)),
+    } satisfies RelatedAppsByOAuthLexiconPayload;
+  });
+
+function getRelatedAppsBySharedLexiconKeysQueryOptions(
+  input: z.input<typeof getRelatedAppsBySharedLexiconKeysInput>,
+) {
+  const normalizedInput = getRelatedAppsBySharedLexiconKeysInput.parse(input);
+
+  return queryOptions({
+    queryKey: ["storeListings", "relatedAppsByLexicon", normalizedInput],
+    queryFn: async () =>
+      getRelatedAppsBySharedLexiconKeys({ data: normalizedInput }),
+  });
+}
+
+const getLexiconCompatibleAppsPageInput = z.object({
+  listingId: z.string().uuid(),
+  sort: listingSortInput,
+});
+
+const getLexiconCompatibleAppsPage = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getLexiconCompatibleAppsPageInput)
+  .handler(async ({ data, context }) => {
+    const input = getLexiconCompatibleAppsPageInput.parse(data);
+    const listTable = context.schema.storeListings;
+    const probeTable = context.schema.storeListingOAuthProbes;
+
+    const keys = await loadCrossAppMatchingOAuthLexiconKeysForListing(
+      context,
+      input.listingId,
+    );
+
+    if (keys == null) {
+      return null;
+    }
+
+    const matchLexiconKeys = keys.toSorted(
+      compareOAuthLexiconKeysForDisplayOrder,
+    );
+
+    /** Badge list: repo collection NSIDs only (omit `include:` / `rpc:` keys). */
+    const badgeLexiconKeys = matchLexiconKeys.filter(
+      (k) => parseOAuthLexiconKey(k)?.kind === "repo",
+    );
+
+    const overlapsOneKeyPredicate = (k: string) =>
+      and(
+        listingPublicWhere(listTable),
+        sqlCategorySlugsMatchesLike(listTable.categorySlugs, "apps/%"),
+        ne(listTable.id, input.listingId),
+        sql`cardinality(${probeTable.oauthLexiconKeys}) > 0`,
+        arrayOverlaps(probeTable.oauthLexiconKeys, [k]),
+      );
+
+    const allEntries = await Promise.all(
+      badgeLexiconKeys.map(async (key) => {
+        const [row] = await context.db
+          .select({ otherAppCount: count() })
+          .from(listTable)
+          .innerJoin(probeTable, eq(probeTable.storeListingId, listTable.id))
+          .where(overlapsOneKeyPredicate(key));
+        return {
+          key,
+          otherAppCount: Number(row?.otherAppCount ?? 0),
+        };
+      }),
+    );
+    const matchLexiconEntries = allEntries.filter((e) => e.otherAppCount > 0);
+
+    const rows = await context.db
+      .select(getListingSelect(listTable))
+      .from(listTable)
+      .innerJoin(probeTable, eq(probeTable.storeListingId, listTable.id))
+      .where(
+        and(
+          listingPublicWhere(listTable),
+          sqlCategorySlugsMatchesLike(listTable.categorySlugs, "apps/%"),
+          ne(listTable.id, input.listingId),
+          sql`cardinality(${probeTable.oauthLexiconKeys}) > 0`,
+          arrayOverlaps(probeTable.oauthLexiconKeys, keys),
+        ),
+      )
+      .orderBy(
+        ...(input.sort === "newest"
+          ? [desc(listTable.createdAt)]
+          : input.sort === "alphabetical"
+            ? [asc(listTable.name)]
+            : orderByPopularListingSort(listTable)),
+      )
+      .limit(OAUTH_LEXICON_COMPATIBLE_APPS_PAGE_LIMIT);
+
+    return {
+      matchLexiconEntries,
+      count: rows.length,
+      listings: rows.map((row) => toListingCard(row)),
+    } satisfies LexiconCompatibleAppsPagePayload;
+  });
+
+function getLexiconCompatibleAppsPageQueryOptions(
+  input: z.input<typeof getLexiconCompatibleAppsPageInput>,
+) {
+  const normalizedInput = getLexiconCompatibleAppsPageInput.parse(input);
+
+  return queryOptions({
+    queryKey: ["storeListings", "lexiconCompatibleAppsPage", normalizedInput],
+    queryFn: async () =>
+      getLexiconCompatibleAppsPage({ data: normalizedInput }),
   });
 }
 
@@ -6784,6 +7254,16 @@ export const directoryListingApi = {
   getAllDirectoryListingAppTagsQueryOptions,
   getAppsByTagPage,
   getAppsByTagPageQueryOptions,
+  getAppsOAuthLexiconSummaries,
+  getAppsOAuthLexiconSummariesQueryOptions,
+  getAppsByLexiconPage,
+  getAppsByLexiconPageQueryOptions,
+  getAppsByLexiconClusterPage,
+  getAppsByLexiconClusterPageQueryOptions,
+  getRelatedAppsBySharedLexiconKeys,
+  getRelatedAppsBySharedLexiconKeysQueryOptions,
+  getLexiconCompatibleAppsPage,
+  getLexiconCompatibleAppsPageQueryOptions,
   getAllListings,
   getAllListingsQueryOptions,
   getDirectoryListingDetail,

@@ -21,6 +21,7 @@
 import "dotenv/config";
 import * as schema from "#/db/schema";
 import { probeOAuthListingAuth } from "#/lib/oauth-listing-auth-probe";
+import { extractOAuthLexiconKeysForStorefrontProbe } from "#/lib/oauth-scope-lexicon-keys";
 import { asc, isNotNull } from "drizzle-orm";
 
 function ts(): string {
@@ -149,6 +150,7 @@ async function main() {
       probedUrl: null as string | null,
       probedAt: now,
       oauthScopesDistinct: [] as Array<string>,
+      oauthLexiconKeys: [] as Array<string>,
       transitionalScopes: [] as Array<string>,
       publishesAtprotoScope: null as boolean | null,
       clientScopeRawLine: null as string | null,
@@ -187,6 +189,10 @@ async function main() {
       probedUrl: report.inputUrl,
       probedAt: now,
       oauthScopesDistinct: report.summary.oauthScopesDistinct,
+      oauthLexiconKeys: extractOAuthLexiconKeysForStorefrontProbe({
+        oauthScopesDistinct: report.summary.oauthScopesDistinct,
+        scopeHumanReadable: report.summary.scopeHumanReadable,
+      }),
       transitionalScopes: report.summary.transitionalScopesPresent,
       publishesAtprotoScope: report.summary.publishesAtprotoAs,
       clientScopeRawLine: report.summary.clientScopeRawLine,
@@ -224,6 +230,7 @@ async function main() {
       probedUrl: rawUrl,
       probedAt: now,
       oauthScopesDistinct: [] as Array<string>,
+      oauthLexiconKeys: [] as Array<string>,
       transitionalScopes: [] as Array<string>,
       publishesAtprotoScope: null as boolean | null,
       clientScopeRawLine: null as string | null,

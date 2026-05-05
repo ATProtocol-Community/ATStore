@@ -30,6 +30,9 @@ import { Route as HeaderLayoutProductClaimRouteImport } from './routes/_header-l
 import { Route as HeaderLayoutDevelopersAtprotoRouteImport } from './routes/_header-layout.developers.atproto'
 import { Route as HeaderLayoutCategoriesCategoryIdRouteImport } from './routes/_header-layout.categories.$categoryId'
 import { Route as HeaderLayoutAppsTagsRouteImport } from './routes/_header-layout.apps.tags'
+import { Route as HeaderLayoutAppsLexiconsRouteImport } from './routes/_header-layout.apps.lexicons'
+import { Route as HeaderLayoutAppsLexiconSetRouteImport } from './routes/_header-layout.apps.lexicon-set'
+import { Route as HeaderLayoutAppsLexiconRouteImport } from './routes/_header-layout.apps.lexicon'
 import { Route as HeaderLayoutAppsAllRouteImport } from './routes/_header-layout.apps.all'
 import { Route as HeaderLayoutAppsTagRouteImport } from './routes/_header-layout.apps.$tag'
 import { Route as HeaderLayoutProductsProductIdIndexRouteImport } from './routes/_header-layout.products.$productId.index'
@@ -42,6 +45,7 @@ import { Route as ApiAuthAtprotoCallbackRouteImport } from './routes/api.auth.at
 import { Route as ApiAuthAtprotoAuthorizeRouteImport } from './routes/api.auth.atproto.authorize'
 import { Route as HeaderLayoutProductsProductIdReviewsRouteImport } from './routes/_header-layout.products.$productId.reviews'
 import { Route as HeaderLayoutProductsProductIdMentionsRouteImport } from './routes/_header-layout.products.$productId.mentions'
+import { Route as HeaderLayoutProductsProductIdLexiconCompatibleRouteImport } from './routes/_header-layout.products.$productId.lexicon-compatible'
 import { Route as HeaderLayoutProductsProductIdEditRouteImport } from './routes/_header-layout.products.$productId.edit'
 import { Route as HeaderLayoutEcosystemsAppAllRouteImport } from './routes/_header-layout.ecosystems.$app.all'
 import { Route as HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.unverified-listings'
@@ -166,6 +170,23 @@ const HeaderLayoutAppsTagsRoute = HeaderLayoutAppsTagsRouteImport.update({
   path: '/apps/tags',
   getParentRoute: () => HeaderLayoutRoute,
 } as any)
+const HeaderLayoutAppsLexiconsRoute =
+  HeaderLayoutAppsLexiconsRouteImport.update({
+    id: '/apps/lexicons',
+    path: '/apps/lexicons',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutAppsLexiconSetRoute =
+  HeaderLayoutAppsLexiconSetRouteImport.update({
+    id: '/apps/lexicon-set',
+    path: '/apps/lexicon-set',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutAppsLexiconRoute = HeaderLayoutAppsLexiconRouteImport.update({
+  id: '/apps/lexicon',
+  path: '/apps/lexicon',
+  getParentRoute: () => HeaderLayoutRoute,
+} as any)
 const HeaderLayoutAppsAllRoute = HeaderLayoutAppsAllRouteImport.update({
   id: '/apps/all',
   path: '/apps/all',
@@ -231,6 +252,12 @@ const HeaderLayoutProductsProductIdMentionsRoute =
   HeaderLayoutProductsProductIdMentionsRouteImport.update({
     id: '/products/$productId/mentions',
     path: '/products/$productId/mentions',
+    getParentRoute: () => HeaderLayoutRoute,
+  } as any)
+const HeaderLayoutProductsProductIdLexiconCompatibleRoute =
+  HeaderLayoutProductsProductIdLexiconCompatibleRouteImport.update({
+    id: '/products/$productId/lexicon-compatible',
+    path: '/products/$productId/lexicon-compatible',
     getParentRoute: () => HeaderLayoutRoute,
   } as any)
 const HeaderLayoutProductsProductIdEditRoute =
@@ -327,6 +354,9 @@ export interface FileRoutesByFullPath {
   '/og/': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
+  '/apps/lexicon': typeof HeaderLayoutAppsLexiconRoute
+  '/apps/lexicon-set': typeof HeaderLayoutAppsLexiconSetRoute
+  '/apps/lexicons': typeof HeaderLayoutAppsLexiconsRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/developers/atproto': typeof HeaderLayoutDevelopersAtprotoRoute
@@ -344,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
+  '/products/$productId/lexicon-compatible': typeof HeaderLayoutProductsProductIdLexiconCompatibleRoute
   '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
   '/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
@@ -373,6 +404,9 @@ export interface FileRoutesByTo {
   '/og': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
+  '/apps/lexicon': typeof HeaderLayoutAppsLexiconRoute
+  '/apps/lexicon-set': typeof HeaderLayoutAppsLexiconSetRoute
+  '/apps/lexicons': typeof HeaderLayoutAppsLexiconsRoute
   '/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/developers/atproto': typeof HeaderLayoutDevelopersAtprotoRoute
@@ -390,6 +424,7 @@ export interface FileRoutesByTo {
   '/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
+  '/products/$productId/lexicon-compatible': typeof HeaderLayoutProductsProductIdLexiconCompatibleRoute
   '/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
   '/api/auth/atproto/callback': typeof ApiAuthAtprotoCallbackRoute
@@ -421,6 +456,9 @@ export interface FileRoutesById {
   '/og/': typeof OgIndexRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
+  '/_header-layout/apps/lexicon': typeof HeaderLayoutAppsLexiconRoute
+  '/_header-layout/apps/lexicon-set': typeof HeaderLayoutAppsLexiconSetRoute
+  '/_header-layout/apps/lexicons': typeof HeaderLayoutAppsLexiconsRoute
   '/_header-layout/apps/tags': typeof HeaderLayoutAppsTagsRoute
   '/_header-layout/categories/$categoryId': typeof HeaderLayoutCategoriesCategoryIdRoute
   '/_header-layout/developers/atproto': typeof HeaderLayoutDevelopersAtprotoRoute
@@ -438,6 +476,7 @@ export interface FileRoutesById {
   '/_header-layout/_admin-layout/admin/unverified-listings': typeof HeaderLayoutAdminLayoutAdminUnverifiedListingsRoute
   '/_header-layout/ecosystems/$app/all': typeof HeaderLayoutEcosystemsAppAllRoute
   '/_header-layout/products/$productId/edit': typeof HeaderLayoutProductsProductIdEditRoute
+  '/_header-layout/products/$productId/lexicon-compatible': typeof HeaderLayoutProductsProductIdLexiconCompatibleRoute
   '/_header-layout/products/$productId/mentions': typeof HeaderLayoutProductsProductIdMentionsRoute
   '/_header-layout/products/$productId/reviews': typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   '/api/auth/atproto/authorize': typeof ApiAuthAtprotoAuthorizeRoute
@@ -469,6 +508,9 @@ export interface FileRouteTypes {
     | '/og/'
     | '/apps/$tag'
     | '/apps/all'
+    | '/apps/lexicon'
+    | '/apps/lexicon-set'
+    | '/apps/lexicons'
     | '/apps/tags'
     | '/categories/$categoryId'
     | '/developers/atproto'
@@ -486,6 +528,7 @@ export interface FileRouteTypes {
     | '/admin/unverified-listings'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
+    | '/products/$productId/lexicon-compatible'
     | '/products/$productId/mentions'
     | '/products/$productId/reviews'
     | '/api/auth/atproto/authorize'
@@ -515,6 +558,9 @@ export interface FileRouteTypes {
     | '/og'
     | '/apps/$tag'
     | '/apps/all'
+    | '/apps/lexicon'
+    | '/apps/lexicon-set'
+    | '/apps/lexicons'
     | '/apps/tags'
     | '/categories/$categoryId'
     | '/developers/atproto'
@@ -532,6 +578,7 @@ export interface FileRouteTypes {
     | '/admin/unverified-listings'
     | '/ecosystems/$app/all'
     | '/products/$productId/edit'
+    | '/products/$productId/lexicon-compatible'
     | '/products/$productId/mentions'
     | '/api/auth/atproto/authorize'
     | '/api/auth/atproto/callback'
@@ -562,6 +609,9 @@ export interface FileRouteTypes {
     | '/og/'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
+    | '/_header-layout/apps/lexicon'
+    | '/_header-layout/apps/lexicon-set'
+    | '/_header-layout/apps/lexicons'
     | '/_header-layout/apps/tags'
     | '/_header-layout/categories/$categoryId'
     | '/_header-layout/developers/atproto'
@@ -579,6 +629,7 @@ export interface FileRouteTypes {
     | '/_header-layout/_admin-layout/admin/unverified-listings'
     | '/_header-layout/ecosystems/$app/all'
     | '/_header-layout/products/$productId/edit'
+    | '/_header-layout/products/$productId/lexicon-compatible'
     | '/_header-layout/products/$productId/mentions'
     | '/_header-layout/products/$productId/reviews'
     | '/api/auth/atproto/authorize'
@@ -760,6 +811,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutAppsTagsRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
+    '/_header-layout/apps/lexicons': {
+      id: '/_header-layout/apps/lexicons'
+      path: '/apps/lexicons'
+      fullPath: '/apps/lexicons'
+      preLoaderRoute: typeof HeaderLayoutAppsLexiconsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/apps/lexicon-set': {
+      id: '/_header-layout/apps/lexicon-set'
+      path: '/apps/lexicon-set'
+      fullPath: '/apps/lexicon-set'
+      preLoaderRoute: typeof HeaderLayoutAppsLexiconSetRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/apps/lexicon': {
+      id: '/_header-layout/apps/lexicon'
+      path: '/apps/lexicon'
+      fullPath: '/apps/lexicon'
+      preLoaderRoute: typeof HeaderLayoutAppsLexiconRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
     '/_header-layout/apps/all': {
       id: '/_header-layout/apps/all'
       path: '/apps/all'
@@ -842,6 +914,13 @@ declare module '@tanstack/react-router' {
       path: '/products/$productId/mentions'
       fullPath: '/products/$productId/mentions'
       preLoaderRoute: typeof HeaderLayoutProductsProductIdMentionsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
+    '/_header-layout/products/$productId/lexicon-compatible': {
+      id: '/_header-layout/products/$productId/lexicon-compatible'
+      path: '/products/$productId/lexicon-compatible'
+      fullPath: '/products/$productId/lexicon-compatible'
+      preLoaderRoute: typeof HeaderLayoutProductsProductIdLexiconCompatibleRouteImport
       parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/products/$productId/edit': {
@@ -1016,6 +1095,9 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutIndexRoute: typeof HeaderLayoutIndexRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
+  HeaderLayoutAppsLexiconRoute: typeof HeaderLayoutAppsLexiconRoute
+  HeaderLayoutAppsLexiconSetRoute: typeof HeaderLayoutAppsLexiconSetRoute
+  HeaderLayoutAppsLexiconsRoute: typeof HeaderLayoutAppsLexiconsRoute
   HeaderLayoutAppsTagsRoute: typeof HeaderLayoutAppsTagsRoute
   HeaderLayoutCategoriesCategoryIdRoute: typeof HeaderLayoutCategoriesCategoryIdRoute
   HeaderLayoutDevelopersAtprotoRoute: typeof HeaderLayoutDevelopersAtprotoRoute
@@ -1025,6 +1107,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutProfileActorRoute: typeof HeaderLayoutProfileActorRoute
   HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
   HeaderLayoutProductsProductIdEditRoute: typeof HeaderLayoutProductsProductIdEditRoute
+  HeaderLayoutProductsProductIdLexiconCompatibleRoute: typeof HeaderLayoutProductsProductIdLexiconCompatibleRoute
   HeaderLayoutProductsProductIdMentionsRoute: typeof HeaderLayoutProductsProductIdMentionsRoute
   HeaderLayoutProductsProductIdReviewsRoute: typeof HeaderLayoutProductsProductIdReviewsRouteWithChildren
   HeaderLayoutEcosystemsAppIndexRoute: typeof HeaderLayoutEcosystemsAppIndexRoute
@@ -1038,6 +1121,9 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutIndexRoute: HeaderLayoutIndexRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
+  HeaderLayoutAppsLexiconRoute: HeaderLayoutAppsLexiconRoute,
+  HeaderLayoutAppsLexiconSetRoute: HeaderLayoutAppsLexiconSetRoute,
+  HeaderLayoutAppsLexiconsRoute: HeaderLayoutAppsLexiconsRoute,
   HeaderLayoutAppsTagsRoute: HeaderLayoutAppsTagsRoute,
   HeaderLayoutCategoriesCategoryIdRoute: HeaderLayoutCategoriesCategoryIdRoute,
   HeaderLayoutDevelopersAtprotoRoute: HeaderLayoutDevelopersAtprotoRoute,
@@ -1048,6 +1134,8 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
   HeaderLayoutProductsProductIdEditRoute:
     HeaderLayoutProductsProductIdEditRoute,
+  HeaderLayoutProductsProductIdLexiconCompatibleRoute:
+    HeaderLayoutProductsProductIdLexiconCompatibleRoute,
   HeaderLayoutProductsProductIdMentionsRoute:
     HeaderLayoutProductsProductIdMentionsRoute,
   HeaderLayoutProductsProductIdReviewsRoute:

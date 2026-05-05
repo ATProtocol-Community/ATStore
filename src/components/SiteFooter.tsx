@@ -21,6 +21,7 @@ const FOOTER_LINK_GROUPS = [
     links: [
       { href: "/apps/all", label: "All Apps" },
       { href: "/apps/tags", label: "Categories" },
+      { href: "/apps/lexicons", label: "Shared data" },
     ],
   },
 ] as const;

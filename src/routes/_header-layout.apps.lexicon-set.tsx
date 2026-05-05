@@ -5,25 +5,22 @@ import {
   createFileRoute,
   createLink,
   notFound,
+  redirect,
   useRouter,
 } from "@tanstack/react-router";
 import { StarRating } from "#/design-system/star-rating";
 import { ChevronLeft } from "lucide-react";
 
-import type {
-  DirectoryAppTagGroup,
-  DirectoryListingCard,
-} from "../integrations/tanstack-query/api-directory-listings.functions";
+import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
-import { AppTagCard } from "../components/AppTagCard";
 import { AppTagHero } from "../components/AppTagHero";
 import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { HeroImage } from "../components/HeroImage";
 import { Avatar } from "../design-system/avatar";
+import { Badge } from "../design-system/badge";
 import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import { Select, SelectItem } from "../design-system/select";
@@ -36,71 +33,21 @@ import {
 import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import {
-  formatAppTagCount,
-  formatAppTagLabel,
-  getAppTagDescription,
-} from "../lib/app-tag-metadata";
-import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
-import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
+import {
+  formatLexiconClusterPageTitle,
+  formatOAuthLexiconKeyClusterStyleHeadline,
+  tryParseLexiconClusterSearchParam,
+} from "../lib/oauth-scope-lexicon-keys";
+import { buildRouteOgMeta } from "../lib/og-meta";
 
 const sortOptions = [
   { id: "popular", label: "Popular" },
   { id: "newest", label: "Newest" },
   { id: "alphabetical", label: "Alphabetical" },
 ] as const;
-
-export const Route = createFileRoute("/_header-layout/apps/$tag")({
-  validateSearch: (
-    search,
-  ): { sort: "popular" | "newest" | "alphabetical" } => ({
-    sort:
-      search.sort === "newest"
-        ? "newest"
-        : search.sort === "alphabetical"
-          ? "alphabetical"
-          : "popular",
-  }),
-  loaderDeps: ({ search }) => ({
-    sort: search.sort,
-  }),
-  loader: async ({ context, params, deps }) => {
-    const data = await context.queryClient.ensureQueryData(
-      directoryListingApi.getAppsByTagPageQueryOptions({
-        tag: params.tag,
-        sort: deps.sort,
-      }),
-    );
-
-    if (!data) {
-      throw notFound();
-    }
-
-    return {
-      tag: params.tag,
-      ogTitle: `${formatAppTagLabel(data.tag)} apps | at-store`,
-      ogDescription: getAppTagDescription(data.tag),
-      ogImage: buildAppTagOgImageUrl({
-        tag: data.tag,
-        label: formatAppTagLabel(data.tag),
-        kind: "App Tag",
-        count: data.count,
-      }),
-    };
-  },
-  head: ({ loaderData }) =>
-    buildRouteOgMeta({
-      title: loaderData?.ogTitle ?? "App tag | at-store",
-      description:
-        loaderData?.ogDescription ||
-        "Explore listings grouped under this app workflow tag.",
-      image: loaderData?.ogImage,
-    }),
-  component: AppsTagPage,
-});
 
 const LinkLink = createLink(Link);
 
@@ -143,7 +90,6 @@ const styles = stylex.create({
     height: "100%",
     width: "100%",
   },
-
   listingCardBody: {
     gap: gap["4xl"],
     position: "relative",
@@ -164,87 +110,144 @@ const styles = stylex.create({
     flexShrink: "1",
     minWidth: 0,
   },
-  relatedSection: {
-    gap: gap["5xl"],
-    paddingTop: verticalSpace["6xl"],
-  },
-  relatedHeader: {
-    maxWidth: "44rem",
-  },
-  relatedDescription: {
+  emptyState: {
+    gap: gap["lg"],
     maxWidth: "40rem",
   },
-  relatedGrid: {
-    gap: gap["2xl"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.md]: "repeat(4, minmax(0, 1fr))",
+  badgeRow: {
+    gap: gap.md,
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
+    rowGap: gap.md,
+    maxWidth: "48rem",
+  },
+  badgeLink: {
+    textDecoration: "none",
+    color: "inherit",
+    display: "block",
+    maxWidth: "100%",
+  },
+  badgeLabel: {
+    overflow: "hidden",
+    display: "block",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: {
+      default: "18rem",
+      [breakpoints.sm]: "22rem",
     },
+    minWidth: 0,
   },
 });
 
-function AppsTagPage() {
+export const Route = createFileRoute("/_header-layout/apps/lexicon-set")({
+  validateSearch: (
+    search,
+  ): { c: string; sort: "popular" | "newest" | "alphabetical" } => ({
+    c: typeof search.c === "string" ? search.c : "",
+    sort:
+      search.sort === "newest"
+        ? "newest"
+        : search.sort === "alphabetical"
+          ? "alphabetical"
+          : "popular",
+  }),
+  loaderDeps: ({ search }) => ({
+    c: search.c.trim(),
+    sort: search.sort,
+  }),
+  loader: async ({ context, deps }) => {
+    const clusterKeys = tryParseLexiconClusterSearchParam(deps.c);
+    if (clusterKeys == null) {
+      throw redirect({ to: "/apps/lexicons" });
+    }
+
+    const data = await context.queryClient.ensureQueryData(
+      directoryListingApi.getAppsByLexiconClusterPageQueryOptions({
+        keys: clusterKeys,
+        sort: deps.sort,
+      }),
+    );
+
+    if (data == null) {
+      throw notFound();
+    }
+
+    const keyLabels = data.keys.map((k) =>
+      formatOAuthLexiconKeyClusterStyleHeadline(k),
+    );
+    const titleSuffix = formatLexiconClusterPageTitle(data.keys);
+
+    return {
+      clusterKeys: data.keys,
+      ogTitle: `${titleSuffix} · shared OAuth lexicons | at-store`,
+      ogDescription: `Verified apps that advertise all of these repo record lexicons in OAuth scopes (${String(data.count)} listing${data.count === 1 ? "" : "s"}): ${keyLabels.join(", ")}.`,
+    };
+  },
+  head: ({ loaderData }) =>
+    buildRouteOgMeta({
+      title: loaderData?.ogTitle ?? "OAuth lexicon cluster | at-store",
+      description:
+        loaderData?.ogDescription ??
+        "Explore apps grouped by overlapping OAuth lexicon identifiers.",
+    }),
+  component: AppsLexiconSetPage,
+});
+
+function AppsLexiconSetPage() {
   const search = Route.useSearch();
   const router = useRouter();
-  const { tag } = Route.useLoaderData();
+  const { clusterKeys } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
-    directoryListingApi.getAppsByTagPageQueryOptions({
-      tag,
+    directoryListingApi.getAppsByLexiconClusterPageQueryOptions({
+      keys: clusterKeys,
       sort: search.sort,
     }),
   );
-  const { data: allGroups } = useSuspenseQuery(
-    directoryListingApi.getAppsByTagQueryOptions,
-  );
 
-  if (!data) {
+  if (data == null) {
     throw notFound();
   }
 
-  const relatedTags = getRelatedAppTagGroups(data, allGroups);
+  const gridKey = data.keys.join("\u001F");
 
   return (
     <Page.Root variant="large" style={styles.page}>
       <Flex direction="column" style={styles.pageContent}>
         <Flex direction="column" gap="4xl">
           <Flex gap="xl" style={styles.navLinks}>
-            <LinkLink to="/apps/tags">
+            <LinkLink to="/apps/lexicons">
               <ChevronLeft />
-              All tags
+              All lexicon collections
             </LinkLink>
-            <LinkLink to="/apps/lexicons">OAuth lexicons</LinkLink>
           </Flex>
 
           <AppTagHero
-            eyebrow={formatAppTagCount(data.count)}
-            title={formatAppTagLabel(data.tag)}
-            description={getAppTagDescription(data.tag)}
-            accent={getAppTagAccent(data.tag)}
-            emojis={[getAppTagEmoji(data.tag)]}
+            eyebrow="Compatible data"
+            title={formatLexiconClusterPageTitle(data.keys)}
+            description="These apps use the same data sources, so they can interoperate with each other."
             action={
               <Select
-                aria-label="Sort apps in tag"
+                aria-label="Sort apps in lexicon cluster"
                 items={sortOptions}
                 placeholder="Sort apps"
                 size="lg"
                 style={styles.sortSelect}
                 value={search.sort}
                 variant="secondary"
-                onChange={(key) => {
+                onChange={(sortKey) => {
                   if (
-                    key !== "popular" &&
-                    key !== "newest" &&
-                    key !== "alphabetical"
+                    sortKey !== "popular" &&
+                    sortKey !== "newest" &&
+                    sortKey !== "alphabetical"
                   ) {
                     return;
                   }
 
                   void router.navigate({
-                    to: "/apps/$tag",
-                    params: { tag },
-                    search: { sort: key },
+                    to: "/apps/lexicon-set",
+                    search: { c: search.c, sort: sortKey },
                   });
                 }}
               >
@@ -252,26 +255,53 @@ function AppsTagPage() {
               </Select>
             }
           />
+          {data.keys.length > 1 ? (
+            <Flex style={styles.badgeRow}>
+              {data.keys.map((k) => {
+                const label = formatOAuthLexiconKeyClusterStyleHeadline(k);
+                return (
+                  <RouterLink
+                    key={k}
+                    to="/apps/lexicon"
+                    search={{ key: k, sort: "popular" }}
+                    title={label}
+                    aria-label={`Browse apps for ${label}`}
+                    {...stylex.props(styles.badgeLink)}
+                  >
+                    <Badge size="sm" variant="default">
+                      <span {...stylex.props(styles.badgeLabel)}>{label}</span>
+                    </Badge>
+                  </RouterLink>
+                );
+              })}
+            </Flex>
+          ) : null}
         </Flex>
 
-        <FeaturedListingGrid
-          items={data.listings}
-          getKey={(listing) => `${data.tag}-${listing.id}`}
-          canFeature={(listing) => Boolean(listing.heroImageUrl)}
-          renderItem={(listing, { featured }) => (
-            <AppTagListingCard featured={featured} listing={listing} />
-          )}
-        />
-
-        {relatedTags.length > 0 ? (
-          <RelatedTagsSection groups={relatedTags} />
-        ) : null}
+        {data.listings.length > 0 ? (
+          <FeaturedListingGrid
+            items={data.listings}
+            getKey={(listing) => `${gridKey}-${listing.id}`}
+            canFeature={(listing) => Boolean(listing.heroImageUrl)}
+            renderItem={(listing, { featured }) => (
+              <LexiconListingCard featured={featured} listing={listing} />
+            )}
+          />
+        ) : (
+          <Flex direction="column" style={styles.emptyState}>
+            <Body variant="secondary">
+              No verified app listings reference this exact cluster yet. Try the
+              hub or a single-key browse page—or wait for the next OAuth probe
+              sync.
+            </Body>
+          </Flex>
+        )}
       </Flex>
     </Page.Root>
   );
 }
 
-function AppTagListingCard({
+function LexiconListingCard({
   listing,
   featured = false,
 }: {
@@ -335,62 +365,4 @@ function AppTagListingCard({
       )}
     </RouterLink>
   );
-}
-
-function RelatedTagsSection({
-  groups,
-}: {
-  groups: Array<DirectoryAppTagGroup>;
-}) {
-  return (
-    <Flex direction="column" style={styles.relatedSection}>
-      <Flex direction="column" gap="4xl" style={styles.relatedHeader}>
-        <Text size="3xl" weight="semibold">
-          Related tags to explore
-        </Text>
-        <Body variant="secondary" style={styles.relatedDescription}>
-          Explore adjacent workflows and neighboring collections that share apps
-          with this tag.
-        </Body>
-      </Flex>
-      <Grid style={styles.relatedGrid}>
-        {groups.map((group) => (
-          <AppTagCard key={group.tag} tag={group} />
-        ))}
-      </Grid>
-    </Flex>
-  );
-}
-
-function getRelatedAppTagGroups(
-  currentGroup: DirectoryAppTagGroup,
-  groups: Array<DirectoryAppTagGroup>,
-) {
-  const currentListingIds = new Set(
-    currentGroup.listings.map((listing) => listing.id),
-  );
-
-  return groups
-    .filter((group) => group.tag !== currentGroup.tag)
-    .toSorted((left, right) => {
-      const leftOverlap = left.listings.reduce(
-        (count, listing) => count + Number(currentListingIds.has(listing.id)),
-        0,
-      );
-      const rightOverlap = right.listings.reduce(
-        (count, listing) => count + Number(currentListingIds.has(listing.id)),
-        0,
-      );
-
-      if (rightOverlap !== leftOverlap) {
-        return rightOverlap - leftOverlap;
-      }
-
-      if (right.count !== left.count) {
-        return right.count - left.count;
-      }
-
-      return left.tag.localeCompare(right.tag);
-    })
-    .slice(0, 4);
 }

@@ -298,6 +298,15 @@ async function fetchPermissionSetViaLexiconRegistry(
   return { lexiconDoc: rec, sourceUri };
 }
 
+/** Authoritative lexicon JSON from `com.atproto.lexicon.schema` via `_lexicon.*` DNS + PDS getRecord. */
+export async function fetchLexiconSchemaRecordValue(
+  nsid: string,
+): Promise<JsonRecord | null> {
+  const attemptedUrls: Array<string> = [];
+  const r = await fetchPermissionSetViaLexiconRegistry(nsid, attemptedUrls);
+  return r?.lexiconDoc ?? null;
+}
+
 function extractResourceMetadataUrlFromWwwAuthenticate(
   raw: string | null,
 ): string | null {

@@ -37,7 +37,7 @@ import { publicMediaUrlOrNull } from "../lib/listing-image-url";
 interface AppTagHeroProps {
   eyebrow?: string;
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   /**
    * When provided, render an accent hero: gradient + emoji scatter with eyebrow, title,
    * description, and action **inside** the panel (`uiColor.textContrast` + shadows for
@@ -339,7 +339,7 @@ export function AppTagHero({
             </div>
           ) : null}
           <Flex style={styles.accentBannerContent}>
-            <Flex direction="row" style={styles.bannerTopStack}>
+            <Flex direction="row" gap="4xl" style={styles.bannerTopStack}>
               <Flex direction="column" gap="4xl">
                 {eyebrow ? (
                   <SmallBody style={styles.bannerEyebrow}>{eyebrow}</SmallBody>
@@ -370,14 +370,14 @@ export function AppTagHero({
         </div>
       ) : (
         <>
-          <div {...stylex.props(styles.imageFrame, ui.bgSubtle)}>
-            {bannerSrc ? (
+          {bannerSrc ? (
+            <div {...stylex.props(styles.imageFrame, ui.bgSubtle)}>
               <img {...stylex.props(styles.image)} alt="" src={bannerSrc} />
-            ) : null}
-          </div>
+            </div>
+          ) : null}
 
           <Flex justify="between" gap="5xl" align="end" wrap>
-            <Flex direction="column" gap="5xl" style={styles.copy}>
+            <Flex direction="column" gap="6xl" style={styles.copy}>
               {eyebrow ? (
                 <SmallBody style={styles.eyebrow}>{eyebrow}</SmallBody>
               ) : null}
