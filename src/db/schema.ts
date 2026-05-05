@@ -1,4 +1,5 @@
 import type { ListingLink } from "#/lib/atproto/listing-record";
+import type { DirectoryOAuthLexiconHubData } from "#/lib/oauth-lexicon-hub.types";
 import type { OAuthAuthProbeReport } from "#/lib/oauth-listing-auth-probe";
 
 import { relations, sql } from "drizzle-orm";
@@ -712,6 +713,16 @@ export const storeListingOAuthProbes = pgTable(
     ),
   ],
 );
+
+/**
+ * Precomputed payload for `/apps/lexicons` (clusters + resolved lexicon descriptions).
+ * Rebuilt by `scripts/sync-listing-oauth-probes.ts` after OAuth probes complete, or manually.
+ */
+export const oauthLexiconHubSnapshot = pgTable("oauth_lexicon_hub_snapshot", {
+  singletonKey: text("singleton_key").primaryKey().notNull(),
+  payload: jsonb("payload").$type<DirectoryOAuthLexiconHubData>().notNull(),
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull(),
+});
 
 /** Ordered homepage hero slots managed from admin. */
 export const homePageHeroListings = pgTable(

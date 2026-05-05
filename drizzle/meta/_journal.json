@@ -267,6 +267,13 @@
       "when": 1778900000000,
       "tag": "0038_store_listing_oauth_probes_lexicon_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1779000000000,
+      "tag": "0039_oauth_lexicon_hub_snapshot",
+      "breakpoints": true
     }
   ]
 }

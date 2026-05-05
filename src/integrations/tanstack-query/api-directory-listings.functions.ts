@@ -61,6 +61,10 @@ import {
   publicMediaUrlOrNull,
 } from "#/lib/listing-image-url";
 import {
+  computeOAuthLexiconHubData,
+  getOAuthLexiconHubSnapshot,
+} from "#/lib/oauth-lexicon-hub-snapshot.server";
+import {
   oauthClientDistinctTokensFromPublishedScopeLine,
   probeOAuthListingAuth,
 } from "#/lib/oauth-listing-auth-probe";
@@ -68,10 +72,10 @@ import {
   compareOAuthLexiconKeysForDisplayOrder,
   extractOAuthLexiconKeysForStorefrontProbe,
   filterLexiconKeysForCrossAppMatching,
-  isRepoLexiconKeyForLexiconHub,
   normalizeLexiconClusterKeysForHub,
   parseOAuthLexiconKey,
 } from "#/lib/oauth-scope-lexicon-keys";
+import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
   adminFnMiddleware,
@@ -133,7 +137,6 @@ import {
 } from "../../lib/listing-copy";
 import { buildFallbackOgImageUrl } from "../../lib/og-meta";
 import { dbMiddleware } from "./db-middleware";
-import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility.ts";
 
 /** Columns only on legacy `directory_listings`; absent on `store_listings` — selected as null for UI types. */
 const storeListingLegacyDetailColumns = {
@@ -356,27 +359,10 @@ export interface DirectoryListingOAuthProbe {
   oauthLexiconKeys: Array<string>;
 }
 
-/**
- * Hub row for /apps/lexicons — a cluster of repo collection NSIDs that appear
- * on exactly the same set of listings (≥2 apps). `include:` and `rpc:` are omitted.
- */
-export interface DirectoryOAuthLexiconClusterSummary {
-  keys: Array<string>;
-  /** Number of app listings in this cluster (same for every key in `keys`). */
-  appCount: number;
-  /**
-   * Store listing IDs in this cluster — the same sorted set for every key in `keys`
-   * (used to dedupe apps across clusters when grouping by lexicon producer).
-   */
-  listingIds: Array<string>;
-}
-
-/** Hub payload for `/apps/lexicons` — clusters plus optional local lexicon descriptions. */
-export interface DirectoryOAuthLexiconHubData {
-  clusters: Array<DirectoryOAuthLexiconClusterSummary>;
-  /** Repo NSID (no `repo:` prefix) -> `defs.main.description` when present under `lexicons/`. */
-  descriptionsByRepoNsid: Record<string, string>;
-}
+export type {
+  DirectoryOAuthLexiconClusterSummary,
+  DirectoryOAuthLexiconHubData,
+} from "#/lib/oauth-lexicon-hub.types";
 
 export interface DirectoryOAuthLexiconClusterPagePayload {
   keys: Array<string>;
@@ -2415,84 +2401,11 @@ function getAppsByTagPageQueryOptions(
 const getAppsOAuthLexiconSummaries = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
-    const list = context.schema.storeListings;
-    const probe = context.schema.storeListingOAuthProbes;
-
-    const rows = await context.db
-      .select({ id: list.id, keys: probe.oauthLexiconKeys })
-      .from(list)
-      .innerJoin(probe, eq(probe.storeListingId, list.id))
-      .where(
-        and(
-          listingPublicWhere(list),
-          sqlCategorySlugsMatchesLike(list.categorySlugs, "apps/%"),
-          sql`cardinality(${probe.oauthLexiconKeys}) > 0`,
-        ),
-      );
-
-    const keyToListings = new Map<string, Set<string>>();
-    for (const row of rows) {
-      for (const k of row.keys) {
-        if (!isRepoLexiconKeyForLexiconHub(k)) continue;
-        let set = keyToListings.get(k);
-        if (!set) {
-          set = new Set();
-          keyToListings.set(k, set);
-        }
-        set.add(row.id);
-      }
+    const cached = await getOAuthLexiconHubSnapshot(context.db);
+    if (cached) {
+      return cached;
     }
-
-    const clusterMap = new Map<
-      string,
-      { keys: Array<string>; appCount: number; listingIds: Array<string> }
-    >();
-    for (const [key, listingSet] of keyToListings) {
-      if (listingSet.size < 2) continue;
-      const sig = [...listingSet].toSorted().join("\u001F");
-      let entry = clusterMap.get(sig);
-      if (!entry) {
-        entry = {
-          keys: [],
-          appCount: listingSet.size,
-          listingIds: [...listingSet].toSorted(),
-        };
-        clusterMap.set(sig, entry);
-      }
-      entry.keys.push(key);
-    }
-
-    const clustersUnsorted = [...clusterMap.values()].map(
-      (row): DirectoryOAuthLexiconClusterSummary => ({
-        keys: row.keys.toSorted(compareOAuthLexiconKeysForDisplayOrder),
-        appCount: row.appCount,
-        listingIds: row.listingIds,
-      }),
-    );
-
-    const clusters = clustersUnsorted.toSorted((a, b) => {
-      if (b.appCount !== a.appCount) return b.appCount - a.appCount;
-      const ak = a.keys[0] ?? "";
-      const bk = b.keys[0] ?? "";
-      return compareOAuthLexiconKeysForDisplayOrder(ak, bk);
-    });
-
-    const repoNsids = new Set<string>();
-    for (const c of clusters) {
-      for (const k of c.keys) {
-        const p = parseOAuthLexiconKey(k);
-        if (p?.kind === "repo" && p.nsid) {
-          repoNsids.add(p.nsid);
-        }
-      }
-    }
-    const descriptionsByRepoNsid =
-      await loadLexiconRecordDescriptionsForWorkspace([...repoNsids]);
-
-    return {
-      clusters,
-      descriptionsByRepoNsid,
-    } satisfies DirectoryOAuthLexiconHubData;
+    return computeOAuthLexiconHubData(context.db);
   });
 
 const getAppsOAuthLexiconSummariesQueryOptions = queryOptions({

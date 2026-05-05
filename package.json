@@ -19,6 +19,7 @@
     "listing:restore-from-backup-db": "tsx -r dotenv/config scripts/restore-store-listing-from-backup-db.ts",
     "oauth:detect-scopes": "tsx scripts/detect-listing-oauth-scopes.ts",
     "listing:oauth-probes-sync": "tsx -r dotenv/config scripts/sync-listing-oauth-probes.ts",
+    "listing:oauth-lexicon-hub-refresh": "tsx -r dotenv/config scripts/refresh-oauth-lexicon-hub.ts",
     "listing:oauth-lexicon-keys-backfill": "tsx -r dotenv/config scripts/backfill-oauth-lexicon-keys.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",

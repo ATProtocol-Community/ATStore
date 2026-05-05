@@ -7,6 +7,7 @@
  */
 import "dotenv/config";
 import * as schema from "#/db/schema";
+import { refreshOAuthLexiconHubSnapshot } from "#/lib/oauth-lexicon-hub-snapshot.server";
 import { extractOAuthLexiconKeysForStorefrontProbe } from "#/lib/oauth-scope-lexicon-keys";
 import { eq } from "drizzle-orm";
 
@@ -62,6 +63,18 @@ async function main() {
   console.log(
     `[backfill-oauth-lexicon-keys] ${ts()} rows=${String(rows.length)} updated=${String(updated)} skipped_unchanged=${String(skipped)}`,
   );
+
+  try {
+    const hub = await refreshOAuthLexiconHubSnapshot(db);
+    console.log(
+      `[backfill-oauth-lexicon-keys] ${ts()} oauth_lexicon_hub_snapshot clusterCount=${String(hub.clusterCount)}`,
+    );
+  } catch (error) {
+    console.error(
+      `[backfill-oauth-lexicon-keys] ${ts()} oauth_lexicon_hub_snapshot refresh failed`,
+      error instanceof Error ? (error.stack ?? error.message) : error,
+    );
+  }
 
   await dbClient.end({ timeout: 5 }).catch(() => {});
 }

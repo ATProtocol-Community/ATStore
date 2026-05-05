@@ -2,6 +2,8 @@
 /**
  * Batch-probe every `store_listings.external_url` for OAuth / authorization metadata
  * (same logic as `pnpm oauth:detect-scopes`) and upsert into `store_listing_oauth_probes`.
+ * After a non–dry-run pass completes, recomputes the `/apps/lexicons` hub snapshot
+ * (`oauth_lexicon_hub_snapshot`) so the hub stays fast without on-demand HTTP.
  *
  * Railway cron (suggested): weekly is enough for slow-changing OAuth metadata; avoids
  * hammering third-party sites. Example crontab UTC:
@@ -21,6 +23,7 @@
 import "dotenv/config";
 import * as schema from "#/db/schema";
 import { probeOAuthListingAuth } from "#/lib/oauth-listing-auth-probe";
+import { refreshOAuthLexiconHubSnapshot } from "#/lib/oauth-lexicon-hub-snapshot.server";
 import { extractOAuthLexiconKeysForStorefrontProbe } from "#/lib/oauth-scope-lexicon-keys";
 import { asc, isNotNull } from "drizzle-orm";
 
@@ -307,6 +310,23 @@ async function main() {
     dryRun,
     elapsedMs,
   });
+
+  if (!dryRun) {
+    try {
+      const hub = await refreshOAuthLexiconHubSnapshot(db);
+      log("info", "oauth_lexicon_hub_snapshot_refreshed", {
+        clusterCount: hub.clusterCount,
+        computedAt: hub.computedAt.toISOString(),
+      });
+    } catch (error) {
+      log("error", "oauth_lexicon_hub_snapshot_refresh_failed", {
+        error:
+          error instanceof Error
+            ? (error.stack ?? error.message)
+            : String(error),
+      });
+    }
+  }
 
   await dbClient.end({ timeout: 5 }).catch(() => {});
 }
