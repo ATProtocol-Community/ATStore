@@ -32,6 +32,7 @@ const styles = stylex.create({
     position: "absolute",
     transformOrigin: "center",
     zIndex: 0,
+    height: "100%",
     width: "100%",
   },
   frame: {

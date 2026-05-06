@@ -1338,7 +1338,7 @@ function HeroSection({
       {listing.heroImageUrl && (
         <HeroImage
           alt={getDirectoryListingHeroImageAlt(listing)}
-          glowIntensity={0.9}
+          glowIntensity={0.6}
           src={listing.heroImageUrl}
         />
       )}
