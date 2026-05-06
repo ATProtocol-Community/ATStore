@@ -111,15 +111,14 @@ function AdminOAuthUrlGapsPage() {
         <Flex direction="column" style={styles.header}>
           <Heading1>OAuth client metadata gaps</Heading1>
           <Body variant="secondary">
-            Listings with an HTTPS storefront that still need a discoverable OAuth
-            client-metadata URL, plus listings whose last automated probe threw an
-            error. Protocol directory rows and <code>at:</code> links are excluded
-            (same rules as the discovery script).
+            Listings with an HTTPS storefront that still need a discoverable
+            OAuth client-metadata URL, plus listings whose last automated probe
+            threw an error. Protocol directory rows and <code>at:</code> links
+            are excluded (same rules as the discovery script).
           </Body>
           <SmallBody variant="secondary">
-            Populate URLs with{" "}
-            <code>pnpm listing:oauth-discover-metadata</code> or sync probes; see{" "}
-            <code>store_listing_oauth_discovery</code> and{" "}
+            Populate URLs with <code>pnpm listing:oauth-discover-metadata</code>{" "}
+            or sync probes; see <code>store_listing_oauth_discovery</code> and{" "}
             <code>store_listing_oauth_probes</code>.
           </SmallBody>
         </Flex>
@@ -199,7 +198,9 @@ function GapTable({
                             >
                               {row.name}
                             </ProductLink>
-                            <span {...stylex.props(styles.mono)}>{row.slug}</span>
+                            <span {...stylex.props(styles.mono)}>
+                              {row.slug}
+                            </span>
                           </Flex>
                         </td>
                         <td {...stylex.props(styles.td)}>
@@ -261,7 +262,9 @@ function GapTable({
                             >
                               {row.name}
                             </ProductLink>
-                            <span {...stylex.props(styles.mono)}>{row.slug}</span>
+                            <span {...stylex.props(styles.mono)}>
+                              {row.slug}
+                            </span>
                           </Flex>
                         </td>
                         <td {...stylex.props(styles.td)}>
