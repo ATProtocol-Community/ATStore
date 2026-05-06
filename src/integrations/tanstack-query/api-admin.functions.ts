@@ -894,6 +894,8 @@ const getRecentListings = createServerFn({ method: "GET" })
     });
   });
 
+const toIso = (d: Date | null) => (d ? d.toISOString() : null);
+
 const getAdminOAuthUrlGaps = createServerFn({ method: "GET" })
   .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
@@ -967,8 +969,6 @@ const getAdminOAuthUrlGaps = createServerFn({ method: "GET" })
         .where(failingWhere)
         .orderBy(desc(probes.probedAt), asc(listings.slug)),
     ]);
-
-    const toIso = (d: Date | null) => (d ? d.toISOString() : null);
 
     return {
       missingClientMetadataUrl: missingRows.map((r) => ({

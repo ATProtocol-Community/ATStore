@@ -1,7 +1,7 @@
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { DirectoryOAuthLexiconHubData } from "#/lib/oauth-lexicon-hub.types";
-import type { StoreListingOauthDiscoveryDetail } from "#/lib/oauth-listing-oauth-discovery.types";
 import type { OAuthAuthProbeReport } from "#/lib/oauth-listing-auth-probe";
+import type { StoreListingOauthDiscoveryDetail } from "#/lib/oauth-listing-oauth-discovery.types";
 
 import { relations, sql } from "drizzle-orm";
 import {

@@ -37,12 +37,20 @@
  * If that misses a listing, re-run without `--no-playwright` for Playwright + optional manual steps.
  */
 import "dotenv/config";
-import * as readline from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
+
+import type { Database } from "#/db/index.server";
+import type { AuthorizationPageProbeAttempt } from "#/lib/oauth-authorization-page-discovery";
+import type { StoreListingOauthDiscoveryDetail } from "#/lib/oauth-listing-oauth-discovery.types";
 
 import * as schema from "#/db/schema";
-import type { Database } from "#/db/index.server";
-import type { StoreListingOauthDiscoveryDetail } from "#/lib/oauth-listing-oauth-discovery.types";
+import {
+  oauthAuthorizationPageProbeTargets,
+  probeOAuthClientMetadataFromAuthorizationServerPage,
+} from "#/lib/oauth-authorization-page-discovery";
+import {
+  probeOAuthListingAuth,
+  tryResolveOAuthClientMetadataUrlFast,
+} from "#/lib/oauth-listing-auth-probe";
 import {
   attachClientMetadataCapture,
   collectLoginLinkCandidates,
@@ -51,24 +59,18 @@ import {
   readAuthHintsFromBody,
   tryBlueskyishIdentifierLogin,
 } from "#/lib/oauth-listing-playwright-discovery";
-import {
-  probeOAuthListingAuth,
-  tryResolveOAuthClientMetadataUrlFast,
-} from "#/lib/oauth-listing-auth-probe";
-import type { AuthorizationPageProbeAttempt } from "#/lib/oauth-authorization-page-discovery";
-import {
-  oauthAuthorizationPageProbeTargets,
-  probeOAuthClientMetadataFromAuthorizationServerPage,
-} from "#/lib/oauth-authorization-page-discovery";
 import { sqlCategorySlugsHasProtocolBrowseableSegment } from "#/lib/product-claim-eligibility";
 import { and, asc, eq, isNotNull, not, sql } from "drizzle-orm";
+import { stdin as input, stdout as output } from "node:process";
+import * as readline from "node:readline/promises";
+
+import type { SkippedListingReason } from "./oauth-discovery-local-progress";
 
 import {
   defaultOAuthDiscoveryProgressPath,
   isSlugInLocalSkips,
   loadLocalProgress,
   recordSkippedListing,
-  type SkippedListingReason,
 } from "./oauth-discovery-local-progress";
 
 function ts(): string {
@@ -125,7 +127,7 @@ async function saveLocalSkip(args: {
     slug: args.listing.slug,
     skippedAt: new Date().toISOString(),
     reason: args.reason,
-    ...(args.note !== undefined ? { note: args.note } : {}),
+    ...(args.note === undefined ? {} : { note: args.note }),
   });
   log("local_progress_saved_skip", {
     slug: args.listing.slug,
@@ -134,7 +136,7 @@ async function saveLocalSkip(args: {
   });
 }
 
-async function upsertDiscovery(input: {
+async function upsertDiscovery(opts: {
   db: Database;
   listing: ListingRow;
   clientMetadataUrl: string | null;
@@ -146,22 +148,22 @@ async function upsertDiscovery(input: {
 }) {
   const now = new Date();
   const row = {
-    storeListingId: input.listing.id,
-    slug: input.listing.slug,
-    clientMetadataUrl: input.clientMetadataUrl,
-    authMethod: input.authMethod,
-    resolution: input.resolution,
-    loginPageUrl: input.loginPageUrl,
-    detailJson: input.detailJson,
+    storeListingId: opts.listing.id,
+    slug: opts.listing.slug,
+    clientMetadataUrl: opts.clientMetadataUrl,
+    authMethod: opts.authMethod,
+    resolution: opts.resolution,
+    loginPageUrl: opts.loginPageUrl,
+    detailJson: opts.detailJson,
     updatedAt: now,
   };
 
-  if (input.dryRun) {
+  if (opts.dryRun) {
     log("dry_run_upsert_discovery", row);
     return;
   }
 
-  await input.db
+  await opts.db
     .insert(schema.storeListingOauthDiscovery)
     .values({
       ...row,
@@ -415,7 +417,7 @@ async function runPlaywrightWithManual(args: {
         }
 
         const onProg = (event: string, data?: Record<string, unknown>) =>
-          log(event, { slug: args.listing.slug, ...(data ?? {}) });
+          log(event, { slug: args.listing.slug, ...data });
 
         const attempts: Array<AuthorizationPageProbeAttempt> = [];
         let metaUrl: string | null = null;

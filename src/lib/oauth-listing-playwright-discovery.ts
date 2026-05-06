@@ -65,12 +65,11 @@ export async function readAuthHintsFromBody(page: Page): Promise<{
   appPasswordMentioned: boolean;
   oauthMentioned: boolean;
 }> {
-  const text = (
-    await page
-      .locator("body")
-      .innerText()
-      .catch(() => "")
-  ).slice(0, 150_000);
+  const rawText = await page
+    .locator("body")
+    .textContent()
+    .catch(() => "");
+  const text = (rawText ?? "").slice(0, 150_000);
   const low = text.toLowerCase();
   return {
     appPasswordMentioned:
@@ -107,7 +106,7 @@ export async function exploreLoginEntrypoints(page: Page): Promise<{
   const visited: Array<string> = [];
   const candidates = await collectLoginLinkCandidates(page);
   const ordered = [
-    ...candidates.filter(oauthishCandidate),
+    ...candidates.filter((c) => oauthishCandidate(c)),
     ...candidates.filter((c) => !oauthishCandidate(c)),
   ].slice(0, 6);
 

@@ -300,21 +300,23 @@ async function main() {
         : [storefrontUrl];
 
       try {
-        let report: Awaited<ReturnType<typeof probeOAuthListingAuth>>;
+        let result:
+          | Awaited<ReturnType<typeof probeOAuthListingAuth>>
+          | undefined;
         let lastError: unknown;
         for (const probeUrl of orderedProbeUrls) {
           try {
-            report = await probeOAuthListingAuth(probeUrl);
+            result = await probeOAuthListingAuth(probeUrl);
             lastError = undefined;
             break;
-          } catch (e) {
-            lastError = e;
+          } catch (error) {
+            lastError = error;
           }
         }
-        if (lastError !== undefined) {
+        if (result === undefined) {
           throw lastError;
         }
-        await persistCompleted(row, report!);
+        await persistCompleted(row, result);
       } catch (error) {
         failed++;
         const message = error instanceof Error ? error.message : String(error);
@@ -329,11 +331,7 @@ async function main() {
             ? { discoveryClientMetadataUrl: fallbackTried }
             : {}),
         });
-        await persistError(
-          row,
-          orderedProbeUrls[orderedProbeUrls.length - 1] ?? null,
-          message,
-        );
+        await persistError(row, orderedProbeUrls.at(-1) ?? null, message);
       }
 
       done++;
