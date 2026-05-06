@@ -45,7 +45,12 @@ export function SiteHeader() {
 
   return (
     <Navbar hideHamburgerButton={true}>
-      <NavbarLogoLink to="/$locale" params={{ locale }} style={styles.logoContent} hasUnderline={false}>
+      <NavbarLogoLink
+        to="/$locale"
+        params={{ locale }}
+        style={styles.logoContent}
+        hasUnderline={false}
+      >
         <AtStoreLogo variant="navbar" />
       </NavbarLogoLink>
 

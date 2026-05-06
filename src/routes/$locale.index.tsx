@@ -109,16 +109,16 @@ const styles = stylex.create({
     transitionTimingFunction: "ease-in-out",
     height: "100%",
 
-    ":hover::before": {
-      opacity: 1,
-    },
     "::before": {
       inset: 0,
       borderRadius: radius.lg,
       cornerShape: "squircle",
       boxShadow: shadow.lg,
       content: "''",
-      opacity: 0,
+      opacity: {
+        default: 0,
+        ":hover": 1,
+      },
       position: "absolute",
       transitionDuration: animationDuration.slow,
       transitionProperty: "opacity",
@@ -172,16 +172,16 @@ const styles = stylex.create({
     boxShadow: shadow.md,
     position: "relative",
 
-    ":hover::before": {
-      opacity: 1,
-    },
     "::before": {
       inset: 0,
       borderRadius: radius.lg,
       cornerShape: "squircle",
       boxShadow: shadow.lg,
       content: "''",
-      opacity: 0,
+      opacity: {
+        default: 0,
+        ":hover": 1,
+      },
       position: "absolute",
       transitionDuration: animationDuration.default,
       transitionProperty: "opacity",
@@ -281,15 +281,15 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["2xl"],
     paddingTop: verticalSpace["2xl"],
 
-    ":hover::after": {
-      opacity: 1,
-    },
     "::after": {
       inset: 0,
       borderRadius: radius.md,
       boxShadow: shadow.lg,
       content: "''",
-      opacity: 0,
+      opacity: {
+        default: 0,
+        ":hover": 1,
+      },
       position: "absolute",
       transitionDuration: animationDuration.slow,
       transitionProperty: "opacity",

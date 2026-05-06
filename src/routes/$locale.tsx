@@ -31,8 +31,6 @@ export const Route = createFileRoute("/$locale")({
         href: restOfPath + location.searchStr,
       });
     }
-
-
   },
   component: LocaleRoute,
 });
