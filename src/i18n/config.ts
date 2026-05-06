@@ -17,7 +17,7 @@ export {
  * different surfaces in parallel. `common` is for site-wide chrome (header,
  * footer, switcher); page-specific surfaces get their own namespace.
  */
-export const NAMESPACES = ["common", "about"] as const;
+export const NAMESPACES = ["common", "about", "home"] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
 export const DEFAULT_NAMESPACE: Namespace = "common";

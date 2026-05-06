@@ -51,7 +51,7 @@ const detectLocale = createServerFn({ method: "GET" }).handler(
  * exists — so we redirect to the locale-prefixed version. Append to this
  * list as more surfaces are migrated.
  */
-const MIGRATED_TOP_LEVEL_PATHS: ReadonlySet<string> = new Set(["/about"]);
+const MIGRATED_TOP_LEVEL_PATHS: ReadonlySet<string> = new Set(["/about", "/"]);
 
 const primaryColorTheme = stylex.createTheme(primaryColor, {
   bg: blue.bg,

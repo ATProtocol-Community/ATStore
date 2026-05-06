@@ -9,5 +9,21 @@
       "en": "English",
       "en-XA": "Pseudo (en-XA)"
     }
+  },
+  "siteFooter": {
+    "copyright": "{{year}} at-store Copyright. All rights reserved.",
+    "nav": {
+      "about": "About",
+      "home": "Home",
+      "search": "Search",
+      "developerApi": "Developer API",
+      "manageListings": "Manage listings"
+    },
+    "apps": {
+      "groupTitle": "Apps",
+      "allApps": "All Apps",
+      "categories": "Categories",
+      "sharedData": "Shared data"
+    }
   }
 }

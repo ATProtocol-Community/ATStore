@@ -32,16 +32,7 @@ export const Route = createFileRoute("/$locale")({
       });
     }
 
-    // Temporary to show how route-based locales will work. once /home route is
-    // migrated with $locale prefix (next followup PR) we can remove this.
 
-    // Bare `/<locale>` has no index child yet — bounce to the canonical
-    if (location.pathname === `/${params.locale}`) {
-      throw redirect({
-        to: "/$locale/about",
-        params: { locale: params.locale },
-      });
-    }
   },
   component: LocaleRoute,
 });

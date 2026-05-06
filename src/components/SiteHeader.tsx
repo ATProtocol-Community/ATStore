@@ -11,6 +11,7 @@ import { Flex } from "../design-system/flex";
 import { IconButton } from "../design-system/icon-button";
 import { Navbar, NavbarAction, NavbarLogo } from "../design-system/navbar";
 import { fontSize } from "../design-system/theme/typography.stylex";
+import { useLocale } from "../lib/LocaleContext";
 import { AtStoreLogo } from "./AtStoreLogo";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { NavbarAuth } from "./NavbarAuth";
@@ -30,6 +31,7 @@ const styles = stylex.create({
 });
 
 export function SiteHeader() {
+  const { locale } = useLocale();
   const { data: session } = useQuery(user.getSessionQueryOptions);
   const { data: notifications } = useQuery({
     ...notificationApi.getProductNotificationsQueryOptions({ limit: 50 }),
@@ -43,7 +45,7 @@ export function SiteHeader() {
 
   return (
     <Navbar hideHamburgerButton={true}>
-      <NavbarLogoLink to="/" style={styles.logoContent} hasUnderline={false}>
+      <NavbarLogoLink to="/$locale" params={{ locale }} style={styles.logoContent} hasUnderline={false}>
         <AtStoreLogo variant="navbar" />
       </NavbarLogoLink>
 
