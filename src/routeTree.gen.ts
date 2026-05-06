@@ -52,6 +52,7 @@ import { Route as HeaderLayoutAdminLayoutAdminUnverifiedListingsRouteImport } fr
 import { Route as HeaderLayoutAdminLayoutAdminReviewsRouteImport } from './routes/_header-layout._admin-layout.admin.reviews'
 import { Route as HeaderLayoutAdminLayoutAdminRecentlyClaimedRouteImport } from './routes/_header-layout._admin-layout.admin.recently-claimed'
 import { Route as HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport } from './routes/_header-layout._admin-layout.admin.pending-claims'
+import { Route as HeaderLayoutAdminLayoutAdminOauthUrlGapsRouteImport } from './routes/_header-layout._admin-layout.admin.oauth-url-gaps'
 import { Route as HeaderLayoutAdminLayoutAdminManagedListingsRouteImport } from './routes/_header-layout._admin-layout.admin.managed-listings'
 import { Route as HeaderLayoutAdminLayoutAdminHomePageHeroRouteImport } from './routes/_header-layout._admin-layout.admin.home-page-hero'
 import { Route as HeaderLayoutAdminLayoutAdminAdminsRouteImport } from './routes/_header-layout._admin-layout.admin.admins'
@@ -296,6 +297,12 @@ const HeaderLayoutAdminLayoutAdminPendingClaimsRoute =
     path: '/admin/pending-claims',
     getParentRoute: () => HeaderLayoutAdminLayoutRoute,
   } as any)
+const HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute =
+  HeaderLayoutAdminLayoutAdminOauthUrlGapsRouteImport.update({
+    id: '/admin/oauth-url-gaps',
+    path: '/admin/oauth-url-gaps',
+    getParentRoute: () => HeaderLayoutAdminLayoutRoute,
+  } as any)
 const HeaderLayoutAdminLayoutAdminManagedListingsRoute =
   HeaderLayoutAdminLayoutAdminManagedListingsRouteImport.update({
     id: '/admin/managed-listings',
@@ -368,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/admin/oauth-url-gaps': typeof HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute
   '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
   '/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
@@ -418,6 +426,7 @@ export interface FileRoutesByTo {
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   '/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/admin/oauth-url-gaps': typeof HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute
   '/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   '/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
   '/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
@@ -470,6 +479,7 @@ export interface FileRoutesById {
   '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/_header-layout/_admin-layout/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   '/_header-layout/_admin-layout/admin/managed-listings': typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  '/_header-layout/_admin-layout/admin/oauth-url-gaps': typeof HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute
   '/_header-layout/_admin-layout/admin/pending-claims': typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   '/_header-layout/_admin-layout/admin/recently-claimed': typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
   '/_header-layout/_admin-layout/admin/reviews': typeof HeaderLayoutAdminLayoutAdminReviewsRoute
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/admin/admins'
     | '/admin/home-page-hero'
     | '/admin/managed-listings'
+    | '/admin/oauth-url-gaps'
     | '/admin/pending-claims'
     | '/admin/recently-claimed'
     | '/admin/reviews'
@@ -572,6 +583,7 @@ export interface FileRouteTypes {
     | '/admin/admins'
     | '/admin/home-page-hero'
     | '/admin/managed-listings'
+    | '/admin/oauth-url-gaps'
     | '/admin/pending-claims'
     | '/admin/recently-claimed'
     | '/admin/reviews'
@@ -623,6 +635,7 @@ export interface FileRouteTypes {
     | '/_header-layout/_admin-layout/admin/admins'
     | '/_header-layout/_admin-layout/admin/home-page-hero'
     | '/_header-layout/_admin-layout/admin/managed-listings'
+    | '/_header-layout/_admin-layout/admin/oauth-url-gaps'
     | '/_header-layout/_admin-layout/admin/pending-claims'
     | '/_header-layout/_admin-layout/admin/recently-claimed'
     | '/_header-layout/_admin-layout/admin/reviews'
@@ -965,6 +978,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRouteImport
       parentRoute: typeof HeaderLayoutAdminLayoutRoute
     }
+    '/_header-layout/_admin-layout/admin/oauth-url-gaps': {
+      id: '/_header-layout/_admin-layout/admin/oauth-url-gaps'
+      path: '/admin/oauth-url-gaps'
+      fullPath: '/admin/oauth-url-gaps'
+      preLoaderRoute: typeof HeaderLayoutAdminLayoutAdminOauthUrlGapsRouteImport
+      parentRoute: typeof HeaderLayoutAdminLayoutRoute
+    }
     '/_header-layout/_admin-layout/admin/managed-listings': {
       id: '/_header-layout/_admin-layout/admin/managed-listings'
       path: '/admin/managed-listings'
@@ -1033,6 +1053,7 @@ interface HeaderLayoutAdminLayoutRouteChildren {
   HeaderLayoutAdminLayoutAdminAdminsRoute: typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   HeaderLayoutAdminLayoutAdminHomePageHeroRoute: typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
   HeaderLayoutAdminLayoutAdminManagedListingsRoute: typeof HeaderLayoutAdminLayoutAdminManagedListingsRoute
+  HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute: typeof HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute
   HeaderLayoutAdminLayoutAdminPendingClaimsRoute: typeof HeaderLayoutAdminLayoutAdminPendingClaimsRoute
   HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute: typeof HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute
   HeaderLayoutAdminLayoutAdminReviewsRoute: typeof HeaderLayoutAdminLayoutAdminReviewsRoute
@@ -1050,6 +1071,8 @@ const HeaderLayoutAdminLayoutRouteChildren: HeaderLayoutAdminLayoutRouteChildren
       HeaderLayoutAdminLayoutAdminHomePageHeroRoute,
     HeaderLayoutAdminLayoutAdminManagedListingsRoute:
       HeaderLayoutAdminLayoutAdminManagedListingsRoute,
+    HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute:
+      HeaderLayoutAdminLayoutAdminOauthUrlGapsRoute,
     HeaderLayoutAdminLayoutAdminPendingClaimsRoute:
       HeaderLayoutAdminLayoutAdminPendingClaimsRoute,
     HeaderLayoutAdminLayoutAdminRecentlyClaimedRoute:

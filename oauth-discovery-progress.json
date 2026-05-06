@@ -1,0 +1,562 @@
+{
+  "version": 1,
+  "skipped": {
+    "anchor": {
+      "storeListingId": "1c67b060-409b-49d9-8c06-65835cfe7818",
+      "slug": "anchor",
+      "skippedAt": "2026-05-06T06:04:31.025Z",
+      "reason": "playwright_error",
+      "note": "page.goto: net::ERR_SSL_PROTOCOL_ERROR at https://dropanchor.app/\nCall log:\n\u001b[2m  - navigating to \"https://dropanchor.app/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    },
+    "atproto-science": {
+      "storeListingId": "aa43bc29-1e83-4adb-867a-6a13f20eae38",
+      "slug": "atproto-science",
+      "skippedAt": "2026-05-06T05:58:31.398Z",
+      "reason": "manual_skip"
+    },
+    "aturi-to": {
+      "storeListingId": "df756a25-fddc-45e5-a12c-19a4385e24ff",
+      "slug": "aturi-to",
+      "skippedAt": "2026-05-06T05:59:11.351Z",
+      "reason": "manual_skip"
+    },
+    "avails": {
+      "storeListingId": "9364e625-de1f-4625-8405-8491766367e6",
+      "slug": "avails",
+      "skippedAt": "2026-05-06T06:02:06.437Z",
+      "reason": "playwright_error",
+      "note": "Aborted with Ctrl+C"
+    },
+    "best-time-to-post": {
+      "storeListingId": "59e4c629-a927-4f92-a85b-312884185b67",
+      "slug": "best-time-to-post",
+      "skippedAt": "2026-05-06T06:06:25.476Z",
+      "reason": "manual_skip"
+    },
+    "bismuth-2": {
+      "storeListingId": "d3872a43-811a-44ce-914d-e1e82bd8ae2d",
+      "slug": "bismuth-2",
+      "skippedAt": "2026-05-06T06:06:49.008Z",
+      "reason": "manual_skip"
+    },
+    "blacktwist": {
+      "storeListingId": "506afef8-966b-44da-afc3-3f219072a72d",
+      "slug": "blacktwist",
+      "skippedAt": "2026-05-06T06:07:02.680Z",
+      "reason": "manual_skip"
+    },
+    "blebbit": {
+      "storeListingId": "a3c0834a-cdce-4416-932b-3a6012aefbf3",
+      "slug": "blebbit",
+      "skippedAt": "2026-05-06T06:07:19.241Z",
+      "reason": "manual_skip"
+    },
+    "blue-pilot": {
+      "storeListingId": "25ac1e78-021c-4abe-b2a4-afab8caa3743",
+      "slug": "blue-pilot",
+      "skippedAt": "2026-05-06T06:07:58.253Z",
+      "reason": "manual_skip"
+    },
+    "blueprint": {
+      "storeListingId": "354143c8-2d84-487a-85b9-d1c29caa92f3",
+      "slug": "blueprint",
+      "skippedAt": "2026-05-06T06:08:10.371Z",
+      "reason": "manual_skip"
+    },
+    "bluerain": {
+      "storeListingId": "64cc24d1-7f10-4645-9ac2-c3fa504b0e23",
+      "slug": "bluerain",
+      "skippedAt": "2026-05-06T06:08:21.299Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-alerts-and-account-backup-by-skyscraper": {
+      "storeListingId": "32569792-de6e-4dc7-9d42-1adc47ce3482",
+      "slug": "bluesky-alerts-and-account-backup-by-skyscraper",
+      "skippedAt": "2026-05-06T06:08:59.548Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-by-the-second": {
+      "storeListingId": "5c562aca-efcb-4c8e-b1e8-f2340e5d53d9",
+      "slug": "bluesky-by-the-second",
+      "skippedAt": "2026-05-06T06:09:29.036Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-copilot": {
+      "storeListingId": "f6a78286-848a-4b86-99bd-6cb9a2b7271d",
+      "slug": "bluesky-copilot",
+      "skippedAt": "2026-05-06T06:46:52.931Z",
+      "reason": "playwright_error",
+      "note": "page.goto: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://blueskycopilot.yourgenlab.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    },
+    "bluesky-inbox": {
+      "storeListingId": "710c621a-7604-41e8-a57d-579e17ae5250",
+      "slug": "bluesky-inbox",
+      "skippedAt": "2026-05-06T06:12:02.469Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-insights": {
+      "storeListingId": "e90f50a3-c046-4b5b-acbb-6c18f173c13a",
+      "slug": "bluesky-insights",
+      "skippedAt": "2026-05-06T06:12:39.629Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-meter": {
+      "storeListingId": "b83d47b9-2e94-4cc7-9871-f244093d56cb",
+      "slug": "bluesky-meter",
+      "skippedAt": "2026-05-06T06:13:33.723Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-migration": {
+      "storeListingId": "a18f74d7-8353-4af0-9438-d4babea84e0d",
+      "slug": "bluesky-migration",
+      "skippedAt": "2026-05-06T06:13:54.591Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-popularity-index": {
+      "storeListingId": "45cd7e81-c9cb-4acc-a673-00ce7630d847",
+      "slug": "bluesky-popularity-index",
+      "skippedAt": "2026-05-06T06:14:03.439Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-post-count-and-author-stats": {
+      "storeListingId": "14aaa414-b9d3-45b6-a725-7397ef39512f",
+      "slug": "bluesky-post-count-and-author-stats",
+      "skippedAt": "2026-05-06T06:46:59.145Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-post-formatter": {
+      "storeListingId": "7a8440d4-174d-4a8c-805f-a2d8ab2089b6",
+      "slug": "bluesky-post-formatter",
+      "skippedAt": "2026-05-06T06:14:47.101Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-post-screenshot-maker": {
+      "storeListingId": "ec98494f-914c-4ab0-aa41-d835f0be6535",
+      "slug": "bluesky-post-screenshot-maker",
+      "skippedAt": "2026-05-06T06:15:35.635Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-replies-exporter": {
+      "storeListingId": "ca214a29-5828-4778-be14-249cb58b73da",
+      "slug": "bluesky-replies-exporter",
+      "skippedAt": "2026-05-06T06:15:54.884Z",
+      "reason": "manual_skip"
+    },
+    "blueskyscore": {
+      "storeListingId": "114010ba-b69b-4cf0-89b5-77edba3d8dc4",
+      "slug": "blueskyscore",
+      "skippedAt": "2026-05-06T06:16:37.058Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-sidebar": {
+      "storeListingId": "80f7dbbe-36ac-4376-a696-442f831328ad",
+      "slug": "bluesky-sidebar",
+      "skippedAt": "2026-05-06T06:16:46.151Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-sms-service": {
+      "storeListingId": "b5105be5-9045-4b8f-9233-ae42dd730d28",
+      "slug": "bluesky-sms-service",
+      "skippedAt": "2026-05-06T06:17:03.670Z",
+      "reason": "manual_skip"
+    },
+    "blueskytimeline": {
+      "storeListingId": "b2e4e9ec-a4cb-48fa-92f1-3c85dcb96e55",
+      "slug": "blueskytimeline",
+      "skippedAt": "2026-05-06T06:17:13.104Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-tracker": {
+      "storeListingId": "bf21cc52-dc39-4a0a-a626-cd0f7b4d31fd",
+      "slug": "bluesky-tracker",
+      "skippedAt": "2026-05-06T06:17:35.669Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-video-downloader": {
+      "storeListingId": "1c0c25ae-900a-443b-b9b2-cd1714c28068",
+      "slug": "bluesky-video-downloader",
+      "skippedAt": "2026-05-06T06:17:49.269Z",
+      "reason": "manual_skip"
+    },
+    "bluesky-widget": {
+      "storeListingId": "0ca546e2-d0b3-46bd-9872-34ea0476dda9",
+      "slug": "bluesky-widget",
+      "skippedAt": "2026-05-06T06:17:57.616Z",
+      "reason": "manual_skip"
+    },
+    "bluetails": {
+      "storeListingId": "f775c7dc-0b63-46f4-a762-8bdbf4ed976d",
+      "slug": "bluetails",
+      "skippedAt": "2026-05-06T06:18:20.883Z",
+      "reason": "manual_skip"
+    },
+    "blue-video-saver": {
+      "storeListingId": "d05af201-6533-4000-b529-d82a66c06134",
+      "slug": "blue-video-saver",
+      "skippedAt": "2026-05-06T06:18:30.349Z",
+      "reason": "manual_skip"
+    },
+    "bskycharts": {
+      "storeListingId": "081a9ea7-aaad-4387-9fb6-df0b677375b8",
+      "slug": "bskycharts",
+      "skippedAt": "2026-05-06T06:20:25.323Z",
+      "reason": "manual_skip"
+    },
+    "bskycheck": {
+      "storeListingId": "500f3fd9-7932-4c7a-ada4-d0eadc098271",
+      "slug": "bskycheck",
+      "skippedAt": "2026-05-06T06:20:34.005Z",
+      "reason": "manual_skip"
+    },
+    "bskydelete": {
+      "storeListingId": "c70adba2-340a-446e-83b5-30094312a5e4",
+      "slug": "bskydelete",
+      "skippedAt": "2026-05-06T06:20:47.201Z",
+      "reason": "manual_skip"
+    },
+    "bsky-md": {
+      "storeListingId": "4c603729-a9ee-4f69-be6d-881af1bc5a21",
+      "slug": "bsky-md",
+      "skippedAt": "2026-05-06T06:20:58.463Z",
+      "reason": "manual_skip"
+    },
+    "bskysrch": {
+      "storeListingId": "a47eb352-82d3-4acd-9692-d34d5d20a681",
+      "slug": "bskysrch",
+      "skippedAt": "2026-05-06T06:21:04.514Z",
+      "reason": "manual_skip"
+    },
+    "buffer": {
+      "storeListingId": "0c7d10f4-f576-42a9-9860-2e36e5084e56",
+      "slug": "buffer",
+      "skippedAt": "2026-05-06T06:21:26.093Z",
+      "reason": "manual_skip"
+    },
+    "comment-picker": {
+      "storeListingId": "57df9706-4eae-433d-a85d-2647ffe1dc8d",
+      "slug": "comment-picker",
+      "skippedAt": "2026-05-06T06:23:34.382Z",
+      "reason": "manual_skip"
+    },
+    "debya": {
+      "storeListingId": "dba6bfe5-1cf5-41c2-bef5-e0c957ce5f4d",
+      "slug": "debya",
+      "skippedAt": "2026-05-06T06:25:44.565Z",
+      "reason": "manual_skip"
+    },
+    "docs-surf": {
+      "storeListingId": "fefc9c7b-7292-4f1a-a179-2d31338ec236",
+      "slug": "docs-surf",
+      "skippedAt": "2026-05-06T06:27:10.698Z",
+      "reason": "manual_skip"
+    },
+    "fedica": {
+      "storeListingId": "f00a661f-0e4f-41ed-8965-8e458b7a1aed",
+      "slug": "fedica",
+      "skippedAt": "2026-05-06T06:28:33.373Z",
+      "reason": "manual_skip"
+    },
+    "flour-blend-calculator": {
+      "storeListingId": "9ae718e2-6fe6-4d06-b26f-9d3e438f31d1",
+      "slug": "flour-blend-calculator",
+      "skippedAt": "2026-05-06T06:29:17.446Z",
+      "reason": "manual_skip"
+    },
+    "freemix": {
+      "storeListingId": "c7c7264f-274a-4b17-b758-30d0f2a455a3",
+      "slug": "freemix",
+      "skippedAt": "2026-05-06T06:30:40.385Z",
+      "reason": "manual_skip"
+    },
+    "freeq": {
+      "storeListingId": "bf2e873f-8db5-482f-9fbc-915bb0a2465b",
+      "slug": "freeq",
+      "skippedAt": "2026-05-06T06:30:54.198Z",
+      "reason": "manual_skip"
+    },
+    "glimpsky": {
+      "storeListingId": "d646e00a-6247-4234-9d79-9b0970de8dfe",
+      "slug": "glimpsky",
+      "skippedAt": "2026-05-06T06:32:02.164Z",
+      "reason": "manual_skip"
+    },
+    "graphtracks": {
+      "storeListingId": "6e0a908d-22ad-466c-8f15-b114a7a7eb28",
+      "slug": "graphtracks",
+      "skippedAt": "2026-05-06T06:33:05.747Z",
+      "reason": "manual_skip"
+    },
+    "iftta": {
+      "storeListingId": "2879cccb-b637-443a-b4eb-849032b831dc",
+      "slug": "iftta",
+      "skippedAt": "2026-05-06T06:36:46.755Z",
+      "reason": "manual_skip"
+    },
+    "ilo-so": {
+      "storeListingId": "15794378-2822-4419-96d9-137caf56fad5",
+      "slug": "ilo-so",
+      "skippedAt": "2026-05-06T06:37:03.334Z",
+      "reason": "manual_skip"
+    },
+    "linkedclaims": {
+      "storeListingId": "fa87fbe2-2851-4920-80b6-d7d86cf589a4",
+      "slug": "linkedclaims",
+      "skippedAt": "2026-05-06T06:38:07.047Z",
+      "reason": "manual_skip"
+    },
+    "my-location": {
+      "storeListingId": "6a3ded72-8198-4ca6-87c6-2b3851139edc",
+      "slug": "my-location",
+      "skippedAt": "2026-05-06T06:40:48.696Z",
+      "reason": "manual_skip"
+    },
+    "nectar": {
+      "storeListingId": "ba3d901f-0136-475a-98f3-cbb09cae991d",
+      "slug": "nectar",
+      "skippedAt": "2026-05-06T06:41:06.805Z",
+      "reason": "manual_skip"
+    },
+    "nowplaying-blue": {
+      "storeListingId": "7df3288d-4f41-4d63-8263-d0f0f4ec1029",
+      "slug": "nowplaying-blue",
+      "skippedAt": "2026-05-06T06:41:29.195Z",
+      "reason": "manual_skip"
+    },
+    "octosphere": {
+      "storeListingId": "dfbe4436-809a-409e-9409-5d613a8f7c3d",
+      "slug": "octosphere",
+      "skippedAt": "2026-05-06T06:41:48.411Z",
+      "reason": "manual_skip"
+    },
+    "oneup": {
+      "storeListingId": "17fdc4b8-b850-4517-ac15-45e5cf3d6646",
+      "slug": "oneup",
+      "skippedAt": "2026-05-06T06:42:04.643Z",
+      "reason": "manual_skip"
+    },
+    "onlysocial": {
+      "storeListingId": "a707dbf0-1b75-4f47-ab7c-593f3228213e",
+      "slug": "onlysocial",
+      "skippedAt": "2026-05-06T06:42:26.081Z",
+      "reason": "manual_skip"
+    },
+    "postflow": {
+      "storeListingId": "56e00ee1-3f0f-4946-b939-84f99d45ba83",
+      "slug": "postflow",
+      "skippedAt": "2026-05-06T06:44:46.355Z",
+      "reason": "manual_skip"
+    },
+    "posthyve": {
+      "storeListingId": "e4425d36-b656-40d8-a1f5-f0a6688698ff",
+      "slug": "posthyve",
+      "skippedAt": "2026-05-06T06:51:37.589Z",
+      "reason": "manual_skip"
+    },
+    "postingcat": {
+      "storeListingId": "b32aac16-4f00-42f1-b441-ba15dfa00549",
+      "slug": "postingcat",
+      "skippedAt": "2026-05-06T06:51:54.236Z",
+      "reason": "manual_skip"
+    },
+    "postpone": {
+      "storeListingId": "1b72ca20-5d35-40bf-9839-b582d61106e5",
+      "slug": "postpone",
+      "skippedAt": "2026-05-06T06:52:08.641Z",
+      "reason": "manual_skip"
+    },
+    "postwatch": {
+      "storeListingId": "4e981e6c-fa75-40a9-a14e-65d31259b09d",
+      "slug": "postwatch",
+      "skippedAt": "2026-05-06T06:52:44.469Z",
+      "reason": "manual_skip"
+    },
+    "qrsurge-com": {
+      "storeListingId": "5879033c-1f15-4b38-a79f-f3a351df5d8f",
+      "slug": "qrsurge-com",
+      "skippedAt": "2026-05-06T06:55:26.871Z",
+      "reason": "manual_skip"
+    },
+    "quiet-posters": {
+      "storeListingId": "659c4cae-026a-4d86-b63d-b16b85e091eb",
+      "slug": "quiet-posters",
+      "skippedAt": "2026-05-06T06:55:42.158Z",
+      "reason": "manual_skip"
+    },
+    "realtime-bluesky-metrics": {
+      "storeListingId": "b8f30453-355e-490e-b06f-34f5df723a3f",
+      "slug": "realtime-bluesky-metrics",
+      "skippedAt": "2026-05-06T06:56:09.870Z",
+      "reason": "manual_skip"
+    },
+    "roster": {
+      "storeListingId": "990fda99-bec1-416c-9e3c-cb66bd0d0dee",
+      "slug": "roster",
+      "skippedAt": "2026-05-06T06:58:19.717Z",
+      "reason": "manual_skip"
+    },
+    "rpsync": {
+      "storeListingId": "230c26fd-fcbe-41a9-9764-9003d15f11fb",
+      "slug": "rpsync",
+      "skippedAt": "2026-05-06T06:58:41.713Z",
+      "reason": "manual_skip"
+    },
+    "schedpilot": {
+      "storeListingId": "9b218f9d-20bc-4b6a-82ac-aa5de7863ae4",
+      "slug": "schedpilot",
+      "skippedAt": "2026-05-06T06:59:36.918Z",
+      "reason": "manual_skip"
+    },
+    "selfhosted-social": {
+      "storeListingId": "3d64c741-1712-4e6a-90f7-67a1165d490b",
+      "slug": "selfhosted-social",
+      "skippedAt": "2026-05-06T07:00:25.853Z",
+      "reason": "manual_skip"
+    },
+    "sensorthings-on-atproto": {
+      "storeListingId": "4ce72c76-2e3e-49fa-b9ed-00fcd283b8b5",
+      "slug": "sensorthings-on-atproto",
+      "skippedAt": "2026-05-06T07:00:40.390Z",
+      "reason": "manual_skip"
+    },
+    "skircle": {
+      "storeListingId": "43e997b4-386c-46e2-aa2c-f6ff8cf709ac",
+      "slug": "skircle",
+      "skippedAt": "2026-05-06T07:01:21.181Z",
+      "reason": "manual_skip"
+    },
+    "skycord": {
+      "storeListingId": "672a7332-af1e-4ffa-bc32-ea8688d4092d",
+      "slug": "skycord",
+      "skippedAt": "2026-05-06T07:02:52.425Z",
+      "reason": "manual_skip"
+    },
+    "skyflow": {
+      "storeListingId": "024f1f0a-6588-4e7c-b758-a184618cb47d",
+      "slug": "skyflow",
+      "skippedAt": "2026-05-06T07:05:07.171Z",
+      "reason": "manual_skip"
+    },
+    "sky-follower-bridge": {
+      "storeListingId": "6dc45f39-2394-412a-94f0-f43e3e90df20",
+      "slug": "sky-follower-bridge",
+      "skippedAt": "2026-05-06T07:05:26.656Z",
+      "reason": "manual_skip"
+    },
+    "skykit": {
+      "storeListingId": "23ec07f3-37c7-4939-99fd-1e16f861c4aa",
+      "slug": "skykit",
+      "skippedAt": "2026-05-06T07:05:36.502Z",
+      "reason": "manual_skip"
+    },
+    "skypilot": {
+      "storeListingId": "75f35e36-4434-4945-be4f-3a13ebfb59c6",
+      "slug": "skypilot",
+      "skippedAt": "2026-05-06T07:06:14.821Z",
+      "reason": "manual_skip"
+    },
+    "sky-zoo": {
+      "storeListingId": "be6f0ae9-3f2d-4909-a149-a79b77e007a3",
+      "slug": "sky-zoo",
+      "skippedAt": "2026-05-06T07:07:20.709Z",
+      "reason": "manual_skip"
+    },
+    "sorasns": {
+      "storeListingId": "baa599c2-5086-4885-8731-76b79b62e700",
+      "slug": "sorasns",
+      "skippedAt": "2026-05-06T07:08:03.706Z",
+      "reason": "manual_skip"
+    },
+    "starter-packs": {
+      "storeListingId": "71977bcf-666b-41a9-9573-b17489d9162e",
+      "slug": "starter-packs",
+      "skippedAt": "2026-05-06T07:09:11.338Z",
+      "reason": "manual_skip"
+    },
+    "swat": {
+      "storeListingId": "b6a93637-09b1-447a-ae58-82f19e3b6793",
+      "slug": "swat",
+      "skippedAt": "2026-05-06T07:10:28.184Z",
+      "reason": "manual_skip"
+    },
+    "sweat": {
+      "storeListingId": "6f97ca00-8713-469a-b35a-db928583717c",
+      "slug": "sweat",
+      "skippedAt": "2026-05-06T07:10:29.296Z",
+      "reason": "playwright_error",
+      "note": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://sweat.mino.mobi/\nCall log:\n\u001b[2m  - navigating to \"https://sweat.mino.mobi/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    },
+    "teal-fm": {
+      "storeListingId": "9808372d-623b-478a-83aa-5df03fd4ad0e",
+      "slug": "teal-fm",
+      "skippedAt": "2026-05-06T07:10:45.597Z",
+      "reason": "manual_skip"
+    },
+    "thebluereport": {
+      "storeListingId": "d2b32750-4bac-463b-81da-1b836488190f",
+      "slug": "thebluereport",
+      "skippedAt": "2026-05-06T07:10:57.771Z",
+      "reason": "manual_skip"
+    },
+    "the-bluesky-dictionary": {
+      "storeListingId": "23b11f3a-73a5-4c57-842b-2eb78ac54c64",
+      "slug": "the-bluesky-dictionary",
+      "skippedAt": "2026-05-06T07:11:05.695Z",
+      "reason": "manual_skip"
+    },
+    "thread2page": {
+      "storeListingId": "a565cab2-f349-4acc-8cb7-f067e71f59b3",
+      "slug": "thread2page",
+      "skippedAt": "2026-05-06T07:11:33.537Z",
+      "reason": "manual_skip"
+    },
+    "thundersky": {
+      "storeListingId": "d1268e6c-97f0-477a-b265-26601e728216",
+      "slug": "thundersky",
+      "skippedAt": "2026-05-06T07:11:44.682Z",
+      "reason": "manual_skip"
+    },
+    "tobsky": {
+      "storeListingId": "0294b68a-c006-455a-9b3a-f6ccdb98d236",
+      "slug": "tobsky",
+      "skippedAt": "2026-05-06T07:12:16.055Z",
+      "reason": "manual_skip"
+    },
+    "toolify-blue": {
+      "storeListingId": "5e352dac-66c0-4ea2-87d0-d0e3f0fe1815",
+      "slug": "toolify-blue",
+      "skippedAt": "2026-05-06T07:12:52.651Z",
+      "reason": "manual_skip"
+    },
+    "tracklist": {
+      "storeListingId": "1eb7ac59-345b-45f6-88cd-f7aa4f456624",
+      "slug": "tracklist",
+      "skippedAt": "2026-05-06T07:13:21.353Z",
+      "reason": "manual_skip"
+    },
+    "trending-hashtags-by-skyscraper": {
+      "storeListingId": "0bb1fc85-1628-4574-91ec-0fea9a5949ce",
+      "slug": "trending-hashtags-by-skyscraper",
+      "skippedAt": "2026-05-06T07:13:29.361Z",
+      "reason": "manual_skip"
+    },
+    "trendspotter": {
+      "storeListingId": "c461a5b2-b5bb-4314-8a58-d9ec80f03351",
+      "slug": "trendspotter",
+      "skippedAt": "2026-05-06T07:13:36.165Z",
+      "reason": "manual_skip"
+    },
+    "tt": {
+      "storeListingId": "84cdf8d1-8ce2-455c-87ff-70912b063401",
+      "slug": "tt",
+      "skippedAt": "2026-05-06T07:13:36.961Z",
+      "reason": "playwright_error",
+      "note": "page.goto: net::ERR_NAME_NOT_RESOLVED at http://y.com/\nCall log:\n\u001b[2m  - navigating to \"http://y.com/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    },
+    "vanity-blue": {
+      "storeListingId": "be92c4f8-cc3a-4a04-b7a8-b4a0de4e92bd",
+      "slug": "vanity-blue",
+      "skippedAt": "2026-05-06T07:13:58.928Z",
+      "reason": "manual_skip"
+    }
+  }
+}

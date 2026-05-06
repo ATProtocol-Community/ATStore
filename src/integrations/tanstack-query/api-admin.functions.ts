@@ -10,6 +10,7 @@ import {
   fetchBlueskyPublicProfileFields,
 } from "#/lib/bluesky-public-profile";
 import { httpsListingImageUrlOrNull } from "#/lib/listing-image-url";
+import { sqlCategorySlugsHasProtocolBrowseableSegment } from "#/lib/product-claim-eligibility";
 import {
   adminFnMiddleware,
   getAtprotoSessionForRequest,
@@ -24,6 +25,7 @@ import {
   isNotNull,
   isNull,
   ne,
+  not,
   or,
   sql,
 } from "drizzle-orm";
@@ -892,6 +894,116 @@ const getRecentListings = createServerFn({ method: "GET" })
     });
   });
 
+const getAdminOAuthUrlGaps = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware, adminFnMiddleware])
+  .handler(async ({ context }) => {
+    const { db, schema } = context;
+    const listings = schema.storeListings;
+    const discovery = schema.storeListingOauthDiscovery;
+    const probes = schema.storeListingOAuthProbes;
+
+    const baseFilters = and(
+      isNotNull(listings.externalUrl),
+      sql`lower(trim(${listings.externalUrl})) not like 'at:%'`,
+      not(sqlCategorySlugsHasProtocolBrowseableSegment(listings.categorySlugs)),
+    );
+
+    const discoveryNotAppPasswordOnly = or(
+      isNull(discovery.storeListingId),
+      and(
+        ne(discovery.authMethod, "app_password"),
+        ne(discovery.authMethod, "unsupported_mobile"),
+      ),
+    );
+
+    const noClientMetadataFromEither = sql`(
+      (
+        ${discovery.clientMetadataUrl} is null
+        or trim(${discovery.clientMetadataUrl}) = ''
+      ) and (
+        ${probes.successfulClientMetadataUrl} is null
+        or trim(${probes.successfulClientMetadataUrl}) = ''
+      )
+    )`;
+
+    const missingWhere = and(
+      baseFilters,
+      discoveryNotAppPasswordOnly,
+      noClientMetadataFromEither,
+      or(isNull(probes.status), ne(probes.status, "error")),
+    );
+
+    const failingWhere = and(baseFilters, eq(probes.status, "error"));
+
+    const selectCols = {
+      id: listings.id,
+      slug: listings.slug,
+      name: listings.name,
+      externalUrl: listings.externalUrl,
+      verificationStatus: listings.verificationStatus,
+      discoveryClientMetadataUrl: discovery.clientMetadataUrl,
+      discoveryResolution: discovery.resolution,
+      discoveryAuthMethod: discovery.authMethod,
+      probeStatus: probes.status,
+      probeSuccessfulUrl: probes.successfulClientMetadataUrl,
+      probeError: probes.probeError,
+      probedUrl: probes.probedUrl,
+      probedAt: probes.probedAt,
+    };
+
+    const [missingRows, failingRows] = await Promise.all([
+      db
+        .select(selectCols)
+        .from(listings)
+        .leftJoin(discovery, eq(discovery.storeListingId, listings.id))
+        .leftJoin(probes, eq(probes.storeListingId, listings.id))
+        .where(missingWhere)
+        .orderBy(asc(listings.slug)),
+      db
+        .select(selectCols)
+        .from(listings)
+        .leftJoin(discovery, eq(discovery.storeListingId, listings.id))
+        .innerJoin(probes, eq(probes.storeListingId, listings.id))
+        .where(failingWhere)
+        .orderBy(desc(probes.probedAt), asc(listings.slug)),
+    ]);
+
+    const toIso = (d: Date | null) => (d ? d.toISOString() : null);
+
+    return {
+      missingClientMetadataUrl: missingRows.map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        externalUrl: r.externalUrl,
+        verificationStatus: r.verificationStatus,
+        discoveryClientMetadataUrl: r.discoveryClientMetadataUrl,
+        discoveryResolution: r.discoveryResolution,
+        discoveryAuthMethod: r.discoveryAuthMethod,
+        probeStatus: r.probeStatus,
+        probeSuccessfulUrl: r.probeSuccessfulUrl,
+        probedAt: toIso(r.probedAt),
+        probedUrl: r.probedUrl,
+      })),
+      probeErrors: failingRows.map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        externalUrl: r.externalUrl,
+        verificationStatus: r.verificationStatus,
+        discoveryClientMetadataUrl: r.discoveryClientMetadataUrl,
+        probeError: r.probeError,
+        probedAt: toIso(r.probedAt),
+        probedUrl: r.probedUrl,
+      })),
+    };
+  });
+
+const getAdminOAuthUrlGapsQueryOptions = queryOptions({
+  queryKey: ["admin", "oauth-url-gaps"],
+  queryFn: async () => getAdminOAuthUrlGaps(),
+});
+
 const getRecentListingsQueryOptions = queryOptions({
   queryKey: ["admin", "recent-listings"],
   queryFn: async () => getRecentListings(),
@@ -900,6 +1012,8 @@ const getRecentListingsQueryOptions = queryOptions({
 export const adminApi = {
   getAdminDashboard,
   getAdminDashboardQueryOptions,
+  getAdminOAuthUrlGaps,
+  getAdminOAuthUrlGapsQueryOptions,
   setListingVerification,
   setClaimStatus,
   setHomePageHeroListings,

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Batch-probe every `store_listings.external_url` for OAuth / authorization metadata
- * (same logic as `pnpm oauth:detect-scopes`) and upsert into `store_listing_oauth_probes`.
+ * Batch-probe every listing for OAuth / authorization metadata (same logic as
+ * `pnpm oauth:detect-scopes`) and upsert into `store_listing_oauth_probes`.
+ * When `store_listing_oauth_discovery.client_metadata_url` is set, that URL is
+ * probed first; on failure we fall back to `store_listings.external_url`.
  * After a non–dry-run pass completes, recomputes the `/apps/lexicons` hub snapshot
  * (`oauth_lexicon_hub_snapshot`) so the hub stays fast without on-demand HTTP.
  *
@@ -17,15 +19,16 @@
  *   LISTING_OAUTH_PROBE_CONCURRENCY=4                 (parallel probes)
  *   LISTING_OAUTH_PROBE_LIMIT=                        (optional max rows)
  *   LISTING_OAUTH_PROBE_PROGRESS_EVERY=25
+ *   LISTING_OAUTH_PROBE_SLUG=openmeet                  (optional; probe one listing)
  *
- * CLI (override env): --concurrency=N --limit=N --progress-every=N --dry-run
+ * CLI (override env): --slug=openmeet --concurrency=N --limit=N --progress-every=N --dry-run
  */
 import "dotenv/config";
 import * as schema from "#/db/schema";
 import { refreshOAuthLexiconHubSnapshot } from "#/lib/oauth-lexicon-hub-snapshot.server";
 import { probeOAuthListingAuth } from "#/lib/oauth-listing-auth-probe";
 import { extractOAuthLexiconKeysForStorefrontProbe } from "#/lib/oauth-scope-lexicon-keys";
-import { asc, isNotNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 
 function ts(): string {
   return new Date().toISOString();
@@ -89,6 +92,10 @@ async function main() {
   }
 
   const dryRun = hasFlag("dry-run");
+  const slugFilter =
+    parseFlag("slug")?.trim() ||
+    process.env.LISTING_OAUTH_PROBE_SLUG?.trim() ||
+    undefined;
   const concurrency = readPositiveInt(
     "concurrency",
     "LISTING_OAUTH_PROBE_CONCURRENCY",
@@ -108,9 +115,25 @@ async function main() {
       id: schema.storeListings.id,
       slug: schema.storeListings.slug,
       externalUrl: schema.storeListings.externalUrl,
+      discoveryClientMetadataUrl:
+        schema.storeListingOauthDiscovery.clientMetadataUrl,
     })
     .from(schema.storeListings)
-    .where(isNotNull(schema.storeListings.externalUrl))
+    .leftJoin(
+      schema.storeListingOauthDiscovery,
+      eq(
+        schema.storeListingOauthDiscovery.storeListingId,
+        schema.storeListings.id,
+      ),
+    )
+    .where(
+      slugFilter
+        ? and(
+            isNotNull(schema.storeListings.externalUrl),
+            eq(schema.storeListings.slug, slugFilter),
+          )
+        : isNotNull(schema.storeListings.externalUrl),
+    )
     .orderBy(
       asc(schema.storeListings.slug),
       asc(schema.storeListings.createdAt),
@@ -126,6 +149,7 @@ async function main() {
     concurrency,
     dryRun,
     limit: limit ?? null,
+    slug: slugFilter ?? null,
   });
 
   if (total === 0) {
@@ -261,26 +285,55 @@ async function main() {
       const row = rows[i];
       if (!row) return;
 
-      const trimmed = row.externalUrl?.trim() ?? "";
-      if (!trimmed) {
+      const storefrontUrl = row.externalUrl?.trim() ?? "";
+      const discoveryUrl = row.discoveryClientMetadataUrl?.trim() ?? "";
+      if (!storefrontUrl) {
         await persistSkipped(row);
         done++;
         continue;
       }
 
+      const orderedProbeUrls = discoveryUrl
+        ? discoveryUrl === storefrontUrl
+          ? [storefrontUrl]
+          : [discoveryUrl, storefrontUrl]
+        : [storefrontUrl];
+
       try {
-        const report = await probeOAuthListingAuth(trimmed);
-        await persistCompleted(row, report);
+        let report: Awaited<ReturnType<typeof probeOAuthListingAuth>>;
+        let lastError: unknown;
+        for (const probeUrl of orderedProbeUrls) {
+          try {
+            report = await probeOAuthListingAuth(probeUrl);
+            lastError = undefined;
+            break;
+          } catch (e) {
+            lastError = e;
+          }
+        }
+        if (lastError !== undefined) {
+          throw lastError;
+        }
+        await persistCompleted(row, report!);
       } catch (error) {
         failed++;
         const message = error instanceof Error ? error.message : String(error);
+        const fallbackTried =
+          orderedProbeUrls.length > 1 ? orderedProbeUrls[0] : undefined;
         log("warn", "probe_failed", {
           workerId,
           listingId: row.id,
           slug: row.slug,
           error: message,
+          ...(fallbackTried
+            ? { discoveryClientMetadataUrl: fallbackTried }
+            : {}),
         });
-        await persistError(row, trimmed, message);
+        await persistError(
+          row,
+          orderedProbeUrls[orderedProbeUrls.length - 1] ?? null,
+          message,
+        );
       }
 
       done++;

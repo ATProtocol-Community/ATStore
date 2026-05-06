@@ -1,5 +1,6 @@
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { DirectoryOAuthLexiconHubData } from "#/lib/oauth-lexicon-hub.types";
+import type { StoreListingOauthDiscoveryDetail } from "#/lib/oauth-listing-oauth-discovery.types";
 import type { OAuthAuthProbeReport } from "#/lib/oauth-listing-auth-probe";
 
 import { relations, sql } from "drizzle-orm";
@@ -711,6 +712,47 @@ export const storeListingOAuthProbes = pgTable(
       "gin",
       table.oauthLexiconKeys,
     ),
+  ],
+);
+
+/**
+ * Canonical OAuth / login classification for a listing, filled by
+ * `scripts/discover-listing-oauth-metadata.ts` (well-known probes, Playwright, or manual).
+ * `client_metadata_url` is the URL we should fetch first for future automation.
+ */
+export const storeListingOauthDiscovery = pgTable(
+  "store_listing_oauth_discovery",
+  {
+    storeListingId: uuid("store_listing_id")
+      .primaryKey()
+      .references(() => storeListings.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    clientMetadataUrl: text("client_metadata_url"),
+    /**
+     * `oauth` | `app_password` | `unsupported_mobile` | `unknown`
+     */
+    authMethod: text("auth_method").notNull().default("unknown"),
+    /**
+     * `well_known` | `playwright` | `manual_oauth` | `manual_app_password` |
+     * `manual_mobile`
+     */
+    resolution: text("resolution").notNull(),
+    loginPageUrl: text("login_page_url"),
+    detailJson: jsonb("detail_json")
+      .$type<StoreListingOauthDiscoveryDetail>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("store_listing_oauth_discovery_slug_idx").on(table.slug),
+    index("store_listing_oauth_discovery_resolution_idx").on(table.resolution),
   ],
 );
 

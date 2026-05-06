@@ -7,7 +7,7 @@ import { getAtstoreRepoDid } from "#/lib/atproto/publish-directory-listing";
 import { and, asc, eq, isNotNull, isNull, ne, not, or, sql } from "drizzle-orm";
 
 /** Two-segment `protocol/…` slug — directory "Protocol" listings; not claimable as app product listings. */
-function sqlCategorySlugsHasProtocolBrowseableSegment(
+export function sqlCategorySlugsHasProtocolBrowseableSegment(
   categorySlugs: AnyPgColumn,
 ): SQL {
   return sql<boolean>`exists (

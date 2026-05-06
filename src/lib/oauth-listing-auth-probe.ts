@@ -40,6 +40,8 @@ import {
 export type { PermissionGrantStructuredLine } from "./oauth-permission-grant-ui";
 
 const FETCH_TIMEOUT_MS = 15_000;
+/** Short timeout for {@link tryResolveOAuthClientMetadataUrlFast} (manual PDS login path, etc.). */
+const CLIENT_METADATA_QUICK_TIMEOUT_MS = 7500;
 const LEXICON_DNS_TIMEOUT_MS = 5 * 1000;
 const LEXICON_SCHEMA_COLLECTION = "com.atproto.lexicon.schema";
 
@@ -112,6 +114,92 @@ function clientMetadataCandidates(originHref: string): Array<string> {
   return CLIENT_METADATA_PATHS.map((p) => `${origin}${p}`);
 }
 
+function looksLikeOAuthClientMetadataDoc(doc: JsonRecord): boolean {
+  if (typeof doc.client_id !== "string" || !doc.client_id.trim()) {
+    return false;
+  }
+  const cid = doc.client_id.trim();
+  if (/^https?:\/\//iu.test(cid)) {
+    return true;
+  }
+  if (Array.isArray(doc.redirect_uris)) {
+    return doc.redirect_uris.every((x) => typeof x === "string");
+  }
+  return typeof doc.scope === "string" || typeof doc.client_uri === "string";
+}
+
+/**
+ * Fast path: find a single OAuth client-metadata JSON URL (direct GET or well-known paths
+ * on the resource origin, plus optional `api.` host). No PRM/AS fetches, no lexicon expansion.
+ * Used for manual “PDS login page” triage where full {@link probeOAuthListingAuth} is too slow.
+ */
+export async function tryResolveOAuthClientMetadataUrlFast(
+  rawHref: string,
+  onProgress?: (event: string, data?: Record<string, unknown>) => void,
+): Promise<{ url: string } | null> {
+  let listingUrl: URL;
+  try {
+    listingUrl = new URL(normalizeOAuthProbeHref(rawHref));
+  } catch {
+    return null;
+  }
+
+  const href =
+    listingUrl.href.replace(/#$/, "").split("#")[0] ?? listingUrl.href;
+
+  onProgress?.("client_metadata_fast_start", { input: href });
+
+  const tryCandidate = async (
+    candidateUrl: string,
+    kind: string,
+  ): Promise<string | null> => {
+    onProgress?.("client_metadata_fast_fetch", { kind, url: candidateUrl });
+    const result = await fetchJson(
+      candidateUrl,
+      CLIENT_METADATA_QUICK_TIMEOUT_MS,
+    );
+    if (!result.ok) {
+      onProgress?.("client_metadata_fast_fetch_miss", {
+        kind,
+        url: candidateUrl,
+        error: result.error,
+        status: result.status,
+      });
+      return null;
+    }
+    if (!looksLikeOAuthClientMetadataDoc(result.data)) {
+      onProgress?.("client_metadata_fast_not_metadata_doc", {
+        kind,
+        url: candidateUrl,
+      });
+      return null;
+    }
+    onProgress?.("client_metadata_fast_hit", { kind, url: candidateUrl });
+    return candidateUrl;
+  };
+
+  const direct = await tryCandidate(href, "direct_url");
+  if (direct) return { url: direct };
+
+  const storefrontUrl = new URL(`${listingUrl.origin}/`);
+  for (const u of clientMetadataCandidates(storefrontUrl.href)) {
+    const found = await tryCandidate(u, "origin_path");
+    if (found) return { url: found };
+  }
+
+  const alt = tryAlternateApiHostnameOriginForOAuthProbe(storefrontUrl);
+  if (alt) {
+    onProgress?.("client_metadata_fast_alt_api_origin", { origin: alt });
+    for (const u of clientMetadataCandidates(`${alt}/`)) {
+      const found = await tryCandidate(u, "api_host_path");
+      if (found) return { url: found };
+    }
+  }
+
+  onProgress?.("client_metadata_fast_give_up", { input: href });
+  return null;
+}
+
 /**
  * Many ATProto apps advertise OAuth client_metadata on an `api.` host while the storefront
  * `external_url` points at marketing apex (`semble.so` vs `api.semble.so`).
@@ -144,9 +232,12 @@ export function tryAlternateApiHostnameOriginForOAuthProbe(
   }
 }
 
-async function fetchJson(url: string): Promise<AttemptResult<JsonRecord>> {
+async function fetchJson(
+  url: string,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
+): Promise<AttemptResult<JsonRecord>> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       redirect: "follow",
@@ -1096,6 +1187,31 @@ async function ingestOAuthClientMetadataAttemptsForOrigin(
   }
 }
 
+/** When the probe input is a concrete path (e.g. discovery `client_metadata_url`), fetch it before well-known candidates on the origin. */
+async function ingestOAuthClientMetadataAttemptsForExplicitInputPath(
+  listingUrl: URL,
+  href: string,
+  clientAttempts: OAuthAuthProbeReport["clientMetadata"],
+): Promise<void> {
+  const path = listingUrl.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/") return;
+
+  const result = await fetchJson(href);
+  let scope_field: string | undefined;
+  if (result.ok) {
+    const s = result.data.scope;
+    if (typeof s === "string") scope_field = normalizeScopeWhitespace(s);
+    const cid = result.data.client_id;
+    if (!scope_field && typeof cid === "string") {
+      const fromQ = extractScopeHintsFromQuery(cid);
+      if (fromQ) scope_field = normalizeScopeWhitespace(fromQ);
+    }
+  }
+  if (result.ok || result.status !== 404) {
+    clientAttempts.push({ url: href, result, scope_field });
+  }
+}
+
 export async function probeOAuthListingAuth(
   rawHref: string,
 ): Promise<OAuthAuthProbeReport> {
@@ -1182,10 +1298,18 @@ export async function probeOAuthListingAuth(
 
   const clientAttempts: OAuthAuthProbeReport["clientMetadata"] = [];
 
-  await ingestOAuthClientMetadataAttemptsForOrigin(
-    listingUrl.origin,
+  await ingestOAuthClientMetadataAttemptsForExplicitInputPath(
+    listingUrl,
+    href,
     clientAttempts,
   );
+
+  if (!clientAttempts.some((c) => c.result.ok)) {
+    await ingestOAuthClientMetadataAttemptsForOrigin(
+      listingUrl.origin + "/",
+      clientAttempts,
+    );
+  }
 
   const storefrontHadReachableOAuthClientMetadata = clientAttempts.some(
     (c) => c.result.ok,

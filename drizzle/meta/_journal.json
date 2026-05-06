@@ -274,6 +274,13 @@
       "when": 1779000000000,
       "tag": "0039_oauth_lexicon_hub_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1779100000000,
+      "tag": "0040_store_listing_oauth_discovery",
+      "breakpoints": true
     }
   ]
 }

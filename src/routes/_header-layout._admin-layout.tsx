@@ -95,6 +95,12 @@ function RouteComponent() {
               Edit Listing
             </SidebarLink>
             <SidebarLink
+              to="/admin/oauth-url-gaps"
+              activeProps={{ isActive: true }}
+            >
+              OAuth URL gaps
+            </SidebarLink>
+            <SidebarLink
               to="/admin/add-listing"
               activeProps={{ isActive: true }}
             >
