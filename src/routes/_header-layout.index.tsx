@@ -314,8 +314,10 @@ const styles = stylex.create({
     height: "100%",
   },
   listingCardContent: {
+    boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
+    height: "100%",
     paddingBottom: verticalSpace["4xl"],
     paddingLeft: horizontalSpace["4xl"],
     paddingRight: horizontalSpace["4xl"],
@@ -533,36 +535,42 @@ function HeroCard({ listing }: { listing: DirectoryListingCard }) {
       params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.bentoLink, stylex.defaultMarker())}
     >
-      <Card size="lg" style={styles.bentoLinkFeatured}>
-        <Flex direction="column" gap="4xl" style={styles.heroCardContent}>
-          {listing.heroImageUrl ? (
-            <div {...stylex.props(styles.heroImagePlaceholder)}>
-              <HeroImage
-                alt={getDirectoryListingHeroImageAlt(listing)}
-                glowIntensity={0}
-                src={listing.heroImageUrl}
-              />
-            </div>
-          ) : null}
-          <Flex direction="column" gap="4xl" style={styles.listingCardContent}>
-            <Flex align="center" gap="2xl">
-              <StoreIcon listing={listing} size="xl" />
-              <Flex direction="column" gap="xl">
-                <Text size="3xl" weight="semibold">
-                  {listing.name}
-                </Text>
-                <Text size="lg" variant="secondary">
-                  @
-                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-                </Text>
+      {listing.heroImageUrl ? (
+        <div {...stylex.props(styles.heroImagePlaceholder)}>
+          <HeroImage
+            alt={getDirectoryListingHeroImageAlt(listing)}
+            glowIntensity={0}
+            src={listing.heroImageUrl}
+          />
+        </div>
+      ) : (
+        <Card size="lg" style={styles.bentoLinkFeatured}>
+          <Flex direction="column" gap="4xl" style={styles.heroCardContent}>
+            <Flex
+              direction="column"
+              gap="4xl"
+              style={styles.listingCardContent}
+            >
+              <Flex align="center" gap="2xl">
+                <StoreIcon listing={listing} size="xl" />
+                <Flex direction="column" gap="xl">
+                  <Text size="3xl" weight="semibold">
+                    {listing.name}
+                  </Text>
+                  <Text size="lg" variant="secondary">
+                    @
+                    {listing.productAccountHandle?.replace(/^@/, "") ||
+                      "unknown"}
+                  </Text>
+                </Flex>
               </Flex>
+              <Body variant="secondary" style={styles.listItemTagline}>
+                {listing.tagline}
+              </Body>
             </Flex>
-            <Body variant="secondary" style={styles.listItemTagline}>
-              {listing.tagline}
-            </Body>
           </Flex>
-        </Flex>
-      </Card>
+        </Card>
+      )}
     </RouterLink>
   );
 }
