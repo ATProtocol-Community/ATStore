@@ -90,8 +90,7 @@ export async function probeOAuthClientMetadataFromAuthorizationServerPage(
   const attempts: Array<AuthorizationPageProbeAttempt> = [];
   let clientMetadataUrl: string | null = null;
 
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i]!;
+  for (const [i, target] of targets.entries()) {
     onProgress?.("authorization_page_probe_target_start", {
       index: i + 1,
       total: targets.length,

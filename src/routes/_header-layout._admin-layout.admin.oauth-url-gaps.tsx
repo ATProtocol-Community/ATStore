@@ -54,28 +54,28 @@ const styles = stylex.create({
     width: "100%",
   },
   table: {
-    width: "100%",
     borderCollapse: "collapse",
     fontSize: "0.875rem",
+    width: "100%",
   },
   th: {
+    textAlign: "left" as const,
+    whiteSpace: "nowrap" as const,
     borderBottomColor: uiColor.border2,
     borderBottomStyle: "solid",
     borderBottomWidth: 1,
     paddingBottom: verticalSpace.sm,
-    paddingTop: verticalSpace.sm,
     paddingRight: horizontalSpace.md,
-    textAlign: "left" as const,
-    whiteSpace: "nowrap" as const,
+    paddingTop: verticalSpace.sm,
   },
   td: {
+    verticalAlign: "top" as const,
     borderBottomColor: uiColor.border2,
     borderBottomStyle: "solid",
     borderBottomWidth: 1,
     paddingBottom: verticalSpace.md,
-    paddingTop: verticalSpace.md,
     paddingRight: horizontalSpace.md,
-    verticalAlign: "top" as const,
+    paddingTop: verticalSpace.md,
   },
   mono: {
     fontFamily: "ui-monospace, monospace",
@@ -111,15 +111,14 @@ function AdminOAuthUrlGapsPage() {
         <Flex direction="column" style={styles.header}>
           <Heading1>OAuth client metadata gaps</Heading1>
           <Body variant="secondary">
-            Listings with an HTTPS storefront that still need a discoverable OAuth
-            client-metadata URL, plus listings whose last automated probe threw an
-            error. Protocol directory rows and <code>at:</code> links are excluded
-            (same rules as the discovery script).
+            Listings with an HTTPS storefront that still need a discoverable
+            OAuth client-metadata URL, plus listings whose last automated probe
+            threw an error. Protocol directory rows and <code>at:</code> links
+            are excluded (same rules as the discovery script).
           </Body>
           <SmallBody variant="secondary">
-            Populate URLs with{" "}
-            <code>pnpm listing:oauth-discover-metadata</code> or sync probes; see{" "}
-            <code>store_listing_oauth_discovery</code> and{" "}
+            Populate URLs with <code>pnpm listing:oauth-discover-metadata</code>{" "}
+            or sync probes; see <code>store_listing_oauth_discovery</code> and{" "}
             <code>store_listing_oauth_probes</code>.
           </SmallBody>
         </Flex>
@@ -199,7 +198,9 @@ function GapTable({
                             >
                               {row.name}
                             </ProductLink>
-                            <span {...stylex.props(styles.mono)}>{row.slug}</span>
+                            <span {...stylex.props(styles.mono)}>
+                              {row.slug}
+                            </span>
                           </Flex>
                         </td>
                         <td {...stylex.props(styles.td)}>
@@ -261,7 +262,9 @@ function GapTable({
                             >
                               {row.name}
                             </ProductLink>
-                            <span {...stylex.props(styles.mono)}>{row.slug}</span>
+                            <span {...stylex.props(styles.mono)}>
+                              {row.slug}
+                            </span>
                           </Flex>
                         </td>
                         <td {...stylex.props(styles.td)}>

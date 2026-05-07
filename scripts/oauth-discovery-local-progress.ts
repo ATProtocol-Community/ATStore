@@ -49,10 +49,10 @@ export async function loadLocalProgress(
         ? (o.skipped as Record<string, SkippedListingRecord>)
         : {};
     return { version: PROGRESS_VERSION, skipped };
-  } catch (e: unknown) {
-    const err = e as NodeJS.ErrnoException;
+  } catch (error: unknown) {
+    const err = error as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return emptyProgress();
-    throw e;
+    throw error;
   }
 }
 
