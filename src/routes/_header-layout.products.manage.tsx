@@ -376,7 +376,8 @@ function ManageListingsPage() {
 
           {listings.length === 0 ? (
             <Body variant="secondary">
-              You don&rsquo;t have any listings yet. Create one to get started.
+              Nothing is published from your repository yet. Create a listing to
+              get started.
             </Body>
           ) : (
             <Flex direction="column" gap="6xl">

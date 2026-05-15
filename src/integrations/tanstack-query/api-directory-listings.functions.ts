@@ -3025,9 +3025,7 @@ const getDirectoryListingDetailForOwnerEdit = createServerFn({
     }
 
     const verified = row.verificationStatus === "verified";
-    const isOwner =
-      row.productAccountDid?.trim() === session.did &&
-      row.repoDid?.trim() === session.did;
+    const isOwner = row.repoDid?.trim() === session.did;
 
     if (!verified && !isOwner) {
       return null;
@@ -4664,10 +4662,6 @@ const deleteOwnedProductListing = createServerFn({ method: "POST" })
       );
     }
 
-    if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error("This listing is not associated with your account.");
-    }
-
     if (!full.rkey?.trim()) {
       throw new Error(
         "Listing has no AT Proto record (missing rkey). Nothing to delete.",
@@ -4924,6 +4918,16 @@ function normalizeManualProductAccountDid(raw: string): string {
     throw new Error('DID must start with "did:".');
   }
   return s;
+}
+
+async function mirrorProductAccountHandleFromDid(
+  did: string | null,
+): Promise<string | null> {
+  const d = did?.trim();
+  if (!d) return null;
+  const profile = await fetchBlueskyPublicProfileFields(d);
+  const h = profile?.handle?.trim();
+  return h && h.length > 0 ? h.replace(/^@+/, "") : null;
 }
 
 const setProductAccountHandleDevInput = z
@@ -5537,7 +5541,12 @@ const getProductListingEditAccess = createServerFn({ method: "GET" })
 
     const needsClaim = Boolean(productDid === session.did && isStoreManaged);
 
-    const canEdit = Boolean(repo === session.did && productDid === session.did);
+    /**
+     * Only the PDS that hosts the listing record may edit it. Being the
+     * `productAccountDid` is not enough when the record lives in someone
+     * else's repo.
+     */
+    const canEdit = Boolean(repo === session.did);
 
     return { canEdit, needsClaim, isStoreManaged };
   });
@@ -5566,10 +5575,6 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       );
     }
 
-    if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error("This listing is not associated with your account.");
-    }
-
     const name = data.name.trim().slice(0, 640);
     const taglineClean = sanitizeListingTagline(data.tagline);
     const descClean = sanitizeListingDescription(data.fullDescription);
@@ -5577,8 +5582,10 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
     const categorySlug = normalizeEditableListingCategorySlug(
       data.categorySlug,
     );
+
     const productHandleInput = data.productHandle.trim();
 
+    let productAccountDid: string | null = null;
     let productAccountHandle: string | null = null;
     if (productHandleInput.length > 0) {
       productAccountHandle =
@@ -5587,11 +5594,7 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       if (!resolvedDid) {
         throw new Error("Could not resolve that handle to a DID.");
       }
-      if (resolvedDid !== session.did) {
-        throw new Error(
-          "That handle does not belong to your signed-in account.",
-        );
-      }
+      productAccountDid = resolvedDid;
     }
 
     const links = normalizeListingLinks(data.links as Array<ListingLink>);
@@ -5611,7 +5614,8 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       fullDescription: descClean,
       externalUrl,
       categorySlugs: [categorySlug],
-      productAccountDid: session.did,
+      productAccountDid,
+      productAccountHandle,
       links,
       appTags,
     };
@@ -5647,7 +5651,7 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
         fullDescription: descClean,
         externalUrl,
         categorySlugs: [categorySlug],
-        productAccountDid: session.did,
+        productAccountDid,
         productAccountHandle,
         atUri: uri,
         links,
@@ -5716,6 +5720,7 @@ const createOwnedProductListing = createServerFn({ method: "POST" })
     );
     const productHandleInput = data.productHandle.trim();
 
+    let productAccountDid: string;
     let productAccountHandle: string | null = null;
     if (productHandleInput.length > 0) {
       productAccountHandle =
@@ -5724,11 +5729,12 @@ const createOwnedProductListing = createServerFn({ method: "POST" })
       if (!resolvedDid) {
         throw new Error("Could not resolve that handle to a DID.");
       }
-      if (resolvedDid !== session.did) {
-        throw new Error(
-          "That handle does not belong to your signed-in account.",
-        );
-      }
+      productAccountDid = resolvedDid;
+    } else {
+      productAccountDid = session.did;
+      productAccountHandle = await mirrorProductAccountHandleFromDid(
+        session.did,
+      );
     }
 
     const now = new Date();
@@ -5762,7 +5768,7 @@ const createOwnedProductListing = createServerFn({ method: "POST" })
       sourceAccountDid: session.did,
       claimedByDid: null,
       claimedAt: null,
-      productAccountDid: session.did,
+      productAccountDid,
       productAccountHandle,
       productAccountHandleIgnoredAt: null,
       migratedFromAtUri: null,
@@ -5900,10 +5906,6 @@ const updateOwnedProductListingImage = createServerFn({ method: "POST" })
       throw new Error(
         "Only the account that hosts the listing record can edit it.",
       );
-    }
-
-    if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error("This listing is not associated with your account.");
     }
 
     let raw: Buffer;
@@ -6065,10 +6067,6 @@ const removeOwnedProductListingHeroImage = createServerFn({ method: "POST" })
       );
     }
 
-    if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error("This listing is not associated with your account.");
-    }
-
     const { uri } = await publishOwnedListingDetail(
       session.client,
       session.did,
@@ -6106,10 +6104,6 @@ const updateOwnedProductListingScreenshots = createServerFn({ method: "POST" })
       throw new Error(
         "Only the account that hosts the listing record can edit it.",
       );
-    }
-
-    if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error("This listing is not associated with your account.");
     }
 
     const retainedExistingScreenshotUrls = data.retainedExistingScreenshotUrls
@@ -6376,7 +6370,7 @@ function getProfileOwnedProductListingsQueryOptions(did: string) {
   });
 }
 
-/** Signed-in user's listings (every verification status) with rejection history — for /products/manage */
+/** Listings hosted on the signed-in user's PDS (`repo_did`), every verification status, with rejection history — for `/products/manage`. */
 const getMyProductListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
@@ -6399,7 +6393,7 @@ const getMyProductListings = createServerFn({ method: "GET" })
         updatedAt: t.updatedAt,
       })
       .from(t)
-      .where(eq(t.productAccountDid, did))
+      .where(eq(t.repoDid, did))
       .orderBy(desc(t.updatedAt));
 
     if (rows.length === 0) {
