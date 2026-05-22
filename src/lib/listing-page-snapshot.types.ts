@@ -101,6 +101,8 @@ export type SnapshotProductUpdate = {
 export type StoreListingPageSnapshotPayload = {
   version: typeof LISTING_PAGE_SNAPSHOT_VERSION;
   isStoreManaged: boolean;
+  /** Repo-level Germ DM link when resolvable without a viewer session. */
+  germDmHref: string | null;
   oauthProbe: SnapshotOAuthProbe | null;
   fundingDetail: FundingDetail | null;
   reviewPreview: Array<SnapshotReview>;

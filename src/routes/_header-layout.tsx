@@ -9,6 +9,13 @@ export const Route = createFileRoute("/_header-layout")({
   component: HeaderLayoutRoute,
 });
 
+/** Shown only while a child route suspends; avoids a blank page shell. */
+function HeaderLayoutOutletFallback() {
+  return (
+    <div aria-busy="true" aria-live="polite" style={{ minHeight: "40vh" }} />
+  );
+}
+
 function HeaderLayoutRoute() {
   return (
     <HeaderLayout.Root>
@@ -17,7 +24,7 @@ function HeaderLayoutRoute() {
       </HeaderLayout.Header>
 
       <HeaderLayout.Page>
-        <Suspense>
+        <Suspense fallback={<HeaderLayoutOutletFallback />}>
           <Outlet />
         </Suspense>
       </HeaderLayout.Page>

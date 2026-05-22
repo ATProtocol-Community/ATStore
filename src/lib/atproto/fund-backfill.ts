@@ -14,10 +14,8 @@
  * follow-up alongside the existing TODO in `resolve-atproto-pds.ts`.
  */
 import type { Database } from "#/db/index.server";
-import * as schema from "#/db/schema";
-import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
-import { eq } from "drizzle-orm";
 
+import * as schema from "#/db/schema";
 import {
   paginateListRecords,
   rkeyFromCollectionAtUri,
@@ -44,6 +42,8 @@ import {
   tryParseFundGraphDependencyRecord,
   upsertFundGraphDependencyIntoDb,
 } from "#/lib/atproto/tap-fund-graph-dependency-sync";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
+import { eq } from "drizzle-orm";
 
 async function backfillCollection<T>(
   db: Database,

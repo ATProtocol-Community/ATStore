@@ -12,15 +12,12 @@
  * `ATSTORE_REPO_DID`) like `listing:rehydrate-from-at-uri`.
  */
 import "dotenv/config";
-
 import {
   paginateListRecords,
   rkeyFromCollectionAtUri,
 } from "#/lib/atproto/list-records";
 import { COLLECTION } from "#/lib/atproto/nsids";
-import {
-  getAtstoreRepoDid,
-} from "#/lib/atproto/publish-directory-listing";
+import { getAtstoreRepoDid } from "#/lib/atproto/publish-directory-listing";
 import { resolveAtprotoPdsBaseUrl } from "#/lib/atproto/resolve-atproto-pds";
 import {
   tryParseListingDetailRecord,

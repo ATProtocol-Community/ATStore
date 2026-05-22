@@ -6,7 +6,6 @@
  *   pnpm listing:page-snapshots-refresh -- --slug=murmul
  */
 import "dotenv/config";
-
 import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { and, asc, eq, isNotNull } from "drizzle-orm";
 
@@ -23,7 +22,9 @@ function slugArg(): string | null {
 
 async function main() {
   if (!process.env.DATABASE_URL?.trim()) {
-    console.error(`[refresh-listing-page-snapshots] ${ts()} DATABASE_URL is required`);
+    console.error(
+      `[refresh-listing-page-snapshots] ${ts()} DATABASE_URL is required`,
+    );
     process.exit(1);
   }
 
@@ -77,7 +78,7 @@ async function main() {
       console.warn(
         `[refresh-listing-page-snapshots] ${ts()} failed id=${row.id} slug=${row.slug ?? "?"}`,
         error instanceof Error ? (error.stack ?? error.message) : error,
-        cause != null ? { cause } : undefined,
+        cause == null ? undefined : { cause },
       );
       if (
         failed === 1 &&

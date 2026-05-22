@@ -1,6 +1,6 @@
 import type { ListingLink } from "#/lib/atproto/listing-record";
-import type { DirectoryOAuthLexiconHubData } from "#/lib/oauth-lexicon-hub.types";
 import type { StoreListingPageSnapshotPayload } from "#/lib/listing-page-snapshot.types";
+import type { DirectoryOAuthLexiconHubData } from "#/lib/oauth-lexicon-hub.types";
 import type { OAuthAuthProbeReport } from "#/lib/oauth-listing-auth-probe";
 import type { StoreListingOauthDiscoveryDetail } from "#/lib/oauth-listing-oauth-discovery.types";
 
@@ -771,14 +771,19 @@ export const oauthLexiconHubSnapshot = pgTable("oauth_lexicon_hub_snapshot", {
  * Precomputed public product-page bundle (reviews/mentions/related/oauth/funding).
  * Rebuilt on listing/review/mention/probe/fund changes and by backfill cron.
  */
-export const storeListingPageSnapshots = pgTable("store_listing_page_snapshots", {
-  storeListingId: uuid("store_listing_id")
-    .primaryKey()
-    .references(() => storeListings.id, { onDelete: "cascade" }),
-  payload: jsonb("payload").$type<StoreListingPageSnapshotPayload>().notNull(),
-  payloadVersion: integer("payload_version").notNull().default(1),
-  refreshedAt: timestamp("refreshed_at", { withTimezone: true }).notNull(),
-});
+export const storeListingPageSnapshots = pgTable(
+  "store_listing_page_snapshots",
+  {
+    storeListingId: uuid("store_listing_id")
+      .primaryKey()
+      .references(() => storeListings.id, { onDelete: "cascade" }),
+    payload: jsonb("payload")
+      .$type<StoreListingPageSnapshotPayload>()
+      .notNull(),
+    payloadVersion: integer("payload_version").notNull().default(1),
+    refreshedAt: timestamp("refreshed_at", { withTimezone: true }).notNull(),
+  },
+);
 
 /** Ordered homepage hero slots managed from admin. */
 export const homePageHeroListings = pgTable(

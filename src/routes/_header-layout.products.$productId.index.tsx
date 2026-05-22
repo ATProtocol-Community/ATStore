@@ -2,11 +2,7 @@ import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { FundingDetail } from "#/lib/atproto/load-funding-summaries";
 
 import * as stylex from "@stylexjs/stylex";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link as RouterLink,
   createFileRoute,
@@ -115,7 +111,9 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
     const result = await context.queryClient.ensureQueryData(
       legacyListingId
         ? directoryListingApi.getProductPageByIdQueryOptions(params.productId)
-        : directoryListingApi.getProductPageBySlugQueryOptions(params.productId),
+        : directoryListingApi.getProductPageBySlugQueryOptions(
+            params.productId,
+          ),
     );
 
     if (!result) {
@@ -439,24 +437,6 @@ const styles = stylex.create({
     flexWrap: "wrap",
     rowGap: gap["md"],
   },
-  sectionSkeleton: {
-    borderRadius: radius.xl,
-    cornerShape: "squircle",
-    height: "12rem",
-    width: "100%",
-  },
-  reviewSkeleton: {
-    borderRadius: radius.xl,
-    cornerShape: "squircle",
-    height: "8rem",
-    width: "100%",
-  },
-  mentionSkeleton: {
-    borderRadius: radius.xl,
-    cornerShape: "squircle",
-    height: "6rem",
-    width: "100%",
-  },
   linkChip: {
     borderColor: uiColor.border1,
     borderRadius: radius.full,
@@ -699,11 +679,7 @@ function ProductPage() {
           content={listing.description}
           paragraphStyle={styles.descriptionText}
         />
-        <ProductListingLinksRow
-          listing={listing}
-          productId={productId}
-          productSlug={productSlug}
-        />
+        <ProductListingLinksRow listing={listing} productSlug={productSlug} />
         {/* screenshots */}
         {listing.screenshots.length > 0 ? (
           <Flex direction="column" gap="3xl" style={styles.screenshotsSection}>
@@ -746,7 +722,7 @@ function ProductPage() {
         {ecosystemRootId && isRootApp ? (
           <ProductEcosystemSection
             ecosystemRootId={ecosystemRootId}
-            children={page.ecosystemChildren}
+            ecosystemChildren={page.ecosystemChildren}
           />
         ) : null}
 
@@ -919,7 +895,7 @@ function HeroSection({
 
   const actions = (
     <Flex align="center" gap="md">
-      {session?.user?.did && canFavorite ? (
+      {session?.user?.did && canFavorite && favoriteStatus ? (
         <ToggleButton
           variant="secondary"
           size="lg"
@@ -1019,27 +995,17 @@ function HeroSection({
 
 function ProductListingLinksRow({
   listing,
-  productId,
   productSlug,
 }: {
   listing: DirectoryListingDetail;
-  productId: string;
   productSlug: string;
 }) {
-  const { data: germDmHref } = useQuery({
-    ...directoryListingApi.getDirectoryListingDetailEnrichmentQueryOptions(
-      productId,
-    ),
-    select: (data) => data?.germDmHref ?? null,
-    enabled: typeof document !== "undefined",
-  });
-
   return (
     <ListingLinksRow
       externalUrl={listing.externalUrl}
       links={listing.links}
       oauthProbe={listing.oauthProbe}
-      germDmHref={germDmHref ?? listing.germDmHref}
+      germDmHref={listing.germDmHref}
       fundingDetail={listing.fundingDetail}
       productName={listing.name}
       devListingId={listing.id}
@@ -1312,9 +1278,7 @@ function ProductUpdatesSection({
               {update.coverImageUrl ? (
                 <CardImage
                   src={update.coverImageUrl}
-                  alt={
-                    update.title?.trim() || update.path.replace(/^\//, "")
-                  }
+                  alt={update.title?.trim() || update.path.replace(/^\//, "")}
                   aspectRatio={1.91 / 1}
                 />
               ) : null}
@@ -1326,8 +1290,7 @@ function ProductUpdatesSection({
                 >
                   <Flex direction="column" gap="md" style={styles.grow}>
                     <Text weight="semibold" size="base">
-                      {update.title?.trim() ||
-                        update.path.replace(/^\//, "")}
+                      {update.title?.trim() || update.path.replace(/^\//, "")}
                     </Text>
                     {update.description?.trim() ? (
                       <Text
@@ -1483,10 +1446,10 @@ function ProductRelatedSections({
 
 function ProductEcosystemSection({
   ecosystemRootId,
-  children: ecosystemChildren,
+  ecosystemChildren,
 }: {
   ecosystemRootId: string;
-  children: Array<DirectoryCategoryTreeNode> | null;
+  ecosystemChildren: Array<DirectoryCategoryTreeNode> | null;
 }) {
   const appSegment = getAppSegmentFromEcosystemRootCategoryId(ecosystemRootId);
 

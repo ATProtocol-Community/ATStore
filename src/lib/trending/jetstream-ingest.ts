@@ -5,6 +5,7 @@ import type {
 } from "#/lib/trending/mention-matcher";
 
 import * as schema from "#/db/schema";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import {
   buildListingMentionIndex,
   excerptText,
@@ -13,7 +14,6 @@ import {
   facetMentionHandles,
   matchPostToListings,
 } from "#/lib/trending/mention-matcher";
-import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { recomputeListingTrending } from "#/lib/trending/recompute-listing-trending";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

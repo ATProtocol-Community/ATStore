@@ -2,6 +2,7 @@ import type { Database } from "#/db/index.server";
 import type { StoreListing } from "#/db/schema";
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { FundingDetail } from "#/lib/atproto/load-funding-summaries";
+import type { StoreListingPageSnapshotPayload } from '#/lib/listing-page-snapshot.types';
 import type { SummaryScopeHumanRow } from "#/lib/oauth-listing-auth-probe";
 import type { AtprotoSessionContext } from "#/middleware/auth";
 import type { SQL } from "drizzle-orm";
@@ -61,6 +62,7 @@ import {
   httpsListingImageUrlOrNull,
   publicMediaUrlOrNull,
 } from "#/lib/listing-image-url";
+import { LISTING_PAGE_SNAPSHOT_VERSION } from '#/lib/listing-page-snapshot.types';
 import {
   computeOAuthLexiconHubData,
   getOAuthLexiconHubSnapshot,
@@ -77,6 +79,8 @@ import {
   parseOAuthLexiconKey,
 } from "#/lib/oauth-scope-lexicon-keys";
 import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
+import { PRODUCT_REVIEW_PREVIEW_COUNT } from "#/lib/product-reviews";
+import { serializeForJsonColumn } from "#/lib/serialize-for-json-column";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
   adminFnMiddleware,
@@ -124,12 +128,6 @@ import {
   primaryCategorySlug,
   shouldOmitUrlMentionsForBlueskyPlatformListing,
 } from "../../lib/directory-categories";
-import { serializeForJsonColumn } from "#/lib/serialize-for-json-column";
-import {
-  LISTING_PAGE_SNAPSHOT_VERSION,
-  type StoreListingPageSnapshotPayload,
-} from "#/lib/listing-page-snapshot.types";
-import { PRODUCT_REVIEW_PREVIEW_COUNT } from "#/lib/product-reviews";
 import {
   buildDirectoryListingSlug,
   getDirectoryListingSlug,
@@ -3025,10 +3023,7 @@ export type ProductPageLoaderResult = {
   page: StoreListingPageSnapshotPayload;
 };
 
-async function selectDirectoryListingDetailRow(
-  db: Database,
-  whereClause: SQL,
-) {
+async function selectDirectoryListingDetailRow(db: Database, whereClause: SQL) {
   const table = dbSchema.storeListings;
   const [row] = await db
     .select({
@@ -3099,7 +3094,7 @@ export async function loadProductPageByListingId(
   const listing = toListingDetail(row, {
     isStoreManaged: page.isStoreManaged,
     oauthProbe: page.oauthProbe as DirectoryListingOAuthProbe | null,
-    germDmHref: null,
+    germDmHref: page.germDmHref ?? null,
     fundingDetail: page.fundingDetail,
   });
 
@@ -3131,20 +3126,22 @@ const getProductPageBySlug = createServerFn({ method: "GET" })
 const getProductPageById = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(z.object({ id: z.string().min(1) }))
-  .handler(async ({ data, context }): Promise<ProductPageLoaderResult | null> => {
-    const legacyListingId = getLegacyDirectoryListingId(data.id);
-    if (legacyListingId) {
-      return loadProductPageByListingId(context.db, legacyListingId);
-    }
-    const row = await selectDirectoryListingDetailRow(
-      context.db,
-      eq(context.schema.storeListings.slug, data.id),
-    );
-    if (!row) {
-      return null;
-    }
-    return loadProductPageByListingId(context.db, row.id);
-  });
+  .handler(
+    async ({ data, context }): Promise<ProductPageLoaderResult | null> => {
+      const legacyListingId = getLegacyDirectoryListingId(data.id);
+      if (legacyListingId) {
+        return loadProductPageByListingId(context.db, legacyListingId);
+      }
+      const row = await selectDirectoryListingDetailRow(
+        context.db,
+        eq(context.schema.storeListings.slug, data.id),
+      );
+      if (!row) {
+        return null;
+      }
+      return loadProductPageByListingId(context.db, row.id);
+    },
+  );
 
 function getProductPageBySlugQueryOptions(slug: string) {
   return queryOptions({
@@ -3320,7 +3317,7 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
 
 function getDirectoryListingReviewsQueryOptions(id: string, limit?: number) {
   const normalized = getDirectoryListingReviewsInput.parse(
-    limit != null ? { id, limit } : { id },
+    limit == null ? { id } : { id, limit },
   );
 
   return queryOptions({
@@ -7125,7 +7122,7 @@ async function loadDirectoryListingReviewsForContext(
     .orderBy(desc(rev.reviewCreatedAt));
 
   const rows =
-    limit != null ? await reviewsQuery.limit(limit) : await reviewsQuery;
+    limit == null ? await reviewsQuery : await reviewsQuery.limit(limit);
 
   const profilesByDid = await fetchBlueskyPublicProfilesBatch(
     rows.map((row) => row.authorDid),
@@ -7142,8 +7139,7 @@ async function loadDirectoryListingReviewsForContext(
       profile?.displayName?.trim() ||
       profile?.handle ||
       null;
-    const avatarUrl =
-      row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
+    const avatarUrl = row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
 
     const replyCount = Number(row.replyCount ?? 0);
     return {
@@ -7449,14 +7445,12 @@ async function loadRelatedDirectoryListingsForContext(
         return left.sameCategory ? -1 : 1;
       }
 
-      const updatedDelta =
-        right.updatedAt.getTime() - left.updatedAt.getTime();
+      const updatedDelta = right.updatedAt.getTime() - left.updatedAt.getTime();
       if (updatedDelta !== 0) {
         return updatedDelta;
       }
 
-      const createdDelta =
-        right.createdAt.getTime() - left.createdAt.getTime();
+      const createdDelta = right.createdAt.getTime() - left.createdAt.getTime();
       if (createdDelta !== 0) {
         return createdDelta;
       }
@@ -7655,6 +7649,7 @@ export async function refreshListingPageSnapshot(
   const payload = serializeForJsonColumn({
     version: LISTING_PAGE_SNAPSHOT_VERSION,
     isStoreManaged: enrichment.isStoreManaged,
+    germDmHref: enrichment.germDmHref,
     oauthProbe: enrichment.oauthProbe,
     fundingDetail: enrichment.fundingDetail,
     reviewPreview,
