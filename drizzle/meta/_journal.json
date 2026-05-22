@@ -281,6 +281,20 @@
       "when": 1779100000000,
       "tag": "0040_store_listing_oauth_discovery",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779200000000,
+      "tag": "0041_store_listing_page_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779300000000,
+      "tag": "0042_ensure_store_listing_page_snapshots",
+      "breakpoints": true
     }
   ]
 }

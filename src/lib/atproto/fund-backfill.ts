@@ -15,6 +15,7 @@
  */
 import type { Database } from "#/db/index.server";
 
+import * as schema from "#/db/schema";
 import {
   paginateListRecords,
   rkeyFromCollectionAtUri,
@@ -41,6 +42,8 @@ import {
   tryParseFundGraphDependencyRecord,
   upsertFundGraphDependencyIntoDb,
 } from "#/lib/atproto/tap-fund-graph-dependency-sync";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
+import { eq } from "drizzle-orm";
 
 async function backfillCollection<T>(
   db: Database,
@@ -136,6 +139,19 @@ export async function backfillFundForProductDid(
     tryParseFundGraphDependencyRecord,
     upsertFundGraphDependencyIntoDb,
   );
+
+  const listings = await db
+    .select({ id: schema.storeListings.id })
+    .from(schema.storeListings)
+    .where(eq(schema.storeListings.productAccountDid, did));
+
+  for (const row of listings) {
+    try {
+      await refreshListingPageSnapshot(db, row.id);
+    } catch {
+      // Non-fatal after fund crawl.
+    }
+  }
 }
 
 /**

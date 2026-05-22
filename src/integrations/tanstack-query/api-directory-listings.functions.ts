@@ -2,6 +2,7 @@ import type { Database } from "#/db/index.server";
 import type { StoreListing } from "#/db/schema";
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { FundingDetail } from "#/lib/atproto/load-funding-summaries";
+import type { StoreListingPageSnapshotPayload } from "#/lib/listing-page-snapshot.types";
 import type { SummaryScopeHumanRow } from "#/lib/oauth-listing-auth-probe";
 import type { AtprotoSessionContext } from "#/middleware/auth";
 import type { SQL } from "drizzle-orm";
@@ -51,23 +52,21 @@ import { upsertListingReviewFromTap } from "#/lib/atproto/tap-review-sync";
 import {
   fetchBlueskyHandleForDid,
   fetchBlueskyPublicProfileFields,
+  fetchBlueskyPublicProfilesBatch,
   resolveBlueskyHandleToDid,
 } from "#/lib/bluesky-public-profile";
 import { bskyAppPostUrlFromAtUri } from "#/lib/bsky-app-urls";
 import { resolveGermDmHrefFromRecordJson } from "#/lib/germ-network-dm";
-import { loadLexiconRecordDescriptionsForWorkspace } from "#/lib/lexicon-local-record-description";
 import {
   httpsListingImageUrlOrNull,
   publicMediaUrlOrNull,
 } from "#/lib/listing-image-url";
+import { LISTING_PAGE_SNAPSHOT_VERSION } from "#/lib/listing-page-snapshot.types";
 import {
   computeOAuthLexiconHubData,
   getOAuthLexiconHubSnapshot,
 } from "#/lib/oauth-lexicon-hub-snapshot.server";
-import {
-  oauthClientDistinctTokensFromPublishedScopeLine,
-  probeOAuthListingAuth,
-} from "#/lib/oauth-listing-auth-probe";
+import { oauthClientDistinctTokensFromPublishedScopeLine } from "#/lib/oauth-scope-include-parse";
 import {
   compareOAuthLexiconKeysForDisplayOrder,
   extractOAuthLexiconKeysForStorefrontProbe,
@@ -76,6 +75,8 @@ import {
   parseOAuthLexiconKey,
 } from "#/lib/oauth-scope-lexicon-keys";
 import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility";
+import { PRODUCT_REVIEW_PREVIEW_COUNT } from "#/lib/product-reviews";
+import { serializeForJsonColumn } from "#/lib/serialize-for-json-column";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
   adminFnMiddleware,
@@ -117,6 +118,7 @@ import {
   buildDirectoryCategoryTree,
   findDirectoryCategoryNode,
   flattenDirectoryCategoryTree,
+  getAppEcosystemRootCategoryId,
   getDirectoryCategoryDescendantIds,
   getDirectoryCategoryOption,
   primaryCategorySlug,
@@ -779,8 +781,14 @@ const getRelatedDirectoryListingsInput = z.object({
   limit: z.number().int().min(1).max(8).default(4),
 });
 
+const getRelatedListingsInCategoryInput = z.object({
+  id: z.string().uuid(),
+  limit: z.number().int().min(1).max(8).default(3),
+});
+
 const getDirectoryListingReviewsInput = z.object({
   id: z.string().min(1),
+  limit: z.number().int().min(1).max(50).optional(),
 });
 
 const PRODUCT_SITE_UPDATES_LIMIT = 40;
@@ -1219,6 +1227,8 @@ const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
     }
 
     try {
+      const { probeOAuthListingAuth } =
+        await import("#/lib/oauth-listing-auth-probe");
       const report = await probeOAuthListingAuth(storefrontUrl);
       const successfulClientUrl = report.clientMetadata.find(
         (c) => c.result.ok,
@@ -2167,19 +2177,7 @@ const getDirectoryCategoriesQueryOptions = queryOptions({
 
 const getDirectoryCategoryTree = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
-  .handler(async ({ context }) => {
-    const table = context.schema.storeListings;
-    const rows = await context.db
-      .select({
-        categorySlugs: table.categorySlugs,
-      })
-      .from(table)
-      .where(listingPublicWhere(table));
-
-    return buildDirectoryCategoryTree(
-      rows.flatMap((row) => row.categorySlugs ?? []),
-    );
-  });
+  .handler(async ({ context }) => loadDirectoryCategoryTreeForContext(context));
 
 const getDirectoryCategoryTreeQueryOptions = queryOptions({
   queryKey: ["storeListings", "categoryTree"],
@@ -2477,6 +2475,8 @@ const getLexiconRecordMainDescriptionForNsid = createServerFn({
   .inputValidator(getLexiconRecordMainDescriptionForNsidInput)
   .handler(async ({ data }) => {
     const { nsid } = getLexiconRecordMainDescriptionForNsidInput.parse(data);
+    const { loadLexiconRecordDescriptionsForWorkspace } =
+      await import("#/lib/lexicon-local-record-description");
     const map = await loadLexiconRecordDescriptionsForWorkspace([nsid]);
     return map[nsid] ?? null;
   });
@@ -2609,40 +2609,11 @@ const getRelatedAppsBySharedLexiconKeys = createServerFn({ method: "GET" })
   .inputValidator(getRelatedAppsBySharedLexiconKeysInput)
   .handler(async ({ data, context }) => {
     const input = getRelatedAppsBySharedLexiconKeysInput.parse(data);
-    const listTable = context.schema.storeListings;
-    const probeTable = context.schema.storeListingOAuthProbes;
-
-    const keys = await loadCrossAppMatchingOAuthLexiconKeysForListing(
+    return loadRelatedAppsBySharedLexiconKeysForContext(
       context,
       input.listingId,
+      input.limit,
     );
-
-    if (keys == null) {
-      return {
-        listings: [],
-      } satisfies RelatedAppsByOAuthLexiconPayload;
-    }
-
-    /** Require materialized keys so overlap queries stay index-friendly. */
-    const candidateRows = await context.db
-      .select(getListingSelect(listTable))
-      .from(listTable)
-      .innerJoin(probeTable, eq(probeTable.storeListingId, listTable.id))
-      .where(
-        and(
-          listingPublicWhere(listTable),
-          sqlCategorySlugsMatchesLike(listTable.categorySlugs, "apps/%"),
-          ne(listTable.id, input.listingId),
-          sql`cardinality(${probeTable.oauthLexiconKeys}) > 0`,
-          arrayOverlaps(probeTable.oauthLexiconKeys, keys),
-        ),
-      )
-      .orderBy(...orderByPopularListingSort(listTable))
-      .limit(input.limit);
-
-    return {
-      listings: candidateRows.map((row) => toListingCard(row)),
-    } satisfies RelatedAppsByOAuthLexiconPayload;
   });
 
 function getRelatedAppsBySharedLexiconKeysQueryOptions(
@@ -2838,26 +2809,14 @@ const getDirectoryListingDetail = createServerFn({ method: "GET" })
       return null;
     }
 
-    const session = await getAtprotoSessionForRequest(getRequest());
-
-    const [oauthProbe, isStoreManaged, germDmHref, fundingDetail] =
-      await Promise.all([
-        fetchStoreListingOAuthProbe(row.id, context),
-        computeIsStoreManaged(row),
-        germDmHrefForMirroredRepoDid({
-          db: context.db,
-          schemaMod: context.schema,
-          repoDid: row.productAccountDid,
-          session,
-        }),
-        loadFundingDetailForDid(context.db, row.productAccountDid),
-      ]);
-
     return toListingDetail(row, {
-      isStoreManaged,
-      oauthProbe,
-      germDmHref,
-      fundingDetail,
+      isStoreManaged: computeIsStoreManagedSync(
+        row,
+        resolveAtstoreRepoDidFromEnv(),
+      ),
+      oauthProbe: null,
+      germDmHref: null,
+      fundingDetail: null,
     });
   });
 
@@ -2905,28 +2864,31 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: "GET" })
       return null;
     }
 
-    const session = await getAtprotoSessionForRequest(getRequest());
-
-    const [oauthProbe, isStoreManaged, germDmHref, fundingDetail] =
-      await Promise.all([
-        fetchStoreListingOAuthProbe(row.id, context),
-        computeIsStoreManaged(row),
-        germDmHrefForMirroredRepoDid({
-          db: context.db,
-          schemaMod: context.schema,
-          repoDid: row.productAccountDid,
-          session,
-        }),
-        loadFundingDetailForDid(context.db, row.productAccountDid),
-      ]);
-
     return toListingDetail(row, {
-      isStoreManaged,
-      oauthProbe,
-      germDmHref,
-      fundingDetail,
+      isStoreManaged: computeIsStoreManagedSync(
+        row,
+        resolveAtstoreRepoDidFromEnv(),
+      ),
+      oauthProbe: null,
+      germDmHref: null,
+      fundingDetail: null,
     });
   });
+
+type ListingStoreManagedRow = {
+  atUri: string | null;
+  repoDid: string | null;
+  migratedFromAtUri: string | null;
+};
+
+/**
+ * AT Store publisher DID without network I/O. Set `ATSTORE_REPO_DID` in prod so
+ * product pages never call `getAtstoreRepoDid()` → PDS login on the hot path.
+ */
+function resolveAtstoreRepoDidFromEnv(): string | null {
+  const fromEnv = process.env.ATSTORE_REPO_DID?.trim();
+  return fromEnv?.startsWith("did:") ? fromEnv : null;
+}
 
 /**
  * Determines whether a listing's AT proto record is hosted by the at-store
@@ -2939,18 +2901,262 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: "GET" })
  * is set by `claimProductListingToPds` only after a successful PDS migration
  * (and is rolled back on failure), so it's our truthful "claim happened" signal.
  */
-async function computeIsStoreManaged(row: {
-  atUri: string | null;
-  repoDid: string | null;
-  migratedFromAtUri: string | null;
-}): Promise<boolean> {
+function computeIsStoreManagedSync(
+  row: ListingStoreManagedRow,
+  atstoreDid: string | null,
+): boolean {
   const atUri = row.atUri?.trim();
   if (!atUri) return true;
   const repoDid = row.repoDid?.trim();
   if (!repoDid) return true;
-  const atstoreDid = await getAtstoreRepoDid();
+  if (!atstoreDid) return false;
   if (repoDid !== atstoreDid) return false;
   return !row.migratedFromAtUri?.trim();
+}
+
+async function computeIsStoreManaged(
+  row: ListingStoreManagedRow,
+): Promise<boolean> {
+  const atstoreDid =
+    resolveAtstoreRepoDidFromEnv() ?? (await getAtstoreRepoDid());
+  return computeIsStoreManagedSync(row, atstoreDid);
+}
+
+export type DirectoryListingDetailEnrichment = {
+  oauthProbe: DirectoryListingOAuthProbe | null;
+  germDmHref: string | null;
+  fundingDetail: FundingDetail | null;
+  isStoreManaged: boolean;
+};
+
+/** DB + schema handle for loaders callable outside TanStack request context (scripts, ingest). */
+export type ListingDbContext = {
+  db: Database;
+  schema: typeof dbSchema;
+};
+
+export function listingDbContext(db: Database): ListingDbContext {
+  return { db, schema: dbSchema };
+}
+
+async function loadDirectoryListingDetailEnrichmentForContext(
+  context: ListingDbContext,
+  listingId: string,
+  session?: AtprotoSessionContext | undefined,
+): Promise<DirectoryListingDetailEnrichment | null> {
+  if (!isUuid(listingId)) {
+    return null;
+  }
+
+  const table = context.schema.storeListings;
+  const [row] = await context.db
+    .select({
+      id: table.id,
+      atUri: table.atUri,
+      repoDid: table.repoDid,
+      migratedFromAtUri: table.migratedFromAtUri,
+      productAccountDid: table.productAccountDid,
+    })
+    .from(table)
+    .where(listingPublicWhere(table, eq(table.id, listingId)))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  const [oauthProbe, isStoreManaged, germDmHref, fundingDetail] =
+    await Promise.all([
+      fetchStoreListingOAuthProbe(row.id, context),
+      computeIsStoreManaged(row),
+      germDmHrefForMirroredRepoDid({
+        db: context.db,
+        schemaMod: context.schema,
+        repoDid: row.productAccountDid,
+        session,
+      }),
+      loadFundingDetailForDid(context.db, row.productAccountDid),
+    ]);
+
+  return {
+    oauthProbe,
+    germDmHref,
+    fundingDetail,
+    isStoreManaged,
+  };
+}
+
+const getDirectoryListingDetailEnrichmentInput = z.object({
+  id: z.string().min(1),
+});
+
+const getDirectoryListingDetailEnrichment = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getDirectoryListingDetailEnrichmentInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest());
+    return loadDirectoryListingDetailEnrichmentForContext(
+      context,
+      data.id,
+      session ?? undefined,
+    );
+  });
+
+function getDirectoryListingDetailEnrichmentQueryOptions(listingId: string) {
+  return queryOptions({
+    queryKey: ["storeListings", "detailEnrichment", listingId],
+    queryFn: async () =>
+      getDirectoryListingDetailEnrichment({ data: { id: listingId } }),
+  });
+}
+
+const MENTION_SNAPSHOT_PREVIEW_LIMIT = 3;
+const RELATED_BY_TAG_SNAPSHOT_LIMIT = 3;
+const RELATED_IN_CATEGORY_SNAPSHOT_LIMIT = 3;
+const RELATED_BY_LEXICON_SNAPSHOT_LIMIT = 6;
+
+export type ProductPageLoaderResult = {
+  productId: string;
+  productSlug: string;
+  ecosystemRootId: string | null;
+  listing: DirectoryListingDetail;
+  page: StoreListingPageSnapshotPayload;
+};
+
+async function selectDirectoryListingDetailRow(db: Database, whereClause: SQL) {
+  const table = dbSchema.storeListings;
+  const [row] = await db
+    .select({
+      id: table.id,
+      sourceUrl: table.sourceUrl,
+      name: table.name,
+      slug: table.slug,
+      externalUrl: table.externalUrl,
+      iconUrl: table.iconUrl,
+      heroImageUrl: table.heroImageUrl,
+      screenshotUrls: table.screenshotUrls,
+      tagline: table.tagline,
+      fullDescription: table.fullDescription,
+      categorySlugs: table.categorySlugs,
+      atUri: table.atUri,
+      repoDid: table.repoDid,
+      migratedFromAtUri: table.migratedFromAtUri,
+      productAccountDid: table.productAccountDid,
+      productAccountHandle: table.productAccountHandle,
+      reviewCount: table.reviewCount,
+      averageRating: table.averageRating,
+      ...storeListingLegacyDetailColumns,
+      appTags: table.appTags,
+      links: table.links,
+      createdAt: table.createdAt,
+      updatedAt: table.updatedAt,
+    })
+    .from(table)
+    .where(listingPublicWhere(table, whereClause))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export async function loadProductPageByListingId(
+  db: Database,
+  listingId: string,
+  options?: { refreshIfMissing?: boolean },
+): Promise<ProductPageLoaderResult | null> {
+  const row = await selectDirectoryListingDetailRow(
+    db,
+    eq(dbSchema.storeListings.id, listingId),
+  );
+  if (!row) {
+    return null;
+  }
+
+  let [snapshot] = await db
+    .select({ payload: dbSchema.storeListingPageSnapshots.payload })
+    .from(dbSchema.storeListingPageSnapshots)
+    .where(eq(dbSchema.storeListingPageSnapshots.storeListingId, listingId))
+    .limit(1);
+
+  if (!snapshot && (options?.refreshIfMissing ?? true)) {
+    await refreshListingPageSnapshot(db, listingId);
+    [snapshot] = await db
+      .select({ payload: dbSchema.storeListingPageSnapshots.payload })
+      .from(dbSchema.storeListingPageSnapshots)
+      .where(eq(dbSchema.storeListingPageSnapshots.storeListingId, listingId))
+      .limit(1);
+  }
+
+  if (!snapshot) {
+    return null;
+  }
+
+  const page = snapshot.payload;
+  const listing = toListingDetail(row, {
+    isStoreManaged: page.isStoreManaged,
+    oauthProbe: page.oauthProbe as DirectoryListingOAuthProbe | null,
+    germDmHref: page.germDmHref ?? null,
+    fundingDetail: page.fundingDetail,
+  });
+
+  return {
+    productId: listing.id,
+    productSlug: getDirectoryListingSlug(listing),
+    ecosystemRootId: getAppEcosystemRootCategoryId(listing.categorySlug),
+    listing,
+    page,
+  };
+}
+
+const getProductPageBySlug = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(z.object({ slug: z.string().trim().min(1) }))
+  .handler(
+    async ({ data, context }): Promise<ProductPageLoaderResult | null> => {
+      const row = await selectDirectoryListingDetailRow(
+        context.db,
+        eq(context.schema.storeListings.slug, data.slug),
+      );
+      if (!row) {
+        return null;
+      }
+      return loadProductPageByListingId(context.db, row.id);
+    },
+  );
+
+const getProductPageById = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(z.object({ id: z.string().min(1) }))
+  .handler(
+    async ({ data, context }): Promise<ProductPageLoaderResult | null> => {
+      const legacyListingId = getLegacyDirectoryListingId(data.id);
+      if (legacyListingId) {
+        return loadProductPageByListingId(context.db, legacyListingId);
+      }
+      const row = await selectDirectoryListingDetailRow(
+        context.db,
+        eq(context.schema.storeListings.slug, data.id),
+      );
+      if (!row) {
+        return null;
+      }
+      return loadProductPageByListingId(context.db, row.id);
+    },
+  );
+
+function getProductPageBySlugQueryOptions(slug: string) {
+  return queryOptions({
+    queryKey: ["storeListings", "productPage", "slug", slug],
+    queryFn: async (): Promise<ProductPageLoaderResult | null> =>
+      getProductPageBySlug({ data: { slug } }),
+  });
+}
+
+function getProductPageByIdQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ["storeListings", "productPage", "id", id],
+    queryFn: async (): Promise<ProductPageLoaderResult | null> =>
+      getProductPageById({ data: { id } }),
+  });
 }
 
 function getDirectoryListingDetailQueryOptions(id: string) {
@@ -3092,165 +3298,45 @@ const getDirectoryListingReviews = createServerFn({ method: "GET" })
 
     const session = await getAtprotoSessionForRequest(getRequest());
     const viewerDid = session?.did ?? undefined;
-
-    const rev = context.schema.storeListingReviews;
-    const rows = await context.db
-      .select({
-        id: rev.id,
-        authorDid: rev.authorDid,
-        rating: rev.rating,
-        text: rev.text,
-        reviewCreatedAt: rev.reviewCreatedAt,
-        authorDisplayName: rev.authorDisplayName,
-        authorAvatarUrl: rev.authorAvatarUrl,
-        replyCount: rev.replyCount,
-      })
-      .from(rev)
-      .where(eq(rev.storeListingId, listing.id))
-      .orderBy(desc(rev.reviewCreatedAt));
-
-    const enriched: Array<DirectoryListingReview> = await Promise.all(
-      rows.map(async (row) => {
-        const profile = await fetchBlueskyPublicProfileFields(row.authorDid);
-        const handle =
-          profile?.handle?.trim() && profile.handle.trim().length > 0
-            ? profile.handle.trim()
-            : null;
-        const displayName =
-          row.authorDisplayName?.trim() ||
-          profile?.displayName?.trim() ||
-          profile?.handle ||
-          null;
-        const avatarUrl =
-          row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
-
-        const replyCount = Number(row.replyCount ?? 0);
-        return {
-          id: row.id,
-          authorDid: row.authorDid,
-          rating: row.rating,
-          text: row.text,
-          reviewCreatedAt: row.reviewCreatedAt.toISOString(),
-          authorDisplayName: displayName,
-          authorHandle: handle,
-          authorAvatarUrl: avatarUrl,
-          replyCount,
-          canReply: viewerMayReplyOnListingReview({
-            viewerDid,
-            reviewAuthorDid: row.authorDid,
-            listingRepoDid: listing.repoDid,
-            listingProductAccountDid: listing.productAccountDid,
-          }),
-        };
-      }),
+    const reviews = await loadDirectoryListingReviewsForContext(
+      context,
+      data.id,
+      data.limit,
     );
 
-    return enriched;
+    return reviews.map((review) => ({
+      ...review,
+      canReply: viewerMayReplyOnListingReview({
+        viewerDid,
+        reviewAuthorDid: review.authorDid,
+        listingRepoDid: listing.repoDid,
+        listingProductAccountDid: listing.productAccountDid,
+      }),
+    }));
   });
 
-function getDirectoryListingReviewsQueryOptions(id: string) {
+function getDirectoryListingReviewsQueryOptions(id: string, limit?: number) {
+  const normalized = getDirectoryListingReviewsInput.parse(
+    limit == null ? { id } : { id, limit },
+  );
+
   return queryOptions({
-    queryKey: ["storeListings", "reviews", id],
-    queryFn: async () => getDirectoryListingReviews({ data: { id } }),
+    queryKey: [
+      "storeListings",
+      "reviews",
+      normalized.id,
+      normalized.limit ?? "all",
+    ],
+    queryFn: async () => getDirectoryListingReviews({ data: normalized }),
   });
 }
 
 const getDirectoryListingProductUpdates = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryListingProductUpdatesInput)
-  .handler(async ({ data, context }) => {
-    const empty: DirectoryListingProductUpdatesPayload = {
-      updates: [],
-      publicationBaseUrl: null,
-    };
-
-    if (!isUuid(data.id)) {
-      return empty;
-    }
-
-    const table = context.schema.storeListings;
-    const [listing] = await context.db
-      .select({ id: table.id, productAccountDid: table.productAccountDid })
-      .from(table)
-      .where(listingPublicWhere(table, eq(table.id, data.id)))
-      .limit(1);
-
-    if (!listing) {
-      return empty;
-    }
-
-    const productDid = listing.productAccountDid?.trim();
-    if (!productDid?.startsWith("did:")) {
-      return empty;
-    }
-
-    const docs = context.schema.productSiteDocuments;
-    const pubs = context.schema.productSitePublications;
-
-    const publicationRows = await context.db
-      .select({
-        atUri: pubs.atUri,
-        baseUrl: pubs.baseUrl,
-      })
-      .from(pubs)
-      .where(eq(pubs.repoDid, productDid));
-
-    const pubByAtUri = new Map(
-      publicationRows.map((r) => [r.atUri, r.baseUrl] as const),
-    );
-    const fallbackBase =
-      publicationRows.length === 1 ? publicationRows[0].baseUrl : null;
-
-    const docRows = await context.db
-      .select({
-        id: docs.id,
-        atUri: docs.atUri,
-        title: docs.title,
-        description: docs.description,
-        path: docs.path,
-        documentPublishedAt: docs.documentPublishedAt,
-        publicationAtUri: docs.publicationAtUri,
-        coverImageUrl: docs.coverImageUrl,
-      })
-      .from(docs)
-      .where(eq(docs.repoDid, productDid))
-      .orderBy(desc(docs.documentPublishedAt))
-      .limit(PRODUCT_SITE_UPDATES_LIMIT);
-
-    const out: Array<DirectoryListingProductUpdate> = [];
-    let publicationBaseUrl: string | null = null;
-    for (const row of docRows) {
-      let baseUrl: string | null = null;
-      const pAt = row.publicationAtUri?.trim();
-      if (pAt && pubByAtUri.has(pAt)) {
-        baseUrl = pubByAtUri.get(pAt) ?? null;
-      } else if (fallbackBase) {
-        baseUrl = fallbackBase;
-      } else if (publicationRows.length > 0) {
-        baseUrl = publicationRows[0].baseUrl;
-      }
-      if (publicationBaseUrl === null && baseUrl?.trim()) {
-        publicationBaseUrl = baseUrl.trim().replace(/\/+$/, "");
-      }
-      const canonicalPostUrl =
-        baseUrl != null && baseUrl.length > 0
-          ? canonicalStandardSitePostUrl(baseUrl, row.path)
-          : null;
-
-      out.push({
-        id: row.id,
-        atUri: row.atUri,
-        title: row.title,
-        description: row.description,
-        path: row.path,
-        publishedAt: row.documentPublishedAt.toISOString(),
-        canonicalPostUrl,
-        coverImageUrl: httpsListingImageUrlOrNull(row.coverImageUrl),
-      });
-    }
-
-    return { updates: out, publicationBaseUrl };
-  });
+  .handler(async ({ data, context }) =>
+    loadDirectoryListingProductUpdatesForContext(context, data.id),
+  );
 
 function getDirectoryListingProductUpdatesQueryOptions(id: string) {
   return queryOptions({
@@ -3263,107 +3349,9 @@ function getDirectoryListingProductUpdatesQueryOptions(id: string) {
 const getDirectoryListingMentions = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getDirectoryListingMentionsInput)
-  .handler(async ({ data, context }) => {
-    if (!isUuid(data.id)) {
-      return { mentions: [], total: 0 };
-    }
-
-    const table = context.schema.storeListings;
-    const [listing] = await context.db
-      .select({ id: table.id, categorySlugs: table.categorySlugs })
-      .from(table)
-      .where(listingPublicWhere(table, eq(table.id, data.id)))
-      .limit(1);
-
-    if (!listing) {
-      return { mentions: [], total: 0 };
-    }
-
-    const omitUrl = shouldOmitUrlMentionsForBlueskyPlatformListing(
-      listing.categorySlugs,
-    );
-    const m = context.schema.storeListingMentions;
-    const mentionWhere = (
-      omitUrl
-        ? and(eq(m.storeListingId, listing.id), ne(m.matchType, "url"))
-        : eq(m.storeListingId, listing.id)
-    ) as SQL;
-
-    const [{ total: mentionCount }] = await context.db
-      .select({ total: count() })
-      .from(m)
-      .where(mentionWhere);
-    const total = Number(mentionCount ?? 0);
-
-    const rows = await context.db
-      .select({
-        id: m.id,
-        postUri: m.postUri,
-        authorDid: m.authorDid,
-        authorHandle: m.authorHandle,
-        postText: m.postText,
-        postCreatedAt: m.postCreatedAt,
-        matchType: m.matchType,
-        matchConfidence: m.matchConfidence,
-        matchEvidence: m.matchEvidence,
-      })
-      .from(m)
-      .where(mentionWhere)
-      .orderBy(desc(m.postCreatedAt))
-      .limit(data.limit);
-
-    const postDataByPostUri = await fetchBlueskyPostEmbedsByUri(
-      rows.map((row) => row.postUri),
-    );
-
-    const profileByDid = new Map<
-      string,
-      Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>
-    >();
-
-    async function profileForDid(
-      did: string,
-    ): Promise<Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>> {
-      if (profileByDid.has(did)) return profileByDid.get(did) ?? null;
-      const p = await fetchBlueskyPublicProfileFields(did);
-      profileByDid.set(did, p);
-      return p;
-    }
-
-    const enriched: Array<DirectoryListingMention> = await Promise.all(
-      rows.map(async (row) => {
-        const profile = await profileForDid(row.authorDid);
-        const handle =
-          row.authorHandle?.trim() || profile?.handle?.trim() || null;
-        const authorDisplayName = profile?.displayName?.trim() || null;
-        const authorAvatarUrl = profile?.avatarUrl ?? null;
-
-        return {
-          id: row.id,
-          postUri: row.postUri,
-          bskyPostUrl: bskyAppPostUrlFromAtUri(row.postUri),
-          authorDid: row.authorDid,
-          authorHandle: handle,
-          authorDisplayName,
-          authorAvatarUrl,
-          postText: postDataByPostUri.get(row.postUri)?.text ?? row.postText,
-          postFacets: postDataByPostUri.get(row.postUri)?.facets ?? null,
-          postCreatedAt: row.postCreatedAt.toISOString(),
-          matchType: row.matchType,
-          matchConfidence: row.matchConfidence,
-          matchEvidence:
-            row.matchEvidence &&
-            typeof row.matchEvidence === "object" &&
-            !Array.isArray(row.matchEvidence)
-              ? (row.matchEvidence as Record<string, {}>)
-              : null,
-          postEmbed: postDataByPostUri.get(row.postUri)?.embed ?? null,
-        };
-      }),
-    );
-
-    return { mentions: enriched, total };
-  });
+  .handler(async ({ data, context }) =>
+    loadDirectoryListingMentionsForContext(context, data.id, data.limit),
+  );
 
 function getDirectoryListingMentionsQueryOptions(
   id: string,
@@ -4156,97 +4144,12 @@ const getRelatedDirectoryListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getRelatedDirectoryListingsInput)
   .handler(async ({ data, context }) => {
-    if (!isUuid(data.id)) {
-      return [];
-    }
-
-    const table = context.schema.storeListings;
-    const listingSelect = getListingSelect(table);
-
-    const [currentRow, candidateRows] = await Promise.all([
-      context.db
-        .select({
-          id: table.id,
-          appTags: table.appTags,
-          categorySlugs: table.categorySlugs,
-        })
-        .from(table)
-        .where(listingPublicWhere(table, eq(table.id, data.id)))
-        .limit(1)
-        .then((rows) => rows[0] ?? null),
-      context.db
-        .select({
-          ...listingSelect,
-          updatedAt: table.updatedAt,
-          createdAt: table.createdAt,
-        })
-        .from(table)
-        .where(listingPublicWhere(table, ne(table.id, data.id)))
-        .orderBy(...orderByPopularListingSort(table))
-        .limit(128),
-    ]);
-
-    if (!currentRow) {
-      return [];
-    }
-
-    const currentTags = new Set(normalizeAppTags(currentRow.appTags ?? []));
-    if (currentTags.size === 0) {
-      return [];
-    }
-
-    return candidateRows
-      .map((row) => {
-        const tags = normalizeAppTags(row.appTags ?? []);
-        let overlapCount = 0;
-
-        for (const tag of tags) {
-          if (currentTags.has(tag)) {
-            overlapCount += 1;
-          }
-        }
-
-        if (overlapCount === 0) {
-          return null;
-        }
-
-        return {
-          card: toListingCard(row),
-          overlapCount,
-          sameCategory: categorySlugsOverlap(
-            row.categorySlugs,
-            currentRow.categorySlugs,
-          ),
-          updatedAt: row.updatedAt,
-          createdAt: row.createdAt,
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .toSorted((left, right) => {
-        if (right.overlapCount !== left.overlapCount) {
-          return right.overlapCount - left.overlapCount;
-        }
-
-        if (left.sameCategory !== right.sameCategory) {
-          return left.sameCategory ? -1 : 1;
-        }
-
-        const updatedDelta =
-          right.updatedAt.getTime() - left.updatedAt.getTime();
-        if (updatedDelta !== 0) {
-          return updatedDelta;
-        }
-
-        const createdDelta =
-          right.createdAt.getTime() - left.createdAt.getTime();
-        if (createdDelta !== 0) {
-          return createdDelta;
-        }
-
-        return left.card.name.localeCompare(right.card.name);
-      })
-      .slice(0, data.limit)
-      .map((item) => item.card);
+    const input = getRelatedDirectoryListingsInput.parse(data);
+    return loadRelatedDirectoryListingsForContext(
+      context,
+      input.id,
+      input.limit,
+    );
   });
 
 function getRelatedDirectoryListingsQueryOptions(
@@ -4257,6 +4160,30 @@ function getRelatedDirectoryListingsQueryOptions(
   return queryOptions({
     queryKey: ["storeListings", "related", normalizedInput],
     queryFn: async () => getRelatedDirectoryListings({ data: normalizedInput }),
+  });
+}
+
+const getRelatedListingsInCategory = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator(getRelatedListingsInCategoryInput)
+  .handler(async ({ data, context }) => {
+    const input = getRelatedListingsInCategoryInput.parse(data);
+    return loadRelatedListingsInCategoryForContext(
+      context,
+      input.id,
+      input.limit,
+    );
+  });
+
+function getRelatedListingsInCategoryQueryOptions(
+  input: z.input<typeof getRelatedListingsInCategoryInput>,
+) {
+  const normalizedInput = getRelatedListingsInCategoryInput.parse(input);
+
+  return queryOptions({
+    queryKey: ["storeListings", "relatedInCategory", normalizedInput],
+    queryFn: async () =>
+      getRelatedListingsInCategory({ data: normalizedInput }),
   });
 }
 
@@ -7154,6 +7081,606 @@ const createStoreManagedListing = createServerFn({ method: "POST" })
   });
 
 /** Server-only helpers shared with AT Store XRPC handlers. */
+async function loadDirectoryListingReviewsForContext(
+  context: ListingDbContext,
+  listingId: string,
+  limit?: number,
+): Promise<Array<DirectoryListingReview>> {
+  if (!isUuid(listingId)) {
+    return [];
+  }
+
+  const table = context.schema.storeListings;
+  const [listing] = await context.db
+    .select({
+      id: table.id,
+      repoDid: table.repoDid,
+      productAccountDid: table.productAccountDid,
+    })
+    .from(table)
+    .where(listingPublicWhere(table, eq(table.id, listingId)))
+    .limit(1);
+
+  if (!listing) {
+    return [];
+  }
+
+  const rev = context.schema.storeListingReviews;
+  const reviewsQuery = context.db
+    .select({
+      id: rev.id,
+      authorDid: rev.authorDid,
+      rating: rev.rating,
+      text: rev.text,
+      reviewCreatedAt: rev.reviewCreatedAt,
+      authorDisplayName: rev.authorDisplayName,
+      authorAvatarUrl: rev.authorAvatarUrl,
+      replyCount: rev.replyCount,
+    })
+    .from(rev)
+    .where(eq(rev.storeListingId, listing.id))
+    .orderBy(desc(rev.reviewCreatedAt));
+
+  const rows =
+    limit == null ? await reviewsQuery : await reviewsQuery.limit(limit);
+
+  const profilesByDid = await fetchBlueskyPublicProfilesBatch(
+    rows.map((row) => row.authorDid),
+  );
+
+  return rows.map((row) => {
+    const profile = profilesByDid.get(row.authorDid) ?? null;
+    const handle =
+      profile?.handle?.trim() && profile.handle.trim().length > 0
+        ? profile.handle.trim()
+        : null;
+    const displayName =
+      row.authorDisplayName?.trim() ||
+      profile?.displayName?.trim() ||
+      profile?.handle ||
+      null;
+    const avatarUrl = row.authorAvatarUrl?.trim() || profile?.avatarUrl || null;
+
+    const replyCount = Number(row.replyCount ?? 0);
+    return {
+      id: row.id,
+      authorDid: row.authorDid,
+      rating: row.rating,
+      text: row.text,
+      reviewCreatedAt: row.reviewCreatedAt.toISOString(),
+      authorDisplayName: displayName,
+      authorHandle: handle,
+      authorAvatarUrl: avatarUrl,
+      replyCount,
+      canReply: viewerMayReplyOnListingReview({
+        viewerDid: undefined,
+        reviewAuthorDid: row.authorDid,
+        listingRepoDid: listing.repoDid,
+        listingProductAccountDid: listing.productAccountDid,
+      }),
+    };
+  });
+}
+
+async function loadDirectoryListingProductUpdatesForContext(
+  context: ListingDbContext,
+  listingId: string,
+): Promise<DirectoryListingProductUpdatesPayload> {
+  const empty: DirectoryListingProductUpdatesPayload = {
+    updates: [],
+    publicationBaseUrl: null,
+  };
+
+  if (!isUuid(listingId)) {
+    return empty;
+  }
+
+  const table = context.schema.storeListings;
+  const [listing] = await context.db
+    .select({ id: table.id, productAccountDid: table.productAccountDid })
+    .from(table)
+    .where(listingPublicWhere(table, eq(table.id, listingId)))
+    .limit(1);
+
+  if (!listing) {
+    return empty;
+  }
+
+  const productDid = listing.productAccountDid?.trim();
+  if (!productDid?.startsWith("did:")) {
+    return empty;
+  }
+
+  const docs = context.schema.productSiteDocuments;
+  const pubs = context.schema.productSitePublications;
+
+  const publicationRows = await context.db
+    .select({
+      atUri: pubs.atUri,
+      baseUrl: pubs.baseUrl,
+    })
+    .from(pubs)
+    .where(eq(pubs.repoDid, productDid));
+
+  const pubByAtUri = new Map(
+    publicationRows.map((r) => [r.atUri, r.baseUrl] as const),
+  );
+  const fallbackBase =
+    publicationRows.length === 1 ? publicationRows[0].baseUrl : null;
+
+  const docRows = await context.db
+    .select({
+      id: docs.id,
+      atUri: docs.atUri,
+      title: docs.title,
+      description: docs.description,
+      path: docs.path,
+      documentPublishedAt: docs.documentPublishedAt,
+      publicationAtUri: docs.publicationAtUri,
+      coverImageUrl: docs.coverImageUrl,
+    })
+    .from(docs)
+    .where(eq(docs.repoDid, productDid))
+    .orderBy(desc(docs.documentPublishedAt))
+    .limit(PRODUCT_SITE_UPDATES_LIMIT);
+
+  const out: Array<DirectoryListingProductUpdate> = [];
+  let publicationBaseUrl: string | null = null;
+  for (const row of docRows) {
+    let baseUrl: string | null = null;
+    const pAt = row.publicationAtUri?.trim();
+    if (pAt && pubByAtUri.has(pAt)) {
+      baseUrl = pubByAtUri.get(pAt) ?? null;
+    } else if (fallbackBase) {
+      baseUrl = fallbackBase;
+    } else if (publicationRows.length > 0) {
+      baseUrl = publicationRows[0].baseUrl;
+    }
+    if (publicationBaseUrl === null && baseUrl?.trim()) {
+      publicationBaseUrl = baseUrl.trim().replace(/\/+$/, "");
+    }
+    const canonicalPostUrl =
+      baseUrl != null && baseUrl.length > 0
+        ? canonicalStandardSitePostUrl(baseUrl, row.path)
+        : null;
+
+    out.push({
+      id: row.id,
+      atUri: row.atUri,
+      title: row.title,
+      description: row.description,
+      path: row.path,
+      publishedAt: row.documentPublishedAt.toISOString(),
+      canonicalPostUrl,
+      coverImageUrl: httpsListingImageUrlOrNull(row.coverImageUrl),
+    });
+  }
+
+  return { updates: out, publicationBaseUrl };
+}
+
+async function loadDirectoryListingMentionsForContext(
+  context: ListingDbContext,
+  listingId: string,
+  limit: number,
+): Promise<DirectoryListingMentionsResult> {
+  if (!isUuid(listingId)) {
+    return { mentions: [], total: 0 };
+  }
+
+  const table = context.schema.storeListings;
+  const [listing] = await context.db
+    .select({ id: table.id, categorySlugs: table.categorySlugs })
+    .from(table)
+    .where(listingPublicWhere(table, eq(table.id, listingId)))
+    .limit(1);
+
+  if (!listing) {
+    return { mentions: [], total: 0 };
+  }
+
+  const omitUrl = shouldOmitUrlMentionsForBlueskyPlatformListing(
+    listing.categorySlugs,
+  );
+  const m = context.schema.storeListingMentions;
+  const mentionWhere = (
+    omitUrl
+      ? and(eq(m.storeListingId, listing.id), ne(m.matchType, "url"))
+      : eq(m.storeListingId, listing.id)
+  ) as SQL;
+
+  const [{ total: mentionCount }] = await context.db
+    .select({ total: count() })
+    .from(m)
+    .where(mentionWhere);
+  const total = Number(mentionCount ?? 0);
+
+  const rows = await context.db
+    .select({
+      id: m.id,
+      postUri: m.postUri,
+      authorDid: m.authorDid,
+      authorHandle: m.authorHandle,
+      postText: m.postText,
+      postCreatedAt: m.postCreatedAt,
+      matchType: m.matchType,
+      matchConfidence: m.matchConfidence,
+      matchEvidence: m.matchEvidence,
+    })
+    .from(m)
+    .where(mentionWhere)
+    .orderBy(desc(m.postCreatedAt))
+    .limit(limit);
+
+  const postDataByPostUri = await fetchBlueskyPostEmbedsByUri(
+    rows.map((row) => row.postUri),
+  );
+
+  const profileByDid = new Map<
+    string,
+    Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>
+  >();
+
+  async function profileForDid(
+    did: string,
+  ): Promise<Awaited<ReturnType<typeof fetchBlueskyPublicProfileFields>>> {
+    if (profileByDid.has(did)) return profileByDid.get(did) ?? null;
+    const p = await fetchBlueskyPublicProfileFields(did);
+    profileByDid.set(did, p);
+    return p;
+  }
+
+  const enriched: Array<DirectoryListingMention> = await Promise.all(
+    rows.map(async (row) => {
+      const profile = await profileForDid(row.authorDid);
+      const handle =
+        row.authorHandle?.trim() || profile?.handle?.trim() || null;
+      const authorDisplayName = profile?.displayName?.trim() || null;
+      const authorAvatarUrl = profile?.avatarUrl ?? null;
+
+      return {
+        id: row.id,
+        postUri: row.postUri,
+        bskyPostUrl: bskyAppPostUrlFromAtUri(row.postUri),
+        authorDid: row.authorDid,
+        authorHandle: handle,
+        authorDisplayName,
+        authorAvatarUrl,
+        postText: postDataByPostUri.get(row.postUri)?.text ?? row.postText,
+        postFacets: postDataByPostUri.get(row.postUri)?.facets ?? null,
+        postCreatedAt: row.postCreatedAt.toISOString(),
+        matchType: row.matchType,
+        matchConfidence: row.matchConfidence,
+        matchEvidence:
+          row.matchEvidence &&
+          typeof row.matchEvidence === "object" &&
+          !Array.isArray(row.matchEvidence)
+            ? (row.matchEvidence as Record<string, {}>)
+            : null,
+        postEmbed: postDataByPostUri.get(row.postUri)?.embed ?? null,
+      };
+    }),
+  );
+
+  return { mentions: enriched, total };
+}
+
+async function loadRelatedDirectoryListingsForContext(
+  context: ListingDbContext,
+  listingId: string,
+  limit: number,
+): Promise<Array<DirectoryListingCard>> {
+  if (!isUuid(listingId)) {
+    return [];
+  }
+
+  const table = context.schema.storeListings;
+  const listingSelect = getListingSelect(table);
+
+  const [currentRow, candidateRows] = await Promise.all([
+    context.db
+      .select({
+        id: table.id,
+        appTags: table.appTags,
+        categorySlugs: table.categorySlugs,
+      })
+      .from(table)
+      .where(listingPublicWhere(table, eq(table.id, listingId)))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    context.db
+      .select({
+        ...listingSelect,
+        updatedAt: table.updatedAt,
+        createdAt: table.createdAt,
+      })
+      .from(table)
+      .where(listingPublicWhere(table, ne(table.id, listingId)))
+      .orderBy(...orderByPopularListingSort(table))
+      .limit(128),
+  ]);
+
+  if (!currentRow) {
+    return [];
+  }
+
+  const currentTags = new Set(normalizeAppTags(currentRow.appTags ?? []));
+  if (currentTags.size === 0) {
+    return [];
+  }
+
+  return candidateRows
+    .map((row) => {
+      const tags = normalizeAppTags(row.appTags ?? []);
+      let overlapCount = 0;
+
+      for (const tag of tags) {
+        if (currentTags.has(tag)) {
+          overlapCount += 1;
+        }
+      }
+
+      if (overlapCount === 0) {
+        return null;
+      }
+
+      return {
+        card: toListingCard(row),
+        overlapCount,
+        sameCategory: categorySlugsOverlap(
+          row.categorySlugs,
+          currentRow.categorySlugs,
+        ),
+        updatedAt: row.updatedAt,
+        createdAt: row.createdAt,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .toSorted((left, right) => {
+      if (right.overlapCount !== left.overlapCount) {
+        return right.overlapCount - left.overlapCount;
+      }
+
+      if (left.sameCategory !== right.sameCategory) {
+        return left.sameCategory ? -1 : 1;
+      }
+
+      const updatedDelta = right.updatedAt.getTime() - left.updatedAt.getTime();
+      if (updatedDelta !== 0) {
+        return updatedDelta;
+      }
+
+      const createdDelta = right.createdAt.getTime() - left.createdAt.getTime();
+      if (createdDelta !== 0) {
+        return createdDelta;
+      }
+
+      return left.card.name.localeCompare(right.card.name);
+    })
+    .slice(0, limit)
+    .map((item) => item.card);
+}
+
+async function loadRelatedListingsInCategoryForContext(
+  context: ListingDbContext,
+  listingId: string,
+  limit: number,
+): Promise<Array<DirectoryListingCard>> {
+  const table = context.schema.storeListings;
+  const [current] = await context.db
+    .select({
+      id: table.id,
+      categorySlugs: table.categorySlugs,
+    })
+    .from(table)
+    .where(listingPublicWhere(table, eq(table.id, listingId)))
+    .limit(1);
+
+  if (!current) {
+    return [];
+  }
+
+  const categoryId = primaryCategorySlug(current.categorySlugs ?? []);
+  if (!categoryId) {
+    return [];
+  }
+
+  const slugRows = await context.db
+    .select({ categorySlugs: table.categorySlugs })
+    .from(table)
+    .where(listingPublicWhere(table));
+
+  const tree = buildDirectoryCategoryTree(
+    slugRows.flatMap((row) => row.categorySlugs ?? []),
+  );
+  const descendantIds = getDirectoryCategoryDescendantIds(tree, categoryId);
+  if (descendantIds.length === 0) {
+    return [];
+  }
+
+  const rows = await context.db
+    .select(getListingSelect(table))
+    .from(table)
+    .where(
+      listingPublicWhere(
+        table,
+        and(
+          ne(table.id, listingId),
+          arrayOverlaps(table.categorySlugs, descendantIds),
+        ),
+      ),
+    )
+    .orderBy(...orderByPopularListingSort(table))
+    .limit(limit);
+
+  return rows.map((row) => toListingCard(row));
+}
+
+async function loadRelatedAppsBySharedLexiconKeysForContext(
+  context: ListingDbContext,
+  listingId: string,
+  limit: number,
+): Promise<RelatedAppsByOAuthLexiconPayload> {
+  const listTable = context.schema.storeListings;
+  const probeTable = context.schema.storeListingOAuthProbes;
+
+  const keys = await loadCrossAppMatchingOAuthLexiconKeysForListing(
+    context,
+    listingId,
+  );
+
+  if (keys == null) {
+    return { listings: [] };
+  }
+
+  const candidateRows = await context.db
+    .select(getListingSelect(listTable))
+    .from(listTable)
+    .innerJoin(probeTable, eq(probeTable.storeListingId, listTable.id))
+    .where(
+      and(
+        listingPublicWhere(listTable),
+        sqlCategorySlugsMatchesLike(listTable.categorySlugs, "apps/%"),
+        ne(listTable.id, listingId),
+        sql`cardinality(${probeTable.oauthLexiconKeys}) > 0`,
+        arrayOverlaps(probeTable.oauthLexiconKeys, keys),
+      ),
+    )
+    .orderBy(...orderByPopularListingSort(listTable))
+    .limit(limit);
+
+  return {
+    listings: candidateRows.map((row) => toListingCard(row)),
+  };
+}
+
+async function loadDirectoryCategoryTreeForContext(
+  context: ListingDbContext,
+): Promise<Array<DirectoryCategoryTreeNode>> {
+  const table = context.schema.storeListings;
+  const rows = await context.db
+    .select({
+      categorySlugs: table.categorySlugs,
+    })
+    .from(table)
+    .where(listingPublicWhere(table));
+
+  return buildDirectoryCategoryTree(
+    rows.flatMap((row) => row.categorySlugs ?? []),
+  );
+}
+
+/**
+ * Rebuild the precomputed product-page JSON for one listing. Safe to call from
+ * Tap ingest, Jetstream, OAuth probe jobs, or lazy on first page view.
+ */
+export async function refreshListingPageSnapshot(
+  db: Database,
+  listingId: string,
+): Promise<void> {
+  if (!isUuid(listingId)) {
+    return;
+  }
+
+  const ctx = listingDbContext(db);
+  const enrichment = await loadDirectoryListingDetailEnrichmentForContext(
+    ctx,
+    listingId,
+  );
+  if (!enrichment) {
+    await db
+      .delete(dbSchema.storeListingPageSnapshots)
+      .where(eq(dbSchema.storeListingPageSnapshots.storeListingId, listingId));
+    return;
+  }
+
+  const [row] = await db
+    .select({ categorySlugs: dbSchema.storeListings.categorySlugs })
+    .from(dbSchema.storeListings)
+    .where(eq(dbSchema.storeListings.id, listingId))
+    .limit(1);
+
+  const [
+    reviewPreview,
+    mentionsResult,
+    productUpdatesPayload,
+    relatedByTag,
+    relatedInCategory,
+    relatedByLexicon,
+    categoryTree,
+  ] = await Promise.all([
+    loadDirectoryListingReviewsForContext(
+      ctx,
+      listingId,
+      PRODUCT_REVIEW_PREVIEW_COUNT,
+    ),
+    loadDirectoryListingMentionsForContext(
+      ctx,
+      listingId,
+      MENTION_SNAPSHOT_PREVIEW_LIMIT,
+    ),
+    loadDirectoryListingProductUpdatesForContext(ctx, listingId),
+    loadRelatedDirectoryListingsForContext(
+      ctx,
+      listingId,
+      RELATED_BY_TAG_SNAPSHOT_LIMIT,
+    ),
+    loadRelatedListingsInCategoryForContext(
+      ctx,
+      listingId,
+      RELATED_IN_CATEGORY_SNAPSHOT_LIMIT,
+    ),
+    loadRelatedAppsBySharedLexiconKeysForContext(
+      ctx,
+      listingId,
+      RELATED_BY_LEXICON_SNAPSHOT_LIMIT,
+    ),
+    loadDirectoryCategoryTreeForContext(ctx),
+  ]);
+
+  const ecosystemRootId = getAppEcosystemRootCategoryId(
+    row?.categorySlugs ?? [],
+  );
+  const ecosystemNode = ecosystemRootId
+    ? findDirectoryCategoryNode(categoryTree, ecosystemRootId)
+    : null;
+
+  const payload = serializeForJsonColumn({
+    version: LISTING_PAGE_SNAPSHOT_VERSION,
+    isStoreManaged: enrichment.isStoreManaged,
+    germDmHref: enrichment.germDmHref,
+    oauthProbe: enrichment.oauthProbe,
+    fundingDetail: enrichment.fundingDetail,
+    reviewPreview,
+    mentions: mentionsResult.mentions,
+    mentionTotal: mentionsResult.total,
+    productUpdates: productUpdatesPayload.updates,
+    productUpdatesPublicationUrl: productUpdatesPayload.publicationBaseUrl,
+    relatedByTag,
+    relatedInCategory,
+    relatedByLexicon: relatedByLexicon.listings,
+    ecosystemChildren: ecosystemNode?.children ?? null,
+  } satisfies StoreListingPageSnapshotPayload);
+
+  const now = new Date();
+  await db
+    .insert(dbSchema.storeListingPageSnapshots)
+    .values({
+      storeListingId: listingId,
+      payload,
+      payloadVersion: LISTING_PAGE_SNAPSHOT_VERSION,
+      refreshedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: dbSchema.storeListingPageSnapshots.storeListingId,
+      set: {
+        payload,
+        payloadVersion: LISTING_PAGE_SNAPSHOT_VERSION,
+        refreshedAt: now,
+      },
+    });
+}
+
 export const directoryListingXrpcHelpers = {
   listingPublicWhere,
   listingXrpcPublicWhere,
@@ -7200,6 +7727,13 @@ export const directoryListingApi = {
   getDirectoryListingDetailQueryOptions,
   getDirectoryListingDetailBySlug,
   getDirectoryListingDetailBySlugQueryOptions,
+  getDirectoryListingDetailEnrichment,
+  getDirectoryListingDetailEnrichmentQueryOptions,
+  getProductPageBySlug,
+  getProductPageById,
+  getProductPageBySlugQueryOptions,
+  getProductPageByIdQueryOptions,
+  refreshListingPageSnapshot,
   getDirectoryListingDetailForOwnerEdit,
   getDirectoryListingDetailForOwnerEditQueryOptions,
   getDirectoryListingReviews,
@@ -7226,6 +7760,8 @@ export const directoryListingApi = {
   deleteDirectoryListingReviewReply,
   getRelatedDirectoryListings,
   getRelatedDirectoryListingsQueryOptions,
+  getRelatedListingsInCategory,
+  getRelatedListingsInCategoryQueryOptions,
   listDirectoryListings,
   getListDirectoryListingsQueryOptions,
   getDirectoryListingCategoryAssignments,

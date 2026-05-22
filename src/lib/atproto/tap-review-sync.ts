@@ -2,6 +2,7 @@ import type { Database } from "#/db/index.server";
 
 import * as schema from "#/db/schema";
 import { COLLECTION, NSID } from "#/lib/atproto/nsids";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { recomputeListingTrending } from "#/lib/trending/recompute-listing-trending";
 import { and, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -121,6 +122,11 @@ export async function recomputeListingReviewAggregates(
     .where(eq(schema.storeListings.id, storeListingId));
 
   await recomputeListingTrending(db, storeListingId);
+  try {
+    await refreshListingPageSnapshot(db, storeListingId);
+  } catch {
+    // Non-fatal: aggregates already updated.
+  }
 }
 
 /**

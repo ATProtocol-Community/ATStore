@@ -1,4 +1,34 @@
 services:
+  tap:
+    image: ghcr.io/bluesky-social/indigo/tap:latest
+    ports:
+      - "2480:2480"
+    environment:
+      TAP_DATABASE_URL: sqlite:///data/tap.db
+      TAP_NO_REPLAY: "true"
+      TAP_SIGNAL_COLLECTION: fyi.atstore.listing.detail
+      TAP_COLLECTION_FILTERS: >-
+        fyi.atstore.listing.detail,
+        fyi.atstore.listing.review,
+        fyi.atstore.listing.reviewReply,
+        fyi.atstore.listing.favorite,
+        site.standard.publication,
+        site.standard.document,
+        com.germnetwork.declaration,
+        fund.at.actor.declaration,
+        fund.at.funding.contribute,
+        fund.at.funding.channel,
+        fund.at.funding.plan,
+        fund.at.graph.dependency
+    volumes:
+      - tap_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:2480/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   postgres:
     image: pgvector/pgvector:pg17
     environment:
@@ -17,3 +47,4 @@ services:
 
 volumes:
   postgres_data:
+  tap_data:
