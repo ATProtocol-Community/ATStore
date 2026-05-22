@@ -14,6 +14,9 @@
  * follow-up alongside the existing TODO in `resolve-atproto-pds.ts`.
  */
 import type { Database } from "#/db/index.server";
+import * as schema from "#/db/schema";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
+import { eq } from "drizzle-orm";
 
 import {
   paginateListRecords,
@@ -136,6 +139,19 @@ export async function backfillFundForProductDid(
     tryParseFundGraphDependencyRecord,
     upsertFundGraphDependencyIntoDb,
   );
+
+  const listings = await db
+    .select({ id: schema.storeListings.id })
+    .from(schema.storeListings)
+    .where(eq(schema.storeListings.productAccountDid, did));
+
+  for (const row of listings) {
+    try {
+      await refreshListingPageSnapshot(db, row.id);
+    } catch {
+      // Non-fatal after fund crawl.
+    }
+  }
 }
 
 /**

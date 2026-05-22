@@ -13,6 +13,7 @@ import {
   facetMentionHandles,
   matchPostToListings,
 } from "#/lib/trending/mention-matcher";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { recomputeListingTrending } from "#/lib/trending/recompute-listing-trending";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -230,6 +231,11 @@ export async function ingestJetstreamCommitLine(
     const uniqueIds = [...new Set(affected.map((r) => r.storeListingId))];
     for (const id of uniqueIds) {
       await recomputeListingTrending(db, id);
+      try {
+        await refreshListingPageSnapshot(db, id);
+      } catch {
+        // Non-fatal.
+      }
     }
     return {
       time_us: evt.time_us,
@@ -341,6 +347,11 @@ export async function ingestJetstreamCommitLine(
 
   for (const id of affectedListingIds) {
     await recomputeListingTrending(db, id);
+    try {
+      await refreshListingPageSnapshot(db, id);
+    } catch {
+      // Non-fatal.
+    }
   }
 
   return {

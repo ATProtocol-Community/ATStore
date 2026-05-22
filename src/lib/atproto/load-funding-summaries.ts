@@ -64,8 +64,8 @@ export type FundingPlanView = {
   status: string | null;
   name: string;
   description: string | null;
-  /** Smallest currency unit (cents for USD); null when omitted. */
-  amount: bigint | null;
+  /** Smallest currency unit (cents for USD); null when omitted. String when read from jsonb snapshots. */
+  amount: bigint | string | null;
   currency: string | null;
   frequency: string | null;
   channelAtUris: Array<string>;

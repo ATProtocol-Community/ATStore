@@ -106,13 +106,20 @@ export function formatFrequencySuffix(frequency: string): string {
  * `/wk` / `/mo` etc. tag from `formatFrequencySuffix`.
  */
 export function formatFundingAmount(
-  amount: bigint | null,
+  amount: bigint | string | null,
   currency: string | null,
   frequency: string | null,
 ): string | null {
   if (amount == null) return null;
-  if (amount === 0n) return "Any amount";
-  const whole = Number(amount) / 100;
+  const units =
+    typeof amount === "bigint"
+      ? amount
+      : typeof amount === "string"
+        ? BigInt(amount)
+        : null;
+  if (units == null) return null;
+  if (units === 0n) return "Any amount";
+  const whole = Number(units) / 100;
   let formatted: string;
   try {
     if (currency && /^[A-Z]{3}$/.test(currency)) {

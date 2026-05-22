@@ -21,6 +21,7 @@ import {
 } from "#/lib/atproto/listing-record";
 import { COLLECTION } from "#/lib/atproto/nsids";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -393,7 +394,7 @@ export async function upsertDirectoryListingFromTap(input: {
   const existingRkey = existingRow?.rkey ?? null;
   const existingVerificationStatus = existingRow?.verificationStatus ?? null;
 
-  const verificationStatus = resolveListingVerificationStatus({
+  let verificationStatus = resolveListingVerificationStatus({
     trustedPublisher,
     record,
     ingestRepoDid: did,
@@ -405,6 +406,13 @@ export async function upsertDirectoryListingFromTap(input: {
     existingVerificationStatus,
     atstoreDid,
   });
+  if (
+    verificationStatus !== "rejected" &&
+    (process.env.LOCAL_VERIFY_ALL_TAP_LISTINGS === "1" ||
+      process.env.LOCAL_VERIFY_ALL_TAP_LISTINGS === "true")
+  ) {
+    verificationStatus = "verified";
+  }
 
   /** Successful claim handshake — clear the pending marker so it cannot be reused. */
   const claimPendingForDidNext =
@@ -519,6 +527,23 @@ export async function upsertDirectoryListingFromTap(input: {
       return;
     }
     throw error;
+  }
+
+  const [saved] = await db
+    .select({ id: schema.storeListings.id })
+    .from(schema.storeListings)
+    .where(eq(schema.storeListings.slug, record.slug))
+    .limit(1);
+
+  if (saved?.id) {
+    try {
+      await refreshListingPageSnapshot(db, saved.id);
+    } catch (refreshError) {
+      console.warn(
+        `[tap-ingest] page snapshot refresh failed slug=${record.slug} id=${saved.id}`,
+        refreshError,
+      );
+    }
   }
 }
 

@@ -25,6 +25,7 @@
  */
 import "dotenv/config";
 import * as schema from "#/db/schema";
+import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { refreshOAuthLexiconHubSnapshot } from "#/lib/oauth-lexicon-hub-snapshot.server";
 import { probeOAuthListingAuth } from "#/lib/oauth-listing-auth-probe";
 import { extractOAuthLexiconKeysForStorefrontProbe } from "#/lib/oauth-scope-lexicon-keys";
@@ -240,6 +241,19 @@ async function main() {
         target: schema.storeListingOAuthProbes.storeListingId,
         set: omitPk(payload),
       });
+
+    try {
+      await refreshListingPageSnapshot(db, listing.id);
+    } catch (refreshError) {
+      log("warn", "page_snapshot_refresh_failed", {
+        listingId: listing.id,
+        slug: listing.slug,
+        error:
+          refreshError instanceof Error
+            ? refreshError.message
+            : String(refreshError),
+      });
+    }
   }
 
   async function persistError(
