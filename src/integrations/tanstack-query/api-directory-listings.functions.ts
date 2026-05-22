@@ -2,7 +2,7 @@ import type { Database } from "#/db/index.server";
 import type { StoreListing } from "#/db/schema";
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { FundingDetail } from "#/lib/atproto/load-funding-summaries";
-import type { StoreListingPageSnapshotPayload } from '#/lib/listing-page-snapshot.types';
+import type { StoreListingPageSnapshotPayload } from "#/lib/listing-page-snapshot.types";
 import type { SummaryScopeHumanRow } from "#/lib/oauth-listing-auth-probe";
 import type { AtprotoSessionContext } from "#/middleware/auth";
 import type { SQL } from "drizzle-orm";
@@ -57,20 +57,16 @@ import {
 } from "#/lib/bluesky-public-profile";
 import { bskyAppPostUrlFromAtUri } from "#/lib/bsky-app-urls";
 import { resolveGermDmHrefFromRecordJson } from "#/lib/germ-network-dm";
-import { loadLexiconRecordDescriptionsForWorkspace } from "#/lib/lexicon-local-record-description";
 import {
   httpsListingImageUrlOrNull,
   publicMediaUrlOrNull,
 } from "#/lib/listing-image-url";
-import { LISTING_PAGE_SNAPSHOT_VERSION } from '#/lib/listing-page-snapshot.types';
+import { LISTING_PAGE_SNAPSHOT_VERSION } from "#/lib/listing-page-snapshot.types";
 import {
   computeOAuthLexiconHubData,
   getOAuthLexiconHubSnapshot,
 } from "#/lib/oauth-lexicon-hub-snapshot.server";
-import {
-  oauthClientDistinctTokensFromPublishedScopeLine,
-  probeOAuthListingAuth,
-} from "#/lib/oauth-listing-auth-probe";
+import { oauthClientDistinctTokensFromPublishedScopeLine } from "#/lib/oauth-scope-include-parse";
 import {
   compareOAuthLexiconKeysForDisplayOrder,
   extractOAuthLexiconKeysForStorefrontProbe,
@@ -1231,6 +1227,8 @@ const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
     }
 
     try {
+      const { probeOAuthListingAuth } =
+        await import("#/lib/oauth-listing-auth-probe");
       const report = await probeOAuthListingAuth(storefrontUrl);
       const successfulClientUrl = report.clientMetadata.find(
         (c) => c.result.ok,
@@ -2477,6 +2475,8 @@ const getLexiconRecordMainDescriptionForNsid = createServerFn({
   .inputValidator(getLexiconRecordMainDescriptionForNsidInput)
   .handler(async ({ data }) => {
     const { nsid } = getLexiconRecordMainDescriptionForNsidInput.parse(data);
+    const { loadLexiconRecordDescriptionsForWorkspace } =
+      await import("#/lib/lexicon-local-record-description");
     const map = await loadLexiconRecordDescriptionsForWorkspace([nsid]);
     return map[nsid] ?? null;
   });
@@ -2942,7 +2942,7 @@ export function listingDbContext(db: Database): ListingDbContext {
 async function loadDirectoryListingDetailEnrichmentForContext(
   context: ListingDbContext,
   listingId: string,
-  session: AtprotoSessionContext | undefined,
+  session?: AtprotoSessionContext | undefined,
 ): Promise<DirectoryListingDetailEnrichment | null> {
   if (!isUuid(listingId)) {
     return null;
@@ -7586,7 +7586,6 @@ export async function refreshListingPageSnapshot(
   const enrichment = await loadDirectoryListingDetailEnrichmentForContext(
     ctx,
     listingId,
-    undefined,
   );
   if (!enrichment) {
     await db

@@ -332,3 +332,29 @@ export function parseIncludeScopeToken(
     aud: audRaw?.trim() ? decodeUriComponentSafely(audRaw.trim()).trim() : null,
   };
 }
+
+function normalizeScopeWhitespace(raw: string): string {
+  return raw.replaceAll("\u00A0", " ").trim();
+}
+
+/** AT Proto `scope` values are typically space-separated; each grant may contain `?` parameters. */
+export function scopeStringToTokens(raw: string): Array<string> {
+  return normalizeScopeWhitespace(raw)
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Distinct scope tokens parsed from app-published OAuth metadata only (backward
+ * compatible when crawls predate persisted `oauthClientScopesDistinct`; does not include
+ * `scopes_supported` from an authorization server catalog).
+ */
+export function oauthClientDistinctTokensFromPublishedScopeLine(
+  rawLine: string | null | undefined,
+): Array<string> {
+  if (!rawLine?.trim()) return [];
+  return [...new Set(scopeStringToTokens(rawLine))].toSorted((a, b) =>
+    a.localeCompare(b),
+  );
+}

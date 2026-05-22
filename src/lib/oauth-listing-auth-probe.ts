@@ -35,7 +35,10 @@ import {
   parseIncludeScopeToken,
   parseRepoScopeForStorefront,
   parseRpcScopeForStorefront,
+  scopeStringToTokens,
 } from "./oauth-scope-include-parse";
+
+export { oauthClientDistinctTokensFromPublishedScopeLine } from "./oauth-scope-include-parse";
 
 export type { PermissionGrantStructuredLine } from "./oauth-permission-grant-ui";
 
@@ -472,28 +475,6 @@ function extractScopeHintsFromQuery(clientIdLike: string): string | undefined {
 
 function normalizeScopeWhitespace(raw: string): string {
   return raw.replaceAll("\u00A0", " ").trim();
-}
-
-/** AT Proto `scope` values are typically space-separated; each grant may contain `?` parameters. */
-function scopeStringToTokens(raw: string): Array<string> {
-  return normalizeScopeWhitespace(raw)
-    .split(/\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-/**
- * Distinct scope tokens parsed from app-published OAuth metadata only (backward
- * compatible when crawls predate persisted `oauthClientScopesDistinct`; does not include
- * `scopes_supported` from an authorization server catalog).
- */
-export function oauthClientDistinctTokensFromPublishedScopeLine(
-  rawLine: string | null | undefined,
-): Array<string> {
-  if (!rawLine?.trim()) return [];
-  return [...new Set(scopeStringToTokens(rawLine))].toSorted((a, b) =>
-    a.localeCompare(b),
-  );
 }
 
 /**
