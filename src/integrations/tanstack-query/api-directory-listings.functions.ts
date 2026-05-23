@@ -128,6 +128,8 @@ import {
   buildDirectoryListingSlug,
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
+  listingSlugBaseFromCategorySlug,
+  resolveStoreListingSlugBase,
 } from "../../lib/directory-listing-slugs";
 import {
   discoverOgImageUrlFromPage,
@@ -5405,30 +5407,60 @@ const getProductListingEditAccessInput = z.object({
 });
 
 /**
- * Stable, human-readable URL slug (same rules as curated listings via
- * {@link buildDirectoryListingSlug}). If that base is taken by another row,
+ * Stable, human-readable URL slug. App listings use the app slug from
+ * {@link listingSlugBaseFromCategorySlug}; others fall back to
+ * {@link buildDirectoryListingSlug}. If the base is taken by another row,
  * allocates `slug-2`, `slug-3`, … rather than `--hex` prefixes from the old draft flow.
  */
 async function allocateUniqueStoreListingSlug(
   db: Database,
-  name: string,
-  sourceUrl: string,
+  input: {
+    categorySlug: string;
+    name: string;
+    sourceUrl: string;
+    excludeListingId?: string;
+  },
 ): Promise<string> {
-  const base = buildDirectoryListingSlug({ name, sourceUrl });
+  const base = resolveStoreListingSlugBase(input);
   const t = dbSchema.storeListings;
   let candidate = base;
   let suffix = 2;
   for (let attempt = 0; attempt < 5000; attempt++) {
+    const slugTaken = input.excludeListingId
+      ? and(eq(t.slug, candidate), ne(t.id, input.excludeListingId))
+      : eq(t.slug, candidate);
     const [row] = await db
       .select({ id: t.id })
       .from(t)
-      .where(eq(t.slug, candidate))
+      .where(slugTaken)
       .limit(1);
     if (!row) return candidate;
     candidate = `${base}-${suffix}`;
     suffix += 1;
   }
   throw new Error("Could not allocate a unique listing slug.");
+}
+
+/** Recompute slug on save when the listing sits under `apps/{slug}`. */
+async function resolveStoreListingSlugOnSave(
+  db: Database,
+  input: {
+    categorySlug: string;
+    name: string;
+    sourceUrl: string;
+    currentSlug: string;
+    listingId: string;
+  },
+): Promise<string> {
+  if (listingSlugBaseFromCategorySlug(input.categorySlug) == null) {
+    return input.currentSlug;
+  }
+  return allocateUniqueStoreListingSlug(db, {
+    categorySlug: input.categorySlug,
+    name: input.name,
+    sourceUrl: input.sourceUrl,
+    excludeListingId: input.listingId,
+  });
 }
 
 const getProductListingEditAccess = createServerFn({ method: "GET" })
@@ -5535,8 +5567,17 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       ? normalizeAppTags(data.appTags ?? [])
       : [];
 
+    const slug = await resolveStoreListingSlugOnSave(context.db, {
+      categorySlug,
+      name,
+      sourceUrl: externalUrl,
+      currentSlug: full.slug,
+      listingId: full.id,
+    });
+
     const patch: Partial<StoreListing> = {
       name,
+      slug,
       tagline: taglineClean,
       fullDescription: descClean,
       externalUrl,
@@ -5574,6 +5615,7 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       .update(t)
       .set({
         name,
+        slug,
         tagline: taglineClean,
         fullDescription: descClean,
         externalUrl,
@@ -5588,7 +5630,9 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       })
       .where(eq(t.id, full.id));
 
-    return { slug: full.slug };
+    await refreshListingPageSnapshot(context.db, full.id);
+
+    return { slug };
   });
 
 const createOwnedProductListing = createServerFn({ method: "POST" })
@@ -5640,11 +5684,11 @@ const createOwnedProductListing = createServerFn({ method: "POST" })
       );
     }
 
-    const slug = await allocateUniqueStoreListingSlug(
-      context.db,
+    const slug = await allocateUniqueStoreListingSlug(context.db, {
+      categorySlug,
       name,
-      externalUrl,
-    );
+      sourceUrl: externalUrl,
+    });
     const productHandleInput = data.productHandle.trim();
 
     let productAccountDid: string;
@@ -6850,8 +6894,17 @@ const updateStoreManagedListing = createServerFn({ method: "POST" })
      * and caused `row.screenshotUrls.filter(...)` to throw in
      * `buildListingDetailRecordWithBlobs`.
      */
+    const slug = await resolveStoreListingSlugOnSave(context.db, {
+      categorySlug,
+      name,
+      sourceUrl: externalUrl,
+      currentSlug: full.slug,
+      listingId: full.id,
+    });
+
     const patch: Partial<StoreListing> = {
       name,
+      slug,
       tagline: taglineClean,
       fullDescription: descClean,
       externalUrl,
@@ -6878,6 +6931,7 @@ const updateStoreManagedListing = createServerFn({ method: "POST" })
       .update(t)
       .set({
         name,
+        slug,
         tagline: taglineClean,
         fullDescription: descClean,
         externalUrl,
@@ -6891,7 +6945,9 @@ const updateStoreManagedListing = createServerFn({ method: "POST" })
       })
       .where(eq(t.id, full.id));
 
-    return { slug: full.slug };
+    await refreshListingPageSnapshot(context.db, full.id);
+
+    return { slug };
   });
 
 const createStoreManagedListingInput = z.object({
@@ -6949,11 +7005,11 @@ const createStoreManagedListing = createServerFn({ method: "POST" })
     const categorySlug = normalizeEditableListingCategorySlug(
       data.categorySlug,
     );
-    const slug = await allocateUniqueStoreListingSlug(
-      context.db,
+    const slug = await allocateUniqueStoreListingSlug(context.db, {
+      categorySlug,
       name,
-      externalUrl,
-    );
+      sourceUrl: externalUrl,
+    });
     const productHandleInput = data.productHandle.trim();
 
     let productAccountHandle: string | null = null;

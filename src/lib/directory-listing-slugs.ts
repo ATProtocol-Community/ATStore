@@ -1,3 +1,8 @@
+import {
+  getAppEcosystemRootCategoryId,
+  getAppSegmentFromEcosystemRootCategoryId,
+} from "./directory-categories";
+
 type DirectoryListingSlugSource = {
   name: string;
   slug?: string | null;
@@ -35,6 +40,36 @@ export function buildDirectoryListingSlug(
     : undefined;
 
   return overriddenSlug ?? slugifyDirectoryListingName(listing.name);
+}
+
+/** App segment from `apps/{slug}` or `apps/{slug}/…`; null for protocol listings. */
+export function listingSlugBaseFromCategorySlug(
+  categorySlug: string,
+): string | null {
+  const root = getAppEcosystemRootCategoryId(categorySlug);
+  if (!root) {
+    return null;
+  }
+  return getAppSegmentFromEcosystemRootCategoryId(root);
+}
+
+/**
+ * Preferred `/products/{slug}` base: app slug for `apps/*` categories, otherwise
+ * the name/source-url slug rules used for curated listings.
+ */
+export function resolveStoreListingSlugBase(input: {
+  categorySlug: string;
+  name: string;
+  sourceUrl?: string | null;
+}): string {
+  const appBase = listingSlugBaseFromCategorySlug(input.categorySlug);
+  if (appBase) {
+    return appBase;
+  }
+  return buildDirectoryListingSlug({
+    name: input.name,
+    sourceUrl: input.sourceUrl ?? undefined,
+  });
 }
 
 export function getDirectoryListingSlug(listing: DirectoryListingSlugSource) {
