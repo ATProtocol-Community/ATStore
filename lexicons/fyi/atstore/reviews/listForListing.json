@@ -12,11 +12,17 @@
         "replyCount",
         "canReply"
       ],
+      "nullable": [
+        "text",
+        "authorDisplayName",
+        "authorHandle",
+        "authorAvatarUrl"
+      ],
       "properties": {
         "id": { "type": "string", "maxLength": 64 },
         "authorDid": { "type": "string", "format": "did", "maxLength": 2048 },
         "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
-        "text": { "type": "string", "maxLength": 8000, "nullable": true },
+        "text": { "type": "string", "maxLength": 8000 },
         "reviewCreatedAt": {
           "type": "string",
           "format": "datetime",
@@ -24,18 +30,15 @@
         },
         "authorDisplayName": {
           "type": "string",
-          "maxLength": 640,
-          "nullable": true
+          "maxLength": 640
         },
         "authorHandle": {
           "type": "string",
-          "maxLength": 512,
-          "nullable": true
+          "maxLength": 512
         },
         "authorAvatarUrl": {
           "type": "string",
-          "maxLength": 8192,
-          "nullable": true
+          "maxLength": 8192
         },
         "replyCount": { "type": "integer" },
         "canReply": { "type": "boolean" }
