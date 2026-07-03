@@ -231,10 +231,9 @@ function DevelopersAtprotoPage() {
             <Text leading="base">
               Permission-set{" "}
               <span {...stylex.props(styles.monoTight)}>
-                {NSID.authReviewer}
+                {NSID.authThirdPartyReviews}
               </span>{" "}
-              publishes <Text weight="medium">ATStore Reviewer</Text> with{" "}
-              <Text weight="medium">repo:create/update/delete</Text> on{" "}
+              bundles <Text weight="medium">repo:create</Text> on{" "}
               <span {...stylex.props(styles.monoTight)}>{NSID.profile}</span>{" "}
               and{" "}
               <span {...stylex.props(styles.monoTight)}>
@@ -247,13 +246,6 @@ function DevelopersAtprotoPage() {
               ).
             </Text>
           </Blockquote>
-          <Body variant="secondary">
-            Existing third-party review clients can also keep using{" "}
-            <span {...stylex.props(styles.monoTight)}>
-              {NSID.authThirdPartyReviews}
-            </span>{" "}
-            when they only need create-only review submission.
-          </Body>
         </Flex>
       </Flex>
     </Page.Root>

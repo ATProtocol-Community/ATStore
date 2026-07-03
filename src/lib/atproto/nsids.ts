@@ -1,7 +1,6 @@
 /** AT Store lexicon NSIDs (`fyi.atstore.*`). */
 export const NSID = {
   authBasic: "fyi.atstore.authBasic",
-  authReviewer: "fyi.atstore.authReviewer",
   authThirdPartyReviews: "fyi.atstore.authThirdPartyReviews",
   profile: "fyi.atstore.profile",
   listingDetail: "fyi.atstore.listing.detail",
@@ -49,7 +48,6 @@ export const FUND_NSID = {
 
 export const COLLECTION = {
   authBasic: NSID.authBasic,
-  authReviewer: NSID.authReviewer,
   profile: NSID.profile,
   listingDetail: NSID.listingDetail,
   listingReview: NSID.listingReview,

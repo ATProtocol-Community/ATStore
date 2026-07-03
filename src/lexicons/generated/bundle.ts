@@ -31,33 +31,6 @@ export const lexicons = [
   },
   {
     "lexicon": 1,
-    "id": "fyi.atstore.authReviewer",
-    "description": "Permission set for AT Store reviewer access.",
-    "defs": {
-      "main": {
-        "type": "permission-set",
-        "title": "ATStore Reviewer",
-        "detail": "Provides AT Store access limited to profile and review records.",
-        "permissions": [
-          {
-            "type": "permission",
-            "resource": "repo",
-            "collection": [
-              "fyi.atstore.profile",
-              "fyi.atstore.listing.review"
-            ],
-            "action": [
-              "create",
-              "update",
-              "delete"
-            ]
-          }
-        ]
-      }
-    }
-  },
-  {
-    "lexicon": 1,
     "id": "fyi.atstore.authThirdPartyReviews",
     "description": "OAuth permission bundle for third-party apps that publish AT Store profile self plus listing reviews on the user's repo; reads use public directory XRPC.",
     "defs": {

@@ -6,7 +6,7 @@
     "main": {
       "type": "permission-set",
       "title": "Submit AT Store reviews",
-      "detail": "Create fyi.atstore.profile/self when needed and fyi.atstore.listing.review records on the user's PDS via repository APIs; read public directory data via XRPC queries.",
+      "detail": "Create reviews on AT Store listings",
       "permissions": [
         {
           "type": "permission",
