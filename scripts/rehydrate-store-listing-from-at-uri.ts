@@ -7,22 +7,20 @@
  *
  *   pnpm listing:rehydrate-from-at-uri at://did:plc:…/fyi.atstore.listing.detail/…
  *
- * Requires `DATABASE_URL`. Uses `ATSTORE_IDENTIFIER` + `ATSTORE_APP_PASSWORD` + `ATSTORE_SERVICE`
- * (same as `listing:publish-store`) so the XRPC client can call `com.atproto.repo.getRecord` for any repo.
+ * Requires `DATABASE_URL`. Fetches the record from the repo owner's PDS (via PLC/DID resolution).
+ * Optional `ATSTORE_REPO_DID` (or `ATSTORE_IDENTIFIER` login) marks @store publisher rows as trusted.
  *
  * If the record was removed from all PDSes, restore from a DB backup instead:
  * `pnpm listing:restore-from-backup-db …`
  */
 import "dotenv/config";
 
-import type { ActorIdentifier } from "@atcute/lexicons";
-
-import { ok } from "@atcute/client";
-
 import { db, dbClient } from "../src/db/index.server";
 import { parseAtUriParts } from "../src/lib/atproto/at-uri";
+import { fetchRepoRecord } from "../src/lib/atproto/list-records";
 import { COLLECTION } from "../src/lib/atproto/nsids";
-import { createAtstorePublishClient } from "../src/lib/atproto/publish-directory-listing";
+import { getAtstoreRepoDid } from "../src/lib/atproto/publish-directory-listing";
+import { resolveAtprotoPdsBaseUrl } from "../src/lib/atproto/resolve-atproto-pds";
 import {
   tryParseListingDetailRecord,
   upsertDirectoryListingFromTap,
@@ -55,18 +53,23 @@ async function main() {
     return;
   }
 
-  const { client, repoDid: atstoreDid } = await createAtstorePublishClient();
-  const gr = await ok(
-    client.get("com.atproto.repo.getRecord", {
-      params: {
-        repo: parts.repo as ActorIdentifier,
-        collection: parts.collection,
-        rkey: parts.rkey,
-      },
-    }),
-  );
+  const pds = await resolveAtprotoPdsBaseUrl(parts.repo);
+  if (!pds) {
+    console.error(`No PDS resolved for repo ${parts.repo}`);
+    process.exitCode = 1;
+    return;
+  }
 
-  const body = gr.value as Record<string, unknown> | undefined;
+  let body: Record<string, unknown>;
+  try {
+    body = await fetchRepoRecord(pds, parts.repo, parts.collection, parts.rkey);
+  } catch (error) {
+    console.error(`getRecord via ${pds} failed:`, error);
+    process.exitCode = 1;
+    return;
+  }
+
+  const atstoreDid = await getAtstoreRepoDid();
   const parsed = tryParseListingDetailRecord(body);
   if (!parsed.ok) {
     console.error(

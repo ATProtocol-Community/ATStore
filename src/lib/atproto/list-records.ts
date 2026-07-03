@@ -29,6 +29,38 @@ export function rkeyFromCollectionAtUri(
  * Throws on non-2xx responses (with a truncated body in the message) — callers handle
  * the error via try/catch in their backfill orchestration.
  */
+/**
+ * Fetch a single repo record via unauthenticated `getRecord` on the repo owner's PDS.
+ * Prefer this over an authenticated AT Store client — third-party listings live on their
+ * own PDS and are not visible through the store account's service endpoint.
+ */
+export async function fetchRepoRecord(
+  pdsBase: string,
+  repo: string,
+  collection: string,
+  rkey: string,
+): Promise<Record<string, unknown>> {
+  const u = new URL("/xrpc/com.atproto.repo.getRecord", `${pdsBase}/`);
+  u.searchParams.set("repo", repo);
+  u.searchParams.set("collection", collection);
+  u.searchParams.set("rkey", rkey);
+  const res = await fetch(u.toString(), {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `getRecord ${collection}/${rkey} failed ${res.status}: ${text.slice(0, 500)}`,
+    );
+  }
+  const data = (await res.json()) as { value?: unknown };
+  const body = data.value;
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error(`getRecord ${collection}/${rkey} returned no record body`);
+  }
+  return body as Record<string, unknown>;
+}
+
 export async function* paginateListRecords(
   pdsBase: string,
   repo: string,

@@ -6,11 +6,13 @@
 import "dotenv/config";
 import { spawn } from "node:child_process";
 
-if (!process.env.GOAT_USERNAME && process.env.ATSTORE_IDENTIFIER) {
-  process.env.GOAT_USERNAME = process.env.ATSTORE_IDENTIFIER;
+// Always prefer ATSTORE_* so a shell-level GOAT_USERNAME (personal handle) cannot
+// accidentally publish fyi.atstore.* lexicons to the wrong repo.
+if (process.env.ATSTORE_IDENTIFIER?.trim()) {
+  process.env.GOAT_USERNAME = process.env.ATSTORE_IDENTIFIER.trim();
 }
-if (!process.env.GOAT_PASSWORD && process.env.ATSTORE_APP_PASSWORD) {
-  process.env.GOAT_PASSWORD = process.env.ATSTORE_APP_PASSWORD;
+if (process.env.ATSTORE_APP_PASSWORD?.trim()) {
+  process.env.GOAT_PASSWORD = process.env.ATSTORE_APP_PASSWORD.trim();
 }
 
 const args = process.argv.slice(2);
