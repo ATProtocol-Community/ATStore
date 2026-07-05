@@ -2,10 +2,12 @@
 /**
  * Post one verified listing to Bluesky that has never been posted about before.
  *
- * Picks a random `store_listings` row with `verification_status = 'verified'` that has
- * no row yet in `store_listing_bluesky_posts` (unique on `store_listing_id`, so a listing
- * can never be posted about twice), writes a short LLM-generated blurb, and posts it as
- * `app.bsky.feed.post` from the AT Store account with a link-card embed back to the
+ * Picks a random `store_listings` row with `verification_status = 'verified'` AND either an
+ * admin approval event or a confirmed product-owner claim (most of the original bulk-imported
+ * directory defaults to `verified` without either — that default alone isn't enough to post
+ * about), that has no row yet in `store_listing_bluesky_posts` (unique on `store_listing_id`,
+ * so a listing can never be posted about twice). Writes a short LLM-generated blurb and posts
+ * it as `app.bsky.feed.post` from the AT Store account with a link-card embed back to the
  * listing's product page.
  */
 // Railway cron (suggested): once every other day, one post per run — `0 15 */2 * *` (15:00 UTC every 2 days).
@@ -36,7 +38,7 @@ import {
 import { createAtstorePublishClient } from "#/lib/atproto/publish-directory-listing";
 import { createBlueskyFeedPostRecord } from "#/lib/atproto/repo-records";
 import { fetchBlueskyHandleForDid } from "#/lib/bluesky-public-profile";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, exists, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 
@@ -185,6 +187,20 @@ async function pickCandidate(db: Database): Promise<Candidate | null> {
       and(
         eq(schema.storeListings.verificationStatus, "verified"),
         isNull(schema.storeListingBlueskyPosts.storeListingId),
+        or(
+          isNotNull(schema.storeListings.claimedByDid),
+          exists(
+            db
+              .select({ n: sql`1` })
+              .from(schema.storeListingVerificationApprovalEvents)
+              .where(
+                eq(
+                  schema.storeListingVerificationApprovalEvents.storeListingId,
+                  schema.storeListings.id,
+                ),
+              ),
+          ),
+        ),
       ),
     )
     .orderBy(sql`random()`)
