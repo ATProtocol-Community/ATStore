@@ -5,6 +5,7 @@ import type {
 } from "@atcute/atproto";
 import type { Client } from "@atcute/client";
 import type { InferInput } from "@atcute/lexicons/validations";
+import type { BlueskyMentionFacet } from "#/lib/atproto/bluesky-facets";
 import type { FyiAtstoreListingDetail } from "#/lib/atproto/listing-record";
 
 import { ComAtprotoRepoCreateRecord } from "@atcute/atproto";
@@ -72,6 +73,22 @@ export type FyiAtstoreListingFavorite = {
   $type: typeof NSID.listingFavorite;
   subject: string;
   createdAt: string;
+};
+
+export type AppBskyFeedPostRecord = {
+  $type: "app.bsky.feed.post";
+  text: string;
+  createdAt: string;
+  facets?: Array<BlueskyMentionFacet>;
+  embed?: {
+    $type: "app.bsky.embed.external";
+    external: {
+      uri: string;
+      title: string;
+      description: string;
+      thumb?: unknown;
+    };
+  };
 };
 
 /**
@@ -186,6 +203,25 @@ export async function createListingDetailRecord(
       input: lexCreateRecordInput({
         repo,
         collection: COLLECTION.listingDetail,
+        rkey: TID.now(),
+        record,
+      }),
+    }),
+  );
+  return { uri: res.uri, cid: res.cid };
+}
+
+/** Create `app.bsky.feed.post` on the store repo (see `scripts/post-verified-listing-to-bluesky.ts`). */
+export async function createBlueskyFeedPostRecord(
+  client: Client,
+  repo: string,
+  record: AppBskyFeedPostRecord,
+): Promise<{ uri: string; cid: string }> {
+  const res = await ok(
+    client.call(ComAtprotoRepoCreateRecord, {
+      input: lexCreateRecordInput({
+        repo,
+        collection: "app.bsky.feed.post",
         rkey: TID.now(),
         record,
       }),

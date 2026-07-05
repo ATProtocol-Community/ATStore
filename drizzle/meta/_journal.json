@@ -295,6 +295,13 @@
       "when": 1779300000000,
       "tag": "0042_ensure_store_listing_page_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779400000000,
+      "tag": "0043_store_listing_bluesky_posts",
+      "breakpoints": true
     }
   ]
 }

@@ -43,6 +43,7 @@
     "standard-site:backfill-all-products": "tsx -r dotenv/config scripts/standard-site-backfill-all-product-dids.ts",
     "jetstream:consumer": "tsx -r dotenv/config scripts/jetstream-consumer.ts",
     "trending:rescore": "tsx -r dotenv/config scripts/rescore-trending.ts",
+    "social:post-verified-listing": "tsx -r dotenv/config scripts/post-verified-listing-to-bluesky.ts",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
     "lint": "pnpm exec oxlint .",

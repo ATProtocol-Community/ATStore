@@ -646,6 +646,31 @@ export const storeListingVerificationApprovalEvents = pgTable(
 );
 
 /**
+ * One row per listing ever announced on Bluesky (see `scripts/post-verified-listing-to-bluesky.ts`).
+ * The unique index on `storeListingId` is what makes "post about each listing at most once" a hard
+ * DB guarantee rather than app-level logic.
+ */
+export const storeListingBlueskyPosts = pgTable(
+  "store_listing_bluesky_posts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    storeListingId: uuid("store_listing_id")
+      .notNull()
+      .references(() => storeListings.id, { onDelete: "cascade" }),
+    postUri: text("post_uri").notNull(),
+    postCid: text("post_cid"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    listingIdx: uniqueIndex(
+      "store_listing_bluesky_posts_store_listing_id_idx",
+    ).on(table.storeListingId),
+  }),
+);
+
+/**
  * Periodic OAuth / auth-metadata probe keyed by storefront `external_url` (see
  * `scripts/sync-listing-oauth-probes.ts`). Intended for dashboards (issue #19) and alerting.
  */
@@ -1107,6 +1132,10 @@ export type NewStoreListingReviewReply =
   typeof storeListingReviewReplies.$inferInsert;
 export type StoreListingFavorite = typeof storeListingFavorites.$inferSelect;
 export type NewStoreListingFavorite = typeof storeListingFavorites.$inferInsert;
+export type StoreListingBlueskyPost =
+  typeof storeListingBlueskyPosts.$inferSelect;
+export type NewStoreListingBlueskyPost =
+  typeof storeListingBlueskyPosts.$inferInsert;
 export type JetstreamConsumerState = typeof jetstreamConsumerState.$inferSelect;
 export type NewJetstreamConsumerState =
   typeof jetstreamConsumerState.$inferInsert;
