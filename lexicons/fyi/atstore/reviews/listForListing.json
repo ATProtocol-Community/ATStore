@@ -10,7 +10,11 @@
         "rating",
         "reviewCreatedAt",
         "replyCount",
-        "canReply"
+        "canReply",
+        "text",
+        "authorDisplayName",
+        "authorHandle",
+        "authorAvatarUrl"
       ],
       "nullable": [
         "text",

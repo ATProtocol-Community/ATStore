@@ -37,7 +37,7 @@ export const lexicons = [
       "main": {
         "type": "permission-set",
         "title": "Submit AT Store reviews",
-        "detail": "Create fyi.atstore.profile/self when needed and fyi.atstore.listing.review records on the user's PDS via repository APIs; read public directory data via XRPC queries.",
+        "detail": "Create reviews on AT Store listings",
         "permissions": [
           {
             "type": "permission",
@@ -79,7 +79,12 @@ export const lexicons = [
           "reviewCount",
           "priceLabel",
           "appTags",
-          "categorySlugs"
+          "categorySlugs",
+          "iconUrl",
+          "heroImageUrl",
+          "categorySlug",
+          "rating",
+          "productAccountHandle"
         ],
         "nullable": [
           "iconUrl",
@@ -184,7 +189,15 @@ export const lexicons = [
         "type": "object",
         "required": [
           "listing",
-          "isStoreManaged"
+          "isStoreManaged",
+          "repoDid",
+          "productAccountDid",
+          "sourceTagline",
+          "sourceFullDescription",
+          "externalUrl",
+          "sourceUrl",
+          "createdAt",
+          "updatedAt"
         ],
         "nullable": [
           "repoDid",
@@ -308,7 +321,12 @@ export const lexicons = [
           "reviewCount",
           "priceLabel",
           "appTags",
-          "categorySlugs"
+          "categorySlugs",
+          "iconUrl",
+          "heroImageUrl",
+          "categorySlug",
+          "rating",
+          "productAccountHandle"
         ],
         "nullable": [
           "iconUrl",
@@ -782,7 +800,11 @@ export const lexicons = [
           "rating",
           "reviewCreatedAt",
           "replyCount",
-          "canReply"
+          "canReply",
+          "text",
+          "authorDisplayName",
+          "authorHandle",
+          "authorAvatarUrl"
         ],
         "nullable": [
           "text",

@@ -14,7 +14,12 @@
         "reviewCount",
         "priceLabel",
         "appTags",
-        "categorySlugs"
+        "categorySlugs",
+        "iconUrl",
+        "heroImageUrl",
+        "categorySlug",
+        "rating",
+        "productAccountHandle"
       ],
       "nullable": [
         "iconUrl",
@@ -78,7 +83,18 @@
     },
     "listingDetailResponse": {
       "type": "object",
-      "required": ["listing", "isStoreManaged"],
+      "required": [
+        "listing",
+        "isStoreManaged",
+        "repoDid",
+        "productAccountDid",
+        "sourceTagline",
+        "sourceFullDescription",
+        "externalUrl",
+        "sourceUrl",
+        "createdAt",
+        "updatedAt"
+      ],
       "nullable": [
         "repoDid",
         "productAccountDid",
