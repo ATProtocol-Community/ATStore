@@ -14,7 +14,12 @@
         "reviewCount",
         "priceLabel",
         "appTags",
-        "categorySlugs"
+        "categorySlugs",
+        "iconUrl",
+        "heroImageUrl",
+        "categorySlug",
+        "rating",
+        "productAccountHandle"
       ],
       "nullable": [
         "iconUrl",
