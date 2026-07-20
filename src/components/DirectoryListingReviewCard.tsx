@@ -437,6 +437,55 @@ function ReviewConversationSection({
   const replyHeadingLabel =
     review.replyCount === 1 ? "1 Reply" : `${review.replyCount} Replies`;
 
+  const composer = showComposerControls ? (
+    <Form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = draft.trim();
+        if (trimmed.length === 0) return;
+        setFormError(null);
+        createReply.mutate();
+      }}
+    >
+      <Flex direction="column" gap="sm">
+        <TextArea
+          aria-label="Write a reply"
+          size="lg"
+          autosize={true}
+          isResizable={false}
+          value={draft}
+          placeholder="Write a reply..."
+          variant="secondary"
+          onChange={setDraft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && e.metaKey) {
+              e.preventDefault();
+              if (draft.trim().length === 0) return;
+              setFormError(null);
+              createReply.mutate();
+            }
+          }}
+          suffix={
+            <Button
+              type="submit"
+              variant="tertiary"
+              isDisabled={draft.trim().length === 0}
+              isPending={createReply.isPending}
+              style={styles.replyComposerButton}
+            >
+              Reply
+            </Button>
+          }
+        />
+        {formError ? (
+          <Text size="xs" variant="secondary">
+            {formError}
+          </Text>
+        ) : null}
+      </Flex>
+    </Form>
+  ) : null;
+
   return (
     <>
       <Flex direction="column" style={styles.replySection}>
@@ -598,60 +647,15 @@ function ReviewConversationSection({
                       )}
                     </Flex>
 
-                    {showComposerControls ? (
-                      <Form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const trimmed = draft.trim();
-                          if (trimmed.length === 0) return;
-                          setFormError(null);
-                          createReply.mutate();
-                        }}
-                      >
-                        <Flex direction="column" gap="sm">
-                          <TextArea
-                            aria-label="Write a reply"
-                            size="lg"
-                            autosize={true}
-                            isResizable={false}
-                            value={draft}
-                            placeholder="Write a reply..."
-                            variant="secondary"
-                            onChange={setDraft}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && e.metaKey) {
-                                e.preventDefault();
-                                if (draft.trim().length === 0) return;
-                                setFormError(null);
-                                createReply.mutate();
-                              }
-                            }}
-                            suffix={
-                              <Button
-                                type="submit"
-                                variant="tertiary"
-                                isDisabled={draft.trim().length === 0}
-                                isPending={createReply.isPending}
-                                style={styles.replyComposerButton}
-                              >
-                                Reply
-                              </Button>
-                            }
-                          />
-                          {formError ? (
-                            <Text size="xs" variant="secondary">
-                              {formError}
-                            </Text>
-                          ) : null}
-                        </Flex>
-                      </Form>
-                    ) : null}
+                    {composer}
                   </Flex>
                 </DisclosurePanel>
               </>
             )}
           </Disclosure>
-        ) : null}
+        ) : (
+          composer
+        )}
       </Flex>
 
       <AlertDialog
