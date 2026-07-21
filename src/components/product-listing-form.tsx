@@ -18,6 +18,7 @@ import {
   LISTING_LINK_MAX_COUNT,
   LISTING_LINK_TYPES,
 } from "#/lib/atproto/listing-record";
+import { slugifyDirectoryListingName } from "#/lib/directory-listing-slugs";
 import { GripVertical, Info, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -561,6 +562,11 @@ const styles = stylex.create({
 
 export type ProductListingFormSubmitValues = {
   name: string;
+  /**
+   * Owner-chosen URL slug. Empty string means "keep auto-deriving" — the server
+   * normalizes and validates before persisting.
+   */
+  slug: string;
   tagline: string;
   fullDescription: string;
   externalUrl: string;
@@ -586,6 +592,8 @@ export type ProductListingFormSubmitValues = {
 
 export type ProductListingFormInitialValues = {
   name: string;
+  /** Current URL slug; omitted on create (server auto-derives). */
+  slug?: string;
   tagline: string;
   fullDescription: string;
   externalUrl: string;
@@ -621,6 +629,12 @@ type ProductListingFormProps = {
    * expect a hero for publication quality.
    */
   requireHero?: boolean;
+  /**
+   * Show the owner-editable "Custom URL" (slug) field. Only the owner edit flow
+   * persists a slug today; create/admin flows auto-derive it, so the field is
+   * hidden there to avoid capturing input that would be silently ignored.
+   */
+  allowSlugEdit?: boolean;
 };
 
 export function ProductListingForm({
@@ -635,6 +649,7 @@ export function ProductListingForm({
   successMessage,
   allowRemoveHero = false,
   requireHero = true,
+  allowSlugEdit = false,
 }: ProductListingFormProps) {
   const { data: categoryTree } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryTreeQueryOptions,
@@ -644,6 +659,7 @@ export function ProductListingForm({
   );
 
   const [name, setName] = useState(initialValues.name);
+  const [slug, setSlug] = useState(initialValues.slug ?? "");
   const [tagline, setTagline] = useState(initialValues.tagline);
   const [fullDescription, setFullDescription] = useState(
     initialValues.fullDescription,
@@ -652,6 +668,16 @@ export function ProductListingForm({
   const [productHandle, setProductHandle] = useState(
     initialValues.productHandle,
   );
+
+  /**
+   * Preview the exact slug the server will store — `slugifyDirectoryListingName`
+   * is the same normalizer used server-side, so what's shown here is what the
+   * URL becomes (and what the canonical redirect resolves to). A blank field
+   * falls back to the name-derived slug, matching the auto-derive default.
+   */
+  const slugPreview = slugifyDirectoryListingName(slug.trim() || name);
+  const initialSlug = initialValues.slug ?? "";
+  const slugWillChange = initialSlug.length > 0 && slugPreview !== initialSlug;
 
   const categoryParts = (initialValues.categorySlug ?? "")
     .split("/")
@@ -1041,6 +1067,7 @@ export function ProductListingForm({
           e.preventDefault();
           onSubmit({
             name,
+            slug,
             tagline,
             fullDescription,
             externalUrl,
@@ -1097,6 +1124,23 @@ export function ProductListingForm({
                     onChange={setExternalUrl}
                     isRequired
                   />
+                  {allowSlugEdit ? (
+                    <>
+                      <TextField
+                        label="Custom URL"
+                        value={slug}
+                        onChange={setSlug}
+                        placeholder={slugifyDirectoryListingName(name)}
+                        description={`Your listing will live at /products/${slugPreview}`}
+                      />
+                      {slugWillChange ? (
+                        <Text size="sm" variant="critical">
+                          Changing your URL will break existing links to the old
+                          address (/products/{initialSlug}).
+                        </Text>
+                      ) : null}
+                    </>
+                  ) : null}
                   <TextArea
                     label="Description"
                     description="Describe what your product does, then call out your top features—paragraphs or bullets both work."

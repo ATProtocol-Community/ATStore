@@ -130,6 +130,7 @@ import {
   getLegacyDirectoryListingId,
   listingSlugBaseFromCategorySlug,
   resolveStoreListingSlugBase,
+  slugifyDirectoryListingName,
 } from "../../lib/directory-listing-slugs";
 import {
   discoverOgImageUrlFromPage,
@@ -5352,6 +5353,11 @@ const listingLinkInputSchema = z.object({
 const updateOwnedProductListingInput = z.object({
   listingId: z.string().uuid(),
   name: z.string().trim().min(1).max(640),
+  /**
+   * Owner-chosen URL slug. Optional/blank preserves today's auto-derive
+   * behavior (see {@link resolveStoreListingSlugWithOverride}).
+   */
+  slug: z.string().trim().max(512).optional(),
   tagline: z.string().max(2000),
   fullDescription: z.string().max(20_000),
   externalUrl: listingExternalUrlSchema,
@@ -5463,6 +5469,103 @@ async function resolveStoreListingSlugOnSave(
   });
 }
 
+const USER_SLUG_MIN_LENGTH = 3;
+const USER_SLUG_MAX_LENGTH = 120;
+
+/**
+ * Slugs that must never be user-assignable because they collide with sibling
+ * `/products/*` routes (e.g. `/products/manage`, `/products/create`) or the
+ * `$productId/edit` child segment. Kept in sync with `src/routes/_header-layout.products.*`.
+ */
+const RESERVED_STORE_LISTING_SLUGS = new Set<string>([
+  "manage",
+  "create",
+  "new",
+  "edit",
+]);
+
+/**
+ * Resolve the slug to persist on save, honoring an explicit owner-chosen value.
+ *
+ * When `requestedSlug` is present it wins even for `apps/*` listings (which
+ * otherwise auto-derive) — that is the whole point of letting owners pick a URL.
+ * The value is normalized through {@link slugifyDirectoryListingName} so the
+ * stored slug is identical to what the read loaders redirect to (no redirect
+ * loop), then validated for length, reserved words, and uniqueness against
+ * other listings. When no slug is requested, behavior is unchanged
+ * ({@link resolveStoreListingSlugOnSave}).
+ */
+async function resolveStoreListingSlugWithOverride(
+  db: Database,
+  input: {
+    categorySlug: string;
+    name: string;
+    sourceUrl: string;
+    currentSlug: string;
+    listingId: string;
+    requestedSlug?: string;
+  },
+): Promise<string> {
+  const requested = input.requestedSlug?.trim();
+  if (!requested) {
+    return resolveStoreListingSlugOnSave(db, input);
+  }
+
+  const normalized = slugifyDirectoryListingName(requested);
+  if (
+    normalized.length < USER_SLUG_MIN_LENGTH ||
+    normalized.length > USER_SLUG_MAX_LENGTH
+  ) {
+    throw new Error(
+      `Custom URL must be between ${USER_SLUG_MIN_LENGTH} and ${USER_SLUG_MAX_LENGTH} characters.`,
+    );
+  }
+  if (RESERVED_STORE_LISTING_SLUGS.has(normalized)) {
+    throw new Error("That URL is reserved. Pick another.");
+  }
+  if (normalized === input.currentSlug) {
+    return input.currentSlug;
+  }
+
+  const t = dbSchema.storeListings;
+  const [taken] = await db
+    .select({ id: t.id })
+    .from(t)
+    .where(and(eq(t.slug, normalized), ne(t.id, input.listingId)))
+    .limit(1);
+  if (taken) {
+    throw new Error("That URL is already taken. Try another.");
+  }
+  return normalized;
+}
+
+/**
+ * Detect a Postgres `unique_violation` (SQLSTATE 23505) on
+ * `store_listings_slug_idx`. Drizzle wraps driver errors, so the Postgres error
+ * may live on a nested `.cause`. Mirrors `isSourceUrlUniqueViolation` in
+ * `tap-listing-sync.ts`.
+ */
+function isSlugUniqueViolation(err: unknown): boolean {
+  const seen = new Set<unknown>();
+  let cur: unknown = err;
+  while (cur && typeof cur === "object" && !seen.has(cur)) {
+    seen.add(cur);
+    const e = cur as {
+      code?: unknown;
+      constraint_name?: unknown;
+      cause?: unknown;
+    };
+    if (
+      e.code === "23505" &&
+      e.constraint_name === "store_listings_slug_idx"
+    ) {
+      return true;
+    }
+    cur = e.cause;
+  }
+  return false;
+}
+
 const getProductListingEditAccess = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator(getProductListingEditAccessInput)
@@ -5567,12 +5670,13 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       ? normalizeAppTags(data.appTags ?? [])
       : [];
 
-    const slug = await resolveStoreListingSlugOnSave(context.db, {
+    const slug = await resolveStoreListingSlugWithOverride(context.db, {
       categorySlug,
       name,
       sourceUrl: externalUrl,
       currentSlug: full.slug,
       listingId: full.id,
+      requestedSlug: data.slug,
     });
 
     const patch: Partial<StoreListing> = {
@@ -5611,24 +5715,37 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
         ? { verificationStatus: "unverified" as const }
         : {};
 
-    await context.db
-      .update(t)
-      .set({
-        name,
-        slug,
-        tagline: taglineClean,
-        fullDescription: descClean,
-        externalUrl,
-        categorySlugs: [categorySlug],
-        productAccountDid,
-        productAccountHandle,
-        atUri: uri,
-        links,
-        appTags,
-        ...verificationStatusPatch,
-        updatedAt: now,
-      })
-      .where(eq(t.id, full.id));
+    try {
+      await context.db
+        .update(t)
+        .set({
+          name,
+          slug,
+          tagline: taglineClean,
+          fullDescription: descClean,
+          externalUrl,
+          categorySlugs: [categorySlug],
+          productAccountDid,
+          productAccountHandle,
+          atUri: uri,
+          links,
+          appTags,
+          ...verificationStatusPatch,
+          updatedAt: now,
+        })
+        .where(eq(t.id, full.id));
+    } catch (error) {
+      /**
+       * `resolveStoreListingSlugWithOverride` pre-checks uniqueness before the
+       * PDS publish above, but a concurrent save can still win the slug between
+       * that check and this write. Surface the unique-index violation as a
+       * friendly message instead of a raw 500.
+       */
+      if (isSlugUniqueViolation(error)) {
+        throw new Error("That URL was just taken. Try another.");
+      }
+      throw error;
+    }
 
     await refreshListingPageSnapshot(context.db, full.id);
 

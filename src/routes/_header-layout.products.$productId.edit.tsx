@@ -153,6 +153,7 @@ function EditProductListingPage() {
         data: {
           listingId: productId,
           name: values.name,
+          slug: values.slug,
           tagline: values.tagline,
           fullDescription: values.fullDescription,
           externalUrl: values.externalUrl,
@@ -257,6 +258,7 @@ function EditProductListingPage() {
       isSubmitting={saveMutation.isPending}
       initialValues={{
         name: listing.name,
+        slug: getDirectoryListingSlug(listing),
         tagline: listing.sourceTagline ?? "",
         fullDescription: listing.sourceFullDescription ?? "",
         externalUrl: listing.externalUrl ?? listing.sourceUrl ?? "",
@@ -270,6 +272,7 @@ function EditProductListingPage() {
       }}
       onCancel={navigateAway}
       onSubmit={(values) => saveMutation.mutate(values)}
+      allowSlugEdit
       allowRemoveHero
       errorMessage={
         saveMutation.isError

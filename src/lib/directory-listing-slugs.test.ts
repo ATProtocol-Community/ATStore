@@ -21,6 +21,29 @@ describe("listingSlugBaseFromCategorySlug", () => {
   });
 });
 
+describe("slugifyDirectoryListingName as a custom-URL normalizer", () => {
+  it("normalizes free-form owner input to a URL slug", () => {
+    expect(slugifyDirectoryListingName("My Cool App!")).toBe("my-cool-app");
+    expect(slugifyDirectoryListingName("  Spaces & Symbols  ")).toBe(
+      "spaces-and-symbols",
+    );
+  });
+
+  it("is idempotent, so the previewed slug survives being re-slugified", () => {
+    // The editor previews `slugify(input)`, the server stores `slugify(input)`,
+    // and the read loaders redirect to `slugify(stored)`. If this weren't
+    // idempotent the owner could land in a redirect loop.
+    for (const input of ["My Cool App!", "already-a-slug", "Café Münchén"]) {
+      const once = slugifyDirectoryListingName(input);
+      expect(slugifyDirectoryListingName(once)).toBe(once);
+    }
+  });
+
+  it("falls back to a non-empty slug for input with no slug characters", () => {
+    expect(slugifyDirectoryListingName("!!!")).toBe("product");
+  });
+});
+
 describe("resolveStoreListingSlugBase", () => {
   it("prefers the app slug for app listings", () => {
     expect(
