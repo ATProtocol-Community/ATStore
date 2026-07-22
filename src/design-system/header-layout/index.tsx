@@ -24,10 +24,7 @@ const styles = stylex.create({
       default: "100vh",
       ":is([data-header-layout] [data-header-layout])": "auto",
     },
-    width: {
-      default: "100cqw",
-      ":is([data-header-layout] [data-header-layout])": "100%",
-    },
+    width: "100%",
   },
   rootMaxWidth: (maxWidth: string | undefined) => ({
     "--page-content-max-width": maxWidth || "1280px",
