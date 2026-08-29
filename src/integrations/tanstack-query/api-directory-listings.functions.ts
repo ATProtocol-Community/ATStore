@@ -1152,14 +1152,12 @@ const rescanListingOAuthProbeDevInput = z.object({
 /**
  * Re-run `probeOAuthListingAuth` against the listing's storefront URL and upsert
  * `store_listing_oauth_probes` — mirrors `scripts/sync-listing-oauth-probes.ts`.
- * Development only.
+ * Admin only.
  */
 const rescanListingOAuthProbeDev = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(rescanListingOAuthProbeDevInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
-
     const listings = context.schema.storeListings;
     const probes = context.schema.storeListingOAuthProbes;
 
@@ -1544,12 +1542,6 @@ function getListingSelect(table: typeof dbSchema.storeListings) {
     averageRating: table.averageRating,
     productAccountHandle: table.productAccountHandle,
   };
-}
-
-function assertDevelopmentOnly() {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("This action is only available in development.");
-  }
 }
 
 async function getFullDirectoryListing(
@@ -4267,10 +4259,8 @@ function getListDirectoryListingsQueryOptions(
 }
 
 const getDirectoryListingCategoryAssignments = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly();
-
     const table = context.schema.storeListings;
     const rows = await context.db
       .select({
@@ -4340,10 +4330,8 @@ const getDirectoryListingCategoryAssignmentsQueryOptions = queryOptions({
 });
 
 const getDirectoryListingAppTagAssignments = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly();
-
     const table = context.schema.storeListings;
     const rows = await context.db
       .select({
@@ -4478,11 +4466,9 @@ const updateDirectoryListingCategoryAssignment = createServerFn({
   });
 
 const deleteDirectoryListing = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(deleteDirectoryListingInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
-
     const full = await getFullDirectoryListing(context, data.id);
     if (!full.rkey) {
       throw new Error(
@@ -4682,10 +4668,8 @@ export type ProductAccountCandidateQueueItem = {
 };
 
 const getNextProductAccountCandidate = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly();
-
     const c = context.schema.storeListingProductAccountCandidates;
     const l = context.schema.storeListings;
     const [row] = await context.db
@@ -4722,10 +4706,8 @@ const getNextProductAccountCandidateQueryOptions = queryOptions({
 });
 
 const getPendingProductAccountCandidates = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .handler(async ({ context }) => {
-    assertDevelopmentOnly();
-
     const c = context.schema.storeListingProductAccountCandidates;
     const l = context.schema.storeListings;
     const rows = await context.db
@@ -4775,10 +4757,9 @@ const getListingsMissingProductAccountHandleInput = z.object({
 });
 
 const getListingsMissingProductAccountHandle = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(getListingsMissingProductAccountHandleInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
     const t = context.schema.storeListings;
     const conditions = [
       sql`coalesce(trim(${t.productAccountHandle}), '') = ''`,
@@ -4871,10 +4852,9 @@ const setProductAccountHandleDevInput = z
   });
 
 const setProductAccountHandleDev = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(setProductAccountHandleDevInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
     const t = context.schema.storeListings;
 
     const [found] = await context.db
@@ -4928,10 +4908,9 @@ const ignoreMissingProductAccountHandleDevInput = z.object({
 });
 
 const ignoreMissingProductAccountHandleDev = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(ignoreMissingProductAccountHandleDevInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
     const t = context.schema.storeListings;
 
     const [found] = await context.db
@@ -4963,10 +4942,9 @@ const unignoreMissingProductAccountHandleDevInput = z.object({
 const unignoreMissingProductAccountHandleDev = createServerFn({
   method: "POST",
 })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(unignoreMissingProductAccountHandleDevInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
     const t = context.schema.storeListings;
 
     const [found] = await context.db
@@ -5049,10 +5027,9 @@ async function runConfirmProductAccountCandidate(
 }
 
 const confirmProductAccountCandidate = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(confirmProductAccountCandidateInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
     await runConfirmProductAccountCandidate(context, data.candidateId);
     return { ok: true as const };
   });
@@ -5063,11 +5040,9 @@ const applyProductAccountCandidatesBatchInput = z.object({
 });
 
 const applyProductAccountCandidatesBatch = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(applyProductAccountCandidatesBatchInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
-
     const c = context.schema.storeListingProductAccountCandidates;
     const l = context.schema.storeListings;
 
@@ -5124,11 +5099,9 @@ const applyProductAccountCandidatesBatch = createServerFn({ method: "POST" })
   });
 
 const rejectProductAccountCandidate = createServerFn({ method: "POST" })
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, adminFnMiddleware])
   .inputValidator(rejectProductAccountCandidateInput)
   .handler(async ({ data, context }) => {
-    assertDevelopmentOnly();
-
     const c = context.schema.storeListingProductAccountCandidates;
     const now = new Date();
     const result = await context.db
