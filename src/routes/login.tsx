@@ -46,6 +46,9 @@ const searchSchema = z.object({
   handle: z.string().optional(),
   avatar: z.string().optional(),
   error: z.string().optional(),
+  // DID hint from another atmosphere app (see docs/atmosphere-login.md): when
+  // present we offer a one-tap "Continue as @handle" for that identity.
+  referrer_did: z.string().optional(),
 });
 
 const styles = stylex.create({
@@ -131,21 +134,34 @@ export const Route = createFileRoute("/login")({
     middleware: [unauthMiddleware],
   },
   loader: async ({ context, location }) => {
+    const search = location.search as Record<string, string>;
+    const redirectTarget = search["redirect"];
+    const referrerDid = search["referrer_did"]?.trim();
+
     const savedHandles = await context.queryClient.ensureQueryData(
       auth.getSavedHandlesQueryOptions,
     );
-    return {
-      savedHandles,
-      redirects: await Promise.all(
+    const [redirects, referrerLogin] = await Promise.all([
+      Promise.all(
         savedHandles.map((h) =>
           auth.authorize({
             data: {
               handle: h.handle,
-              redirect: (location.search as Record<string, string>)["redirect"],
+              redirect: redirectTarget,
             },
           }),
         ),
       ),
+      referrerDid
+        ? auth.getReferrerLogin({
+            data: { referrerDid, redirect: redirectTarget },
+          })
+        : null,
+    ]);
+    return {
+      savedHandles,
+      redirects,
+      referrerLogin,
     };
   },
   component: AuthPage,
@@ -165,8 +181,11 @@ function AuthPage() {
     avatar: avatarParam,
     error,
   } = Route.useSearch();
-  const { savedHandles: initialSavedHandles, redirects } =
-    Route.useLoaderData();
+  const {
+    savedHandles: initialSavedHandles,
+    redirects,
+    referrerLogin,
+  } = Route.useLoaderData();
   const navigate = useNavigate();
 
   const [handle, setHandle] = useState("");
@@ -236,6 +255,37 @@ function AuthPage() {
               <Text size="sm" variant="critical">
                 Sign-in failed. Try again.
               </Text>
+            ) : null}
+
+            {referrerLogin ? (
+              <Flex direction="column" gap="md">
+                <Text size="sm" variant="secondary">
+                  Continue with your atmosphere identity
+                </Text>
+                <AriaLink
+                  href={referrerLogin.authorizationUrl}
+                  {...stylex.props(
+                    styles.savedHandleButton,
+                    primary.bgUi,
+                    primary.borderInteractive,
+                    primary.text,
+                  )}
+                >
+                  <Avatar
+                    src={referrerLogin.avatar ?? undefined}
+                    alt={referrerLogin.handle ?? referrerLogin.did}
+                    fallback={
+                      (referrerLogin.handle ??
+                        referrerLogin.did)[0]?.toUpperCase() ?? "?"
+                    }
+                  />
+                  <Text size="base" style={styles.savedHandleText}>
+                    Continue as {referrerLogin.handle ?? referrerLogin.did}
+                  </Text>
+                  <ChevronRight {...stylex.props(styles.savedHandleIcon)} />
+                </AriaLink>
+                <Separator />
+              </Flex>
             ) : null}
 
             {view === "saved-handles" && (
