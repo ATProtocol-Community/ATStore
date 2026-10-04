@@ -154,6 +154,7 @@ type Candidate = {
   fullDescription: string | null;
   categorySlugs: Array<string>;
   appTags: Array<string>;
+  heroImageUrl: string | null;
   iconUrl: string | null;
   screenshotUrls: Array<string>;
   productAccountDid: string | null;
@@ -170,6 +171,7 @@ async function pickCandidate(db: Database): Promise<Candidate | null> {
       fullDescription: schema.storeListings.fullDescription,
       categorySlugs: schema.storeListings.categorySlugs,
       appTags: schema.storeListings.appTags,
+      heroImageUrl: schema.storeListings.heroImageUrl,
       iconUrl: schema.storeListings.iconUrl,
       screenshotUrls: schema.storeListings.screenshotUrls,
       productAccountDid: schema.storeListings.productAccountDid,
@@ -209,19 +211,55 @@ async function pickCandidate(db: Database): Promise<Candidate | null> {
   return rows[0] ?? null;
 }
 
+/** `app.bsky.embed.external#external.thumb` maxSize. */
+const MAX_THUMB_BYTES = 1_000_000;
+
+/**
+ * Fetch an image and re-encode it as a JPEG that fits the link-card thumb limit
+ * (full-size hero PNGs from the Bluesky CDN can exceed 1 MB).
+ */
 async function fetchThumbBytes(
   url: string,
 ): Promise<{ bytes: Uint8Array; mimeType: string } | null> {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    const mimeType = res.headers.get("content-type")?.split(";")[0]?.trim();
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength === 0) return null;
-    return { bytes, mimeType: mimeType || "image/png" };
+    const raw = Buffer.from(await res.arrayBuffer());
+    if (raw.byteLength === 0) return null;
+
+    const { default: sharp } = await import("sharp");
+    for (const quality of [85, 75, 65, 55]) {
+      const jpeg = await sharp(raw, { failOn: "none" })
+        .rotate()
+        .resize({ width: 1200, withoutEnlargement: true })
+        .jpeg({ quality, mozjpeg: true })
+        .toBuffer();
+      if (jpeg.byteLength <= MAX_THUMB_BYTES) {
+        return { bytes: new Uint8Array(jpeg), mimeType: "image/jpeg" };
+      }
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+/** Prefer the listing hero (what the product page and its og:image show), then icon, then first screenshot. */
+async function fetchListingThumb(
+  listing: Candidate,
+): Promise<{ bytes: Uint8Array; mimeType: string } | null> {
+  const sources = [
+    listing.heroImageUrl,
+    listing.iconUrl,
+    listing.screenshotUrls[0],
+  ];
+  for (const source of sources) {
+    if (!source?.trim()) continue;
+    const thumb = await fetchThumbBytes(source.trim());
+    if (thumb) return thumb;
+    log("warn", "thumb_fetch_failed", { source });
+  }
+  return null;
 }
 
 async function main(): Promise<void> {
@@ -280,8 +318,7 @@ async function main(): Promise<void> {
 
   const { client, repoDid } = await createAtstorePublishClient();
 
-  const thumbSource = listing.iconUrl ?? listing.screenshotUrls[0] ?? null;
-  const thumb = thumbSource ? await fetchThumbBytes(thumbSource) : null;
+  const thumb = await fetchListingThumb(listing);
   const thumbBlob = thumb
     ? await uploadImageBlob(client, thumb.bytes, thumb.mimeType)
     : undefined;
