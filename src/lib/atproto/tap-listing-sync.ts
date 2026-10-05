@@ -360,6 +360,49 @@ function resolveListingVerificationStatus(input: {
 }
 
 /**
+ * The upsert below is keyed on `slug`, but `at_uri` is also unique. When the row already mirroring
+ * this record has a different slug (slug edited on the PDS outside our API, or a record reusing
+ * another listing's slug), a plain slug upsert either inserts a duplicate `at_uri` or repoints
+ * another row onto it — both fail with `store_listings_at_uri_idx`, and Tap retries the event forever.
+ *
+ * Reconcile onto the row that owns `atUri`: adopt the record's slug when it is free, otherwise keep
+ * the row's current slug.
+ */
+async function resolveTapIngestSlug(
+  db: Database,
+  atUri: string,
+  recordSlug: string,
+): Promise<string> {
+  const [rowByAtUri] = await db
+    .select({ id: schema.storeListings.id, slug: schema.storeListings.slug })
+    .from(schema.storeListings)
+    .where(eq(schema.storeListings.atUri, atUri))
+    .limit(1);
+  if (!rowByAtUri || rowByAtUri.slug === recordSlug) return recordSlug;
+
+  const [slugOwner] = await db
+    .select({ atUri: schema.storeListings.atUri })
+    .from(schema.storeListings)
+    .where(eq(schema.storeListings.slug, recordSlug))
+    .limit(1);
+  if (slugOwner) {
+    console.warn(
+      `[tap-ingest] ${atUri} record slug=${recordSlug} already owned by ${slugOwner.atUri ?? "(no at_uri)"}; keeping slug=${rowByAtUri.slug}`,
+    );
+    return rowByAtUri.slug;
+  }
+
+  console.log(
+    `[tap-ingest] ${atUri} slug changed ${rowByAtUri.slug} -> ${recordSlug}`,
+  );
+  await db
+    .update(schema.storeListings)
+    .set({ slug: recordSlug })
+    .where(eq(schema.storeListings.id, rowByAtUri.id));
+  return recordSlug;
+}
+
+/**
  * Upsert `store_listings` from Tap (`fyi.atstore.listing.detail` only — does not touch `directory_listings`).
  * Resolves icon / hero / screenshots to Bluesky CDN URLs from blob refs (Kitchen-style).
  */
@@ -375,6 +418,7 @@ export async function upsertDirectoryListingFromTap(input: {
   const sourceUrl = record.externalUrl.trim();
   const atstoreDidRaw = process.env.ATSTORE_REPO_DID?.trim() ?? null;
   const atstoreDid = atstoreDidRaw?.startsWith("did:") ? atstoreDidRaw : null;
+  const slug = await resolveTapIngestSlug(db, atUri, record.slug);
 
   const [existingRow] = await db
     .select({
@@ -385,7 +429,7 @@ export async function upsertDirectoryListingFromTap(input: {
       verificationStatus: schema.storeListings.verificationStatus,
     })
     .from(schema.storeListings)
-    .where(eq(schema.storeListings.slug, record.slug))
+    .where(eq(schema.storeListings.slug, slug))
     .limit(1);
   const existingClaimPendingForDid =
     existingRow?.claimPendingForDid?.trim() ?? null;
@@ -434,7 +478,7 @@ export async function upsertDirectoryListingFromTap(input: {
   const heroCid = getBlobCidString(record.heroImage);
   const shotsParsed = (record.screenshots ?? []).length;
   console.log(
-    `[tap-ingest] slug=${record.slug} rkey=${rkey} images: icon=${iconUrl ? `cdn(${iconCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.icon)}`} hero=${heroImageUrl ? `cdn(${heroCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.heroImage)}`} screenshots=${screenshotUrls.length}/${shotsParsed}`,
+    `[tap-ingest] slug=${slug} rkey=${rkey} images: icon=${iconUrl ? `cdn(${iconCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.icon)}`} hero=${heroImageUrl ? `cdn(${heroCid?.slice(0, 12)}…)` : `MISS:${explainMissingBlobUrl(record.heroImage)}`} screenshots=${screenshotUrls.length}/${shotsParsed}`,
   );
 
   const productDid = record.productAccountDid?.trim() ?? null;
@@ -454,7 +498,7 @@ export async function upsertDirectoryListingFromTap(input: {
       .values({
         sourceUrl,
         name: record.name,
-        slug: record.slug,
+        slug,
         externalUrl: record.externalUrl,
         iconUrl,
         screenshotUrls,
@@ -522,7 +566,7 @@ export async function upsertDirectoryListingFromTap(input: {
         .where(eq(schema.storeListings.sourceUrl, sourceUrl))
         .limit(1);
       console.warn(
-        `[tap-ingest] skip listing ${atUri} slug=${record.slug} — sourceUrl=${sourceUrl} already owned by ${conflictRow?.atUri ?? "(unknown row)"} slug=${conflictRow?.slug ?? "?"} repoDid=${conflictRow?.repoDid ?? "?"}`,
+        `[tap-ingest] skip listing ${atUri} slug=${slug} — sourceUrl=${sourceUrl} already owned by ${conflictRow?.atUri ?? "(unknown row)"} slug=${conflictRow?.slug ?? "?"} repoDid=${conflictRow?.repoDid ?? "?"}`,
       );
       return;
     }
@@ -532,7 +576,7 @@ export async function upsertDirectoryListingFromTap(input: {
   const [saved] = await db
     .select({ id: schema.storeListings.id })
     .from(schema.storeListings)
-    .where(eq(schema.storeListings.slug, record.slug))
+    .where(eq(schema.storeListings.slug, slug))
     .limit(1);
 
   if (saved?.id) {
@@ -540,7 +584,7 @@ export async function upsertDirectoryListingFromTap(input: {
       await refreshListingPageSnapshot(db, saved.id);
     } catch (refreshError) {
       console.warn(
-        `[tap-ingest] page snapshot refresh failed slug=${record.slug} id=${saved.id}`,
+        `[tap-ingest] page snapshot refresh failed slug=${slug} id=${saved.id}`,
         refreshError,
       );
     }
