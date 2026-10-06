@@ -247,6 +247,51 @@ function DevelopersAtprotoPage() {
             </Text>
           </Blockquote>
         </Flex>
+
+        <Flex direction="column" gap="6xl">
+          <Flex direction="column" gap="4xl">
+            <Heading2>Login to the atmosphere</Heading2>
+            <Body variant="secondary">
+              A convention for letting a user who is logged in on one atmosphere
+              app get a fast, one-tap sign-in when they follow a link to
+              another. It is a <Text weight="medium">hint</Text>, not
+              authentication: a DID is public, so passing one only tells the
+              destination who to offer login to—the destination must still run
+              its own ATProto{" "}
+              <Link href="https://atproto.com/specs/oauth">OAuth</Link>.
+            </Body>
+          </Flex>
+
+          <Flex direction="column" gap="4xl">
+            <Heading3>referrer_did convention</Heading3>
+            <Body variant="secondary">
+              When your app links out to another atmosphere app and the current
+              viewer is logged in, append the viewer&apos;s DID as{" "}
+              <InlineCode>referrer_did</InlineCode>:
+            </Body>
+            <Blockquote>
+              <span {...stylex.props(styles.monoTight)}>
+                https://other-app.example/path?referrer_did=did:plc:abc123
+              </span>
+            </Blockquote>
+            <Body variant="secondary">
+              <Text weight="medium">Consuming it:</Text> on load, read{" "}
+              <InlineCode>referrer_did</InlineCode> from the URL. If it is a
+              valid DID and the user is not signed in, offer &quot;Continue as
+              @handle&quot; that starts OAuth with the DID as the login hint
+              (resolve DID → PDS → authorize). ATStore does this at{" "}
+              <InlineCode>/login?referrer_did=…</InlineCode>.
+            </Body>
+            <Blockquote>
+              <Text leading="base">
+                Privacy: this discloses the viewer&apos;s DID to the
+                destination. Only send it to atmosphere destinations you intend
+                to hand off to (not, for example, a privacy-policy or
+                source-code link).
+              </Text>
+            </Blockquote>
+          </Flex>
+        </Flex>
       </Flex>
     </Page.Root>
   );

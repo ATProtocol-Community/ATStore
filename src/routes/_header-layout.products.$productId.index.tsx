@@ -17,6 +17,7 @@ import { BlueskyIcon } from "#/components/bluesky-icon";
 import { FundingPopoverChip } from "#/components/funding-popover-chip";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
 import { ToggleButton } from "#/design-system/toggle-button";
+import { withReferrerDid } from "#/lib/referrer-did-url";
 import {
   BadgeCheck,
   BookOpen,
@@ -924,7 +925,7 @@ function HeroSection({
       ) : null}
       {primaryLink ? (
         <ButtonLink
-          to={primaryLink}
+          to={withReferrerDid(primaryLink, session?.user?.did)}
           size="lg"
           target="_blank"
           rel="noopener noreferrer"
