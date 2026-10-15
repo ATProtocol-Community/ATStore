@@ -14,7 +14,7 @@ import { Route as HomeRouteImport } from './routes/home'
 import { Route as HeaderLayoutRouteImport } from './routes/_header-layout'
 import { Route as LocaleRouteImport } from './routes/$locale'
 import { Route as OgIndexRouteImport } from './routes/og.index'
-import { Route as HeaderLayoutIndexRouteImport } from './routes/_header-layout.index'
+import { Route as LocaleIndexRouteImport } from './routes/$locale.index'
 import { Route as XrpcNsidRouteImport } from './routes/xrpc.$nsid'
 import { Route as OgTagRouteImport } from './routes/og.tag'
 import { Route as OgReviewRouteImport } from './routes/og.review'
@@ -85,10 +85,10 @@ const OgIndexRoute = OgIndexRouteImport.update({
   path: '/og/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HeaderLayoutIndexRoute = HeaderLayoutIndexRouteImport.update({
+const LocaleIndexRoute = LocaleIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => HeaderLayoutRoute,
+  getParentRoute: () => LocaleRoute,
 } as any)
 const XrpcNsidRoute = XrpcNsidRouteImport.update({
   id: '/xrpc/$nsid',
@@ -348,7 +348,7 @@ const HeaderLayoutProductsProductIdReviewsReviewIdEditRoute =
 
 export interface FileRoutesByFullPath {
   '/$locale': typeof LocaleRouteWithChildren
-  '/': typeof HeaderLayoutIndexRoute
+  '/': typeof HeaderLayoutAdminLayoutRouteWithChildren
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/$locale/about': typeof LocaleAboutRoute
@@ -358,6 +358,7 @@ export interface FileRoutesByFullPath {
   '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
   '/xrpc/$nsid': typeof XrpcNsidRoute
+  '/$locale/': typeof LocaleIndexRoute
   '/og/': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -398,17 +399,17 @@ export interface FileRoutesByFullPath {
   '/products/$productId/reviews/$reviewId/edit': typeof HeaderLayoutProductsProductIdReviewsReviewIdEditRoute
 }
 export interface FileRoutesByTo {
-  '/$locale': typeof LocaleRouteWithChildren
+  '/': typeof HeaderLayoutAdminLayoutRouteWithChildren
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/$locale/about': typeof LocaleAboutRoute
-  '/': typeof HeaderLayoutIndexRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
   '/og/profile': typeof OgProfileRoute
   '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
   '/xrpc/$nsid': typeof XrpcNsidRoute
+  '/$locale': typeof LocaleIndexRoute
   '/og': typeof OgIndexRoute
   '/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -461,7 +462,7 @@ export interface FileRoutesById {
   '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
   '/xrpc/$nsid': typeof XrpcNsidRoute
-  '/_header-layout/': typeof HeaderLayoutIndexRoute
+  '/$locale/': typeof LocaleIndexRoute
   '/og/': typeof OgIndexRoute
   '/_header-layout/apps/$tag': typeof HeaderLayoutAppsTagRoute
   '/_header-layout/apps/all': typeof HeaderLayoutAppsAllRoute
@@ -515,6 +516,7 @@ export interface FileRouteTypes {
     | '/og/review'
     | '/og/tag'
     | '/xrpc/$nsid'
+    | '/$locale/'
     | '/og/'
     | '/apps/$tag'
     | '/apps/all'
@@ -555,17 +557,17 @@ export interface FileRouteTypes {
     | '/products/$productId/reviews/$reviewId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/$locale'
+    | '/'
     | '/home'
     | '/login'
     | '/$locale/about'
-    | '/'
     | '/notifications'
     | '/search'
     | '/og/profile'
     | '/og/review'
     | '/og/tag'
     | '/xrpc/$nsid'
+    | '/$locale'
     | '/og'
     | '/apps/$tag'
     | '/apps/all'
@@ -617,7 +619,7 @@ export interface FileRouteTypes {
     | '/og/review'
     | '/og/tag'
     | '/xrpc/$nsid'
-    | '/_header-layout/'
+    | '/$locale/'
     | '/og/'
     | '/_header-layout/apps/$tag'
     | '/_header-layout/apps/all'
@@ -712,12 +714,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_header-layout/': {
-      id: '/_header-layout/'
+    '/$locale/': {
+      id: '/$locale/'
       path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof HeaderLayoutIndexRouteImport
-      parentRoute: typeof HeaderLayoutRoute
+      fullPath: '/$locale/'
+      preLoaderRoute: typeof LocaleIndexRouteImport
+      parentRoute: typeof LocaleRoute
     }
     '/xrpc/$nsid': {
       id: '/xrpc/$nsid'
@@ -1039,10 +1041,12 @@ declare module '@tanstack/react-router' {
 
 interface LocaleRouteChildren {
   LocaleAboutRoute: typeof LocaleAboutRoute
+  LocaleIndexRoute: typeof LocaleIndexRoute
 }
 
 const LocaleRouteChildren: LocaleRouteChildren = {
   LocaleAboutRoute: LocaleAboutRoute,
+  LocaleIndexRoute: LocaleIndexRoute,
 }
 
 const LocaleRouteWithChildren =
@@ -1115,7 +1119,6 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutAdminLayoutRoute: typeof HeaderLayoutAdminLayoutRouteWithChildren
   HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
   HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
-  HeaderLayoutIndexRoute: typeof HeaderLayoutIndexRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
   HeaderLayoutAppsLexiconRoute: typeof HeaderLayoutAppsLexiconRoute
@@ -1141,7 +1144,6 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutAdminLayoutRoute: HeaderLayoutAdminLayoutRouteWithChildren,
   HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
   HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
-  HeaderLayoutIndexRoute: HeaderLayoutIndexRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
   HeaderLayoutAppsLexiconRoute: HeaderLayoutAppsLexiconRoute,

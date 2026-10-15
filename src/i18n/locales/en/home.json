@@ -1,0 +1,34 @@
+{
+  "ogTitle": "at-store | Apps on the Atmosphere",
+  "ogDescription": "Discover apps and tools across the Atmosphere. Find your next favorite app today!",
+  "hero": {
+    "eyebrow": "The AT Protocol app directory",
+    "title": "Apps on the Atmosphere",
+    "description": "Discover the best apps the Atmosphere has to offer. With every product you own your data and use the same identity across all apps."
+  },
+  "claimBanner": {
+    "title_one": "Claim your listing",
+    "title_other": "Claim your listings",
+    "continue": "Continue",
+    "body_one": "\"{{name}}\" is still on the store repo. Claim it to manage updates from your PDS.",
+    "body_other": "You have {{count}} listings on the store repo. Claim them to manage updates from your PDS."
+  },
+  "browseSection": {
+    "eyebrow": "Browse Apps",
+    "title": "Find apps you'll love"
+  },
+  "popularSection": {
+    "eyebrow": "Popular Right Now",
+    "title": "Trending across the ecosystem"
+  },
+  "newSection": {
+    "eyebrow": "New & Noteworthy",
+    "title": "Fresh apps just added"
+  },
+  "sectionHeader": {
+    "seeAll": "See All"
+  },
+  "popularItem": {
+    "explore": "Explore"
+  }
+}

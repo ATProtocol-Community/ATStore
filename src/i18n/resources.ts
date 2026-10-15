@@ -6,14 +6,16 @@ import type { Namespace } from "./config";
 
 import enXAAbout from "./locales/en-XA/about.json";
 import enXACommon from "./locales/en-XA/common.json";
+import enXAHome from "./locales/en-XA/home.json";
 import enAbout from "./locales/en/about.json";
 import enCommon from "./locales/en/common.json";
+import enHome from "./locales/en/home.json";
 
 export const resources: Record<string, Record<Namespace, unknown>> = {
-  en: { common: enCommon, about: enAbout },
+  en: { common: enCommon, about: enAbout, home: enHome },
   // en-XA is a dev-only pseudo-locale. Rollup replaces import.meta.env.DEV
   // with `false` in prod and tree-shakes the dead branch + JSON assets.
   ...(import.meta.env.DEV
-    ? { "en-XA": { common: enXACommon, about: enXAAbout } }
+    ? { "en-XA": { common: enXACommon, about: enXAAbout, home: enXAHome } }
     : {}),
 };

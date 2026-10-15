@@ -7,18 +7,23 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
+import { Suspense } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { AppTagCard } from "../components/AppTagCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { HeroImage } from "../components/HeroImage";
+import { SiteFooter } from "../components/SiteFooter";
+import { SiteHeader } from "../components/SiteHeader";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Card, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
+import { HeaderLayout } from "../design-system/header-layout";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
 import {
@@ -41,13 +46,14 @@ import {
   SmallBody,
 } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
+import { i18next } from "../i18n";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
-export const Route = createFileRoute("/_header-layout/")({
+export const Route = createFileRoute("/$locale/")({
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(
@@ -58,13 +64,14 @@ export const Route = createFileRoute("/_header-layout/")({
       ),
     ]);
   },
-  head: () =>
-    buildRouteOgMeta({
-      title: "at-store | Apps on the Atmosphere",
-      description:
-        "Discover apps and tools across the Atmosphere. Find your next favorite app today!",
-    }),
-  component: HomePage,
+  head: ({ params }) => {
+    const t = i18next.getFixedT(params.locale, "home");
+    return buildRouteOgMeta({
+      title: t("ogTitle"),
+      description: t("ogDescription"),
+    });
+  },
+  component: HomePageRoute,
 });
 
 const AppLink = createLink(Link);
@@ -102,16 +109,16 @@ const styles = stylex.create({
     transitionTimingFunction: "ease-in-out",
     height: "100%",
 
-    ":hover::before": {
-      opacity: 1,
-    },
     "::before": {
       inset: 0,
       borderRadius: radius.lg,
       cornerShape: "squircle",
       boxShadow: shadow.lg,
       content: "''",
-      opacity: 0,
+      opacity: {
+        default: 0,
+        ":hover": 1,
+      },
       position: "absolute",
       transitionDuration: animationDuration.slow,
       transitionProperty: "opacity",
@@ -165,16 +172,16 @@ const styles = stylex.create({
     boxShadow: shadow.md,
     position: "relative",
 
-    ":hover::before": {
-      opacity: 1,
-    },
     "::before": {
       inset: 0,
       borderRadius: radius.lg,
       cornerShape: "squircle",
       boxShadow: shadow.lg,
       content: "''",
-      opacity: 0,
+      opacity: {
+        default: 0,
+        ":hover": 1,
+      },
       position: "absolute",
       transitionDuration: animationDuration.default,
       transitionProperty: "opacity",
@@ -274,15 +281,15 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["2xl"],
     paddingTop: verticalSpace["2xl"],
 
-    ":hover::after": {
-      opacity: 1,
-    },
     "::after": {
       inset: 0,
       borderRadius: radius.md,
       boxShadow: shadow.lg,
       content: "''",
-      opacity: 0,
+      opacity: {
+        default: 0,
+        ":hover": 1,
+      },
       position: "absolute",
       transitionDuration: animationDuration.slow,
       transitionProperty: "opacity",
@@ -341,7 +348,28 @@ const styles = stylex.create({
   },
 });
 
+function HomePageRoute() {
+  return (
+    <HeaderLayout.Root>
+      <HeaderLayout.Header>
+        <SiteHeader />
+      </HeaderLayout.Header>
+
+      <HeaderLayout.Page>
+        <Suspense>
+          <HomePage />
+        </Suspense>
+      </HeaderLayout.Page>
+
+      <HeaderLayout.Footer>
+        <SiteFooter />
+      </HeaderLayout.Footer>
+    </HeaderLayout.Root>
+  );
+}
+
 function HomePage() {
+  const { t } = useTranslation("home");
   const navigate = useNavigate();
   const { data } = useSuspenseQuery(
     directoryListingApi.getHomePageQueryOptions,
@@ -361,31 +389,31 @@ function HomePage() {
         {showClaimBanner ? (
           <Alert
             variant="info"
-            title={
-              claimCount === 1 ? "Claim your listing" : "Claim your listings"
-            }
+            title={t("claimBanner.title", { count: claimCount })}
             action={
               <Button
                 variant="primary"
                 size="sm"
                 onPress={() => void navigate({ to: "/product/claim" })}
               >
-                Continue
+                {t("claimBanner.continue")}
               </Button>
             }
           >
-            {claimCount === 1
-              ? `“${(claimEligibility.listings[0]?.name ?? "").trim() || "Listing"}” is still on the store repo. Claim it to manage updates from your PDS.`
-              : `You have ${String(claimCount)} listings on the store repo. Claim them to manage updates from your PDS.`}
+            {t("claimBanner.body", {
+              count: claimCount,
+              name:
+                (claimEligibility.listings[0]?.name ?? "").trim() || "Listing",
+            })}
           </Alert>
         ) : null}
 
         <Flex direction="column" gap="6xl" style={styles.pageHeader}>
           <Flex direction="column" gap="5xl">
             <Text size="lg" weight="normal" style={styles.eyebrow}>
-              The AT Protocol app directory
+              {t("hero.eyebrow")}
             </Text>
-            <Heading1>Apps on the Atmosphere</Heading1>
+            <Heading1>{t("hero.title")}</Heading1>
           </Flex>
           <Text
             variant="secondary"
@@ -393,8 +421,7 @@ function HomePage() {
             leading="sm"
             style={styles.headerDescription}
           >
-            Discover the best apps the Atmosphere has to offer. With every
-            product you own your data and use the same identity across all apps.
+            {t("hero.description")}
           </Text>
         </Flex>
       </Flex>
@@ -420,8 +447,8 @@ function HomePage() {
 
         <section {...stylex.props(styles.section)}>
           <SectionHeader
-            eyebrow="Browse Apps"
-            title="Find apps you'll love"
+            eyebrow={t("browseSection.eyebrow")}
+            title={t("browseSection.title")}
             to="/apps/tags"
           />
           <Grid style={styles.categoriesGrid}>
@@ -433,8 +460,8 @@ function HomePage() {
 
         <section {...stylex.props(styles.section)}>
           <SectionHeader
-            eyebrow="Popular Right Now"
-            title="Trending across the ecosystem"
+            eyebrow={t("popularSection.eyebrow")}
+            title={t("popularSection.title")}
             to="/apps/all"
             search={{ sort: "popular" }}
           />
@@ -459,8 +486,8 @@ function HomePage() {
 
         <section {...stylex.props(styles.section)}>
           <SectionHeader
-            eyebrow="New & Noteworthy"
-            title="Fresh apps just added"
+            eyebrow={t("newSection.eyebrow")}
+            title={t("newSection.title")}
             to="/apps/all"
             search={{ sort: "newest" }}
           />
@@ -492,13 +519,14 @@ type SectionHeaderProps =
     };
 
 function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
+  const { t } = useTranslation("home");
   let action: React.ReactNode;
 
   switch (to) {
     case "/apps/all": {
       action = (
         <AppLink to="/apps/all" search={search}>
-          See All <ChevronRight />
+          {t("sectionHeader.seeAll")} <ChevronRight />
         </AppLink>
       );
       break;
@@ -506,7 +534,7 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
     case "/apps/tags": {
       action = (
         <AppLink to="/apps/tags">
-          See All <ChevronRight />
+          {t("sectionHeader.seeAll")} <ChevronRight />
         </AppLink>
       );
       break;
@@ -582,6 +610,7 @@ function PopularListItem({
   listing: DirectoryListingCard;
   rank: number;
 }) {
+  const { t } = useTranslation("home");
   return (
     <RouterLink
       to="/products/$productId"
@@ -604,7 +633,7 @@ function PopularListItem({
         <SmallBody variant="secondary">{listing.tagline}</SmallBody>
       </Flex>
       <Button variant="secondary" style={styles.exploreButton}>
-        Explore
+        {t("popularItem.explore")}
       </Button>
     </RouterLink>
   );
