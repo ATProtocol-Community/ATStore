@@ -10,8 +10,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import type {
   BrowseFacet,
+  BrowseFacets,
   BrowseFilters,
-  BrowseListing,
+  BrowseListingCard,
   BrowseSearch,
   BrowseSort,
 } from "../lib/browse-listings";
@@ -57,18 +58,14 @@ import {
 } from "../lib/app-tag-metadata";
 import { getAppTagEmoji } from "../lib/app-tag-visuals";
 import {
-  BROWSE_PAGE_SIZE,
   BROWSE_SORTS,
   BROWSE_SORT_LABELS,
   TOP_LEVEL_APPS_CATEGORY,
-  buildBrowseFacets,
   clearBrowseFilters,
   countActiveBrowseFilters,
   getBrowseCategoryLabel,
   getBrowseFilterValueLabel,
   getBrowseFilters,
-  listingMatchesFilters,
-  sortBrowseListings,
   toggleBrowseFilter,
   validateBrowseSearch,
 } from "../lib/browse-listings";
@@ -85,11 +82,8 @@ const sortOptions = BROWSE_SORTS.map((id) => ({
   label: BROWSE_SORT_LABELS[id],
 }));
 
-/** When the only filter is a single tag, find the stored tag text for its slug. */
-function getSingleTagPreset(
-  search: BrowseSearch,
-  listings: ReadonlyArray<BrowseListing>,
-) {
+/** When the only filter is a single tag, recover its stored (lowercase) text and count. */
+function getSingleTagPreset(search: BrowseSearch, facets: BrowseFacets) {
   const filters = getBrowseFilters(search);
   if (
     filters.query ||
@@ -98,12 +92,10 @@ function getSingleTagPreset(
   ) {
     return null;
   }
-  const slug = filters.tags[0];
-  const matching = listings.filter((listing) =>
-    listing.appTags.some((tag) => getAppTagSlug(tag) === slug),
-  );
-  const tag = matching[0]?.appTags.find((t) => getAppTagSlug(t) === slug);
-  return tag ? { tag, count: matching.length } : null;
+  const option = facets.tags.find((tag) => tag.id === filters.tags[0]);
+  return option
+    ? { tag: option.label.toLowerCase(), count: option.count }
+    : null;
 }
 
 function getSingleCategoryPreset(search: BrowseSearch) {
@@ -124,13 +116,13 @@ function getSingleCategoryPreset(search: BrowseSearch) {
 
 export const Route = createFileRoute("/_header-layout/apps/")({
   validateSearch: validateBrowseSearch,
-  loaderDeps: ({ search }) => ({ tag: search.tag, in: search.in }),
+  loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    const listings = await context.queryClient.ensureQueryData(
-      directoryListingApi.getBrowseListingsQueryOptions,
+    const { facets } = await context.queryClient.ensureQueryData(
+      directoryListingApi.getBrowsePageQueryOptions(deps),
     );
 
-    const tagPreset = getSingleTagPreset(deps, listings);
+    const tagPreset = getSingleTagPreset(deps, facets);
     if (tagPreset) {
       const label = formatAppTagLabel(tagPreset.tag);
       return {
@@ -287,32 +279,12 @@ const styles = stylex.create({
 function BrowseAppsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: listings } = useSuspenseQuery(
-    directoryListingApi.getBrowseListingsQueryOptions,
-  );
+  const {
+    data: { results, total, totalListings, page, totalPages, facets },
+  } = useSuspenseQuery(directoryListingApi.getBrowsePageQueryOptions(search));
 
   const filters = useMemo(() => getBrowseFilters(search), [search]);
   const sort: BrowseSort = search.sort ?? "popular";
-
-  const results = useMemo(
-    () =>
-      sortBrowseListings(
-        listings.filter((listing) => listingMatchesFilters(listing, filters)),
-        sort,
-      ),
-    [listings, filters, sort],
-  );
-  const facets = useMemo(
-    () => buildBrowseFacets(listings, filters),
-    [listings, filters],
-  );
-
-  const totalPages = Math.max(1, Math.ceil(results.length / BROWSE_PAGE_SIZE));
-  const page = Math.min(search.page ?? 1, totalPages);
-  const pageResults = results.slice(
-    (page - 1) * BROWSE_PAGE_SIZE,
-    page * BROWSE_PAGE_SIZE,
-  );
 
   const toggleFilter = (facet: BrowseFacet, value: string) => {
     void navigate({
@@ -375,7 +347,7 @@ function BrowseAppsPage() {
                         Clear all
                       </Button>
                       <Button slot="close">
-                        {`Show ${results.length} ${results.length === 1 ? "app" : "apps"}`}
+                        {`Show ${total} ${total === 1 ? "app" : "apps"}`}
                       </Button>
                     </Flex>
                   </DrawerFooter>
@@ -407,20 +379,20 @@ function BrowseAppsPage() {
 
             <ActiveFilterChips
               filters={filters}
-              listings={listings}
+              facets={facets}
               onRemove={toggleFilter}
               onClear={clearFilters}
             />
 
             <SmallBody style={styles.resultCount}>
-              {results.length === listings.length
-                ? `${listings.length} apps`
-                : `${results.length} of ${listings.length} apps`}
+              {total === totalListings
+                ? `${totalListings} apps`
+                : `${total} of ${totalListings} apps`}
             </SmallBody>
 
-            {pageResults.length > 0 ? (
+            {results.length > 0 ? (
               <Flex direction="column" gap="xl">
-                {pageResults.map((listing) => (
+                {results.map((listing) => (
                   <BrowseListingRow key={listing.id} listing={listing} />
                 ))}
               </Flex>
@@ -515,12 +487,12 @@ function BrowseQueryField({ query }: { query: string }) {
 
 function ActiveFilterChips({
   filters,
-  listings,
+  facets,
   onRemove,
   onClear,
 }: {
   filters: BrowseFilters;
-  listings: ReadonlyArray<BrowseListing>;
+  facets: BrowseFacets;
   onRemove: (facet: BrowseFacet, value: string) => void;
   onClear: () => void;
 }) {
@@ -544,7 +516,7 @@ function ActiveFilterChips({
   return (
     <Flex align="center" gap="md" style={styles.chips}>
       {chips.map(({ facet, value }) => {
-        const label = getBrowseFilterValueLabel(facet, value, listings);
+        const label = getBrowseFilterValueLabel(facet, value, facets);
         return (
           <Button
             key={`${facet}:${value}`}
@@ -591,7 +563,7 @@ function addFilter(search: BrowseSearch, facet: BrowseFacet, value: string) {
     : toggleBrowseFilter(search, facet, value);
 }
 
-function BrowseListingRow({ listing }: { listing: BrowseListing }) {
+function BrowseListingRow({ listing }: { listing: BrowseListingCard }) {
   const productParams = { productId: listing.slug };
   const handle = listing.productAccountHandle?.replace(/^@/, "");
   // Top-level apps are their own `apps/<name>` category, so only badge ecosystem tools and protocol.

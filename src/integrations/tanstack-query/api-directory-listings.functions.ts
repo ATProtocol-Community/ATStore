@@ -100,7 +100,7 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 
-import type { BrowseListing } from "../../lib/browse-listings";
+import type { BrowseListing, BrowseSearch } from "../../lib/browse-listings";
 import type {
   DirectoryCategoryAccent,
   DirectoryCategoryTreeNode,
@@ -113,6 +113,10 @@ import {
   suggestAppTagsFromListing,
   suggestedTagsForListing,
 } from "../../lib/app-tags";
+import {
+  queryBrowseListings,
+  validateBrowseSearch,
+} from "../../lib/browse-listings";
 import {
   buildDirectoryCategoryTree,
   findDirectoryCategoryNode,
@@ -2621,70 +2625,108 @@ function getLexiconCompatibleAppsPageQueryOptions(
   });
 }
 
-const BROWSE_SEARCH_TEXT_MAX_LENGTH = 200;
-
 /**
- * Every public non-protocol listing with the fields `/apps` filters and sorts on. Returned in "popular"
- * order (`popularRank`) so the client can re-sort without another round trip.
+ * Every public non-protocol listing with the fields `/apps` filters and sorts on, in "popular"
+ * order (`popularRank`).
  */
-const getBrowseListings = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
-  .handler(async ({ context }): Promise<Array<BrowseListing>> => {
-    const table = context.schema.storeListings;
-    const probe = context.schema.storeListingOAuthProbes;
-    const rows = await context.db
-      .select({
-        ...getListingSelect(table),
-        links: table.links,
-        favoriteCount: table.favoriteCount,
-        createdAt: table.createdAt,
-        updatedAt: table.updatedAt,
-        oauthLexiconKeys: probe.oauthLexiconKeys,
-      })
-      .from(table)
-      .leftJoin(probe, eq(probe.storeListingId, table.id))
-      .where(
-        listingPublicWhere(
-          table,
-          sql`not (${sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%")})`,
-        ),
-      )
-      .orderBy(...orderByPopularListingSort(table));
+async function loadBrowseListings(context: {
+  db: Database;
+  schema: typeof dbSchema;
+}): Promise<Array<BrowseListing>> {
+  const table = context.schema.storeListings;
+  const probe = context.schema.storeListingOAuthProbes;
+  const rows = await context.db
+    .select({
+      ...getListingSelect(table),
+      links: table.links,
+      favoriteCount: table.favoriteCount,
+      createdAt: table.createdAt,
+      updatedAt: table.updatedAt,
+      oauthLexiconKeys: probe.oauthLexiconKeys,
+    })
+    .from(table)
+    .leftJoin(probe, eq(probe.storeListingId, table.id))
+    .where(
+      listingPublicWhere(
+        table,
+        sql`not (${sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%")})`,
+      ),
+    )
+    .orderBy(...orderByPopularListingSort(table));
 
-    return rows.map((row, index) => {
-      const card = toListingCard(row);
-      const dataNsids = (row.oauthLexiconKeys ?? [])
-        .filter((key) => isRepoLexiconKeyForLexiconHub(key))
-        .flatMap((key) => parseOAuthLexiconKey(key)?.nsid ?? []);
-      const linkTypes = new Set(row.links.map((link) => link.type));
+  return rows.map((row, index) => {
+    const card = toListingCard(row);
+    const dataNsids = (row.oauthLexiconKeys ?? [])
+      .filter((key) => isRepoLexiconKeyForLexiconHub(key))
+      .flatMap((key) => parseOAuthLexiconKey(key)?.nsid ?? []);
+    const linkTypes = new Set(row.links.map((link) => link.type));
 
-      return {
-        id: card.id,
-        name: card.name,
-        slug: getDirectoryListingSlug(card),
-        iconUrl: card.iconUrl,
-        tagline: card.tagline,
-        searchText: card.description.slice(0, BROWSE_SEARCH_TEXT_MAX_LENGTH),
-        categorySlugs: card.categorySlugs,
-        appTags: card.appTags,
-        rating: card.rating,
-        reviewCount: card.reviewCount,
-        favoriteCount: row.favoriteCount,
-        productAccountHandle: card.productAccountHandle,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-        popularRank: index,
-        dataNsids: [...new Set(dataNsids)],
-        hasSourceLink: linkTypes.has("source"),
-        acceptsDonations: linkTypes.has("donate"),
-      };
-    });
+    return {
+      id: card.id,
+      name: card.name,
+      slug: getDirectoryListingSlug(card),
+      iconUrl: card.iconUrl,
+      tagline: card.tagline,
+      searchText: card.description,
+      categorySlugs: card.categorySlugs,
+      appTags: card.appTags,
+      rating: card.rating,
+      reviewCount: card.reviewCount,
+      favoriteCount: row.favoriteCount,
+      productAccountHandle: card.productAccountHandle,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      popularRank: index,
+      dataNsids: [...new Set(dataNsids)],
+      hasSourceLink: linkTypes.has("source"),
+      acceptsDonations: linkTypes.has("donate"),
+    };
   });
+}
 
-const getBrowseListingsQueryOptions = queryOptions({
-  queryKey: ["storeListings", "browse"] as const,
-  queryFn: async () => getBrowseListings(),
-});
+/** Facets need the whole catalog, so keep it in memory briefly instead of re-querying per filter click. */
+const BROWSE_LISTINGS_CACHE_TTL_MS = 60 * 1000;
+let browseListingsCache: {
+  expiresAt: number;
+  listings: Promise<Array<BrowseListing>>;
+} | null = null;
+
+function getCachedBrowseListings(context: {
+  db: Database;
+  schema: typeof dbSchema;
+}) {
+  const now = Date.now();
+  if (!browseListingsCache || browseListingsCache.expiresAt <= now) {
+    const listings = loadBrowseListings(context);
+    browseListingsCache = {
+      expiresAt: now + BROWSE_LISTINGS_CACHE_TTL_MS,
+      listings,
+    };
+    // Don't cache failures.
+    listings.catch(() => {
+      if (browseListingsCache?.listings === listings)
+        browseListingsCache = null;
+    });
+  }
+  return browseListingsCache.listings;
+}
+
+/** One page of `/apps` results plus facet counts; filtering runs here so the client never loads the catalog. */
+const getBrowsePage = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .inputValidator((data: BrowseSearch) =>
+    validateBrowseSearch(data as Record<string, unknown>),
+  )
+  .handler(async ({ data, context }) =>
+    queryBrowseListings(await getCachedBrowseListings(context), data),
+  );
+
+function getBrowsePageQueryOptions(search: BrowseSearch) {
+  return queryOptions({
+    queryKey: ["storeListings", "browsePage", search],
+    queryFn: async () => getBrowsePage({ data: search }),
+  });
+}
 
 const getDirectoryListingDetail = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
@@ -7786,8 +7828,7 @@ export const directoryListingApi = {
   getRelatedAppsBySharedLexiconKeysQueryOptions,
   getLexiconCompatibleAppsPage,
   getLexiconCompatibleAppsPageQueryOptions,
-  getBrowseListings,
-  getBrowseListingsQueryOptions,
+  getBrowsePageQueryOptions,
   getDirectoryListingDetail,
   getDirectoryListingDetailQueryOptions,
   getDirectoryListingDetailBySlug,

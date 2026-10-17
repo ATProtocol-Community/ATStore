@@ -27,6 +27,23 @@ export interface BrowseListing {
   acceptsDonations: boolean;
 }
 
+/** What a result row renders — the server only sends these fields for the current page. */
+export type BrowseListingCard = Pick<
+  BrowseListing,
+  | "id"
+  | "name"
+  | "slug"
+  | "iconUrl"
+  | "tagline"
+  | "categorySlugs"
+  | "appTags"
+  | "rating"
+  | "reviewCount"
+  | "favoriteCount"
+  | "productAccountHandle"
+  | "updatedAt"
+>;
+
 export const BROWSE_SORTS = [
   "popular",
   "rating",
@@ -526,19 +543,17 @@ export function getBrowseCategoryLabel(categoryId: string): string {
 export function getBrowseFilterValueLabel(
   facet: BrowseFacet,
   value: string,
-  listings: ReadonlyArray<BrowseListing>,
+  facets: Pick<BrowseFacets, "tags">,
 ): string {
   switch (facet) {
     case "categories": {
       return getBrowseCategoryLabel(value);
     }
     case "tags": {
-      for (const listing of listings) {
-        for (const tag of listing.appTags) {
-          if (getAppTagSlug(tag) === value) return formatAppTagLabel(tag);
-        }
-      }
-      return formatAppTagLabel(value.replaceAll("-", " "));
+      return (
+        facets.tags.find((option) => option.id === value)?.label ??
+        formatAppTagLabel(value.replaceAll("-", " "))
+      );
     }
     case "data": {
       return getLexiconProducerSiteFromRepoNsid(value)?.siteLabel ?? value;
@@ -604,4 +619,57 @@ export function toggleBrowseFilter(
 
 export function clearBrowseFilters(search: BrowseSearch): BrowseSearch {
   return { q: search.q, sort: search.sort };
+}
+
+export interface BrowsePage {
+  results: Array<BrowseListingCard>;
+  /** Listings matching the current search and filters. */
+  total: number;
+  /** All browseable listings, ignoring search and filters. */
+  totalListings: number;
+  page: number;
+  totalPages: number;
+  facets: BrowseFacets;
+}
+
+function toBrowseListingCard(listing: BrowseListing): BrowseListingCard {
+  return {
+    id: listing.id,
+    name: listing.name,
+    slug: listing.slug,
+    iconUrl: listing.iconUrl,
+    tagline: listing.tagline,
+    categorySlugs: listing.categorySlugs,
+    appTags: listing.appTags,
+    rating: listing.rating,
+    reviewCount: listing.reviewCount,
+    favoriteCount: listing.favoriteCount,
+    productAccountHandle: listing.productAccountHandle,
+    updatedAt: listing.updatedAt,
+  };
+}
+
+/** Filter, facet, sort and paginate — runs server-side so the client only gets one page. */
+export function queryBrowseListings(
+  listings: ReadonlyArray<BrowseListing>,
+  search: BrowseSearch,
+): BrowsePage {
+  const filters = getBrowseFilters(search);
+  const matching = sortBrowseListings(
+    listings.filter((listing) => listingMatchesFilters(listing, filters)),
+    search.sort ?? "popular",
+  );
+  const totalPages = Math.max(1, Math.ceil(matching.length / BROWSE_PAGE_SIZE));
+  const page = Math.min(search.page ?? 1, totalPages);
+
+  return {
+    results: matching
+      .slice((page - 1) * BROWSE_PAGE_SIZE, page * BROWSE_PAGE_SIZE)
+      .map((listing) => toBrowseListingCard(listing)),
+    total: matching.length,
+    totalListings: listings.length,
+    page,
+    totalPages,
+    facets: buildBrowseFacets(listings, filters),
+  };
 }

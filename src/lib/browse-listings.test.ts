@@ -6,6 +6,7 @@ import {
   buildBrowseFacets,
   getBrowseFilters,
   listingMatchesFilters,
+  queryBrowseListings,
   sortBrowseListings,
   toggleBrowseFilter,
   validateBrowseSearch,
@@ -197,5 +198,42 @@ describe("toggleBrowseFilter", () => {
     expect(toggleBrowseFilter({ rating: 4 }, "minRating", "4").rating).toBe(
       undefined,
     );
+  });
+});
+
+describe("queryBrowseListings", () => {
+  const many = Array.from({ length: 30 }, (_, index) =>
+    listing({
+      id: `l${index}`,
+      name: `Listing ${index}`,
+      popularRank: index,
+      searchText: "a very long description",
+      appTags: index % 2 === 0 ? ["social"] : ["games"],
+    }),
+  );
+
+  it("returns one page of trimmed cards with totals", () => {
+    const page = queryBrowseListings(many, { page: 2 });
+    expect(page.total).toBe(30);
+    expect(page.totalListings).toBe(30);
+    expect(page.totalPages).toBe(2);
+    expect(page.page).toBe(2);
+    expect(page.results.map((r) => r.id)).toEqual([
+      "l24",
+      "l25",
+      "l26",
+      "l27",
+      "l28",
+      "l29",
+    ]);
+    expect(page.results[0]).not.toHaveProperty("searchText");
+  });
+
+  it("clamps out-of-range pages and filters before paginating", () => {
+    const page = queryBrowseListings(many, { tag: "games", page: 9 });
+    expect(page.total).toBe(15);
+    expect(page.totalPages).toBe(1);
+    expect(page.page).toBe(1);
+    expect(page.facets.tags.find((t) => t.id === "social")?.count).toBe(15);
   });
 });
