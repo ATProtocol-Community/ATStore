@@ -1,75 +1,65 @@
 export const lexicons = [
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.authBasic",
-    "description": "Permission set for AT Store write access.",
-    "defs": {
-      "main": {
-        "type": "permission-set",
-        "title": "Full AT Store Access",
-        "detail": "Provides full access to AT Store profile, listings, reviews, and favorites.",
-        "permissions": [
+    lexicon: 1,
+    id: "fyi.atstore.authBasic",
+    description: "Permission set for AT Store write access.",
+    defs: {
+      main: {
+        type: "permission-set",
+        title: "Full AT Store Access",
+        detail:
+          "Provides full access to AT Store profile, listings, reviews, and favorites.",
+        permissions: [
           {
-            "type": "permission",
-            "resource": "repo",
-            "collection": [
+            type: "permission",
+            resource: "repo",
+            collection: [
               "fyi.atstore.profile",
               "fyi.atstore.listing.detail",
               "fyi.atstore.listing.review",
               "fyi.atstore.listing.reviewReply",
-              "fyi.atstore.listing.favorite"
+              "fyi.atstore.listing.favorite",
             ],
-            "action": [
-              "create",
-              "update",
-              "delete"
-            ]
-          }
-        ]
-      }
-    }
+            action: ["create", "update", "delete"],
+          },
+        ],
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.authThirdPartyReviews",
-    "description": "OAuth permission bundle for third-party apps that publish AT Store profile self plus listing reviews on the user's repo; reads use public directory XRPC.",
-    "defs": {
-      "main": {
-        "type": "permission-set",
-        "title": "Submit AT Store reviews",
-        "detail": "Create reviews on AT Store listings",
-        "permissions": [
+    lexicon: 1,
+    id: "fyi.atstore.authThirdPartyReviews",
+    description:
+      "OAuth permission bundle for third-party apps that publish AT Store profile self plus listing reviews on the user's repo; reads use public directory XRPC.",
+    defs: {
+      main: {
+        type: "permission-set",
+        title: "Submit AT Store reviews",
+        detail: "Create reviews on AT Store listings",
+        permissions: [
           {
-            "type": "permission",
-            "resource": "repo",
-            "collection": [
-              "fyi.atstore.profile"
-            ],
-            "action": [
-              "create"
-            ]
+            type: "permission",
+            resource: "repo",
+            collection: ["fyi.atstore.profile"],
+            action: ["create"],
           },
           {
-            "type": "permission",
-            "resource": "repo",
-            "collection": [
-              "fyi.atstore.listing.review"
-            ],
-            "action": [
-              "create"
-            ]
-          }
-        ]
-      }
-    }
+            type: "permission",
+            resource: "repo",
+            collection: ["fyi.atstore.listing.review"],
+            action: ["create"],
+          },
+        ],
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.directory.getListing",
-    "defs": {
-      "listingCardGet": {
-        "type": "object",
-        "required": [
+    lexicon: 1,
+    id: "fyi.atstore.directory.getListing",
+    defs: {
+      listingCardGet: {
+        type: "object",
+        required: [
           "uri",
           "name",
           "tagline",
@@ -84,110 +74,103 @@ export const lexicons = [
           "heroImageUrl",
           "categorySlug",
           "rating",
-          "productAccountHandle"
+          "productAccountHandle",
         ],
-        "nullable": [
+        nullable: [
           "iconUrl",
           "heroImageUrl",
           "categorySlug",
           "rating",
-          "productAccountHandle"
+          "productAccountHandle",
         ],
-        "properties": {
-          "uri": {
-            "type": "string",
-            "format": "at-uri",
-            "maxLength": 2560,
-            "description": "AT URI of the fyi.atstore.listing.detail record."
+        properties: {
+          uri: {
+            type: "string",
+            format: "at-uri",
+            maxLength: 2560,
+            description: "AT URI of the fyi.atstore.listing.detail record.",
           },
-          "name": {
-            "type": "string",
-            "maxLength": 640
+          name: {
+            type: "string",
+            maxLength: 640,
           },
-          "tagline": {
-            "type": "string",
-            "maxLength": 2000
+          tagline: {
+            type: "string",
+            maxLength: 2000,
           },
-          "description": {
-            "type": "string",
-            "maxLength": 20000
+          description: {
+            type: "string",
+            maxLength: 20000,
           },
-          "iconUrl": {
-            "type": "string",
-            "maxLength": 8192
+          iconUrl: {
+            type: "string",
+            maxLength: 8192,
           },
-          "heroImageUrl": {
-            "type": "string",
-            "maxLength": 8192
+          heroImageUrl: {
+            type: "string",
+            maxLength: 8192,
           },
-          "categorySlug": {
-            "type": "string",
-            "maxLength": 512
+          categorySlug: {
+            type: "string",
+            maxLength: 512,
           },
-          "categorySlugs": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 512
-            }
+          categorySlugs: {
+            type: "array",
+            items: {
+              type: "string",
+              maxLength: 512,
+            },
           },
-          "category": {
-            "type": "string",
-            "maxLength": 640
+          category: {
+            type: "string",
+            maxLength: 640,
           },
-          "accent": {
-            "type": "string",
-            "maxLength": 16,
-            "knownValues": [
-              "blue",
-              "pink",
-              "purple",
-              "green"
-            ]
+          accent: {
+            type: "string",
+            maxLength: 16,
+            knownValues: ["blue", "pink", "purple", "green"],
           },
-          "rating": {
-            "type": "string",
-            "maxLength": 16
+          rating: {
+            type: "string",
+            maxLength: 16,
           },
-          "reviewCount": {
-            "type": "integer"
+          reviewCount: {
+            type: "integer",
           },
-          "priceLabel": {
-            "type": "string",
-            "maxLength": 32
+          priceLabel: {
+            type: "string",
+            maxLength: 32,
           },
-          "productAccountHandle": {
-            "type": "string",
-            "maxLength": 512
+          productAccountHandle: {
+            type: "string",
+            maxLength: 512,
           },
-          "appTags": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 256
-            }
-          }
-        }
+          appTags: {
+            type: "array",
+            items: {
+              type: "string",
+              maxLength: 256,
+            },
+          },
+        },
       },
-      "listingLinkRow": {
-        "type": "object",
-        "required": [
-          "uri"
-        ],
-        "properties": {
-          "label": {
-            "type": "string",
-            "maxLength": 640
+      listingLinkRow: {
+        type: "object",
+        required: ["uri"],
+        properties: {
+          label: {
+            type: "string",
+            maxLength: 640,
           },
-          "uri": {
-            "type": "string",
-            "maxLength": 2048
-          }
-        }
+          uri: {
+            type: "string",
+            maxLength: 2048,
+          },
+        },
       },
-      "listingDetailResponse": {
-        "type": "object",
-        "required": [
+      listingDetailResponse: {
+        type: "object",
+        required: [
           "listing",
           "isStoreManaged",
           "repoDid",
@@ -197,9 +180,9 @@ export const lexicons = [
           "externalUrl",
           "sourceUrl",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
         ],
-        "nullable": [
+        nullable: [
           "repoDid",
           "productAccountDid",
           "sourceTagline",
@@ -207,111 +190,113 @@ export const lexicons = [
           "externalUrl",
           "sourceUrl",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
         ],
-        "properties": {
-          "listing": {
-            "type": "ref",
-            "ref": "#listingCardGet"
+        properties: {
+          listing: {
+            type: "ref",
+            ref: "#listingCardGet",
           },
-          "isStoreManaged": {
-            "type": "boolean"
+          isStoreManaged: {
+            type: "boolean",
           },
-          "repoDid": {
-            "type": "string",
-            "maxLength": 2048
+          repoDid: {
+            type: "string",
+            maxLength: 2048,
           },
-          "productAccountDid": {
-            "type": "string",
-            "maxLength": 2048
+          productAccountDid: {
+            type: "string",
+            maxLength: 2048,
           },
-          "sourceTagline": {
-            "type": "string",
-            "maxLength": 20000
+          sourceTagline: {
+            type: "string",
+            maxLength: 20000,
           },
-          "sourceFullDescription": {
-            "type": "string",
-            "maxLength": 20000
+          sourceFullDescription: {
+            type: "string",
+            maxLength: 20000,
           },
-          "screenshots": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 4096
-            }
-          },
-          "externalUrl": {
-            "type": "string",
-            "maxLength": 2048
-          },
-          "sourceUrl": {
-            "type": "string",
-            "maxLength": 8192
-          },
-          "createdAt": {
-            "type": "string",
-            "maxLength": 64
-          },
-          "updatedAt": {
-            "type": "string",
-            "maxLength": 64
-          },
-          "links": {
-            "type": "array",
-            "items": {
-              "type": "ref",
-              "ref": "#listingLinkRow"
-            }
-          }
-        }
-      },
-      "main": {
-        "type": "query",
-        "description": "Fetch one public verified listing. Provide exactly one of `uri` (fyi.atstore.listing.detail AT URI) or `externalUrl` (unique storefront URL); `externalUrl` uses the same matching rules as the former resolve endpoint.",
-        "parameters": {
-          "type": "params",
-          "properties": {
-            "uri": {
-              "type": "string",
-              "format": "at-uri",
-              "maxLength": 2560,
-              "description": "AT URI of the fyi.atstore.listing.detail record."
+          screenshots: {
+            type: "array",
+            items: {
+              type: "string",
+              maxLength: 4096,
             },
-            "externalUrl": {
-              "type": "string",
-              "maxLength": 2048,
-              "description": "Listing external_url / product URL as stored on the record; must match at most one public listing."
-            }
-          }
+          },
+          externalUrl: {
+            type: "string",
+            maxLength: 2048,
+          },
+          sourceUrl: {
+            type: "string",
+            maxLength: 8192,
+          },
+          createdAt: {
+            type: "string",
+            maxLength: 64,
+          },
+          updatedAt: {
+            type: "string",
+            maxLength: 64,
+          },
+          links: {
+            type: "array",
+            items: {
+              type: "ref",
+              ref: "#listingLinkRow",
+            },
+          },
         },
-        "output": {
-          "encoding": "application/json",
-          "schema": {
-            "type": "ref",
-            "ref": "#listingDetailResponse"
-          }
+      },
+      main: {
+        type: "query",
+        description:
+          "Fetch one public verified listing. Provide exactly one of `uri` (fyi.atstore.listing.detail AT URI) or `externalUrl` (unique storefront URL); `externalUrl` uses the same matching rules as the former resolve endpoint.",
+        parameters: {
+          type: "params",
+          properties: {
+            uri: {
+              type: "string",
+              format: "at-uri",
+              maxLength: 2560,
+              description: "AT URI of the fyi.atstore.listing.detail record.",
+            },
+            externalUrl: {
+              type: "string",
+              maxLength: 2048,
+              description:
+                "Listing external_url / product URL as stored on the record; must match at most one public listing.",
+            },
+          },
         },
-        "errors": [
+        output: {
+          encoding: "application/json",
+          schema: {
+            type: "ref",
+            ref: "#listingDetailResponse",
+          },
+        },
+        errors: [
           {
-            "name": "ListingNotFound"
+            name: "ListingNotFound",
           },
           {
-            "name": "InvalidParams"
+            name: "InvalidParams",
           },
           {
-            "name": "AmbiguousResolution"
-          }
-        ]
-      }
-    }
+            name: "AmbiguousResolution",
+          },
+        ],
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.directory.searchListings",
-    "defs": {
-      "listingCardSearch": {
-        "type": "object",
-        "required": [
+    lexicon: 1,
+    id: "fyi.atstore.directory.searchListings",
+    defs: {
+      listingCardSearch: {
+        type: "object",
+        required: [
           "uri",
           "name",
           "tagline",
@@ -326,220 +311,213 @@ export const lexicons = [
           "heroImageUrl",
           "categorySlug",
           "rating",
-          "productAccountHandle"
+          "productAccountHandle",
         ],
-        "nullable": [
+        nullable: [
           "iconUrl",
           "heroImageUrl",
           "categorySlug",
           "rating",
-          "productAccountHandle"
+          "productAccountHandle",
         ],
-        "properties": {
-          "uri": {
-            "type": "string",
-            "format": "at-uri",
-            "maxLength": 2560,
-            "description": "AT URI of the fyi.atstore.listing.detail record."
+        properties: {
+          uri: {
+            type: "string",
+            format: "at-uri",
+            maxLength: 2560,
+            description: "AT URI of the fyi.atstore.listing.detail record.",
           },
-          "name": {
-            "type": "string",
-            "maxLength": 640
+          name: {
+            type: "string",
+            maxLength: 640,
           },
-          "tagline": {
-            "type": "string",
-            "maxLength": 2000
+          tagline: {
+            type: "string",
+            maxLength: 2000,
           },
-          "description": {
-            "type": "string",
-            "maxLength": 20000
+          description: {
+            type: "string",
+            maxLength: 20000,
           },
-          "iconUrl": {
-            "type": "string",
-            "maxLength": 8192
+          iconUrl: {
+            type: "string",
+            maxLength: 8192,
           },
-          "heroImageUrl": {
-            "type": "string",
-            "maxLength": 8192
+          heroImageUrl: {
+            type: "string",
+            maxLength: 8192,
           },
-          "categorySlug": {
-            "type": "string",
-            "maxLength": 512
+          categorySlug: {
+            type: "string",
+            maxLength: 512,
           },
-          "categorySlugs": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 512
-            }
-          },
-          "category": {
-            "type": "string",
-            "maxLength": 640
-          },
-          "accent": {
-            "type": "string",
-            "maxLength": 16,
-            "knownValues": [
-              "blue",
-              "pink",
-              "purple",
-              "green"
-            ]
-          },
-          "rating": {
-            "type": "string",
-            "maxLength": 16
-          },
-          "reviewCount": {
-            "type": "integer"
-          },
-          "priceLabel": {
-            "type": "string",
-            "maxLength": 32
-          },
-          "productAccountHandle": {
-            "type": "string",
-            "maxLength": 512
-          },
-          "appTags": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 256
-            }
-          }
-        }
-      },
-      "main": {
-        "type": "query",
-        "description": "Directory listing search and pagination (verified listings with a listing.detail AT URI only). Filters match the at-store /apps page: values within one filter are OR'd, different filters are AND'd.",
-        "parameters": {
-          "type": "params",
-          "properties": {
-            "q": {
-              "type": "string",
-              "maxLength": 512
+          categorySlugs: {
+            type: "array",
+            items: {
+              type: "string",
+              maxLength: 512,
             },
-            "sort": {
-              "type": "string",
-              "maxLength": 24,
-              "default": "popular",
-              "enum": [
+          },
+          category: {
+            type: "string",
+            maxLength: 640,
+          },
+          accent: {
+            type: "string",
+            maxLength: 16,
+            knownValues: ["blue", "pink", "purple", "green"],
+          },
+          rating: {
+            type: "string",
+            maxLength: 16,
+          },
+          reviewCount: {
+            type: "integer",
+          },
+          priceLabel: {
+            type: "string",
+            maxLength: 32,
+          },
+          productAccountHandle: {
+            type: "string",
+            maxLength: 512,
+          },
+          appTags: {
+            type: "array",
+            items: {
+              type: "string",
+              maxLength: 256,
+            },
+          },
+        },
+      },
+      main: {
+        type: "query",
+        description:
+          "Directory listing search and pagination (verified listings with a listing.detail AT URI only). Filters match the at-store /apps page: values within one filter are OR'd, different filters are AND'd.",
+        parameters: {
+          type: "params",
+          properties: {
+            q: {
+              type: "string",
+              maxLength: 512,
+            },
+            sort: {
+              type: "string",
+              maxLength: 24,
+              default: "popular",
+              enum: [
                 "popular",
                 "rating",
                 "reviews",
                 "favorites",
                 "newest",
                 "updated",
-                "alphabetical"
+                "alphabetical",
               ],
-              "description": "popular = trending score; rating = average rating (unrated last); reviews = review count; favorites = favorite count; newest = created; updated = last updated; alphabetical = name."
+              description:
+                "popular = trending score; rating = average rating (unrated last); reviews = review count; favorites = favorite count; newest = created; updated = last updated; alphabetical = name.",
             },
-            "tag": {
-              "type": "array",
-              "maxLength": 20,
-              "items": {
-                "type": "string",
-                "maxLength": 256
+            tag: {
+              type: "array",
+              maxLength: 20,
+              items: {
+                type: "string",
+                maxLength: 256,
               },
-              "description": "App tags to match (any). Accepts the tag text from appTags or its slug, e.g. 'developer tool' or 'developer'."
+              description:
+                "App tags to match (any). Accepts the tag text from appTags or its slug, e.g. 'developer tool' or 'developer'.",
             },
-            "category": {
-              "type": "array",
-              "maxLength": 20,
-              "items": {
-                "type": "string",
-                "maxLength": 512
+            category: {
+              type: "array",
+              maxLength: 20,
+              items: {
+                type: "string",
+                maxLength: 512,
               },
-              "description": "Category paths to match (any), including descendants, e.g. 'apps/bluesky' or 'apps/bluesky/client'. 'apps' matches top-level apps only."
+              description:
+                "Category paths to match (any), including descendants, e.g. 'apps/bluesky' or 'apps/bluesky/client'. 'apps' matches top-level apps only.",
             },
-            "data": {
-              "type": "array",
-              "maxLength": 20,
-              "items": {
-                "type": "string",
-                "maxLength": 256
+            data: {
+              type: "array",
+              maxLength: 20,
+              items: {
+                type: "string",
+                maxLength: 256,
               },
-              "description": "Lexicon producers whose records the listing reads or writes (any), as the first two NSID segments, e.g. 'app.bsky'."
+              description:
+                "Lexicon producers whose records the listing reads or writes (any), as the first two NSID segments, e.g. 'app.bsky'.",
             },
-            "minRating": {
-              "type": "string",
-              "maxLength": 8,
-              "knownValues": [
-                "3",
-                "4",
-                "4.5"
-              ],
-              "description": "Only listings with an average rating at or above this value."
+            minRating: {
+              type: "string",
+              maxLength: 8,
+              knownValues: ["3", "4", "4.5"],
+              description:
+                "Only listings with an average rating at or above this value.",
             },
-            "has": {
-              "type": "array",
-              "maxLength": 3,
-              "items": {
-                "type": "string",
-                "maxLength": 32,
-                "knownValues": [
-                  "open-source",
-                  "donations",
-                  "official"
-                ]
+            has: {
+              type: "array",
+              maxLength: 3,
+              items: {
+                type: "string",
+                maxLength: 32,
+                knownValues: ["open-source", "donations", "official"],
               },
-              "description": "Required extras (all): open-source (has a source link), donations (has a donate link), official (has a product account)."
+              description:
+                "Required extras (all): open-source (has a source link), donations (has a donate link), official (has a product account).",
             },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 24
+            limit: {
+              type: "integer",
+              minimum: 1,
+              maximum: 100,
+              default: 24,
             },
-            "cursor": {
-              "type": "string",
-              "maxLength": 512
-            }
-          }
+            cursor: {
+              type: "string",
+              maxLength: 512,
+            },
+          },
         },
-        "output": {
-          "encoding": "application/json",
-          "schema": {
-            "type": "object",
-            "required": [
-              "listings"
-            ],
-            "properties": {
-              "cursor": {
-                "type": "string",
-                "maxLength": 512
+        output: {
+          encoding: "application/json",
+          schema: {
+            type: "object",
+            required: ["listings"],
+            properties: {
+              cursor: {
+                type: "string",
+                maxLength: 512,
               },
-              "listings": {
-                "type": "array",
-                "items": {
-                  "type": "ref",
-                  "ref": "#listingCardSearch"
-                }
-              }
-            }
-          }
+              listings: {
+                type: "array",
+                items: {
+                  type: "ref",
+                  ref: "#listingCardSearch",
+                },
+              },
+            },
+          },
         },
-        "errors": [
+        errors: [
           {
-            "name": "InvalidCursor"
-          }
-        ]
-      }
-    }
+            name: "InvalidCursor",
+          },
+        ],
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.listing.detail",
-    "defs": {
-      "main": {
-        "type": "record",
-        "description": "Public protocol or app listing in the AT Store directory. Images are stored as repo blobs (Kitchen-style); the web app caches HTTPS URLs in Postgres separately.",
-        "key": "tid",
-        "record": {
-          "type": "object",
-          "required": [
+    lexicon: 1,
+    id: "fyi.atstore.listing.detail",
+    defs: {
+      main: {
+        type: "record",
+        description:
+          "Public protocol or app listing in the AT Store directory. Images are stored as repo blobs (Kitchen-style); the web app caches HTTPS URLs in Postgres separately.",
+        key: "tid",
+        record: {
+          type: "object",
+          required: [
             "slug",
             "name",
             "tagline",
@@ -547,132 +525,135 @@ export const lexicons = [
             "icon",
             "categorySlug",
             "createdAt",
-            "updatedAt"
+            "updatedAt",
           ],
-          "properties": {
-            "slug": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 512,
-              "description": "Stable URL slug; unique within the publishing account."
+          properties: {
+            slug: {
+              type: "string",
+              minLength: 1,
+              maxLength: 512,
+              description:
+                "Stable URL slug; unique within the publishing account.",
             },
-            "name": {
-              "type": "string",
-              "maxLength": 640
+            name: {
+              type: "string",
+              maxLength: 640,
             },
-            "tagline": {
-              "type": "string",
-              "maxLength": 300
+            tagline: {
+              type: "string",
+              maxLength: 300,
             },
-            "description": {
-              "type": "string",
-              "maxLength": 20000
+            description: {
+              type: "string",
+              maxLength: 20000,
             },
-            "externalUrl": {
-              "type": "string",
-              "format": "uri",
-              "maxLength": 2048,
-              "description": "Primary product or project URL."
+            externalUrl: {
+              type: "string",
+              format: "uri",
+              maxLength: 2048,
+              description: "Primary product or project URL.",
             },
-            "icon": {
-              "type": "blob",
-              "accept": [
+            icon: {
+              type: "blob",
+              accept: [
                 "image/png",
                 "image/jpeg",
                 "image/webp",
                 "image/gif",
-                "image/svg+xml"
+                "image/svg+xml",
               ],
-              "maxSize": 2000000,
-              "description": "Square / app icon (uploaded to repo via com.atproto.repo.uploadBlob)."
+              maxSize: 2000000,
+              description:
+                "Square / app icon (uploaded to repo via com.atproto.repo.uploadBlob).",
             },
-            "heroImage": {
-              "type": "blob",
-              "accept": [
+            heroImage: {
+              type: "blob",
+              accept: [
                 "image/png",
                 "image/jpeg",
                 "image/webp",
                 "image/gif",
-                "image/svg+xml"
+                "image/svg+xml",
               ],
-              "maxSize": 12000000,
-              "description": "Hero / cover image blob."
+              maxSize: 12000000,
+              description: "Hero / cover image blob.",
             },
-            "screenshots": {
-              "type": "array",
-              "maxLength": 20,
-              "items": {
-                "type": "blob",
-                "accept": [
+            screenshots: {
+              type: "array",
+              maxLength: 20,
+              items: {
+                type: "blob",
+                accept: [
                   "image/png",
                   "image/jpeg",
                   "image/webp",
                   "image/gif",
-                  "image/svg+xml"
+                  "image/svg+xml",
                 ],
-                "maxSize": 12000000
-              }
-            },
-            "categorySlug": {
-              "type": "array",
-              "minLength": 1,
-              "maxLength": 32,
-              "items": {
-                "type": "string",
-                "maxLength": 256
+                maxSize: 12000000,
               },
-              "description": "Browse category keys (e.g. protocol/pds). First entry is the primary category for legacy surfaces."
             },
-            "createdAt": {
-              "type": "string",
-              "format": "datetime"
+            categorySlug: {
+              type: "array",
+              minLength: 1,
+              maxLength: 32,
+              items: {
+                type: "string",
+                maxLength: 256,
+              },
+              description:
+                "Browse category keys (e.g. protocol/pds). First entry is the primary category for legacy surfaces.",
             },
-            "updatedAt": {
-              "type": "string",
-              "format": "datetime"
+            createdAt: {
+              type: "string",
+              format: "datetime",
             },
-            "appTags": {
-              "type": "array",
-              "maxLength": 64,
-              "items": {
-                "type": "string",
-                "maxLength": 96
-              }
+            updatedAt: {
+              type: "string",
+              format: "datetime",
             },
-            "productAccountDid": {
-              "type": "string",
-              "maxLength": 2048,
-              "description": "Bluesky DID for the product, app, or tool (not the AT Store publisher). Handle is resolved and stored in Postgres only."
+            appTags: {
+              type: "array",
+              maxLength: 64,
+              items: {
+                type: "string",
+                maxLength: 96,
+              },
             },
-            "migratedFromAtUri": {
-              "type": "string",
-              "format": "at-uri",
-              "maxLength": 8192,
-              "description": "When this listing.detail record supersedes a prior record in another repo (e.g. moved from the AT Store publisher to a product owner PDS), the at:// URI of that prior fyi.atstore.listing.detail record."
+            productAccountDid: {
+              type: "string",
+              maxLength: 2048,
+              description:
+                "Bluesky DID for the product, app, or tool (not the AT Store publisher). Handle is resolved and stored in Postgres only.",
             },
-            "links": {
-              "type": "array",
-              "maxLength": 12,
-              "description": "Relevant links for the app, including trust/compliance, support, and project resources.",
-              "items": {
-                "type": "ref",
-                "ref": "#link"
-              }
-            }
-          }
-        }
+            migratedFromAtUri: {
+              type: "string",
+              format: "at-uri",
+              maxLength: 8192,
+              description:
+                "When this listing.detail record supersedes a prior record in another repo (e.g. moved from the AT Store publisher to a product owner PDS), the at:// URI of that prior fyi.atstore.listing.detail record.",
+            },
+            links: {
+              type: "array",
+              maxLength: 12,
+              description:
+                "Relevant links for the app, including trust/compliance, support, and project resources.",
+              items: {
+                type: "ref",
+                ref: "#link",
+              },
+            },
+          },
+        },
       },
-      "link": {
-        "type": "object",
-        "required": [
-          "type",
-          "url"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "maxLength": 32,
-            "knownValues": [
+      link: {
+        type: "object",
+        required: ["type", "url"],
+        properties: {
+          type: {
+            type: "string",
+            maxLength: 32,
+            knownValues: [
               "privacy",
               "terms",
               "support",
@@ -685,172 +666,168 @@ export const lexicons = [
               "community",
               "donate",
               "license",
-              "other"
+              "other",
             ],
-            "description": "The kind of link."
+            description: "The kind of link.",
           },
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "maxLength": 2048,
-            "description": "The destination URL."
+          url: {
+            type: "string",
+            format: "uri",
+            maxLength: 2048,
+            description: "The destination URL.",
           },
-          "label": {
-            "type": "string",
-            "maxLength": 100,
-            "maxGraphemes": 50,
-            "description": "Optional human-readable label, especially useful when type is 'other'."
-          }
-        }
-      }
-    }
+          label: {
+            type: "string",
+            maxLength: 100,
+            maxGraphemes: 50,
+            description:
+              "Optional human-readable label, especially useful when type is 'other'.",
+          },
+        },
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.listing.favorite",
-    "defs": {
-      "main": {
-        "type": "record",
-        "description": "A user favorite for an AT Store listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
-        "key": "any",
-        "record": {
-          "type": "object",
-          "required": [
-            "subject",
-            "createdAt"
-          ],
-          "properties": {
-            "subject": {
-              "type": "string",
-              "format": "at-uri",
-              "description": "AT URI of the fyi.atstore.listing.detail record being favorited."
+    lexicon: 1,
+    id: "fyi.atstore.listing.favorite",
+    defs: {
+      main: {
+        type: "record",
+        description:
+          "A user favorite for an AT Store listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
+        key: "any",
+        record: {
+          type: "object",
+          required: ["subject", "createdAt"],
+          properties: {
+            subject: {
+              type: "string",
+              format: "at-uri",
+              description:
+                "AT URI of the fyi.atstore.listing.detail record being favorited.",
             },
-            "createdAt": {
-              "type": "string",
-              "format": "datetime"
-            }
-          }
-        }
-      }
-    }
+            createdAt: {
+              type: "string",
+              format: "datetime",
+            },
+          },
+        },
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.listing.review",
-    "defs": {
-      "main": {
-        "type": "record",
-        "description": "A user review of an AT Store directory listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
-        "key": "tid",
-        "record": {
-          "type": "object",
-          "required": [
-            "subject",
-            "rating",
-            "createdAt"
-          ],
-          "properties": {
-            "subject": {
-              "type": "string",
-              "format": "at-uri",
-              "description": "AT URI of the fyi.atstore.listing.detail record being reviewed."
+    lexicon: 1,
+    id: "fyi.atstore.listing.review",
+    defs: {
+      main: {
+        type: "record",
+        description:
+          "A user review of an AT Store directory listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
+        key: "tid",
+        record: {
+          type: "object",
+          required: ["subject", "rating", "createdAt"],
+          properties: {
+            subject: {
+              type: "string",
+              format: "at-uri",
+              description:
+                "AT URI of the fyi.atstore.listing.detail record being reviewed.",
             },
-            "rating": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 5,
-              "description": "Star rating 1–5."
+            rating: {
+              type: "integer",
+              minimum: 1,
+              maximum: 5,
+              description: "Star rating 1–5.",
             },
-            "text": {
-              "type": "string",
-              "maxLength": 8000,
-              "description": "Optional written review; omit for a stars-only rating."
+            text: {
+              type: "string",
+              maxLength: 8000,
+              description:
+                "Optional written review; omit for a stars-only rating.",
             },
-            "createdAt": {
-              "type": "string",
-              "format": "datetime"
-            }
-          }
-        }
-      }
-    }
+            createdAt: {
+              type: "string",
+              format: "datetime",
+            },
+          },
+        },
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.listing.reviewReply",
-    "defs": {
-      "main": {
-        "type": "record",
-        "description": "A reply on a fyi.atstore.listing.review. Threads are linear (no per-reply parent). By convention, only the listing owner or the review author should post replies; the AT Store app drops replies from any other DID at ingest and at render. The PDS does not enforce this — other indexers MAY surface unauthorized replies if they choose.",
-        "key": "tid",
-        "record": {
-          "type": "object",
-          "required": [
-            "subject",
-            "text",
-            "createdAt"
-          ],
-          "properties": {
-            "subject": {
-              "type": "string",
-              "format": "at-uri",
-              "description": "AT URI of the fyi.atstore.listing.review this reply belongs to."
+    lexicon: 1,
+    id: "fyi.atstore.listing.reviewReply",
+    defs: {
+      main: {
+        type: "record",
+        description:
+          "A reply on a fyi.atstore.listing.review. Threads are linear (no per-reply parent). By convention, only the listing owner or the review author should post replies; the AT Store app drops replies from any other DID at ingest and at render. The PDS does not enforce this — other indexers MAY surface unauthorized replies if they choose.",
+        key: "tid",
+        record: {
+          type: "object",
+          required: ["subject", "text", "createdAt"],
+          properties: {
+            subject: {
+              type: "string",
+              format: "at-uri",
+              description:
+                "AT URI of the fyi.atstore.listing.review this reply belongs to.",
             },
-            "text": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 8000
+            text: {
+              type: "string",
+              minLength: 1,
+              maxLength: 8000,
             },
-            "createdAt": {
-              "type": "string",
-              "format": "datetime"
-            }
-          }
-        }
-      }
-    }
+            createdAt: {
+              type: "string",
+              format: "datetime",
+            },
+          },
+        },
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.profile",
-    "defs": {
-      "main": {
-        "type": "record",
-        "description": "AT Store app profile for discovery and TAP ingestion (Kitchen-style).",
-        "key": "literal:self",
-        "record": {
-          "type": "object",
-          "required": [
-            "displayName"
-          ],
-          "properties": {
-            "displayName": {
-              "type": "string",
-              "maxLength": 640,
-              "description": "Human-readable name for the store / app."
+    lexicon: 1,
+    id: "fyi.atstore.profile",
+    defs: {
+      main: {
+        type: "record",
+        description:
+          "AT Store app profile for discovery and TAP ingestion (Kitchen-style).",
+        key: "literal:self",
+        record: {
+          type: "object",
+          required: ["displayName"],
+          properties: {
+            displayName: {
+              type: "string",
+              maxLength: 640,
+              description: "Human-readable name for the store / app.",
             },
-            "description": {
-              "type": "string",
-              "maxLength": 4000,
-              "description": "Longer description shown in directory surfaces."
+            description: {
+              type: "string",
+              maxLength: 4000,
+              description: "Longer description shown in directory surfaces.",
             },
-            "website": {
-              "type": "string",
-              "format": "uri",
-              "maxLength": 2048
-            }
-          }
-        }
-      }
-    }
+            website: {
+              type: "string",
+              format: "uri",
+              maxLength: 2048,
+            },
+          },
+        },
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.reviews.listForListing",
-    "defs": {
-      "listingReviewView": {
-        "type": "object",
-        "required": [
+    lexicon: 1,
+    id: "fyi.atstore.reviews.listForListing",
+    defs: {
+      listingReviewView: {
+        type: "object",
+        required: [
           "id",
           "authorDid",
           "rating",
@@ -860,177 +837,176 @@ export const lexicons = [
           "text",
           "authorDisplayName",
           "authorHandle",
-          "authorAvatarUrl"
+          "authorAvatarUrl",
         ],
-        "nullable": [
+        nullable: [
           "text",
           "authorDisplayName",
           "authorHandle",
-          "authorAvatarUrl"
+          "authorAvatarUrl",
         ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "maxLength": 64
+        properties: {
+          id: {
+            type: "string",
+            maxLength: 64,
           },
-          "authorDid": {
-            "type": "string",
-            "format": "did",
-            "maxLength": 2048
+          authorDid: {
+            type: "string",
+            format: "did",
+            maxLength: 2048,
           },
-          "rating": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5
+          rating: {
+            type: "integer",
+            minimum: 1,
+            maximum: 5,
           },
-          "text": {
-            "type": "string",
-            "maxLength": 8000
+          text: {
+            type: "string",
+            maxLength: 8000,
           },
-          "reviewCreatedAt": {
-            "type": "string",
-            "format": "datetime",
-            "maxLength": 64
+          reviewCreatedAt: {
+            type: "string",
+            format: "datetime",
+            maxLength: 64,
           },
-          "authorDisplayName": {
-            "type": "string",
-            "maxLength": 640
+          authorDisplayName: {
+            type: "string",
+            maxLength: 640,
           },
-          "authorHandle": {
-            "type": "string",
-            "maxLength": 512
+          authorHandle: {
+            type: "string",
+            maxLength: 512,
           },
-          "authorAvatarUrl": {
-            "type": "string",
-            "maxLength": 8192
+          authorAvatarUrl: {
+            type: "string",
+            maxLength: 8192,
           },
-          "replyCount": {
-            "type": "integer"
+          replyCount: {
+            type: "integer",
           },
-          "canReply": {
-            "type": "boolean"
-          }
-        }
+          canReply: {
+            type: "boolean",
+          },
+        },
       },
-      "main": {
-        "type": "query",
-        "description": "List reviews for a directory listing (mirrored Tap data plus profile enrichment).",
-        "parameters": {
-          "type": "params",
-          "required": [
-            "uri"
-          ],
-          "properties": {
-            "uri": {
-              "type": "string",
-              "format": "at-uri",
-              "maxLength": 2560,
-              "description": "AT URI of the fyi.atstore.listing.detail record."
+      main: {
+        type: "query",
+        description:
+          "List reviews for a directory listing (mirrored Tap data plus profile enrichment).",
+        parameters: {
+          type: "params",
+          required: ["uri"],
+          properties: {
+            uri: {
+              type: "string",
+              format: "at-uri",
+              maxLength: 2560,
+              description: "AT URI of the fyi.atstore.listing.detail record.",
             },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 50
+            limit: {
+              type: "integer",
+              minimum: 1,
+              maximum: 100,
+              default: 50,
             },
-            "cursor": {
-              "type": "string",
-              "maxLength": 512
-            }
-          }
+            cursor: {
+              type: "string",
+              maxLength: 512,
+            },
+          },
         },
-        "output": {
-          "encoding": "application/json",
-          "schema": {
-            "type": "object",
-            "required": [
-              "reviews"
-            ],
-            "properties": {
-              "cursor": {
-                "type": "string",
-                "maxLength": 512
+        output: {
+          encoding: "application/json",
+          schema: {
+            type: "object",
+            required: ["reviews"],
+            properties: {
+              cursor: {
+                type: "string",
+                maxLength: 512,
               },
-              "reviews": {
-                "type": "array",
-                "items": {
-                  "type": "ref",
-                  "ref": "#listingReviewView"
-                }
-              }
-            }
-          }
+              reviews: {
+                type: "array",
+                items: {
+                  type: "ref",
+                  ref: "#listingReviewView",
+                },
+              },
+            },
+          },
         },
-        "errors": [
+        errors: [
           {
-            "name": "ListingNotFound"
+            name: "ListingNotFound",
           },
           {
-            "name": "InvalidParams"
+            name: "InvalidParams",
           },
           {
-            "name": "InvalidCursor"
-          }
-        ]
-      }
-    }
+            name: "InvalidCursor",
+          },
+        ],
+      },
+    },
   },
   {
-    "lexicon": 1,
-    "id": "fyi.atstore.server.describe",
-    "defs": {
-      "main": {
-        "type": "query",
-        "description": "Describe this deployment's public XRPC surface and defaults.",
-        "parameters": {
-          "type": "params",
-          "properties": {}
+    lexicon: 1,
+    id: "fyi.atstore.server.describe",
+    defs: {
+      main: {
+        type: "query",
+        description:
+          "Describe this deployment's public XRPC surface and defaults.",
+        parameters: {
+          type: "params",
+          properties: {},
         },
-        "output": {
-          "encoding": "application/json",
-          "schema": {
-            "type": "object",
-            "required": [
+        output: {
+          encoding: "application/json",
+          schema: {
+            type: "object",
+            required: [
               "service",
               "publicReads",
               "reviewsWrittenOnAuthorRepo",
               "defaultListingLimit",
               "maxListingLimit",
               "maxReviewLimit",
-              "methods"
+              "methods",
             ],
-            "properties": {
-              "service": {
-                "type": "string",
-                "maxLength": 256
+            properties: {
+              service: {
+                type: "string",
+                maxLength: 256,
               },
-              "publicReads": {
-                "type": "boolean"
+              publicReads: {
+                type: "boolean",
               },
-              "reviewsWrittenOnAuthorRepo": {
-                "type": "boolean",
-                "description": "When true, listing reviews are created via com.atproto.repo.createRecord on the author's PDS (fyi.atstore.listing.review); this service does not expose a write procedure for reviews."
+              reviewsWrittenOnAuthorRepo: {
+                type: "boolean",
+                description:
+                  "When true, listing reviews are created via com.atproto.repo.createRecord on the author's PDS (fyi.atstore.listing.review); this service does not expose a write procedure for reviews.",
               },
-              "defaultListingLimit": {
-                "type": "integer"
+              defaultListingLimit: {
+                type: "integer",
               },
-              "maxListingLimit": {
-                "type": "integer"
+              maxListingLimit: {
+                type: "integer",
               },
-              "maxReviewLimit": {
-                "type": "integer"
+              maxReviewLimit: {
+                type: "integer",
               },
-              "methods": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "maxLength": 512
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-]
+              methods: {
+                type: "array",
+                items: {
+                  type: "string",
+                  maxLength: 512,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+];

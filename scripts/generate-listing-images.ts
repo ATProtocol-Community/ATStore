@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 import "dotenv/config";
-
+import { desc, eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createHash } from "node:crypto";
 
-import { desc, eq } from "drizzle-orm";
 import { db, dbClient } from "../src/db/index.server";
 import { storeListings } from "../src/db/schema";
 import { geminiFlashGenerateImageFromPromptAndImage } from "../src/lib/gemini-flash-image-gen";
@@ -39,7 +38,7 @@ type CandidateListing = {
   sourceUrl: string;
   externalUrl: string | null;
   iconUrl: string | null;
-  screenshotUrls: string[];
+  screenshotUrls: Array<string>;
   tagline: string | null;
   fullDescription: string | null;
   productType: string | null;
@@ -89,7 +88,7 @@ type ManualListingRecord = {
   sourceUrl: string;
   externalUrl: string | null;
   iconUrl: string | null;
-  screenshotUrls: string[];
+  screenshotUrls: Array<string>;
   tagline: string | null;
   fullDescription: string | null;
   rawCategoryHint: string | null;
@@ -101,7 +100,7 @@ type ManualListingRecord = {
   categorySlug?: string | null;
 };
 
-function parseArgs(argv: string[]): ScriptArgs {
+function parseArgs(argv: Array<string>): ScriptArgs {
   const out: ScriptArgs = {
     concurrency: 4,
     dryRun: false,
@@ -293,7 +292,7 @@ function parseManualListingRecord(
   const screenshotUrls = Array.isArray(row.screenshotUrls)
     ? row.screenshotUrls.map((entry, screenshotIndex) => {
         if (typeof entry !== "string") {
-          throw new Error(
+          throw new TypeError(
             `Row ${rowIndex}: expected screenshotUrls[${screenshotIndex}] to be a string`,
           );
         }
@@ -331,13 +330,13 @@ function parseManualListingRecord(
 
 async function readManualListingRecords(
   inputPath: string,
-): Promise<ManualListingRecord[]> {
+): Promise<Array<ManualListingRecord>> {
   const absoluteInputPath = path.resolve(process.cwd(), inputPath);
   const raw = await readFile(absoluteInputPath, "utf8");
   const data: unknown = JSON.parse(raw);
 
   if (!Array.isArray(data)) {
-    throw new Error(`Expected ${inputPath} to contain a JSON array`);
+    throw new TypeError(`Expected ${inputPath} to contain a JSON array`);
   }
 
   return data.map((row, index) => parseManualListingRecord(row, index));
@@ -380,7 +379,7 @@ function buildMarketingPrompt(
     listing.scope ? `Scope: ${listing.scope}` : null,
     listing.fullDescription ? `Description: ${listing.fullDescription}` : null,
   ]
-    .filter((value): value is string => Boolean(value))
+    .filter((value) => value !== null)
     .join("\n");
 
   return `Create a polished product-marketing image for this software listing using the provided website screenshot as reference.
@@ -422,7 +421,7 @@ function buildIconPrompt(listing: CandidateListing, pageUrl: string): string {
     listing.scope ? `Scope: ${listing.scope}` : null,
     listing.fullDescription ? `Description: ${listing.fullDescription}` : null,
   ]
-    .filter((value): value is string => Boolean(value))
+    .filter((value) => value !== null)
     .join("\n");
 
   return `Create a polished product icon for this software listing using the provided website screenshot as reference.
@@ -676,10 +675,10 @@ async function saveGeneratedImage(
 
 async function getCandidateListings(
   args: ScriptArgs,
-): Promise<CandidateListing[]> {
+): Promise<Array<CandidateListing>> {
   if (args.input) {
     const manualRows = await readManualListingRecords(args.input);
-    const candidates: CandidateListing[] = [];
+    const candidates: Array<CandidateListing> = [];
 
     for (const row of manualRows) {
       if (args.id && row.sourceUrl !== args.id) {
@@ -773,7 +772,7 @@ async function getCandidateListings(
     .from(storeListings)
     .orderBy(desc(storeListings.updatedAt), desc(storeListings.createdAt));
 
-  const candidates: CandidateListing[] = [];
+  const candidates: Array<CandidateListing> = [];
 
   for (const row of rows) {
     if (args.id && row.id !== args.id) {
