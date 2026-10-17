@@ -30,6 +30,7 @@ function listing(overrides: Partial<BrowseListing>): BrowseListing {
     updatedAt: "2026-01-01T00:00:00.000Z",
     popularRank: 0,
     dataNsids: [],
+    hasAtUri: true,
     hasSourceLink: false,
     acceptsDonations: false,
     ...overrides,
@@ -83,6 +84,12 @@ describe("validateBrowseSearch", () => {
       sort: undefined,
       page: undefined,
     });
+  });
+
+  it("canonicalizes raw tags and slugs", () => {
+    expect(
+      validateBrowseSearch({ tag: "developer tool,personal-page,Social" }).tag,
+    ).toBe("developer,personal-page,social");
   });
 
   it("keeps non-default sort, rating and page", () => {

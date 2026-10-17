@@ -23,6 +23,8 @@ export interface BrowseListing {
   popularRank: number;
   /** Repo collection NSIDs requested in the listing's OAuth scopes. */
   dataNsids: Array<string>;
+  /** Has a published `fyi.atstore.listing.detail` record (required for XRPC results). */
+  hasAtUri: boolean;
   hasSourceLink: boolean;
   acceptsDonations: boolean;
 }
@@ -154,7 +156,12 @@ export function validateBrowseSearch(
   return {
     q: asTrimmedString(search.q),
     in: joinList(splitList(asTrimmedString(search.in))),
-    tag: joinList(splitList(asTrimmedString(search.tag))),
+    // Accept raw tags ("developer tool") or slugs ("developer-tool") and canonicalize.
+    tag: joinList(
+      splitList(asTrimmedString(search.tag)).map((tag) =>
+        getAppTagSlug(tag.replaceAll("-", " ")),
+      ),
+    ),
     data: joinList(splitList(asTrimmedString(search.data))),
     rating: (BROWSE_MIN_RATINGS as ReadonlyArray<number>).includes(rating)
       ? rating
@@ -649,16 +656,25 @@ function toBrowseListingCard(listing: BrowseListing): BrowseListingCard {
   };
 }
 
+/** Every listing matching `search`, in `search.sort` order (no pagination). */
+export function filterAndSortBrowseListings(
+  listings: ReadonlyArray<BrowseListing>,
+  search: BrowseSearch,
+): Array<BrowseListing> {
+  const filters = getBrowseFilters(search);
+  return sortBrowseListings(
+    listings.filter((listing) => listingMatchesFilters(listing, filters)),
+    search.sort ?? "popular",
+  );
+}
+
 /** Filter, facet, sort and paginate — runs server-side so the client only gets one page. */
 export function queryBrowseListings(
   listings: ReadonlyArray<BrowseListing>,
   search: BrowseSearch,
 ): BrowsePage {
   const filters = getBrowseFilters(search);
-  const matching = sortBrowseListings(
-    listings.filter((listing) => listingMatchesFilters(listing, filters)),
-    search.sort ?? "popular",
-  );
+  const matching = filterAndSortBrowseListings(listings, search);
   const totalPages = Math.max(1, Math.ceil(matching.length / BROWSE_PAGE_SIZE));
   const page = Math.min(search.page ?? 1, totalPages);
 

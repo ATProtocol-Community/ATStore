@@ -413,7 +413,7 @@ export const lexicons = [
       },
       "main": {
         "type": "query",
-        "description": "Directory listing search and pagination (verified listings with a listing.detail AT URI only).",
+        "description": "Directory listing search and pagination (verified listings with a listing.detail AT URI only). Filters match the at-store /apps page: values within one filter are OR'd, different filters are AND'd.",
         "parameters": {
           "type": "params",
           "properties": {
@@ -427,9 +427,65 @@ export const lexicons = [
               "default": "popular",
               "enum": [
                 "popular",
+                "rating",
+                "reviews",
+                "favorites",
                 "newest",
+                "updated",
                 "alphabetical"
-              ]
+              ],
+              "description": "popular = trending score; rating = average rating (unrated last); reviews = review count; favorites = favorite count; newest = created; updated = last updated; alphabetical = name."
+            },
+            "tag": {
+              "type": "array",
+              "maxLength": 20,
+              "items": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "description": "App tags to match (any). Accepts the tag text from appTags or its slug, e.g. 'developer tool' or 'developer'."
+            },
+            "category": {
+              "type": "array",
+              "maxLength": 20,
+              "items": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "description": "Category paths to match (any), including descendants, e.g. 'apps/bluesky' or 'apps/bluesky/client'. 'apps' matches top-level apps only."
+            },
+            "data": {
+              "type": "array",
+              "maxLength": 20,
+              "items": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "description": "Lexicon producers whose records the listing reads or writes (any), as the first two NSID segments, e.g. 'app.bsky'."
+            },
+            "minRating": {
+              "type": "string",
+              "maxLength": 8,
+              "knownValues": [
+                "3",
+                "4",
+                "4.5"
+              ],
+              "description": "Only listings with an average rating at or above this value."
+            },
+            "has": {
+              "type": "array",
+              "maxLength": 3,
+              "items": {
+                "type": "string",
+                "maxLength": 32,
+                "knownValues": [
+                  "open-source",
+                  "donations",
+                  "official"
+                ]
+              },
+              "description": "Required extras (all): open-source (has a source link), donations (has a donate link), official (has a product account)."
             },
             "limit": {
               "type": "integer",

@@ -2626,8 +2626,8 @@ function getLexiconCompatibleAppsPageQueryOptions(
 }
 
 /**
- * Every public non-protocol listing with the fields `/apps` filters and sorts on, in "popular"
- * order (`popularRank`).
+ * Every verified listing with the fields browse filters and sorts on, in "popular" order
+ * (`popularRank`). Shared by `/apps` and `fyi.atstore.directory.searchListings`.
  */
 async function loadBrowseListings(context: {
   db: Database;
@@ -2646,12 +2646,7 @@ async function loadBrowseListings(context: {
     })
     .from(table)
     .leftJoin(probe, eq(probe.storeListingId, table.id))
-    .where(
-      listingPublicWhere(
-        table,
-        sql`not (${sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%")})`,
-      ),
-    )
+    .where(listingPublicWhere(table))
     .orderBy(...orderByPopularListingSort(table));
 
   return rows.map((row, index) => {
@@ -2678,6 +2673,7 @@ async function loadBrowseListings(context: {
       updatedAt: row.updatedAt.toISOString(),
       popularRank: index,
       dataNsids: [...new Set(dataNsids)],
+      hasAtUri: Boolean(row.atUri?.trim()),
       hasSourceLink: linkTypes.has("source"),
       acceptsDonations: linkTypes.has("donate"),
     };
@@ -2711,15 +2707,26 @@ function getCachedBrowseListings(context: {
   return browseListingsCache.listings;
 }
 
-/** One page of `/apps` results plus facet counts; filtering runs here so the client never loads the catalog. */
+function isProtocolListing(listing: Pick<BrowseListing, "categorySlugs">) {
+  return listing.categorySlugs.some((slug) => slug.startsWith("protocol/"));
+}
+
+/**
+ * One page of `/apps` results plus facet counts; filtering runs here so the client never loads
+ * the catalog. Protocol tooling is left out of the web browse page.
+ */
 const getBrowsePage = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .inputValidator((data: BrowseSearch) =>
     validateBrowseSearch(data as Record<string, unknown>),
   )
-  .handler(async ({ data, context }) =>
-    queryBrowseListings(await getCachedBrowseListings(context), data),
-  );
+  .handler(async ({ data, context }) => {
+    const listings = await getCachedBrowseListings(context);
+    return queryBrowseListings(
+      listings.filter((listing) => !isProtocolListing(listing)),
+      data,
+    );
+  });
 
 function getBrowsePageQueryOptions(search: BrowseSearch) {
   return queryOptions({
@@ -7793,6 +7800,7 @@ export async function refreshListingPageSnapshot(
 }
 
 export const directoryListingXrpcHelpers = {
+  getCachedBrowseListings,
   listingPublicWhere,
   listingXrpcPublicWhere,
   getListingSelect,
