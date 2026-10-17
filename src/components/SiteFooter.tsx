@@ -10,8 +10,7 @@ const FOOTER_LINK_GROUPS = [
   {
     links: [
       { href: "/about", label: "About" },
-      { href: "/home", label: "Home" },
-      { href: "/search", label: "Search" },
+      { href: "/", label: "Home" },
       { href: "/developers/atproto", label: "Developer API" },
       { href: "/products/manage", label: "Manage listings" },
     ],
@@ -19,8 +18,8 @@ const FOOTER_LINK_GROUPS = [
   {
     title: "Apps",
     links: [
-      { href: "/apps/all", label: "All Apps" },
-      { href: "/apps/tags", label: "Categories" },
+      { href: "/apps", label: "Browse apps" },
+      { href: "/apps/tags", label: "Tags" },
       { href: "/apps/lexicons", label: "Shared data" },
     ],
   },

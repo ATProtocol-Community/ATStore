@@ -27,15 +27,6 @@ const APP_TAG_DESCRIPTIONS: Record<string, string> = {
     "General-purpose helpers that make everyday Bluesky usage more convenient, efficient, or easier to customize.",
 };
 
-function normalizeAppTagSlug(slug: string) {
-  return slug
-    .trim()
-    .toLowerCase()
-    .replaceAll(/[_\s]+/g, "-")
-    .replaceAll(/-+/g, "-")
-    .replaceAll(/^-+|-+$/g, "");
-}
-
 export function formatAppTagLabel(tag: string) {
   return tag.replaceAll(/\b\w/g, (character) => character.toUpperCase());
 }
@@ -60,21 +51,4 @@ export function getAppTagSlug(tag: string) {
 
 export function getAppTagHref(tag: string) {
   return `/apps/${getAppTagSlug(tag)}`;
-}
-
-export function findAppTagBySlug(tags: Iterable<string>, slug: string) {
-  const normalizedSlug = normalizeAppTagSlug(slug);
-
-  for (const tag of tags) {
-    const normalizedTag = normalizeAppTag(tag);
-    if (!normalizedTag) {
-      continue;
-    }
-
-    if (getAppTagSlug(normalizedTag) === normalizedSlug) {
-      return normalizedTag;
-    }
-  }
-
-  return null;
 }

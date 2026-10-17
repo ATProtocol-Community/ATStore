@@ -290,9 +290,7 @@ function AppsLexiconsHubPage() {
               All tags
             </LinkLink>
 
-            <LinkLink to="/apps/all" search={{ sort: "popular" }}>
-              All apps
-            </LinkLink>
+            <LinkLink to="/apps">All apps</LinkLink>
           </Flex>
 
           <AppTagHero

@@ -7,8 +7,13 @@ import { directoryListingXrpcHelpers } from "#/integrations/tanstack-query/api-d
 import { parseAtUriParts } from "#/lib/atproto/at-uri";
 import { ATSTORE_XRPC_METHOD, NSID } from "#/lib/atproto/nsids";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
+import {
+  filterAndSortBrowseListings,
+  joinList,
+  validateBrowseSearch,
+} from "#/lib/browse-listings";
 import { getAtprotoSessionForRequest } from "#/middleware/auth";
-import { asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { desc, eq, inArray, or, sql } from "drizzle-orm";
 
 const LEGACY_DETAIL_SQL = {
   rawCategoryHint: sql<string | null>`null::text`.as("rawCategoryHint"),
@@ -113,15 +118,22 @@ async function handleDescribe() {
   });
 }
 
+/** Repeated XRPC array params (`?tag=a&tag=b`), also accepting comma-joined values. */
+function getListParam(url: URL, name: string): string | undefined {
+  return joinList(
+    url.searchParams
+      .getAll(name)
+      .flatMap((value) => value.split(","))
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+}
+
+/**
+ * Filters and sorts with the same logic as `/apps` (over the cached catalog), then loads full
+ * card rows for just the requested page.
+ */
 async function handleSearchListings(url: URL) {
-  const q = url.searchParams.get("q")?.trim();
-  const sortRaw = url.searchParams.get("sort")?.trim() ?? "popular";
-  const sort =
-    sortRaw === "newest"
-      ? "newest"
-      : sortRaw === "alphabetical"
-        ? "alphabetical"
-        : "popular";
   const limitParam = Number(url.searchParams.get("limit") ?? "24");
   const limit = Number.isFinite(limitParam)
     ? Math.min(100, Math.max(1, Math.floor(limitParam)))
@@ -133,49 +145,46 @@ async function handleSearchListings(url: URL) {
   }
   const start = offset ?? 0;
 
-  const table = schema.storeListings;
+  const search = validateBrowseSearch({
+    q: url.searchParams.get("q") ?? undefined,
+    sort: url.searchParams.get("sort") ?? undefined,
+    tag: getListParam(url, "tag"),
+    in: getListParam(url, "category"),
+    data: getListParam(url, "data"),
+    rating: url.searchParams.get("minRating") ?? undefined,
+    has: getListParam(url, "has"),
+  });
+
   const {
+    getCachedBrowseListings,
     listingXrpcPublicWhere,
     getListingSelect,
-    orderByPopularListingSort,
     toListingCardXrpc,
   } = directoryListingXrpcHelpers;
 
-  const searchClause = q
-    ? or(
-        ilike(table.name, `%${q}%`),
-        ilike(table.tagline, `%${q}%`),
-        ilike(table.fullDescription, `%${q}%`),
-        ilike(
-          sql<string>`array_to_string(${table.categorySlugs}, ' ')`,
-          `%${q}%`,
-        ),
-        ilike(sql<string>`array_to_string(${table.appTags}, ' ')`, `%${q}%`),
-      )
-    : undefined;
-
-  const listingSelect = getListingSelect(table);
-  const orderBy =
-    sort === "newest"
-      ? [desc(table.createdAt)]
-      : sort === "alphabetical"
-        ? [asc(table.name)]
-        : orderByPopularListingSort(table);
-
-  const rows = await db
-    .select(listingSelect)
-    .from(table)
-    .where(listingXrpcPublicWhere(table, searchClause))
-    .orderBy(...orderBy)
-    .offset(start)
-    .limit(limit + 1);
-
-  const hasMore = rows.length > limit;
-  const slice = hasMore ? rows.slice(0, limit) : rows;
-  const listings = slice.map((row) =>
-    listingCardXrpcJson(toListingCardXrpc(row)),
+  const catalog = await getCachedBrowseListings({ db, schema });
+  const matching = filterAndSortBrowseListings(
+    catalog.filter((listing) => listing.hasAtUri),
+    search,
   );
+  const pageIds = matching
+    .slice(start, start + limit)
+    .map((listing) => listing.id);
 
+  const table = schema.storeListings;
+  const rows =
+    pageIds.length === 0
+      ? []
+      : await db
+          .select(getListingSelect(table))
+          .from(table)
+          .where(listingXrpcPublicWhere(table, inArray(table.id, pageIds)));
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
+  const listings = pageIds
+    .flatMap((id) => rowsById.get(id) ?? [])
+    .map((row) => listingCardXrpcJson(toListingCardXrpc(row)));
+
+  const hasMore = matching.length > start + limit;
   return xrpcJson({
     listings,
     ...(hasMore ? { cursor: encodeOffsetCursor(start + limit) } : {}),

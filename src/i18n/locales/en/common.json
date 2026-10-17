@@ -1,6 +1,12 @@
 {
   "siteHeader": {
-    "searchListingsLabel": "Search listings"
+    "searchListingsLabel": "Search listings",
+    "searchPlaceholder": "Search apps…",
+    "nav": {
+      "browse": "Browse",
+      "tags": "Tags",
+      "sharedData": "Shared data"
+    }
   },
   "languageSwitcher": {
     "ariaLabel": "Change language",

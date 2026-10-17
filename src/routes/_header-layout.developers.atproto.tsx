@@ -41,7 +41,8 @@ const METHOD_ROWS: ReadonlyArray<{
   {
     nsid: ATSTORE_XRPC_METHOD.directorySearchListings,
     method: "GET",
-    summary: "Search public listings with pagination (`q`, `sort`, `cursor`).",
+    summary:
+      "Search and filter public listings, same filters as /apps (`q`, `sort`, `tag`, `category`, `data`, `minRating`, `has`, `limit`, `cursor`).",
   },
   {
     nsid: ATSTORE_XRPC_METHOD.directoryGetListing,

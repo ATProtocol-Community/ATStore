@@ -867,9 +867,8 @@ function HeroSection({
       {subproductCategories.map((option) => (
         <RouterLink
           key={option.id}
-          to="/categories/$categoryId"
-          params={{ categoryId: option.id }}
-          search={{ sort: "popular" }}
+          to="/apps"
+          search={{ in: option.id }}
           {...stylex.props(styles.tagLink)}
         >
           <Badge size="sm" variant="default">
@@ -880,9 +879,8 @@ function HeroSection({
       {listing.appTags.map((tag) => (
         <RouterLink
           key={tag}
-          to="/apps/$tag"
-          params={{ tag: getAppTagSlug(tag) }}
-          search={{ sort: "popular" }}
+          to="/apps"
+          search={{ tag: getAppTagSlug(tag) }}
           {...stylex.props(styles.tagLink)}
         >
           <Badge size="sm" variant="primary">
