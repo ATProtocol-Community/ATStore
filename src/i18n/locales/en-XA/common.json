@@ -1,6 +1,12 @@
 {
   "siteHeader": {
-    "searchListingsLabel": "[~~ Šéåŕçĥ ļîšţîñĝš ~~]"
+    "searchListingsLabel": "[~~ Šéåŕçĥ ļîšţîñĝš ~~]",
+    "searchPlaceholder": "[~~ Šéåŕçĥ åþþš… ~~]",
+    "nav": {
+      "browse": "[~~ Ɓŕöŵšé ~~]",
+      "tags": "[~~ Ţåĝš ~~]",
+      "sharedData": "[~~ Šĥåŕéð ðåţå ~~]"
+    }
   },
   "languageSwitcher": {
     "ariaLabel": "[~~ Çĥåñĝé ļåñĝüåĝé ~~]",

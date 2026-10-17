@@ -23,7 +23,6 @@ import { directoryListingApi } from "../integrations/tanstack-query/api-director
 import {
   getAppEcosystemCategoryIdFromRouteParam,
   getAppSegmentFromEcosystemRootCategoryId,
-  getEcosystemAllPathFromAppSegment,
 } from "../lib/directory-categories";
 import {
   formatEcosystemListingCount,
@@ -166,11 +165,7 @@ function EcosystemIndexPage() {
               {category.label}
             </AppLink>
 
-            <AppLink
-              to="/ecosystems/$app/all"
-              params={{ app: appSegment }}
-              search={{ sort: "popular" }}
-            >
+            <AppLink to="/apps" search={{ in: category.id }}>
               All tools
             </AppLink>
           </Flex>
@@ -200,7 +195,7 @@ function EcosystemIndexPage() {
             <Body variant="secondary">
               This ecosystem does not have nested category sections yet.
             </Body>
-            <AppLink to={getEcosystemAllPathFromAppSegment(appSegment)}>
+            <AppLink to="/apps" search={{ in: category.id }}>
               Search all listings in this ecosystem
             </AppLink>
           </Flex>
@@ -235,9 +230,8 @@ function EcosystemCategorySection({
             </Body>
           </Flex>
           <ButtonLink
-            to="/categories/$categoryId"
-            params={{ categoryId: category.id }}
-            search={{ sort: "popular" }}
+            to="/apps"
+            search={{ in: category.id }}
             size="lg"
             variant="secondary"
           >

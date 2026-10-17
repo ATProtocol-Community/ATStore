@@ -435,8 +435,7 @@ function HomePage() {
           <SectionHeader
             eyebrow="Popular Right Now"
             title="Trending across the ecosystem"
-            to="/apps/all"
-            search={{ sort: "popular" }}
+            to="/apps"
           />
           <Grid
             style={[
@@ -461,7 +460,7 @@ function HomePage() {
           <SectionHeader
             eyebrow="New & Noteworthy"
             title="Fresh apps just added"
-            to="/apps/all"
+            to="/apps"
             search={{ sort: "newest" }}
           />
           <Grid style={styles.newGrid}>
@@ -485,9 +484,9 @@ type SectionHeaderProps =
   | {
       eyebrow: string;
       title: string;
-      to: "/apps/all";
-      search: {
-        sort: "popular" | "newest";
+      to: "/apps";
+      search?: {
+        sort?: "newest";
       };
     };
 
@@ -495,9 +494,9 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
   let action: React.ReactNode;
 
   switch (to) {
-    case "/apps/all": {
+    case "/apps": {
       action = (
-        <AppLink to="/apps/all" search={search}>
+        <AppLink to="/apps" search={search ?? {}}>
           See All <ChevronRight />
         </AppLink>
       );

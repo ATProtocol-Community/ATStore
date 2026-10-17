@@ -317,9 +317,8 @@ export function AppTagCard({ tag, isFeatured }: AppTagCardProps) {
 
   return (
     <RouterLink
-      to="/apps/$tag"
-      params={{ tag: getAppTagSlug(tag.tag) }}
-      search={{ sort: "popular" }}
+      to="/apps"
+      search={{ tag: getAppTagSlug(tag.tag) }}
       {...stylex.props(
         styles.cardLink,
         styles.cardShadow,

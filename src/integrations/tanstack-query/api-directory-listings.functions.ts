@@ -71,6 +71,7 @@ import {
   compareOAuthLexiconKeysForDisplayOrder,
   extractOAuthLexiconKeysForStorefrontProbe,
   filterLexiconKeysForCrossAppMatching,
+  isRepoLexiconKeyForLexiconHub,
   normalizeLexiconClusterKeysForHub,
   parseOAuthLexiconKey,
 } from "#/lib/oauth-scope-lexicon-keys";
@@ -99,15 +100,13 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 
+import type { BrowseListing } from "../../lib/browse-listings";
 import type {
   DirectoryCategoryAccent,
   DirectoryCategoryTreeNode,
 } from "../../lib/directory-categories";
 
-import {
-  findAppTagBySlug,
-  formatAppTagLabel,
-} from "../../lib/app-tag-metadata";
+import { formatAppTagLabel } from "../../lib/app-tag-metadata";
 import {
   normalizeAppTags,
   popularTagsFromAllAssignments,
@@ -772,11 +771,6 @@ const regenerateDirectoryListingContentInput = z.object({
 const updateDirectoryListingAppTagsInput = z.object({
   id: z.string().min(1),
   appTags: z.array(z.string()).max(64),
-});
-
-const getAppsByTagPageInput = z.object({
-  tag: z.string().trim().min(1),
-  sort: listingSortInput,
 });
 
 const getRelatedDirectoryListingsInput = z.object({
@@ -1467,12 +1461,6 @@ function buildAppTagGroups(
 
       return left.tag.localeCompare(right.tag);
     });
-}
-
-function buildAllApps(rows: Array<DirectoryListingRow>) {
-  return dedupeListings(rows.filter((row) => isBrowseableAppRow(row))).map(
-    (row) => toListingCard(row),
-  );
 }
 
 function isHomePageFeaturedAppRow(
@@ -2305,92 +2293,6 @@ const getAllDirectoryListingAppTagsQueryOptions = queryOptions({
   queryFn: async () => getAllDirectoryListingAppTags(),
 });
 
-const getAllAppsInput = z.object({
-  sort: listingSortInput,
-});
-
-const getAllApps = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
-  .inputValidator(getAllAppsInput)
-  .handler(async ({ data, context }) => {
-    const input = getAllAppsInput.parse(data);
-    const table = context.schema.storeListings;
-    const rows = await context.db
-      .select(getListingSelect(table))
-      .from(table)
-      .where(
-        listingPublicWhere(
-          table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, "apps/%"),
-        ),
-      )
-      .orderBy(
-        ...(input.sort === "newest"
-          ? [desc(table.createdAt)]
-          : input.sort === "alphabetical"
-            ? [asc(table.name)]
-            : orderByPopularListingSort(table)),
-      );
-
-    return buildAllApps(rows);
-  });
-
-function getAllAppsQueryOptions(input: z.input<typeof getAllAppsInput> = {}) {
-  const normalizedInput = getAllAppsInput.parse(input);
-
-  return queryOptions({
-    queryKey: ["storeListings", "allApps", normalizedInput],
-    queryFn: async () => getAllApps({ data: normalizedInput }),
-  });
-}
-
-const getAppsByTagPage = createServerFn({ method: "GET" })
-  .middleware([dbMiddleware])
-  .inputValidator(getAppsByTagPageInput)
-  .handler(async ({ data, context }) => {
-    const input = getAppsByTagPageInput.parse(data);
-    const table = context.schema.storeListings;
-    const rows = await context.db
-      .select(getListingSelect(table))
-      .from(table)
-      .where(
-        listingPublicWhere(
-          table,
-          sqlCategorySlugsMatchesLike(table.categorySlugs, "apps/%"),
-        ),
-      )
-      .orderBy(
-        ...(input.sort === "newest"
-          ? [desc(table.createdAt)]
-          : input.sort === "alphabetical"
-            ? [asc(table.name)]
-            : orderByPopularListingSort(table)),
-      );
-
-    const groups = buildAppTagGroups(rows, { preserveListingOrder: true });
-    const tag = findAppTagBySlug(
-      groups.map((group) => group.tag),
-      input.tag,
-    );
-
-    if (!tag) {
-      return null;
-    }
-
-    return groups.find((group) => group.tag === tag) ?? null;
-  });
-
-function getAppsByTagPageQueryOptions(
-  input: z.input<typeof getAppsByTagPageInput>,
-) {
-  const normalizedInput = getAppsByTagPageInput.parse(input);
-
-  return queryOptions({
-    queryKey: ["storeListings", "appsByTagPage", normalizedInput],
-    queryFn: async () => getAppsByTagPage({ data: normalizedInput }),
-  });
-}
-
 const getAppsOAuthLexiconSummaries = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
@@ -2719,46 +2621,70 @@ function getLexiconCompatibleAppsPageQueryOptions(
   });
 }
 
-const getAllListingsInput = z.object({
-  sort: listingSortInput,
-});
+const BROWSE_SEARCH_TEXT_MAX_LENGTH = 200;
 
-const getAllListings = createServerFn({ method: "GET" })
+/**
+ * Every public non-protocol listing with the fields `/apps` filters and sorts on. Returned in "popular"
+ * order (`popularRank`) so the client can re-sort without another round trip.
+ */
+const getBrowseListings = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
-  .inputValidator(getAllListingsInput)
-  .handler(async ({ data, context }) => {
-    const input = getAllListingsInput.parse(data);
+  .handler(async ({ context }): Promise<Array<BrowseListing>> => {
     const table = context.schema.storeListings;
+    const probe = context.schema.storeListingOAuthProbes;
     const rows = await context.db
-      .select(getListingSelect(table))
+      .select({
+        ...getListingSelect(table),
+        links: table.links,
+        favoriteCount: table.favoriteCount,
+        createdAt: table.createdAt,
+        updatedAt: table.updatedAt,
+        oauthLexiconKeys: probe.oauthLexiconKeys,
+      })
       .from(table)
+      .leftJoin(probe, eq(probe.storeListingId, table.id))
       .where(
         listingPublicWhere(
           table,
           sql`not (${sqlCategorySlugsMatchesLike(table.categorySlugs, "protocol/%")})`,
         ),
       )
-      .orderBy(
-        ...(input.sort === "newest"
-          ? [desc(table.createdAt)]
-          : input.sort === "alphabetical"
-            ? [asc(table.name)]
-            : orderByPopularListingSort(table)),
-      );
+      .orderBy(...orderByPopularListingSort(table));
 
-    return rows.map((row) => toListingCard(row));
+    return rows.map((row, index) => {
+      const card = toListingCard(row);
+      const dataNsids = (row.oauthLexiconKeys ?? [])
+        .filter((key) => isRepoLexiconKeyForLexiconHub(key))
+        .flatMap((key) => parseOAuthLexiconKey(key)?.nsid ?? []);
+      const linkTypes = new Set(row.links.map((link) => link.type));
+
+      return {
+        id: card.id,
+        name: card.name,
+        slug: getDirectoryListingSlug(card),
+        iconUrl: card.iconUrl,
+        tagline: card.tagline,
+        searchText: card.description.slice(0, BROWSE_SEARCH_TEXT_MAX_LENGTH),
+        categorySlugs: card.categorySlugs,
+        appTags: card.appTags,
+        rating: card.rating,
+        reviewCount: card.reviewCount,
+        favoriteCount: row.favoriteCount,
+        productAccountHandle: card.productAccountHandle,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        popularRank: index,
+        dataNsids: [...new Set(dataNsids)],
+        hasSourceLink: linkTypes.has("source"),
+        acceptsDonations: linkTypes.has("donate"),
+      };
+    });
   });
 
-function getAllListingsQueryOptions(
-  input: z.input<typeof getAllListingsInput> = {},
-) {
-  const normalizedInput = getAllListingsInput.parse(input);
-
-  return queryOptions({
-    queryKey: ["storeListings", "allListings", normalizedInput],
-    queryFn: async () => getAllListings({ data: normalizedInput }),
-  });
-}
+const getBrowseListingsQueryOptions = queryOptions({
+  queryKey: ["storeListings", "browse"] as const,
+  queryFn: async () => getBrowseListings(),
+});
 
 const getDirectoryListingDetail = createServerFn({ method: "GET" })
   .middleware([dbMiddleware])
@@ -5528,10 +5454,7 @@ function isSlugUniqueViolation(err: unknown): boolean {
       constraint_name?: unknown;
       cause?: unknown;
     };
-    if (
-      e.code === "23505" &&
-      e.constraint_name === "store_listings_slug_idx"
-    ) {
+    if (e.code === "23505" && e.constraint_name === "store_listings_slug_idx") {
       return true;
     }
     cur = e.cause;
@@ -7848,14 +7771,10 @@ export const directoryListingApi = {
   getDirectoryCategoryTreeQueryOptions,
   getDirectoryCategoryPage,
   getDirectoryCategoryPageQueryOptions,
-  getAllApps,
-  getAllAppsQueryOptions,
   getAppsByTag,
   getAppsByTagQueryOptions,
   getAllDirectoryListingAppTags,
   getAllDirectoryListingAppTagsQueryOptions,
-  getAppsByTagPage,
-  getAppsByTagPageQueryOptions,
   getAppsOAuthLexiconSummaries,
   getAppsOAuthLexiconSummariesQueryOptions,
   getAppsByLexiconPage,
@@ -7867,8 +7786,8 @@ export const directoryListingApi = {
   getRelatedAppsBySharedLexiconKeysQueryOptions,
   getLexiconCompatibleAppsPage,
   getLexiconCompatibleAppsPageQueryOptions,
-  getAllListings,
-  getAllListingsQueryOptions,
+  getBrowseListings,
+  getBrowseListingsQueryOptions,
   getDirectoryListingDetail,
   getDirectoryListingDetailQueryOptions,
   getDirectoryListingDetailBySlug,

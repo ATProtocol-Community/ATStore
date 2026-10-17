@@ -159,21 +159,6 @@ export function shouldOmitUrlMentionsForBlueskyPlatformListing(
   return primaryCategorySlug(categorySlugs) === "apps/bluesky";
 }
 
-export function getDirectoryBrowsePath(categoryId: string | null | undefined) {
-  const option = getDirectoryCategoryOption(categoryId);
-  const rootCategoryId = option?.pathIds[0];
-
-  if (rootCategoryId === "apps") {
-    return "/apps/all";
-  }
-
-  if (rootCategoryId === "protocol") {
-    return "/protocol/all";
-  }
-
-  return "/categories/all";
-}
-
 /**
  * Returns the app root category id `apps/{app}` when `categorySlug` is anywhere under that app
  * (e.g. `apps/bluesky/tools` → `apps/bluesky`). Otherwise `null`.
@@ -201,16 +186,6 @@ export function getAppSegmentFromEcosystemRootCategoryId(
   }
 
   return parts[1];
-}
-
-/** `/ecosystems/{appSegment}` — `appSegment` should match normalized category segments (e.g. `bluesky`). */
-export function getEcosystemPathFromAppSegment(appSegment: string): string {
-  const normalized = normalizeCategorySegment(appSegment);
-  return `/ecosystems/${normalized}`;
-}
-
-export function getEcosystemAllPathFromAppSegment(appSegment: string): string {
-  return `${getEcosystemPathFromAppSegment(appSegment)}/all`;
 }
 
 /**
