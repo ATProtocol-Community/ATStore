@@ -1,12 +1,16 @@
 import type { StoreListing } from "#/db/schema";
 import type {
+  FyiAtstoreListingDetail,
   ListingDetailBlobOverrides,
   ListingDetailDbUrls,
   ListingDetailExistingBlobs,
 } from "#/lib/atproto/listing-record";
 
-import { Client, CredentialManager } from "@atcute/client";
-import { blobLikeToBskyCdnUrl } from "#/lib/atproto/blob-cdn-url";
+import { Client, ClientResponseError, CredentialManager } from "@atcute/client";
+import {
+  blobLikeToBskyCdnUrl,
+  getBlobCidString,
+} from "#/lib/atproto/blob-cdn-url";
 import { buildListingDetailRecordWithBlobs } from "#/lib/atproto/listing-record";
 import {
   createListingDetailRecord,
@@ -143,20 +147,54 @@ export async function publishOwnedListingDetail(
     );
   }
 
-  const { record, dbUrls } = await buildListingDetailRecordWithBlobs(
-    client,
-    merged,
-    blobOverrides,
-    migrated?.startsWith("at://") ? { migratedFromAtUri: migrated } : undefined,
-    existingBlobs,
-  );
-  record.updatedAt = new Date().toISOString();
-  const { uri } = await putListingDetailRecord(
-    client,
-    ownerRepoDid,
-    rk,
-    record,
-  );
+  /**
+   * The prior record can reference blobs the PDS no longer has — e.g. after an account migration
+   * that didn't carry every blob over. `putRecord` then fails with `BlobNotFound`, which would
+   * block every edit. Drop the missing ref and rebuild; that slot falls back to the CDN URL (or
+   * is omitted / placeholdered when that's gone too). One retry per blob slot at most.
+   */
+  const maxAttempts = 1 + 2 + 4;
+  for (let attempt = 1; ; attempt++) {
+    const { record, dbUrls } = await buildListingDetailRecordWithBlobs(
+      client,
+      merged,
+      blobOverrides,
+      migrated?.startsWith("at://")
+        ? { migratedFromAtUri: migrated }
+        : undefined,
+      existingBlobs,
+    );
+    record.updatedAt = new Date().toISOString();
+    let uri: string;
+    try {
+      ({ uri } = await putListingDetailRecord(
+        client,
+        ownerRepoDid,
+        rk,
+        record,
+      ));
+    } catch (error) {
+      const missingCid = blobNotFoundCid(error);
+      const pruned =
+        missingCid && existingBlobs
+          ? withoutBlob(existingBlobs, missingCid)
+          : undefined;
+      if (!pruned || attempt >= maxAttempts) throw error;
+      console.warn(
+        `[publishOwnedListingDetail] ${ownerRepoDid}/${rk} references missing blob ${missingCid}; republishing without it`,
+      );
+      existingBlobs = pruned;
+      continue;
+    }
+    return { uri, dbUrls: ownedListingDbUrls(record, ownerRepoDid, dbUrls) };
+  }
+}
+
+function ownedListingDbUrls(
+  record: FyiAtstoreListingDetail,
+  ownerRepoDid: string,
+  dbUrls: ListingDetailDbUrls,
+): ListingDetailDbUrls {
   const recordIconUrl = blobLikeToBskyCdnUrl(record.icon, ownerRepoDid);
   const recordHeroImageUrl = blobLikeToBskyCdnUrl(
     record.heroImage,
@@ -167,15 +205,44 @@ export async function publishOwnedListingDetail(
     return url ? [url] : [];
   });
   return {
-    uri,
-    dbUrls: {
-      ...dbUrls,
-      iconUrl: recordIconUrl ?? dbUrls.iconUrl,
-      heroImageUrl: recordHeroImageUrl ?? dbUrls.heroImageUrl,
-      screenshotUrls:
-        recordScreenshotUrls.length > 0
-          ? recordScreenshotUrls
-          : dbUrls.screenshotUrls,
-    },
+    ...dbUrls,
+    iconUrl: recordIconUrl ?? dbUrls.iconUrl,
+    heroImageUrl: recordHeroImageUrl ?? dbUrls.heroImageUrl,
+    screenshotUrls:
+      recordScreenshotUrls.length > 0
+        ? recordScreenshotUrls
+        : dbUrls.screenshotUrls,
   };
+}
+
+/** CID from a PDS `BlobNotFound` error (`Could not find blob: <cid>`), else null. */
+function blobNotFoundCid(error: unknown): string | null {
+  if (
+    !(error instanceof ClientResponseError) ||
+    error.error !== "BlobNotFound"
+  ) {
+    return null;
+  }
+  return error.description?.match(/\b(baf[a-z2-7]+)\b/)?.[1] ?? null;
+}
+
+/** `existing` minus any slot pointing at `cid`, or null when nothing referenced it. */
+function withoutBlob(
+  existing: ListingDetailExistingBlobs,
+  cid: string,
+): ListingDetailExistingBlobs | null {
+  const icon =
+    getBlobCidString(existing.icon) === cid ? undefined : existing.icon;
+  const heroImage =
+    getBlobCidString(existing.heroImage) === cid
+      ? undefined
+      : existing.heroImage;
+  const screenshots = existing.screenshots?.filter(
+    (blob) => getBlobCidString(blob) !== cid,
+  );
+  const changed =
+    icon !== existing.icon ||
+    heroImage !== existing.heroImage ||
+    screenshots?.length !== existing.screenshots?.length;
+  return changed ? { icon, heroImage, screenshots } : null;
 }
