@@ -64,6 +64,12 @@ function parseJetstreamTimeUs(line: string): number | null {
   }
 }
 
+/** Pause the socket above this many queued messages; resume once drained to the low-water mark. */
+const QUEUE_HIGH_WATER = 1000;
+const QUEUE_LOW_WATER = 100;
+/** The cursor only needs to be roughly current — the reconnect overlap buffer covers the gap. */
+const CURSOR_SAVE_INTERVAL_MS = 1000;
+
 function buildJetstreamUrl(cursor?: number): string {
   const raw =
     process.env.JETSTREAM_URL?.trim() ||
@@ -236,6 +242,51 @@ async function main() {
     statsTimer.unref?.();
   }
 
+  let lastCursorSavedAt = 0;
+  const saveCursor = async (force = false) => {
+    if (lastCursor == null) return;
+    const now = Date.now();
+    if (!force && now - lastCursorSavedAt < CURSOR_SAVE_INTERVAL_MS) return;
+    lastCursorSavedAt = now;
+    await saveJetstreamCursor(db, lastCursor);
+    stats.cursorSaves += 1;
+  };
+
+  const processLine = async (line: string) => {
+    const timeUs = parseJetstreamTimeUs(line);
+    let result: JetstreamIngestResult | null = null;
+    try {
+      result = await ingestJetstreamCommitLine(db, line, index);
+      applyIngestStats(stats, result);
+      if (result) {
+        logDirectoryListingMatch(result);
+        logVerboseIngest(result);
+      }
+    } catch (error) {
+      stats.ingestErrors += 1;
+      log("error", "ingest_threw", {
+        err: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        linePreview: line.length > 200 ? `${line.slice(0, 200)}…` : line,
+      });
+    }
+    const cursorToSave = timeUs ?? result?.time_us ?? null;
+    if (cursorToSave != null) {
+      lastCursor = cursorToSave;
+      try {
+        await saveCursor();
+      } catch (error) {
+        log("error", "cursor_save_failed", {
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    } else if (result) {
+      log("warn", "no_cursor_in_event", {
+        processed: result.processed,
+      });
+    }
+  };
+
   const connect = () => {
     const url = buildJetstreamUrl(lastCursor);
     log("info", "connecting", {
@@ -252,39 +303,37 @@ async function main() {
       });
     });
 
-    ws.on("message", async (data: WebSocket.RawData) => {
+    /**
+     * Process messages one at a time and pause the socket while the queue is backed up. Without
+     * backpressure every message spawned its own pending DB write, and replaying a saved cursor
+     * (~3.5k msgs/sec) piled up handlers until the heap ran out.
+     */
+    const queue: Array<string> = [];
+    let draining = false;
+
+    const drain = async () => {
+      if (draining) return;
+      draining = true;
+      try {
+        let line: string | undefined;
+        while ((line = queue.shift()) !== undefined) {
+          await processLine(line);
+          if (queue.length <= QUEUE_LOW_WATER && ws.isPaused) ws.resume();
+        }
+      } finally {
+        draining = false;
+      }
+    };
+
+    ws.on("message", (data: WebSocket.RawData) => {
       stats.messages += 1;
-      const line =
+      queue.push(
         typeof data === "string"
           ? data
-          : Buffer.from(data as Buffer).toString("utf8");
-      const timeUs = parseJetstreamTimeUs(line);
-      let result: JetstreamIngestResult | null = null;
-      try {
-        result = await ingestJetstreamCommitLine(db, line, index);
-        applyIngestStats(stats, result);
-        if (result) {
-          logDirectoryListingMatch(result);
-          logVerboseIngest(result);
-        }
-      } catch (error) {
-        stats.ingestErrors += 1;
-        log("error", "ingest_threw", {
-          err: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          linePreview: line.length > 200 ? `${line.slice(0, 200)}…` : line,
-        });
-      }
-      const cursorToSave = timeUs ?? result?.time_us ?? null;
-      if (cursorToSave != null) {
-        lastCursor = cursorToSave;
-        await saveJetstreamCursor(db, cursorToSave);
-        stats.cursorSaves += 1;
-      } else if (result) {
-        log("warn", "no_cursor_in_event", {
-          processed: result.processed,
-        });
-      }
+          : Buffer.from(data as Buffer).toString("utf8"),
+      );
+      if (queue.length >= QUEUE_HIGH_WATER && !ws.isPaused) ws.pause();
+      void drain();
     });
 
     ws.on("close", (code, reason) => {
@@ -315,7 +364,7 @@ async function main() {
     shouldRun = false;
     if (statsTimer) clearInterval(statsTimer);
     log("info", "shutdown", { finalStats: { ...stats } });
-    process.exit(0);
+    void saveCursor(true).finally(() => process.exit(0));
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
