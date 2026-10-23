@@ -7,6 +7,7 @@
  *   DATABASE_URL=…                    (required)
  *   JETSTREAM_URL=…                  (default: wss://jetstream2.us-east.bsky.network/subscribe)
  *   JETSTREAM_CURSOR_BUFFER_SEC=5     (subtract from saved cursor on reconnect for overlap)
+ *   JETSTREAM_CURSOR_FLUSH_SEC=5      (how often the in-memory cursor is persisted)
  *   JETSTREAM_VERBOSE=1             (extra ingest_processed lines for debugging)
  *   JETSTREAM_STATS_INTERVAL_SEC=60 (periodic summary line; set 0 to disable)
  *
@@ -35,6 +36,27 @@ function statsIntervalSec(): number {
   if (!raw) return 60;
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) && n >= 0 ? n : 60;
+}
+
+function cursorFlushSec(): number {
+  const raw = process.env.JETSTREAM_CURSOR_FLUSH_SEC?.trim();
+  if (!raw) return 5;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 5;
+}
+
+/**
+ * Backpressure bounds for the per-connection ingest queue. The firehose bursts
+ * well past what a single ingest loop can chew through, so the socket is paused
+ * once the backlog is this deep and resumed after it drains.
+ */
+const QUEUE_HIGH_WATER = 5000;
+const QUEUE_LOW_WATER = 1000;
+
+function rawDataToString(data: WebSocket.RawData): string {
+  if (Buffer.isBuffer(data)) return data.toString("utf8");
+  if (Array.isArray(data)) return Buffer.concat(data).toString("utf8");
+  return Buffer.from(data).toString("utf8");
 }
 
 function ts(): string {
@@ -93,7 +115,12 @@ type Stats = {
   upsertsWithMatches: number;
   deletesProcessed: number;
   cursorSaves: number;
+  cursorSaveErrors: number;
   ingestErrors: number;
+  /** Deepest ingest backlog seen since startup. */
+  maxQueueDepth: number;
+  /** Times the socket was paused because the backlog hit the high-water mark. */
+  backpressurePauses: number;
 };
 
 function createStats(): Stats {
@@ -109,7 +136,10 @@ function createStats(): Stats {
     upsertsWithMatches: 0,
     deletesProcessed: 0,
     cursorSaves: 0,
+    cursorSaveErrors: 0,
     ingestErrors: 0,
+    maxQueueDepth: 0,
+    backpressurePauses: 0,
   };
 }
 
@@ -189,7 +219,12 @@ function logStatsSummary(stats: Stats) {
     upsertsWithMatches: stats.upsertsWithMatches,
     deletesProcessed: stats.deletesProcessed,
     cursorSaves: stats.cursorSaves,
+    cursorSaveErrors: stats.cursorSaveErrors,
     ingestErrors: stats.ingestErrors,
+    maxQueueDepth: stats.maxQueueDepth,
+    backpressurePauses: stats.backpressurePauses,
+    rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+    heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
   });
 }
 
@@ -223,9 +258,36 @@ async function main() {
   );
 
   let lastCursor = initialCursor;
+  let savedCursor = initialCursor;
   let reconnectDelayMs = 2000;
   let shouldRun = true;
   const stats = createStats();
+
+  /**
+   * The cursor advances thousands of times a second, so it is held in memory and
+   * written on a timer. Persisting per message queued a DB round-trip per event,
+   * which outran the pool and grew the heap until the process was OOM-killed.
+   * Anything not yet flushed is simply replayed from the last saved cursor.
+   */
+  const flushCursor = async () => {
+    const cursor = lastCursor;
+    if (cursor == null || cursor === savedCursor) return;
+    try {
+      await saveJetstreamCursor(db, cursor);
+      savedCursor = cursor;
+      stats.cursorSaves += 1;
+    } catch (error) {
+      stats.cursorSaveErrors += 1;
+      log("warn", "cursor_save_failed", {
+        err: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const cursorTimer = setInterval(() => {
+    void flushCursor();
+  }, cursorFlushSec() * 1000);
+  cursorTimer.unref?.();
 
   const intervalSec = statsIntervalSec();
   let statsTimer: ReturnType<typeof setInterval> | undefined;
@@ -245,19 +307,19 @@ async function main() {
 
     const ws = new WebSocket(url);
 
-    ws.on("open", () => {
-      reconnectDelayMs = 2000;
-      log("info", "websocket_open", {
-        resumeCursorTimeUs: lastCursor ?? null,
-      });
-    });
+    /**
+     * Events are drained one at a time rather than spawning a handler per frame:
+     * `ws` does not await listeners, so a burst would otherwise park unbounded
+     * in-flight work (and its post payloads) on the heap.
+     */
+    let queue: Array<string> = [];
+    let head = 0;
+    let draining = false;
+    let paused = false;
+    let closed = false;
+    const depth = () => queue.length - head;
 
-    ws.on("message", async (data: WebSocket.RawData) => {
-      stats.messages += 1;
-      const line =
-        typeof data === "string"
-          ? data
-          : Buffer.from(data as Buffer).toString("utf8");
+    const processLine = async (line: string) => {
       const timeUs = parseJetstreamTimeUs(line);
       let result: JetstreamIngestResult | null = null;
       try {
@@ -278,16 +340,65 @@ async function main() {
       const cursorToSave = timeUs ?? result?.time_us ?? null;
       if (cursorToSave != null) {
         lastCursor = cursorToSave;
-        await saveJetstreamCursor(db, cursorToSave);
-        stats.cursorSaves += 1;
       } else if (result) {
         log("warn", "no_cursor_in_event", {
           processed: result.processed,
         });
       }
+    };
+
+    const drain = async () => {
+      if (draining) return;
+      draining = true;
+      try {
+        while (head < queue.length && !closed) {
+          const line = queue[head];
+          // Release the payload so a long backlog does not pin every string.
+          queue[head] = "";
+          head += 1;
+          if (head >= 1024) {
+            queue = queue.slice(head);
+            head = 0;
+          }
+          await processLine(line);
+          if (paused && !closed && depth() <= QUEUE_LOW_WATER) {
+            paused = false;
+            ws.resume();
+          }
+        }
+        queue = [];
+        head = 0;
+      } finally {
+        draining = false;
+      }
+    };
+
+    ws.on("open", () => {
+      reconnectDelayMs = 2000;
+      log("info", "websocket_open", {
+        resumeCursorTimeUs: lastCursor ?? null,
+      });
+    });
+
+    ws.on("message", (data: WebSocket.RawData) => {
+      stats.messages += 1;
+      queue.push(rawDataToString(data));
+      const pending = depth();
+      if (pending > stats.maxQueueDepth) stats.maxQueueDepth = pending;
+      if (!paused && pending >= QUEUE_HIGH_WATER) {
+        paused = true;
+        stats.backpressurePauses += 1;
+        ws.pause();
+        log("warn", "backpressure_pause", { queueDepth: pending });
+      }
+      void drain();
     });
 
     ws.on("close", (code, reason) => {
+      // Unprocessed lines never advanced the cursor, so they replay on reconnect.
+      closed = true;
+      queue = [];
+      head = 0;
       const reasonStr =
         typeof reason === "string" ? reason : (reason?.toString?.() ?? "");
       log("warn", "websocket_closed", {
@@ -312,10 +423,14 @@ async function main() {
   connect();
 
   const shutdown = () => {
+    if (!shouldRun) return;
     shouldRun = false;
     if (statsTimer) clearInterval(statsTimer);
-    log("info", "shutdown", { finalStats: { ...stats } });
-    process.exit(0);
+    clearInterval(cursorTimer);
+    void flushCursor().finally(() => {
+      log("info", "shutdown", { finalStats: { ...stats } });
+      process.exit(0);
+    });
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);

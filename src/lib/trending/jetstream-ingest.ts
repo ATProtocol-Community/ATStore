@@ -219,14 +219,14 @@ export async function ingestJetstreamCommitLine(
   }
 
   if (operation === "delete") {
+    // Deletes are ~4% of the firehose and almost never reference a listing, so
+    // this stays a single round-trip rather than a select followed by a delete.
     const affected = await db
-      .select({ storeListingId: schema.storeListingMentions.storeListingId })
-      .from(schema.storeListingMentions)
-      .where(eq(schema.storeListingMentions.postUri, postUri));
-
-    await db
       .delete(schema.storeListingMentions)
-      .where(eq(schema.storeListingMentions.postUri, postUri));
+      .where(eq(schema.storeListingMentions.postUri, postUri))
+      .returning({
+        storeListingId: schema.storeListingMentions.storeListingId,
+      });
 
     const uniqueIds = [...new Set(affected.map((r) => r.storeListingId))];
     for (const id of uniqueIds) {
