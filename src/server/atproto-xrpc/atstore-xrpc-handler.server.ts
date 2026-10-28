@@ -362,6 +362,75 @@ async function handleGetListing(url: URL) {
   return xrpcJson(await listingDetailXrpcPayload(row));
 }
 
+const LISTING_AUTH_METHODS = new Set([
+  "oauth",
+  "app_password",
+  "unsupported_mobile",
+]);
+
+/**
+ * `client_metadata_url` from `store_listing_oauth_discovery` (well-known probes,
+ * Playwright or manual triage) wins over the periodic probe's
+ * `successful_client_metadata_url`, which only tries well-known paths.
+ */
+async function handleGetListingAuth(url: URL) {
+  const canonical = listingDetailUriOrNull(url.searchParams.get("uri") ?? "");
+  if (!canonical) {
+    return xrpcErr(400, "InvalidParams");
+  }
+
+  const table = schema.storeListings;
+  const discovery = schema.storeListingOauthDiscovery;
+  const probes = schema.storeListingOAuthProbes;
+  const { listingXrpcPublicWhere } = directoryListingXrpcHelpers;
+
+  const [row] = await db
+    .select({
+      authMethod: discovery.authMethod,
+      discoveredClientMetadataUrl: discovery.clientMetadataUrl,
+      probedClientMetadataUrl: probes.successfulClientMetadataUrl,
+      scope: probes.clientScopeRawLine,
+      probedAt: probes.probedAt,
+    })
+    .from(table)
+    .leftJoin(discovery, eq(discovery.storeListingId, table.id))
+    .leftJoin(probes, eq(probes.storeListingId, table.id))
+    .where(listingXrpcPublicWhere(table, eq(table.atUri, canonical)))
+    .limit(1);
+
+  if (!row) {
+    return xrpcErr(404, "ListingNotFound");
+  }
+
+  const clientMetadataUrl =
+    row.discoveredClientMetadataUrl?.trim() ||
+    row.probedClientMetadataUrl?.trim() ||
+    null;
+  const authMethod =
+    row.authMethod && LISTING_AUTH_METHODS.has(row.authMethod)
+      ? row.authMethod
+      : clientMetadataUrl
+        ? "oauth"
+        : "unknown";
+  // the probe's scope belongs to the URL it found; drop it if discovery
+  // settled on a different client
+  const scope =
+    row.scope?.trim() &&
+    (!row.discoveredClientMetadataUrl?.trim() ||
+      row.discoveredClientMetadataUrl.trim() ===
+        row.probedClientMetadataUrl?.trim())
+      ? row.scope.trim()
+      : null;
+
+  return xrpcJson({
+    uri: canonical,
+    authMethod,
+    clientMetadataUrl,
+    scope,
+    checkedAt: row.probedAt?.toISOString() ?? null,
+  });
+}
+
 async function handleListReviews(url: URL, request: Request) {
   const uriParam = url.searchParams.get("uri") ?? "";
   const canonical = listingDetailUriOrNull(uriParam);
@@ -502,6 +571,13 @@ export async function handleAtstoreXrpc(
           return xrpcErr(405, "MethodNotAllowed");
         }
         return handleGetListing(url);
+      }
+
+      case ATSTORE_XRPC_METHOD.directoryGetListingAuth: {
+        if (request.method !== "GET") {
+          return xrpcErr(405, "MethodNotAllowed");
+        }
+        return handleGetListingAuth(url);
       }
 
       case ATSTORE_XRPC_METHOD.reviewsListForListing: {
