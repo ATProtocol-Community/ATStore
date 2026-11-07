@@ -19,10 +19,18 @@ import { gap } from "../theme/semantic-spacing.stylex";
 
 const styles = stylex.create({
   list: {
+    margin: 0,
+    padding: 0,
     gap: gap["2xl"],
     alignItems: "center",
     containerType: "inline-size",
     display: "flex",
+  },
+  // Without this the page numbers keep the browser's default list indent,
+  // which pushed the control past the edge of narrow phone screens.
+  pageList: {
+    margin: 0,
+    padding: 0,
   },
   pages: {
     flexGrow: 1,
@@ -118,7 +126,7 @@ export function Pagination({
           </Button>
         </li>
         <li {...stylex.props(styles.listItem, styles.pages)}>
-          <ul>
+          <ul {...stylex.props(styles.pageList)}>
             <Flex align="center" justify="center" gap="xs">
               {visiblePages[0] !== 1 && (
                 <li {...stylex.props(styles.listItem, styles.desktopButton)}>
