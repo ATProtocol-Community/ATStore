@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
-  Link as RouterLink,
   createFileRoute,
   createLink,
   useNavigate,
@@ -10,21 +9,15 @@ import { ChevronRight } from "lucide-react";
 
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
+import { AppCard } from "../components/AppCard";
+import { RankedAppRow } from "../components/AppListRow";
 import { AppTagCard } from "../components/AppTagCard";
-import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
-import { HeroImage } from "../components/HeroImage";
 import { Alert } from "../design-system/alert";
-import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
-import { Card, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import {
-  animationDuration,
-  animationTimingFunction,
-} from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
@@ -33,18 +26,9 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { shadow } from "../design-system/theme/shadow.stylex";
-import {
-  Body,
-  Heading1,
-  Heading2,
-  SmallBody,
-} from "../design-system/typography";
+import { Heading1, Heading2, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { getInitials } from "../lib/get-initials";
-import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 export const Route = createFileRoute("/_header-layout/")({
@@ -76,48 +60,6 @@ const styles = stylex.create({
   headerDescription: {
     maxWidth: "41rem",
   },
-  bentoLink: {
-    textDecoration: "none",
-    color: uiColor.text2,
-    display: "block",
-    position: "relative",
-    zIndex: 1,
-  },
-  bentoLinkFeatured: {
-    aspectRatio: "16 / 9",
-    zIndex: 0,
-  },
-  listingCardLink: {
-    borderRadius: radius.lg,
-    cornerShape: "squircle",
-    textDecoration: "none",
-    boxShadow: shadow.md,
-    display: "block",
-    transform: {
-      default: "none",
-      ":hover": "translateY(-2px)",
-    },
-    transitionDuration: animationDuration.slow,
-    transitionProperty: "transform",
-    transitionTimingFunction: "ease-in-out",
-    height: "100%",
-
-    ":hover::before": {
-      opacity: 1,
-    },
-    "::before": {
-      inset: 0,
-      borderRadius: radius.lg,
-      cornerShape: "squircle",
-      boxShadow: shadow.lg,
-      content: "''",
-      opacity: 0,
-      position: "absolute",
-      transitionDuration: animationDuration.slow,
-      transitionProperty: "opacity",
-      transitionTimingFunction: "ease-in-out",
-    },
-  },
   claimBanner: {
     width: "100%",
   },
@@ -143,71 +85,9 @@ const styles = stylex.create({
     flexDirection: "column",
     width: "100%",
   },
-  promoCard: {
-    borderColor: uiColor.component2,
-    borderRadius: radius["lg"],
-    borderStyle: "solid",
-    borderWidth: 1,
-    boxShadow: shadow.none,
-    color: uiColor.text2,
-    transform: {
-      default: "none",
-      ":hover": "translateY(-2px)",
-    },
-    transitionDuration: animationDuration.slow,
-    transitionProperty: "transform",
-    transitionTimingFunction: "ease-in-out",
-    height: "100%",
-  },
-  promoCardShadow: {
-    borderRadius: radius.lg,
-    cornerShape: "squircle",
-    boxShadow: shadow.md,
-    position: "relative",
-
-    ":hover::before": {
-      opacity: 1,
-    },
-    "::before": {
-      inset: 0,
-      borderRadius: radius.lg,
-      cornerShape: "squircle",
-      boxShadow: shadow.lg,
-      content: "''",
-      opacity: 0,
-      position: "absolute",
-      transitionDuration: animationDuration.default,
-      transitionProperty: "opacity",
-      transitionTimingFunction: animationTimingFunction.linear,
-    },
-  },
-  promoCardBody: {
-    boxSizing: "border-box",
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    justifyContent: "flex-start",
-    position: "relative",
-    zIndex: 1,
-    paddingBottom: verticalSpace["3xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["sm"],
-  },
-  promoCardTagline: {
-    flexGrow: 1,
-  },
   eyebrow: {
     letterSpacing: "0.16em",
     textTransform: "uppercase",
-  },
-  heroTitle: {
-    display: "block",
-    maxWidth: "18ch",
-  },
-  heroDescription: {
-    margin: 0,
-    maxWidth: "32rem",
   },
   sectionHeader: {
     marginBottom: verticalSpace["3xl"],
@@ -240,104 +120,58 @@ const styles = stylex.create({
       [breakpoints.lg]: "1fr",
     },
   },
+  // Rows carry their own spacing (see RankedAppRow), so the vertical padding
+  // here is trimmed by that amount to keep the panel's inset unchanged.
   popularList: {
-    padding: verticalSpace["2xl"],
+    margin: 0,
     borderColor: uiColor.component2,
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
     cornerShape: "squircle",
+    listStyle: "none",
     backgroundColor: uiColor.bg,
-  },
-  listItem: {
-    borderRadius: radius.md,
-    gap: gap["xl"],
-    textDecoration: "none",
-    alignItems: "center",
-    backgroundColor: {
-      default: uiColor.bg,
-      ":hover": uiColor.component2,
-    },
-    boxShadow: shadow.none,
-    color: uiColor.text2,
-    display: "flex",
-    position: "relative",
-    transitionDuration: animationDuration.slow,
-    transitionProperty: "background-color, z-index",
-    transitionTimingFunction: "ease-in-out",
-    zIndex: {
-      default: 0,
-      ":hover": 1,
-    },
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["4xl"],
+    paddingBottom: verticalSpace.lg,
+    paddingLeft: horizontalSpace["2xl"],
     paddingRight: horizontalSpace["2xl"],
-    paddingTop: verticalSpace["2xl"],
-
-    ":hover::after": {
-      opacity: 1,
-    },
-    "::after": {
-      inset: 0,
-      borderRadius: radius.md,
-      boxShadow: shadow.lg,
-      content: "''",
-      opacity: 0,
-      position: "absolute",
-      transitionDuration: animationDuration.slow,
-      transitionProperty: "opacity",
-      transitionTimingFunction: "ease-in-out",
+    paddingTop: verticalSpace.lg,
+  },
+  // Phone: one column. Tablet: hero full width, spotlights as a row of three.
+  // Desktop: hero takes two columns, spotlights stack in the third.
+  heroGrid: {
+    gap: gap["2xl"],
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
     },
   },
-  rankNumber: {
-    minWidth: "1.25rem",
+  heroItem: {
+    gridColumn: {
+      default: "auto",
+      [breakpoints.sm]: "1 / -1",
+      [breakpoints.xl]: "1 / span 2",
+    },
+    gridRow: {
+      default: "auto",
+      [breakpoints.xl]: "1 / span 3",
+    },
+    minWidth: 0,
   },
-  listItemText: {
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
+  spotlightItem: {
+    gridColumn: {
+      default: "auto",
+      [breakpoints.xl]: "3",
+    },
     minWidth: 0,
   },
   newGrid: {
     gap: gap["lg"],
     display: "grid",
     gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
     },
-  },
-  listingCard: {
-    boxShadow: shadow.none,
-    boxSizing: "border-box",
-    position: "relative",
-    height: "100%",
-  },
-  listingCardContent: {
-    boxSizing: "border-box",
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
-  listItemTagline: {
-    flexGrow: 1,
-    minWidth: 0,
-  },
-  exploreButton: {
-    borderRadius: radius.full,
-    cornerShape: "unset",
-    cursor: "pointer",
-  },
-  heroImagePlaceholder: {
-    flexGrow: 1,
-    minHeight: 0,
-  },
-  heroCardContent: {
-    height: "100%",
   },
 });
 
@@ -350,6 +184,10 @@ function HomePage() {
     directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
   const promoListing = data.promo;
+  const [hero, ...spotlights] = putHeroImageFirst([
+    data.featured,
+    ...data.spotlights,
+  ]);
 
   const showClaimBanner =
     claimEligibility.eligible && claimEligibility.listings.length > 0;
@@ -401,21 +239,16 @@ function HomePage() {
 
       <Flex direction="column" style={styles.pageSections}>
         <section {...stylex.props(styles.section)}>
-          <FeaturedListingGrid
-            items={[data.featured, ...data.spotlights]}
-            getKey={(listing, index) =>
-              index === 0 ? `featured-${listing.id}` : `spotlight-${listing.id}`
-            }
-            isFeatured={(_, index) => index === 0}
-            canFeature={(listing) => Boolean(listing.heroImageUrl)}
-            renderItem={(listing, { featured }) =>
-              featured ? (
-                <HeroCard listing={listing} />
-              ) : (
-                <ListingCard listing={listing} />
-              )
-            }
-          />
+          <div {...stylex.props(styles.heroGrid)}>
+            <div {...stylex.props(styles.heroItem)}>
+              <AppCard listing={hero} size="large" />
+            </div>
+            {spotlights.map((listing) => (
+              <div key={listing.id} {...stylex.props(styles.spotlightItem)}>
+                <AppCard listing={listing} size="small" />
+              </div>
+            ))}
+          </div>
         </section>
 
         <section {...stylex.props(styles.section)}>
@@ -443,16 +276,16 @@ function HomePage() {
               promoListing ? null : styles.popularGridSingle,
             ]}
           >
-            <Flex direction="column" gap="md" style={styles.popularList}>
+            <ol role="list" {...stylex.props(styles.popularList)}>
               {data.popular.map((listing, index) => (
-                <PopularListItem
-                  key={listing.id}
-                  listing={listing}
-                  rank={index + 1}
-                />
+                <li key={listing.id}>
+                  <RankedAppRow listing={listing} rank={index + 1} />
+                </li>
               ))}
-            </Flex>
-            {promoListing ? <PromoCard listing={promoListing} /> : null}
+            </ol>
+            {promoListing ? (
+              <AppCard listing={promoListing} size="medium" />
+            ) : null}
           </Grid>
         </section>
 
@@ -465,7 +298,7 @@ function HomePage() {
           />
           <Grid style={styles.newGrid}>
             {data.fresh.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
+              <AppCard key={listing.id} listing={listing} size="small" />
             ))}
           </Grid>
         </section>
@@ -527,180 +360,18 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
   );
 }
 
-function HeroCard({ listing }: { listing: DirectoryListingCard }) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, stylex.defaultMarker())}
-    >
-      {listing.heroImageUrl ? (
-        <div {...stylex.props(styles.heroImagePlaceholder)}>
-          <HeroImage
-            alt={getDirectoryListingHeroImageAlt(listing)}
-            glowIntensity={0}
-            src={listing.heroImageUrl}
-          />
-        </div>
-      ) : (
-        <Card size="lg" style={styles.bentoLinkFeatured}>
-          <Flex direction="column" gap="4xl" style={styles.heroCardContent}>
-            <Flex
-              direction="column"
-              gap="4xl"
-              style={styles.listingCardContent}
-            >
-              <Flex align="center" gap="2xl">
-                <StoreIcon listing={listing} size="xl" />
-                <Flex direction="column" gap="xl">
-                  <Text size="3xl" weight="semibold">
-                    {listing.name}
-                  </Text>
-                  <Text size="lg" variant="secondary">
-                    @
-                    {listing.productAccountHandle?.replace(/^@/, "") ||
-                      "unknown"}
-                  </Text>
-                </Flex>
-              </Flex>
-              <Body variant="secondary" style={styles.listItemTagline}>
-                {listing.tagline}
-              </Body>
-            </Flex>
-          </Flex>
-        </Card>
-      )}
-    </RouterLink>
-  );
-}
+/**
+ * The hero slot is the big image card, so make sure it gets a listing that
+ * has an image: swap the first spotlight with one if the featured app has
+ * none. If no listing has an image the hero renders without one.
+ */
+function putHeroImageFirst(listings: Array<DirectoryListingCard>) {
+  if (listings[0]?.heroImageUrl) return listings;
 
-function PopularListItem({
-  listing,
-  rank,
-}: {
-  listing: DirectoryListingCard;
-  rank: number;
-}) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.listItem)}
-    >
-      <Text
-        size="xl"
-        weight="semibold"
-        variant="secondary"
-        style={styles.rankNumber}
-      >
-        {rank}
-      </Text>
-      <StoreIcon listing={listing} size="lg" />
-      <Flex style={styles.listItemText} direction="column" gap="lg">
-        <Text size="lg" weight="semibold">
-          {listing.name}
-        </Text>
-        <SmallBody variant="secondary">{listing.tagline}</SmallBody>
-      </Flex>
-      <Button variant="secondary" style={styles.exploreButton}>
-        Explore
-      </Button>
-    </RouterLink>
-  );
-}
+  const withImage = listings.findIndex((listing) => listing.heroImageUrl);
+  if (withImage <= 0) return listings;
 
-function PromoCard({ listing }: { listing: DirectoryListingCard }) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, styles.promoCardShadow)}
-    >
-      <Card style={styles.promoCard}>
-        {listing.heroImageUrl ? (
-          <CardImage
-            aspectRatio={16 / 9}
-            alt={getDirectoryListingHeroImageAlt(listing)}
-            src={listing.heroImageUrl}
-          />
-        ) : null}
-        <Flex direction="column" gap="4xl" style={styles.promoCardBody}>
-          <Flex align="center" gap="2xl">
-            <StoreIcon listing={listing} size="xl" />
-            <Flex direction="column" gap="xl">
-              <Text
-                size={{ default: "2xl", sm: "3xl" }}
-                weight="semibold"
-                style={styles.heroTitle}
-              >
-                {listing.name}
-              </Text>
-              <SmallBody variant="secondary">
-                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-              </SmallBody>
-            </Flex>
-          </Flex>
-          <Text
-            size="lg"
-            variant="secondary"
-            style={[styles.heroDescription, styles.promoCardTagline]}
-          >
-            {listing.tagline}
-          </Text>
-          <Flex align="center" justify="end" gap="xl">
-            <ChevronRight />
-          </Flex>
-        </Flex>
-      </Card>
-    </RouterLink>
-  );
-}
-
-function ListingCard({ listing }: { listing: DirectoryListingCard }) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.bentoLink, styles.listingCardLink)}
-    >
-      <Card style={styles.listingCard}>
-        <Flex direction="column" gap="4xl" style={styles.listingCardContent}>
-          <Flex align="center" gap="2xl">
-            <StoreIcon listing={listing} size="xl" />
-            <Flex direction="column" gap="xl">
-              <Text size="xl" weight="semibold">
-                {listing.name}
-              </Text>
-              <SmallBody variant="secondary">
-                @{listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-              </SmallBody>
-            </Flex>
-          </Flex>
-          <Body variant="secondary" style={styles.listItemTagline}>
-            {listing.tagline}
-          </Body>
-          <Flex align="center" justify="end" gap="xl">
-            <ChevronRight />
-          </Flex>
-        </Flex>
-      </Card>
-    </RouterLink>
-  );
-}
-
-function StoreIcon({
-  listing,
-  size,
-}: {
-  listing: DirectoryListingCard;
-  size: "lg" | "xl";
-}) {
-  return (
-    <Avatar
-      alt={listing.name}
-      fallback={getInitials(listing.name)}
-      size={size}
-      src={listing.iconUrl || undefined}
-    />
-  );
+  const arranged = [...listings];
+  [arranged[0], arranged[withImage]] = [arranged[withImage], arranged[0]];
+  return arranged;
 }

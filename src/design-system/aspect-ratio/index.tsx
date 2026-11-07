@@ -66,7 +66,7 @@ export function AspectRatioImage({
   ...props
 }: AspectRatioImageProps) {
   return (
-    <div {...stylex.props(styles.imageContainer, style)}>
+    <div {...stylex.props(styles.imageContainer)}>
       {/* eslint-disable-next-line jsx-a11y/alt-text */}
       <img {...props} {...stylex.props(styles.image, style)} />
       {children}

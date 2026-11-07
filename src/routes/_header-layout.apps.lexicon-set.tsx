@@ -8,18 +8,12 @@ import {
   redirect,
   useRouter,
 } from "@tanstack/react-router";
-import { StarRating } from "#/design-system/star-rating";
 import { ChevronLeft } from "lucide-react";
 
-import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
-
+import { AppCard } from "../components/AppCard";
 import { AppTagHero } from "../components/AppTagHero";
-import { FeaturedListingFallbackCard } from "../components/FeaturedListingFallbackCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
-import { HeroImage } from "../components/HeroImage";
-import { Avatar } from "../design-system/avatar";
 import { Badge } from "../design-system/badge";
-import { Card } from "../design-system/card";
 import { Flex } from "../design-system/flex";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
@@ -27,16 +21,11 @@ import { Select, SelectItem } from "../design-system/select";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
-  horizontalSpace,
   size,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { Body, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+import { Body } from "../design-system/typography";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { getInitials } from "../lib/get-initials";
-import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import {
   formatLexiconClusterPageTitle,
   formatOAuthLexiconKeyClusterStyleHeadline,
@@ -60,9 +49,6 @@ const styles = stylex.create({
       [breakpoints.xl]: gap["7xl"],
     },
   },
-  listingTagline: {
-    flexGrow: 1,
-  },
   page: {
     paddingBottom: verticalSpace["10xl"],
     paddingTop: verticalSpace["6xl"],
@@ -76,41 +62,6 @@ const styles = stylex.create({
       [breakpoints.sm]: 0,
     },
     minWidth: "12rem",
-  },
-  listingLink: {
-    textDecoration: "none",
-    display: "block",
-    position: "relative",
-    zIndex: 1,
-    height: "100%",
-  },
-  listingLinkFeatured: {
-    zIndex: 0,
-  },
-  listingCard: {
-    boxSizing: "border-box",
-    height: "100%",
-    width: "100%",
-  },
-  listingCardBody: {
-    gap: gap["4xl"],
-    position: "relative",
-    height: "100%",
-    paddingBottom: verticalSpace["xl"],
-    paddingLeft: horizontalSpace["xl"],
-    paddingRight: horizontalSpace["xl"],
-    paddingTop: verticalSpace["xl"],
-  },
-  listingHeader: {
-    gap: gap["2xl"],
-    position: "relative",
-    zIndex: 1,
-  },
-  listingInfo: {
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    minWidth: 0,
   },
   emptyState: {
     gap: gap["lg"],
@@ -325,7 +276,7 @@ function AppsLexiconSetPage() {
             getKey={(listing) => `${gridKey}-${listing.id}`}
             canFeature={(listing) => Boolean(listing.heroImageUrl)}
             renderItem={(listing, { featured }) => (
-              <LexiconListingCard featured={featured} listing={listing} />
+              <AppCard listing={listing} size={featured ? "large" : "small"} />
             )}
           />
         ) : (
@@ -339,71 +290,5 @@ function AppsLexiconSetPage() {
         )}
       </Flex>
     </Page.Root>
-  );
-}
-
-function LexiconListingCard({
-  listing,
-  featured = false,
-}: {
-  listing: DirectoryListingCard;
-  featured?: boolean;
-}) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(
-        styles.listingLink,
-        featured && styles.listingLinkFeatured,
-      )}
-    >
-      {featured ? (
-        listing.heroImageUrl ? (
-          <HeroImage
-            alt={getDirectoryListingHeroImageAlt(listing)}
-            glowIntensity={0.8}
-            src={listing.heroImageUrl}
-          />
-        ) : (
-          <FeaturedListingFallbackCard listing={listing} />
-        )
-      ) : (
-        <Card style={[styles.listingCard]}>
-          <Flex direction="column" style={[styles.listingCardBody]}>
-            <Flex gap="2xl" align="center" style={styles.listingHeader}>
-              <Avatar
-                alt={listing.name}
-                fallback={getInitials(listing.name)}
-                size="xl"
-                src={listing.iconUrl || undefined}
-              />
-              <Flex direction="column" gap="xl" style={styles.listingInfo}>
-                <Text size="xl" weight="semibold">
-                  {listing.name}
-                </Text>
-                <SmallBody variant="secondary">
-                  @
-                  {listing.productAccountHandle?.replace(/^@/, "") || "unknown"}
-                </SmallBody>
-              </Flex>
-            </Flex>
-            <Body variant="secondary" style={styles.listingTagline}>
-              {listing.tagline}
-            </Body>
-            <Flex align="center" justify="end" gap="lg">
-              <SmallBody variant="secondary">
-                {listing.rating == null ? "—" : listing.rating.toFixed(1)}
-              </SmallBody>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
-              />
-            </Flex>
-          </Flex>
-        </Card>
-      )}
-    </RouterLink>
   );
 }

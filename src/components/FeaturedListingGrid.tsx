@@ -6,6 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { Grid } from "../design-system/grid";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { gap } from "../design-system/theme/semantic-spacing.stylex";
+import { FEATURED_LISTING_BLOCK_SIZE } from "../lib/featured-listing-grid";
 
 const styles = stylex.create({
   grid: {
@@ -21,16 +22,19 @@ const styles = stylex.create({
   item: {
     minWidth: 0,
   },
+  // Same rhythm as the home hero: on desktop the large card takes two columns
+  // and three rows, with three small cards stacked beside it; on tablet it
+  // spans the full width. Its image grows to fill whatever height that is.
   featuredItem: {
     gridColumn: {
       default: "auto",
-      [breakpoints.sm]: "span 2",
+      [breakpoints.sm]: "1 / -1",
+      [breakpoints.xl]: "span 2",
     },
     gridRow: {
       default: "auto",
-      [breakpoints.sm]: "span 2",
+      [breakpoints.xl]: "span 3",
     },
-    aspectRatio: 16 / 9,
   },
 });
 
@@ -59,7 +63,8 @@ export function FeaturedListingGrid<T>({
   items,
   hasFeatured = true,
   getKey,
-  isFeatured = (_, index) => index % 9 === 0,
+  // One large card + three beside it + a row of three = seven per block.
+  isFeatured = (_, index) => index % FEATURED_LISTING_BLOCK_SIZE === 0,
   canFeature,
   renderItem,
   style,
