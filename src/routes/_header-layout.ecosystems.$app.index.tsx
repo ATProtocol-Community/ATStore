@@ -5,8 +5,8 @@ import { ChevronLeft } from "lucide-react";
 
 import type { DirectoryCategoryTreeNode } from "../lib/directory-categories";
 
+import { AppCard } from "../components/AppCard";
 import { AppTagHero } from "../components/AppTagHero";
-import { EcosystemListingCard } from "../components/EcosystemListingCard";
 import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
@@ -29,6 +29,7 @@ import {
   getListingsForCategoryBranch,
   pickListingImageForCategoryBranch,
 } from "../lib/ecosystem-listings";
+import { FEATURED_LISTING_BLOCK_SIZE } from "../lib/featured-listing-grid";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 const ButtonLink = createLink(Button);
@@ -145,12 +146,20 @@ function EcosystemIndexPage() {
   const categorySections = category.children
     .map((child) => ({
       category: child,
-      listings: getListingsForCategoryBranch(child.id, listings).slice(
-        0,
-        INITIAL_SECTION_LISTING_COUNT,
-      ),
+      listings: getListingsForCategoryBranch(child.id, listings),
     }))
-    .filter((section) => section.listings.length > 0);
+    .filter((section) => section.listings.length > 0)
+    .map((section, index) => ({
+      ...section,
+      // The first section leads with a large card (one large + three beside
+      // it + a row of three); later sections are two plain rows of three.
+      listings: section.listings.slice(
+        0,
+        index === 0
+          ? FEATURED_LISTING_BLOCK_SIZE
+          : INITIAL_SECTION_LISTING_COUNT,
+      ),
+    }));
 
   return (
     <Page.Root variant="large" style={styles.page}>
@@ -247,7 +256,7 @@ function EcosystemCategorySection({
         canFeature={(listing) => Boolean(listing.heroImageUrl)}
         style={styles.sectionGrid}
         renderItem={(listing, { featured }) => (
-          <EcosystemListingCard listing={listing} featured={featured} />
+          <AppCard listing={listing} size={featured ? "large" : "small"} />
         )}
       />
     </Flex>
