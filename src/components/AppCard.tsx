@@ -4,12 +4,15 @@ import * as stylex from "@stylexjs/stylex";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useId } from "react";
+import { VisuallyHidden } from "react-aria";
 
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { Avatar } from "../design-system/avatar";
+import { Badge } from "../design-system/badge";
 import { Card, CardImage } from "../design-system/card";
 import { Flex } from "../design-system/flex";
+import { StarRating } from "../design-system/star-rating";
 import {
   animationDuration,
   animationTimingFunction,
@@ -27,6 +30,7 @@ import { Text } from "../design-system/typography/text";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
+import { getListingLabels } from "../lib/listing-labels";
 import { HeroImage } from "./HeroImage";
 
 export type AppCardSize = "large" | "medium" | "small";
@@ -45,6 +49,8 @@ const styles = stylex.create({
     display: "block",
     outlineStyle: "none",
     height: "100%",
+    // Let grid/flex parents shrink the card; long labels truncate instead.
+    minWidth: 0,
   },
   surface: {
     borderRadius: radius.lg,
@@ -98,6 +104,42 @@ const styles = stylex.create({
   },
   tagline: {
     flexGrow: 1,
+  },
+  labels: {
+    gap: gap["sm"],
+    overflow: "hidden",
+    alignItems: "center",
+    display: "flex",
+    minWidth: 0,
+  },
+  // Only the first label may shrink; later ones keep their natural width up
+  // to a cap, so a short tag like "Work" never collapses to "W…".
+  label: {
+    flexShrink: 0,
+    maxWidth: "10rem",
+    minWidth: 0,
+  },
+  firstLabel: {
+    flexShrink: 1,
+    maxWidth: "none",
+  },
+  labelEmoji: {
+    marginRight: "0.3em",
+  },
+  labelText: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    minWidth: 0,
+  },
+  moreLabel: {
+    flexShrink: 0,
+  },
+  rating: {
+    gap: gap["md"],
+    alignItems: "center",
+    display: "flex",
+    minWidth: 0,
   },
   chevron: {
     color: uiColor.text1,
@@ -153,6 +195,8 @@ export function AppCard({
 }) {
   const nameId = useId();
   const taglineId = useId();
+  const labelsId = useId();
+  const ratingId = useId();
 
   if (size === "large" && listing.heroImageUrl) {
     return (
@@ -174,7 +218,13 @@ export function AppCard({
     <AppCardLink
       listing={listing}
       labelledBy={nameId}
-      describedBy={listing.tagline ? taglineId : undefined}
+      describedBy={[
+        listing.tagline ? taglineId : null,
+        getListingLabels(listing).length > 0 ? labelsId : null,
+        ratingId,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <Card style={styles.surface}>
         {showImage && listing.heroImageUrl ? (
@@ -217,11 +267,109 @@ export function AppCard({
               {listing.tagline}
             </Text>
           )}
-          <Flex align="center" justify="end" gap="xl">
-            <ChevronRight aria-hidden {...stylex.props(styles.chevron)} />
+          <Flex direction="column" gap="xl">
+            <AppCardLabels id={labelsId} listing={listing} />
+            <Flex align="center" justify="between" gap="xl">
+              <AppCardRating
+                id={ratingId}
+                rating={listing.rating}
+                reviewCount={listing.reviewCount}
+              />
+              <ChevronRight aria-hidden {...stylex.props(styles.chevron)} />
+            </Flex>
           </Flex>
         </Flex>
       </Card>
     </AppCardLink>
+  );
+}
+
+const MAX_VISIBLE_LABELS = 2;
+
+/**
+ * Category + tag chips. Capped so they always fit on one line; overflow is
+ * summarised as "+N". Chips are plain labels, never links, so the card stays a
+ * single click target.
+ */
+export function AppCardLabels({
+  id,
+  listing,
+}: {
+  id?: string;
+  listing: Pick<DirectoryListingCard, "categorySlugs" | "appTags">;
+}) {
+  const labels = getListingLabels(listing);
+  if (labels.length === 0) return null;
+
+  const visible = labels.slice(0, MAX_VISIBLE_LABELS);
+  const hiddenCount = labels.length - visible.length;
+
+  return (
+    <div id={id} {...stylex.props(styles.labels)}>
+      {visible.map((label, index) => (
+        <Badge
+          key={label.key}
+          size="sm"
+          variant={label.kind === "tag" ? "primary" : "default"}
+          style={[styles.label, index === 0 && styles.firstLabel]}
+        >
+          <span {...stylex.props(styles.labelText)}>
+            {label.emoji ? (
+              <span aria-hidden {...stylex.props(styles.labelEmoji)}>
+                {label.emoji}
+              </span>
+            ) : null}
+            {label.label}
+          </span>
+        </Badge>
+      ))}
+      {hiddenCount > 0 ? (
+        <Badge size="sm" style={styles.moreLabel}>
+          +{hiddenCount}
+          <VisuallyHidden> more</VisuallyHidden>
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Stars plus the score and review count. Unrated apps show empty stars and
+ * "No reviews yet" so every card keeps the same footer shape.
+ */
+export function AppCardRating({
+  id,
+  rating,
+  reviewCount,
+}: {
+  id?: string;
+  rating: number | null;
+  reviewCount: number;
+}) {
+  const hasReviews = rating != null && reviewCount > 0;
+
+  return (
+    <div id={id} {...stylex.props(styles.rating)}>
+      <span aria-hidden>
+        <StarRating
+          rating={hasReviews ? rating : null}
+          showReviewCount={false}
+          size={14}
+        />
+      </span>
+      {hasReviews ? (
+        <SmallBody variant="secondary">
+          <VisuallyHidden>Rated </VisuallyHidden>
+          {rating.toFixed(1)}
+          <VisuallyHidden> out of 5,</VisuallyHidden> ({reviewCount}
+          <VisuallyHidden>
+            {reviewCount === 1 ? " review" : " reviews"}
+          </VisuallyHidden>
+          )
+        </SmallBody>
+      ) : (
+        <SmallBody variant="secondary">No reviews yet</SmallBody>
+      )}
+    </div>
   );
 }
