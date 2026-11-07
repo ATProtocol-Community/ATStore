@@ -179,6 +179,15 @@ const styles = stylex.create({
     display: "flex",
     minWidth: 0,
   },
+  labelsWrapped: {
+    overflow: "visible",
+    flexWrap: "wrap",
+    rowGap: gap["sm"],
+  },
+  labelWrapped: {
+    maxWidth: "100%",
+    minWidth: 0,
+  },
   // Only the first label may shrink; later ones keep their natural width up
   // to a cap, so a short tag like "Work" never collapses to "W…".
   label: {
@@ -388,19 +397,25 @@ export function AppCard({
 export function AppCardLabels({
   id,
   listing,
+  showAll = false,
 }: {
   id?: string;
   listing: Pick<DirectoryListingCard, "categorySlugs" | "appTags">;
+  /** Show every label, wrapping onto more lines (list rows have the room). */
+  showAll?: boolean;
 }) {
   const labels = getListingLabels(listing);
   if (labels.length === 0) return null;
 
-  const visible = labels.slice(0, 2);
+  const visible = showAll ? labels : labels.slice(0, 2);
   const moreWhenWide = labels.length - visible.length;
-  const moreWhenNarrow = labels.length - 1;
+  const moreWhenNarrow = showAll ? 0 : labels.length - 1;
 
   return (
-    <div id={id} {...stylex.props(styles.labels)}>
+    <div
+      id={id}
+      {...stylex.props(styles.labels, showAll && styles.labelsWrapped)}
+    >
       <VisuallyHidden>
         {labels.map((label) => label.label).join(", ")}
       </VisuallyHidden>
@@ -410,10 +425,14 @@ export function AppCardLabels({
           aria-hidden
           size="sm"
           variant={label.kind === "tag" ? "primary" : "default"}
-          style={[
-            styles.label,
-            index === 0 ? styles.firstLabel : styles.wideOnly,
-          ]}
+          style={
+            showAll
+              ? styles.labelWrapped
+              : [
+                  styles.label,
+                  index === 0 ? styles.firstLabel : styles.wideOnly,
+                ]
+          }
         >
           <span {...stylex.props(styles.labelText)}>
             {label.emoji ? (

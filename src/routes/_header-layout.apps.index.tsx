@@ -1,27 +1,20 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-  Link as RouterLink,
-  createFileRoute,
-  createLink,
-} from "@tanstack/react-router";
-import { Heart, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { SearchX, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type {
   BrowseFacet,
   BrowseFacets,
   BrowseFilters,
-  BrowseListingCard,
   BrowseSearch,
   BrowseSort,
 } from "../lib/browse-listings";
 
+import { DetailedAppRow } from "../components/AppListRow";
 import { BrowseFilterPanel } from "../components/BrowseFilterPanel";
-import { Avatar } from "../design-system/avatar";
-import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
-import { Card } from "../design-system/card";
 import {
   Drawer,
   DrawerBody,
@@ -40,40 +33,31 @@ import { Page } from "../design-system/page";
 import { Pagination } from "../design-system/pagination";
 import { SearchField } from "../design-system/search-field";
 import { Select, SelectItem } from "../design-system/select";
-import { StarRating } from "../design-system/star-rating";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   gap,
-  horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
 import { Body, Heading1, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   formatAppTagLabel,
   getAppTagDescription,
-  getAppTagSlug,
 } from "../lib/app-tag-metadata";
-import { getAppTagEmoji } from "../lib/app-tag-visuals";
 import {
   BROWSE_SORTS,
   BROWSE_SORT_LABELS,
   TOP_LEVEL_APPS_CATEGORY,
   clearBrowseFilters,
   countActiveBrowseFilters,
-  getBrowseCategoryLabel,
   getBrowseFilterValueLabel,
   getBrowseFilters,
   toggleBrowseFilter,
   validateBrowseSearch,
 } from "../lib/browse-listings";
 import { getDirectoryCategoryOption } from "../lib/directory-categories";
-import { getInitials } from "../lib/get-initials";
 import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
-
-const BadgeLink = createLink(Badge);
 
 const QUERY_DEBOUNCE_MS = 250;
 
@@ -211,65 +195,15 @@ const styles = stylex.create({
   resultCount: {
     color: uiColor.text1,
   },
-  row: {
-    contentVisibility: "auto",
-  },
-  rowBody: {
-    alignItems: "flex-start",
-    columnGap: gap["3xl"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "auto minmax(0, 1fr)",
-      [breakpoints.md]: "auto minmax(0, 1fr) auto",
-    },
-    rowGap: gap["md"],
-    paddingBottom: verticalSpace["3xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
-  },
-  rowLink: {
-    textDecoration: {
-      default: "none",
-      ":hover": "underline",
-    },
-    color: "inherit",
-  },
-  rowMeta: {
-    flexWrap: "wrap",
-    rowGap: gap["sm"],
-  },
-  badgeLink: {
-    textDecoration: "none",
-  },
-  rowStats: {
-    alignItems: {
-      default: "center",
-      [breakpoints.md]: "flex-end",
-    },
-    columnGap: gap["2xl"],
-    display: "flex",
-    flexDirection: {
-      default: "row",
-      [breakpoints.md]: "column",
-    },
-    flexWrap: "wrap",
-    gridColumnEnd: {
-      default: "span 2",
-      [breakpoints.md]: "auto",
-    },
-    gridColumnStart: {
-      default: "1",
-      [breakpoints.md]: "auto",
-    },
-    rowGap: gap["sm"],
-    whiteSpace: "nowrap",
-  },
-  statLine: {
-    gap: gap["xs"],
-    alignItems: "center",
-    color: uiColor.text1,
-    display: "inline-flex",
+  // Rows carry the spacing between them (see DetailedAppRow); pull the list
+  // out by that amount so the first and last rows line up as before.
+  results: {
+    padding: 0,
+    listStyle: "none",
+    marginBottom: `calc(${verticalSpace.sm} * -1)`,
+    marginLeft: 0,
+    marginRight: 0,
+    marginTop: `calc(${verticalSpace.sm} * -1)`,
   },
   emptyState: {
     padding: verticalSpace["10xl"],
@@ -391,11 +325,13 @@ function BrowseAppsPage() {
             </SmallBody>
 
             {results.length > 0 ? (
-              <Flex direction="column" gap="xl">
+              <ul role="list" {...stylex.props(styles.results)}>
                 {results.map((listing) => (
-                  <BrowseListingRow key={listing.id} listing={listing} />
+                  <li key={listing.id}>
+                    <DetailedAppRow listing={listing} />
+                  </li>
                 ))}
-              </Flex>
+              </ul>
             ) : (
               <EmptyState size="lg" style={styles.emptyState}>
                 <EmptyStateImage>
@@ -534,116 +470,5 @@ function ActiveFilterChips({
         Clear all
       </Button>
     </Flex>
-  );
-}
-
-const relativeTimeFormat = new Intl.RelativeTimeFormat("en", {
-  numeric: "auto",
-});
-
-function formatUpdatedAgo(iso: string) {
-  const days = Math.round((Date.parse(iso) - Date.now()) / 86_400_000);
-  if (days > -30) return relativeTimeFormat.format(days, "day");
-  if (days > -365) {
-    return relativeTimeFormat.format(Math.round(days / 30), "month");
-  }
-  return relativeTimeFormat.format(Math.round(days / 365), "year");
-}
-
-function addFilter(search: BrowseSearch, facet: BrowseFacet, value: string) {
-  const filters = getBrowseFilters(search);
-  const selected =
-    facet === "categories"
-      ? filters.categories
-      : facet === "tags"
-        ? filters.tags
-        : [];
-  return selected.includes(value)
-    ? search
-    : toggleBrowseFilter(search, facet, value);
-}
-
-function BrowseListingRow({ listing }: { listing: BrowseListingCard }) {
-  const productParams = { productId: listing.slug };
-  const handle = listing.productAccountHandle?.replace(/^@/, "");
-  // Top-level apps are their own `apps/<name>` category, so only badge ecosystem tools and protocol.
-  const category = listing.categorySlugs.find(
-    (slug) => !(slug.startsWith("apps/") && slug.split("/").length === 2),
-  );
-
-  return (
-    <Card style={styles.row}>
-      <div {...stylex.props(styles.rowBody)}>
-        <RouterLink to="/products/$productId" params={productParams}>
-          <Avatar
-            alt={listing.name}
-            fallback={getInitials(listing.name)}
-            size="xl"
-            src={listing.iconUrl || undefined}
-          />
-        </RouterLink>
-
-        <Flex direction="column" gap="md">
-          <Flex align="center" gap="md" style={styles.rowMeta}>
-            <RouterLink
-              to="/products/$productId"
-              params={productParams}
-              {...stylex.props(styles.rowLink)}
-            >
-              <Text size="lg" weight="semibold">
-                {listing.name}
-              </Text>
-            </RouterLink>
-            {handle ? (
-              <SmallBody variant="secondary">@{handle}</SmallBody>
-            ) : null}
-          </Flex>
-          <Body variant="secondary">{listing.tagline}</Body>
-          <Flex align="center" gap="sm" style={styles.rowMeta}>
-            {category ? (
-              <BadgeLink
-                to="/apps"
-                search={(prev: BrowseSearch) =>
-                  addFilter(prev, "categories", category)
-                }
-                size="sm"
-                style={styles.badgeLink}
-              >
-                {getBrowseCategoryLabel(category)}
-              </BadgeLink>
-            ) : null}
-            {listing.appTags.map((tag) => (
-              <BadgeLink
-                key={tag}
-                to="/apps"
-                search={(prev: BrowseSearch) =>
-                  addFilter(prev, "tags", getAppTagSlug(tag))
-                }
-                size="sm"
-                variant="primary"
-                style={styles.badgeLink}
-              >
-                {getAppTagEmoji(tag)} {formatAppTagLabel(tag)}
-              </BadgeLink>
-            ))}
-          </Flex>
-        </Flex>
-
-        <div {...stylex.props(styles.rowStats)}>
-          <StarRating
-            rating={listing.rating}
-            reviewCount={listing.reviewCount}
-            showReviewCount
-          />
-          <SmallBody style={styles.statLine}>
-            <Heart size={12} aria-hidden />
-            {`${listing.favoriteCount} ${listing.favoriteCount === 1 ? "favorite" : "favorites"}`}
-          </SmallBody>
-          <SmallBody variant="secondary">
-            Updated {formatUpdatedAgo(listing.updatedAt)}
-          </SmallBody>
-        </div>
-      </div>
-    </Card>
   );
 }

@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
-  Link as RouterLink,
   createFileRoute,
   createLink,
   useNavigate,
@@ -11,15 +10,14 @@ import { ChevronRight } from "lucide-react";
 import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { AppCard } from "../components/AppCard";
+import { RankedAppRow } from "../components/AppListRow";
 import { AppTagCard } from "../components/AppTagCard";
 import { Alert } from "../design-system/alert";
-import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { Grid } from "../design-system/grid";
 import { Link } from "../design-system/link";
 import { Page } from "../design-system/page";
-import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
@@ -28,12 +26,9 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "../design-system/theme/semantic-spacing.stylex";
-import { shadow } from "../design-system/theme/shadow.stylex";
 import { Heading1, Heading2, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
-import { getInitials } from "../lib/get-initials";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 export const Route = createFileRoute("/_header-layout/")({
@@ -125,63 +120,21 @@ const styles = stylex.create({
       [breakpoints.lg]: "1fr",
     },
   },
+  // Rows carry their own spacing (see RankedAppRow), so the vertical padding
+  // here is trimmed by that amount to keep the panel's inset unchanged.
   popularList: {
-    padding: verticalSpace["2xl"],
+    margin: 0,
     borderColor: uiColor.component2,
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
     cornerShape: "squircle",
+    listStyle: "none",
     backgroundColor: uiColor.bg,
-  },
-  listItem: {
-    borderRadius: radius.md,
-    gap: gap["xl"],
-    textDecoration: "none",
-    alignItems: "center",
-    backgroundColor: {
-      default: uiColor.bg,
-      ":hover": uiColor.component2,
-    },
-    boxShadow: shadow.none,
-    color: uiColor.text2,
-    display: "flex",
-    position: "relative",
-    transitionDuration: animationDuration.slow,
-    transitionProperty: "background-color, z-index",
-    transitionTimingFunction: "ease-in-out",
-    zIndex: {
-      default: 0,
-      ":hover": 1,
-    },
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["4xl"],
+    paddingBottom: verticalSpace.lg,
+    paddingLeft: horizontalSpace["2xl"],
     paddingRight: horizontalSpace["2xl"],
-    paddingTop: verticalSpace["2xl"],
-
-    ":hover::after": {
-      opacity: 1,
-    },
-    "::after": {
-      inset: 0,
-      borderRadius: radius.md,
-      boxShadow: shadow.lg,
-      content: "''",
-      opacity: 0,
-      position: "absolute",
-      transitionDuration: animationDuration.slow,
-      transitionProperty: "opacity",
-      transitionTimingFunction: "ease-in-out",
-    },
-  },
-  rankNumber: {
-    minWidth: "1.25rem",
-  },
-  listItemText: {
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    minWidth: 0,
+    paddingTop: verticalSpace.lg,
   },
   // Phone: one column. Tablet: hero full width, spotlights as a row of three.
   // Desktop: hero takes two columns, spotlights stack in the third.
@@ -219,11 +172,6 @@ const styles = stylex.create({
       default: "minmax(0, 1fr)",
       [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
     },
-  },
-  exploreButton: {
-    borderRadius: radius.full,
-    cornerShape: "unset",
-    cursor: "pointer",
   },
 });
 
@@ -328,15 +276,13 @@ function HomePage() {
               promoListing ? null : styles.popularGridSingle,
             ]}
           >
-            <Flex direction="column" gap="md" style={styles.popularList}>
+            <ol role="list" {...stylex.props(styles.popularList)}>
               {data.popular.map((listing, index) => (
-                <PopularListItem
-                  key={listing.id}
-                  listing={listing}
-                  rank={index + 1}
-                />
+                <li key={listing.id}>
+                  <RankedAppRow listing={listing} rank={index + 1} />
+                </li>
               ))}
-            </Flex>
+            </ol>
             {promoListing ? (
               <AppCard listing={promoListing} size="medium" />
             ) : null}
@@ -411,58 +357,6 @@ function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
         <div {...stylex.props(styles.sectionHeaderAction)}>{action}</div>
       )}
     </Flex>
-  );
-}
-
-function PopularListItem({
-  listing,
-  rank,
-}: {
-  listing: DirectoryListingCard;
-  rank: number;
-}) {
-  return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.listItem)}
-    >
-      <Text
-        size="xl"
-        weight="semibold"
-        variant="secondary"
-        style={styles.rankNumber}
-      >
-        {rank}
-      </Text>
-      <StoreIcon listing={listing} size="lg" />
-      <Flex style={styles.listItemText} direction="column" gap="lg">
-        <Text size="lg" weight="semibold">
-          {listing.name}
-        </Text>
-        <SmallBody variant="secondary">{listing.tagline}</SmallBody>
-      </Flex>
-      <Button variant="secondary" style={styles.exploreButton}>
-        Explore
-      </Button>
-    </RouterLink>
-  );
-}
-
-function StoreIcon({
-  listing,
-  size,
-}: {
-  listing: DirectoryListingCard;
-  size: "lg" | "xl";
-}) {
-  return (
-    <Avatar
-      alt={listing.name}
-      fallback={getInitials(listing.name)}
-      size={size}
-      src={listing.iconUrl || undefined}
-    />
   );
 }
 
