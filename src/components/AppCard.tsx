@@ -29,11 +29,20 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/get-initials";
-import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { getListingLabels } from "../lib/listing-labels";
-import { HeroImage } from "./HeroImage";
 
+/**
+ * - large: hero slot. Image on top, full details underneath.
+ * - medium: promo slot. Same anatomy as large, in a smaller slot.
+ * - small: details only, no image.
+ */
 export type AppCardSize = "large" | "medium" | "small";
+
+/**
+ * The card surface is a size container, so a card adapts to the width it is
+ * given (e.g. a row of three on a tablet) rather than to the viewport.
+ */
+const NARROW_CARD = "@container (max-width: 16rem)";
 
 const styles = stylex.create({
   /**
@@ -60,6 +69,7 @@ const styles = stylex.create({
       [stylex.when.ancestor(":hover")]: shadow.lg,
     },
     boxSizing: "border-box",
+    containerType: "inline-size",
     outlineColor: primaryColor.solid1,
     outlineOffset: 2,
     outlineStyle: {
@@ -76,24 +86,64 @@ const styles = stylex.create({
     transitionTimingFunction: animationTimingFunction.easeOut,
     height: "100%",
   },
-  heroSurface: {
-    borderRadius: radius["3xl"],
-    boxShadow: "none",
-    transform: "none",
+  image: {
+    transform: {
+      default: "scale(1)",
+      [stylex.when.ancestor(":hover")]: "scale(1.02)",
+    },
+    transitionDuration: animationDuration.verySlow,
+    transitionProperty: "transform",
+    transitionTimingFunction: animationTimingFunction.easeOut,
   },
   content: {
-    gap: gap["4xl"],
+    gap: {
+      [NARROW_CARD]: gap["3xl"],
+      default: gap["4xl"],
+    },
     boxSizing: "border-box",
     flexGrow: 1,
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
+    paddingBottom: {
+      [NARROW_CARD]: verticalSpace["3xl"],
+      default: verticalSpace["4xl"],
+    },
+    paddingLeft: {
+      [NARROW_CARD]: horizontalSpace["3xl"],
+      default: horizontalSpace["4xl"],
+    },
+    paddingRight: {
+      [NARROW_CARD]: horizontalSpace["3xl"],
+      default: horizontalSpace["4xl"],
+    },
+    paddingTop: {
+      [NARROW_CARD]: verticalSpace["3xl"],
+      default: verticalSpace["4xl"],
+    },
   },
   contentAfterImage: {
     paddingTop: 0,
   },
+  // A large card's image absorbs any spare height (e.g. when the hero sits
+  // beside a taller column of spotlights) so the card never has an empty band.
+  // It only ever grows past 16:9, cropping the sides, never shrinks below it.
+  imageFill: {
+    flexGrow: 1,
+  },
+  noGrow: {
+    flexGrow: 0,
+  },
+  // Narrow cards stack the icon above the name so long names keep the full
+  // card width instead of breaking mid-word beside the icon.
   identity: {
+    gap: gap["2xl"],
+    alignItems: {
+      [NARROW_CARD]: "flex-start",
+      default: "center",
+    },
+    display: "flex",
+    flexDirection: {
+      [NARROW_CARD]: "column",
+      default: "row",
+    },
     minWidth: 0,
   },
   identityText: {
@@ -102,8 +152,25 @@ const styles = stylex.create({
   name: {
     overflowWrap: "anywhere",
   },
-  tagline: {
-    flexGrow: 1,
+  // Spare height goes above the footer, so footers line up across a row.
+  // (Growing the tagline instead would reveal lines past its clamp.)
+  footer: {
+    marginTop: "auto",
+  },
+  footerRow: {
+    gap: {
+      [NARROW_CARD]: gap["md"],
+      default: gap["xl"],
+    },
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "space-between",
+  },
+  taglineClamped: {
+    overflow: "hidden",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 3,
+    display: "-webkit-box",
   },
   labels: {
     gap: gap["sm"],
@@ -123,6 +190,30 @@ const styles = stylex.create({
     flexShrink: 1,
     maxWidth: "none",
   },
+  wideOnly: {
+    display: {
+      [NARROW_CARD]: "none",
+      default: "flex",
+    },
+  },
+  narrowOnly: {
+    display: {
+      [NARROW_CARD]: "flex",
+      default: "none",
+    },
+  },
+  wideOnlyInline: {
+    display: {
+      [NARROW_CARD]: "none",
+      default: "inline",
+    },
+  },
+  narrowOnlyInline: {
+    display: {
+      [NARROW_CARD]: "inline",
+      default: "none",
+    },
+  },
   labelEmoji: {
     marginRight: "0.3em",
   },
@@ -136,9 +227,14 @@ const styles = stylex.create({
     flexShrink: 0,
   },
   rating: {
-    gap: gap["md"],
     alignItems: "center",
+    columnGap: {
+      [NARROW_CARD]: gap["sm"],
+      default: gap["md"],
+    },
     display: "flex",
+    flexWrap: "wrap",
+    rowGap: gap["xs"],
     minWidth: 0,
   },
   chevron: {
@@ -198,21 +294,10 @@ export function AppCard({
   const labelsId = useId();
   const ratingId = useId();
 
-  if (size === "large" && listing.heroImageUrl) {
-    return (
-      <AppCardLink listing={listing}>
-        <div {...stylex.props(styles.surface, styles.heroSurface)}>
-          <HeroImage
-            alt={getDirectoryListingHeroImageAlt(listing)}
-            glowIntensity={0}
-            src={listing.heroImageUrl}
-          />
-        </div>
-      </AppCardLink>
-    );
-  }
-
-  const showImage = size === "medium" && Boolean(listing.heroImageUrl);
+  const isSmall = size === "small";
+  const imageUrl = isSmall ? null : listing.heroImageUrl;
+  const fillWithImage = size === "large" && Boolean(imageUrl);
+  const hasLabels = getListingLabels(listing).length > 0;
 
   return (
     <AppCardLink
@@ -220,21 +305,31 @@ export function AppCard({
       labelledBy={nameId}
       describedBy={[
         listing.tagline ? taglineId : null,
-        getListingLabels(listing).length > 0 ? labelsId : null,
+        hasLabels ? labelsId : null,
         ratingId,
       ]
         .filter(Boolean)
         .join(" ")}
     >
       <Card style={styles.surface}>
-        {showImage && listing.heroImageUrl ? (
-          <CardImage aspectRatio={16 / 9} alt="" src={listing.heroImageUrl} />
+        {imageUrl ? (
+          <CardImage
+            aspectRatio={16 / 9}
+            alt=""
+            src={imageUrl}
+            imageStyle={styles.image}
+            style={fillWithImage ? styles.imageFill : null}
+          />
         ) : null}
         <Flex
           direction="column"
-          style={[styles.content, showImage && styles.contentAfterImage]}
+          style={[
+            styles.content,
+            imageUrl ? styles.contentAfterImage : null,
+            fillWithImage ? styles.noGrow : null,
+          ]}
         >
-          <Flex align="center" gap="2xl" style={styles.identity}>
+          <div {...stylex.props(styles.identity)}>
             <Avatar
               alt=""
               fallback={getInitials(listing.name)}
@@ -244,7 +339,7 @@ export function AppCard({
             <Flex direction="column" gap="xl" style={styles.identityText}>
               <Text
                 id={nameId}
-                size={size === "small" ? "xl" : { default: "2xl", sm: "3xl" }}
+                size={isSmall ? "xl" : { default: "2xl", sm: "3xl" }}
                 weight="semibold"
                 style={styles.name}
               >
@@ -252,31 +347,30 @@ export function AppCard({
               </Text>
               <SmallBody variant="secondary">@{getHandle(listing)}</SmallBody>
             </Flex>
-          </Flex>
-          {size === "small" ? (
-            <Body id={taglineId} variant="secondary" style={styles.tagline}>
+          </div>
+          {isSmall ? (
+            <Body
+              id={taglineId}
+              variant="secondary"
+              style={styles.taglineClamped}
+            >
               {listing.tagline}
             </Body>
           ) : (
-            <Text
-              id={taglineId}
-              size="lg"
-              variant="secondary"
-              style={styles.tagline}
-            >
+            <Text id={taglineId} size="lg" variant="secondary">
               {listing.tagline}
             </Text>
           )}
-          <Flex direction="column" gap="xl">
+          <Flex direction="column" gap="xl" style={styles.footer}>
             <AppCardLabels id={labelsId} listing={listing} />
-            <Flex align="center" justify="between" gap="xl">
+            <div {...stylex.props(styles.footerRow)}>
               <AppCardRating
                 id={ratingId}
                 rating={listing.rating}
                 reviewCount={listing.reviewCount}
               />
               <ChevronRight aria-hidden {...stylex.props(styles.chevron)} />
-            </Flex>
+            </div>
           </Flex>
         </Flex>
       </Card>
@@ -284,12 +378,12 @@ export function AppCard({
   );
 }
 
-const MAX_VISIBLE_LABELS = 2;
-
 /**
- * Category + tag chips. Capped so they always fit on one line; overflow is
- * summarised as "+N". Chips are plain labels, never links, so the card stays a
- * single click target.
+ * Category + tag chips, capped so they always fit on one line with the rest
+ * summarised as "+N": two chips normally, one in a narrow card. Chips are
+ * plain labels, never links, so the card stays a single click target.
+ *
+ * Screen readers get the full list as text; the chips are visual only.
  */
 export function AppCardLabels({
   id,
@@ -301,32 +395,50 @@ export function AppCardLabels({
   const labels = getListingLabels(listing);
   if (labels.length === 0) return null;
 
-  const visible = labels.slice(0, MAX_VISIBLE_LABELS);
-  const hiddenCount = labels.length - visible.length;
+  const visible = labels.slice(0, 2);
+  const moreWhenWide = labels.length - visible.length;
+  const moreWhenNarrow = labels.length - 1;
 
   return (
     <div id={id} {...stylex.props(styles.labels)}>
+      <VisuallyHidden>
+        {labels.map((label) => label.label).join(", ")}
+      </VisuallyHidden>
       {visible.map((label, index) => (
         <Badge
           key={label.key}
+          aria-hidden
           size="sm"
           variant={label.kind === "tag" ? "primary" : "default"}
-          style={[styles.label, index === 0 && styles.firstLabel]}
+          style={[
+            styles.label,
+            index === 0 ? styles.firstLabel : styles.wideOnly,
+          ]}
         >
           <span {...stylex.props(styles.labelText)}>
             {label.emoji ? (
-              <span aria-hidden {...stylex.props(styles.labelEmoji)}>
-                {label.emoji}
-              </span>
+              <span {...stylex.props(styles.labelEmoji)}>{label.emoji}</span>
             ) : null}
             {label.label}
           </span>
         </Badge>
       ))}
-      {hiddenCount > 0 ? (
-        <Badge size="sm" style={styles.moreLabel}>
-          +{hiddenCount}
-          <VisuallyHidden> more</VisuallyHidden>
+      {moreWhenWide > 0 ? (
+        <Badge
+          aria-hidden
+          size="sm"
+          style={[styles.moreLabel, styles.wideOnly]}
+        >
+          +{moreWhenWide}
+        </Badge>
+      ) : null}
+      {moreWhenNarrow > 0 ? (
+        <Badge
+          aria-hidden
+          size="sm"
+          style={[styles.moreLabel, styles.narrowOnly]}
+        >
+          +{moreWhenNarrow}
         </Badge>
       ) : null}
     </div>
@@ -335,7 +447,10 @@ export function AppCardLabels({
 
 /**
  * Stars plus the score and review count. Unrated apps show empty stars and
- * "No reviews yet" so every card keeps the same footer shape.
+ * "No reviews yet" so every card keeps the same footer shape. Narrow cards
+ * drop the numeric score (the stars already show it) and shorten the copy.
+ *
+ * Screen readers get one plain sentence; the visual parts are hidden.
  */
 export function AppCardRating({
   id,
@@ -350,6 +465,11 @@ export function AppCardRating({
 
   return (
     <div id={id} {...stylex.props(styles.rating)}>
+      <VisuallyHidden>
+        {hasReviews
+          ? `Rated ${rating.toFixed(1)} out of 5, ${String(reviewCount)} ${reviewCount === 1 ? "review" : "reviews"}`
+          : "No reviews yet"}
+      </VisuallyHidden>
       <span aria-hidden>
         <StarRating
           rating={hasReviews ? rating : null}
@@ -357,19 +477,21 @@ export function AppCardRating({
           size={14}
         />
       </span>
-      {hasReviews ? (
-        <SmallBody variant="secondary">
-          <VisuallyHidden>Rated </VisuallyHidden>
-          {rating.toFixed(1)}
-          <VisuallyHidden> out of 5,</VisuallyHidden> ({reviewCount}
-          <VisuallyHidden>
-            {reviewCount === 1 ? " review" : " reviews"}
-          </VisuallyHidden>
-          )
-        </SmallBody>
-      ) : (
-        <SmallBody variant="secondary">No reviews yet</SmallBody>
-      )}
+      <SmallBody variant="secondary" aria-hidden>
+        {hasReviews ? (
+          <>
+            <span {...stylex.props(styles.wideOnlyInline)}>
+              {rating.toFixed(1)}{" "}
+            </span>
+            ({reviewCount})
+          </>
+        ) : (
+          <>
+            <span {...stylex.props(styles.wideOnlyInline)}>No reviews yet</span>
+            <span {...stylex.props(styles.narrowOnlyInline)}>No reviews</span>
+          </>
+        )}
+      </SmallBody>
     </div>
   );
 }

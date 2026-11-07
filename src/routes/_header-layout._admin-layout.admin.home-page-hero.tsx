@@ -27,11 +27,12 @@ export const Route = createFileRoute(
   component: HomePageHeroPage,
 });
 
-const HOME_HERO_SLOT_COUNT = 3;
+const HOME_HERO_SLOT_COUNT = 4;
 const HOME_HERO_SLOT_LABELS = [
   "Featured app",
   "Spotlight app 1",
   "Spotlight app 2",
+  "Spotlight app 3",
 ] as const;
 
 const styles = stylex.create({
@@ -160,7 +161,9 @@ function HomePageHeroPage() {
                     return;
                   }
                   if (new Set(listingIds).size !== listingIds.length) {
-                    setHeroError("Please select three different apps.");
+                    setHeroError(
+                      "Please select a different app for each slot.",
+                    );
                     return;
                   }
 

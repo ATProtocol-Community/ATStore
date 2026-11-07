@@ -33,7 +33,7 @@ import { z } from "zod";
 
 import { dbMiddleware } from "./db-middleware";
 
-const HOME_HERO_SLOT_COUNT = 3;
+const HOME_HERO_SLOT_COUNT = 4;
 const RECENT_REVIEWS_LIMIT = 200;
 const RECENT_LISTINGS_LIMIT = 200;
 const ADMIN_OVERVIEW_REVIEWS_PREVIEW = 6;

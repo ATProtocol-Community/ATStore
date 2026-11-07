@@ -12,7 +12,6 @@ import type { DirectoryListingCard } from "../integrations/tanstack-query/api-di
 
 import { AppCard } from "../components/AppCard";
 import { AppTagCard } from "../components/AppTagCard";
-import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
@@ -184,13 +183,41 @@ const styles = stylex.create({
     flexShrink: "1",
     minWidth: 0,
   },
+  // Phone: one column. Tablet: hero full width, spotlights as a row of three.
+  // Desktop: hero takes two columns, spotlights stack in the third.
+  heroGrid: {
+    gap: gap["2xl"],
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
+    },
+  },
+  heroItem: {
+    gridColumn: {
+      default: "auto",
+      [breakpoints.sm]: "1 / -1",
+      [breakpoints.xl]: "1 / span 2",
+    },
+    gridRow: {
+      default: "auto",
+      [breakpoints.xl]: "1 / span 3",
+    },
+    minWidth: 0,
+  },
+  spotlightItem: {
+    gridColumn: {
+      default: "auto",
+      [breakpoints.xl]: "3",
+    },
+    minWidth: 0,
+  },
   newGrid: {
     gap: gap["lg"],
     display: "grid",
     gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
     },
   },
   exploreButton: {
@@ -209,6 +236,10 @@ function HomePage() {
     directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
   const promoListing = data.promo;
+  const [hero, ...spotlights] = putHeroImageFirst([
+    data.featured,
+    ...data.spotlights,
+  ]);
 
   const showClaimBanner =
     claimEligibility.eligible && claimEligibility.listings.length > 0;
@@ -260,17 +291,16 @@ function HomePage() {
 
       <Flex direction="column" style={styles.pageSections}>
         <section {...stylex.props(styles.section)}>
-          <FeaturedListingGrid
-            items={[data.featured, ...data.spotlights]}
-            getKey={(listing, index) =>
-              index === 0 ? `featured-${listing.id}` : `spotlight-${listing.id}`
-            }
-            isFeatured={(_, index) => index === 0}
-            canFeature={(listing) => Boolean(listing.heroImageUrl)}
-            renderItem={(listing, { featured }) => (
-              <AppCard listing={listing} size={featured ? "large" : "small"} />
-            )}
-          />
+          <div {...stylex.props(styles.heroGrid)}>
+            <div {...stylex.props(styles.heroItem)}>
+              <AppCard listing={hero} size="large" />
+            </div>
+            {spotlights.map((listing) => (
+              <div key={listing.id} {...stylex.props(styles.spotlightItem)}>
+                <AppCard listing={listing} size="small" />
+              </div>
+            ))}
+          </div>
         </section>
 
         <section {...stylex.props(styles.section)}>
@@ -434,4 +464,20 @@ function StoreIcon({
       src={listing.iconUrl || undefined}
     />
   );
+}
+
+/**
+ * The hero slot is the big image card, so make sure it gets a listing that
+ * has an image: swap the first spotlight with one if the featured app has
+ * none. If no listing has an image the hero renders without one.
+ */
+function putHeroImageFirst(listings: Array<DirectoryListingCard>) {
+  if (listings[0]?.heroImageUrl) return listings;
+
+  const withImage = listings.findIndex((listing) => listing.heroImageUrl);
+  if (withImage <= 0) return listings;
+
+  const arranged = [...listings];
+  [arranged[0], arranged[withImage]] = [arranged[withImage], arranged[0]];
+  return arranged;
 }

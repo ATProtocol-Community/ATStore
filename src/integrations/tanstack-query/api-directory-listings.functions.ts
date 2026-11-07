@@ -1346,6 +1346,9 @@ function dedupeListings(rows: Array<DirectoryListingRow>) {
   });
 }
 
+/** Small cards shown beside (desktop) or under (tablet) the home hero. */
+const HOME_SPOTLIGHT_COUNT = 3;
+
 function requireCards(
   cards: Array<DirectoryListingCard>,
   desiredCount: number,
@@ -1358,16 +1361,22 @@ function requireCards(
   return cards.slice(0, desiredCount);
 }
 
+/**
+ * Admin-picked hero rows first, in order, then recent apps to fill any empty
+ * slots. A partial admin list is kept rather than discarded, so adding a slot
+ * never throws away an existing configuration.
+ */
 function resolveConfiguredHomeHeroRows(input: {
   configuredRows: Array<DirectoryListingRow>;
   fallbackRows: Array<DirectoryListingRow>;
   desiredCount: number;
 }) {
-  if (input.configuredRows.length >= input.desiredCount) {
-    return input.configuredRows.slice(0, input.desiredCount);
-  }
+  const configuredIds = new Set(input.configuredRows.map((row) => row.id));
 
-  return input.fallbackRows.slice(0, input.desiredCount);
+  return [
+    ...input.configuredRows,
+    ...input.fallbackRows.filter((row) => !configuredIds.has(row.id)),
+  ].slice(0, input.desiredCount);
 }
 
 function buildCategories(rows: Array<DirectoryListingRow>, limit = 4) {
@@ -2063,7 +2072,7 @@ const getHomePageData = createServerFn({ method: "GET" })
     const heroRows = resolveConfiguredHomeHeroRows({
       configuredRows: dedupeListings(configuredHomeHeroRows),
       fallbackRows: dedupedRecentAppRows,
-      desiredCount: 3,
+      desiredCount: 1 + HOME_SPOTLIGHT_COUNT,
     });
     const featuredSource = heroRows[0] ?? fallbackFeaturedSource;
 
@@ -2077,10 +2086,10 @@ const getHomePageData = createServerFn({ method: "GET" })
         ? heroRows.slice(1)
         : dedupedRecentAppRows.filter((row) => row.id !== featuredSource.id);
 
-    const spotlightRows = remainingAppRows.slice(0, 2);
+    const spotlightRows = remainingAppRows.slice(0, HOME_SPOTLIGHT_COUNT);
     const spotlights = requireCards(
       spotlightRows.map((row) => toListingCard(row)),
-      2,
+      HOME_SPOTLIGHT_COUNT,
       "homepage spotlights",
     );
 
