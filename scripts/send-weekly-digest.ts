@@ -8,9 +8,9 @@
  * Env:
  *   DATABASE_URL                       (required)
  *   COMAIL_DID / COMAIL_API_KEY        (required; comail sending account)
- *   COMAIL_FROM                        (required; e.g. digest@at.store)
+ *   COMAIL_FROM                        (required; e.g. digest@atstore.fyi)
  *   DIGEST_UNSUBSCRIBE_SECRET          (required in production; must match the web service)
- *   ATSTORE_WEBSITE_URL                (optional; link base, default https://at.store)
+ *   ATSTORE_WEBSITE_URL                (optional; link base, default https://atstore.fyi)
  *   COMAIL_FROM_NAME / DIGEST_MAX_PER_RUN / DIGEST_SEND_DELAY_MS   (optional)
  *
  * CLI:

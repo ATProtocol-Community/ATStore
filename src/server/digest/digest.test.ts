@@ -59,8 +59,8 @@ describe("toDigestApp", () => {
   };
 
   it("builds an absolute product URL and rounds the rating", () => {
-    const app = toDigestApp(row, "https://at.store");
-    expect(app.url).toBe("https://at.store/products/skylight");
+    const app = toDigestApp(row, "https://atstore.fyi");
+    expect(app.url).toBe("https://atstore.fyi/products/skylight");
     expect(app.rating).toBe(4.3);
     expect(app.iconUrl).toBe("https://cdn.example/icon.png");
   });
@@ -68,7 +68,7 @@ describe("toDigestApp", () => {
   it("omits the rating with no reviews and drops non-https icons", () => {
     const app = toDigestApp(
       { ...row, reviewCount: 0, iconUrl: "/generated/x.png" },
-      "https://at.store",
+      "https://atstore.fyi",
     );
     expect(app.rating).toBeNull();
     expect(app.iconUrl).toBeNull();

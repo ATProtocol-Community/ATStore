@@ -23,7 +23,7 @@ export const digestConfig = {
   get comailApiKey(): string {
     return required("COMAIL_API_KEY");
   },
-  /** From address on the enrolled sending domain (e.g. `digest@at.store`). */
+  /** From address on the enrolled sending domain (e.g. `digest@atstore.fyi`). */
   get comailFrom(): string {
     return required("COMAIL_FROM");
   },
@@ -64,7 +64,7 @@ export function getDigestBaseUrl(): string {
     process.env.ATSTORE_WEBSITE_URL?.trim() ||
     process.env.BETTER_AUTH_URL?.trim() ||
     process.env.ATPROTO_BASE_URL?.trim() ||
-    "https://at.store";
+    "https://atstore.fyi";
   return url.replace(/\/$/, "");
 }
 
