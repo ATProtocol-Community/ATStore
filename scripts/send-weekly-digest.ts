@@ -3,7 +3,9 @@
  * Send the weekly AT Store digest (new + trending apps) via comail to every user
  * who opted in and hasn't received one in the last ~6 days.
  */
-// Railway cron (suggested): Mondays 14:00 UTC — `0 14 * * 1`, restart policy NEVER.
+// Railway cron (suggested): hourly on Mondays — `0 * * * 1`, restart policy NEVER. Each run sends
+// until comail rate-limits it (2/hr during the 14-day warm-up); later runs pick up the rest,
+// and the 6-day guard keeps anyone from getting two.
 /**
  * Env:
  *   DATABASE_URL                       (required)
