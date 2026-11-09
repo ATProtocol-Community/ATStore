@@ -53,6 +53,22 @@ export const user = pgTable("user", {
   notificationsReadAt: timestamp("notifications_read_at", {
     withTimezone: true,
   }),
+  /**
+   * `true` opts the user into the weekly digest email and makes sign-in request
+   * the `transition:email` OAuth scope (so `email` stays fresh). Cleared when the
+   * user unsubscribes or turns the digest off in settings.
+   */
+  weeklyDigestEnabled: boolean("weekly_digest_enabled"),
+  /** When the last weekly digest was sent; drives the send runner's idempotency guard. */
+  weeklyDigestLastSentAt: timestamp("weekly_digest_last_sent_at", {
+    withTimezone: true,
+  }),
+  /** When the one-time digest welcome email was sent (stamped by the OAuth callback). */
+  weeklyDigestWelcomeSentAt: timestamp("weekly_digest_welcome_sent_at", {
+    withTimezone: true,
+  }),
+  /** `true` once the user dismissed (or acted on) the one-time digest opt-in banner. */
+  weeklyDigestPromptDismissed: boolean("weekly_digest_prompt_dismissed"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

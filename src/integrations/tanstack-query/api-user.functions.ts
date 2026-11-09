@@ -10,6 +10,7 @@ import {
   revokeAtprotoSession,
 } from "#/integrations/auth/atproto";
 import { AUTH_SESSION_TOKEN_COOKIE } from "#/integrations/auth/constants";
+import { hasEmailScope } from "#/integrations/auth/scope";
 import { fetchBlueskyHandleForDid } from "#/lib/bluesky-public-profile";
 import {
   THEME_COOKIE,
@@ -192,6 +193,66 @@ const setThemePreference = createServerFn({ method: "POST" })
     return { mode: data.mode };
   });
 
+export interface WeeklyDigestStatus {
+  /** Opted in AND the email scope was actually granted (an abandoned consent reads as off). */
+  enabled: boolean;
+  email: string | null;
+  /** Whether the one-time opt-in banner should still be shown. */
+  showPrompt: boolean;
+}
+
+const getWeeklyDigestStatus = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware, maybeAuthMiddleware])
+  .handler(async ({ context }): Promise<WeeklyDigestStatus> => {
+    const sessionUser = context?.session?.user;
+    if (!sessionUser) {
+      return { enabled: false, email: null, showPrompt: false };
+    }
+    const row = await context.db.query.user.findFirst({
+      where: eq(context.schema.user.id, sessionUser.id),
+      columns: {
+        email: true,
+        weeklyDigestEnabled: true,
+        weeklyDigestPromptDismissed: true,
+      },
+      with: {
+        accounts: {
+          columns: { scope: true },
+          where: eq(context.schema.account.providerId, "atproto"),
+        },
+      },
+    });
+    const enabled =
+      row?.weeklyDigestEnabled === true &&
+      row.email != null &&
+      row.accounts.some((account) => hasEmailScope(account.scope));
+    return {
+      enabled,
+      email: row?.email ?? null,
+      showPrompt: !enabled && row?.weeklyDigestPromptDismissed !== true,
+    };
+  });
+
+const getWeeklyDigestStatusQueryOptions = queryOptions({
+  queryKey: ["weeklyDigestStatus"] as const,
+  queryFn: () => getWeeklyDigestStatus(),
+  staleTime: Number.POSITIVE_INFINITY,
+});
+
+/** Records that the user closed the one-time digest banner so it never returns. */
+const dismissWeeklyDigestPrompt = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware, maybeAuthMiddleware])
+  .handler(async ({ context }) => {
+    const sessionUser = context?.session?.user;
+    if (sessionUser) {
+      await context.db
+        .update(context.schema.user)
+        .set({ weeklyDigestPromptDismissed: true })
+        .where(eq(context.schema.user.id, sessionUser.id));
+    }
+    return { dismissed: true };
+  });
+
 const signOut = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
@@ -241,5 +302,8 @@ export const user = {
   getThemePreference,
   getThemePreferenceQueryOptions,
   setThemePreference,
+  getWeeklyDigestStatus,
+  getWeeklyDigestStatusQueryOptions,
+  dismissWeeklyDigestPrompt,
   signOut,
 };

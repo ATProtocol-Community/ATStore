@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
+import { WeeklyDigestBanner } from "../components/WeeklyDigestBanner";
 import { HeaderLayout } from "../design-system/header-layout";
 
 export const Route = createFileRoute("/_header-layout")({
@@ -24,6 +25,7 @@ function HeaderLayoutRoute() {
       </HeaderLayout.Header>
 
       <HeaderLayout.Page>
+        <WeeklyDigestBanner />
         <Suspense fallback={<HeaderLayoutOutletFallback />}>
           <Outlet />
         </Suspense>

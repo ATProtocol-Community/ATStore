@@ -19,11 +19,14 @@ import { Route as XrpcNsidRouteImport } from './routes/xrpc.$nsid'
 import { Route as OgTagRouteImport } from './routes/og.tag'
 import { Route as OgReviewRouteImport } from './routes/og.review'
 import { Route as OgProfileRouteImport } from './routes/og.profile'
+import { Route as HeaderLayoutSettingsRouteImport } from './routes/_header-layout.settings'
 import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.search'
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
 import { Route as LocaleAboutRouteImport } from './routes/$locale.about'
 import { Route as HeaderLayoutAppsIndexRouteImport } from './routes/_header-layout.apps.index'
+import { Route as ApiDigestUnsubscribeRouteImport } from './routes/api.digest.unsubscribe'
+import { Route as ApiDigestPreviewRouteImport } from './routes/api.digest.preview'
 import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
 import { Route as HeaderLayoutProductsManageRouteImport } from './routes/_header-layout.products.manage'
 import { Route as HeaderLayoutProductsCreateRouteImport } from './routes/_header-layout.products.create'
@@ -111,6 +114,11 @@ const OgProfileRoute = OgProfileRouteImport.update({
   path: '/og/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HeaderLayoutSettingsRoute = HeaderLayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => HeaderLayoutRoute,
+} as any)
 const HeaderLayoutSearchRoute = HeaderLayoutSearchRouteImport.update({
   id: '/search',
   path: '/search',
@@ -135,6 +143,16 @@ const HeaderLayoutAppsIndexRoute = HeaderLayoutAppsIndexRouteImport.update({
   id: '/apps/',
   path: '/apps/',
   getParentRoute: () => HeaderLayoutRoute,
+} as any)
+const ApiDigestUnsubscribeRoute = ApiDigestUnsubscribeRouteImport.update({
+  id: '/api/digest/unsubscribe',
+  path: '/api/digest/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDigestPreviewRoute = ApiDigestPreviewRouteImport.update({
+  id: '/api/digest/preview',
+  path: '/api/digest/preview',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const HeaderLayoutProfileActorRoute =
   HeaderLayoutProfileActorRouteImport.update({
@@ -360,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/$locale/about': typeof LocaleAboutRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
+  '/settings': typeof HeaderLayoutSettingsRoute
   '/og/profile': typeof OgProfileRoute
   '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
@@ -377,6 +396,8 @@ export interface FileRoutesByFullPath {
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
+  '/api/digest/preview': typeof ApiDigestPreviewRoute
+  '/api/digest/unsubscribe': typeof ApiDigestUnsubscribeRoute
   '/apps/': typeof HeaderLayoutAppsIndexRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
@@ -412,6 +433,7 @@ export interface FileRoutesByTo {
   '/': typeof HeaderLayoutIndexRoute
   '/notifications': typeof HeaderLayoutNotificationsRoute
   '/search': typeof HeaderLayoutSearchRoute
+  '/settings': typeof HeaderLayoutSettingsRoute
   '/og/profile': typeof OgProfileRoute
   '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
@@ -429,6 +451,8 @@ export interface FileRoutesByTo {
   '/products/create': typeof HeaderLayoutProductsCreateRoute
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
+  '/api/digest/preview': typeof ApiDigestPreviewRoute
+  '/api/digest/unsubscribe': typeof ApiDigestUnsubscribeRoute
   '/apps': typeof HeaderLayoutAppsIndexRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
@@ -465,6 +489,7 @@ export interface FileRoutesById {
   '/_header-layout/_admin-layout': typeof HeaderLayoutAdminLayoutRouteWithChildren
   '/_header-layout/notifications': typeof HeaderLayoutNotificationsRoute
   '/_header-layout/search': typeof HeaderLayoutSearchRoute
+  '/_header-layout/settings': typeof HeaderLayoutSettingsRoute
   '/og/profile': typeof OgProfileRoute
   '/og/review': typeof OgReviewRoute
   '/og/tag': typeof OgTagRoute
@@ -483,6 +508,8 @@ export interface FileRoutesById {
   '/_header-layout/products/create': typeof HeaderLayoutProductsCreateRoute
   '/_header-layout/products/manage': typeof HeaderLayoutProductsManageRoute
   '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
+  '/api/digest/preview': typeof ApiDigestPreviewRoute
+  '/api/digest/unsubscribe': typeof ApiDigestUnsubscribeRoute
   '/_header-layout/apps/': typeof HeaderLayoutAppsIndexRoute
   '/_header-layout/_admin-layout/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
@@ -520,6 +547,7 @@ export interface FileRouteTypes {
     | '/$locale/about'
     | '/notifications'
     | '/search'
+    | '/settings'
     | '/og/profile'
     | '/og/review'
     | '/og/tag'
@@ -537,6 +565,8 @@ export interface FileRouteTypes {
     | '/products/create'
     | '/products/manage'
     | '/profile/$actor'
+    | '/api/digest/preview'
+    | '/api/digest/unsubscribe'
     | '/apps/'
     | '/admin/add-listing'
     | '/admin/admins'
@@ -572,6 +602,7 @@ export interface FileRouteTypes {
     | '/'
     | '/notifications'
     | '/search'
+    | '/settings'
     | '/og/profile'
     | '/og/review'
     | '/og/tag'
@@ -589,6 +620,8 @@ export interface FileRouteTypes {
     | '/products/create'
     | '/products/manage'
     | '/profile/$actor'
+    | '/api/digest/preview'
+    | '/api/digest/unsubscribe'
     | '/apps'
     | '/admin/add-listing'
     | '/admin/admins'
@@ -624,6 +657,7 @@ export interface FileRouteTypes {
     | '/_header-layout/_admin-layout'
     | '/_header-layout/notifications'
     | '/_header-layout/search'
+    | '/_header-layout/settings'
     | '/og/profile'
     | '/og/review'
     | '/og/tag'
@@ -642,6 +676,8 @@ export interface FileRouteTypes {
     | '/_header-layout/products/create'
     | '/_header-layout/products/manage'
     | '/_header-layout/profile/$actor'
+    | '/api/digest/preview'
+    | '/api/digest/unsubscribe'
     | '/_header-layout/apps/'
     | '/_header-layout/_admin-layout/admin/add-listing'
     | '/_header-layout/_admin-layout/admin/admins'
@@ -680,6 +716,8 @@ export interface RootRouteChildren {
   OgTagRoute: typeof OgTagRoute
   XrpcNsidRoute: typeof XrpcNsidRoute
   OgIndexRoute: typeof OgIndexRoute
+  ApiDigestPreviewRoute: typeof ApiDigestPreviewRoute
+  ApiDigestUnsubscribeRoute: typeof ApiDigestUnsubscribeRoute
   ApiAuthAtprotoAuthorizeRoute: typeof ApiAuthAtprotoAuthorizeRoute
   ApiAuthAtprotoCallbackRoute: typeof ApiAuthAtprotoCallbackRoute
   ApiAuthAtprotoJwksDotjsonRoute: typeof ApiAuthAtprotoJwksDotjsonRoute
@@ -759,6 +797,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_header-layout/settings': {
+      id: '/_header-layout/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof HeaderLayoutSettingsRouteImport
+      parentRoute: typeof HeaderLayoutRoute
+    }
     '/_header-layout/search': {
       id: '/_header-layout/search'
       path: '/search'
@@ -793,6 +838,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/apps/'
       preLoaderRoute: typeof HeaderLayoutAppsIndexRouteImport
       parentRoute: typeof HeaderLayoutRoute
+    }
+    '/api/digest/unsubscribe': {
+      id: '/api/digest/unsubscribe'
+      path: '/api/digest/unsubscribe'
+      fullPath: '/api/digest/unsubscribe'
+      preLoaderRoute: typeof ApiDigestUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/digest/preview': {
+      id: '/api/digest/preview'
+      path: '/api/digest/preview'
+      fullPath: '/api/digest/preview'
+      preLoaderRoute: typeof ApiDigestPreviewRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_header-layout/profile/$actor': {
       id: '/_header-layout/profile/$actor'
@@ -1134,6 +1193,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutAdminLayoutRoute: typeof HeaderLayoutAdminLayoutRouteWithChildren
   HeaderLayoutNotificationsRoute: typeof HeaderLayoutNotificationsRoute
   HeaderLayoutSearchRoute: typeof HeaderLayoutSearchRoute
+  HeaderLayoutSettingsRoute: typeof HeaderLayoutSettingsRoute
   HeaderLayoutIndexRoute: typeof HeaderLayoutIndexRoute
   HeaderLayoutAppsTagRoute: typeof HeaderLayoutAppsTagRoute
   HeaderLayoutAppsAllRoute: typeof HeaderLayoutAppsAllRoute
@@ -1161,6 +1221,7 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutAdminLayoutRoute: HeaderLayoutAdminLayoutRouteWithChildren,
   HeaderLayoutNotificationsRoute: HeaderLayoutNotificationsRoute,
   HeaderLayoutSearchRoute: HeaderLayoutSearchRoute,
+  HeaderLayoutSettingsRoute: HeaderLayoutSettingsRoute,
   HeaderLayoutIndexRoute: HeaderLayoutIndexRoute,
   HeaderLayoutAppsTagRoute: HeaderLayoutAppsTagRoute,
   HeaderLayoutAppsAllRoute: HeaderLayoutAppsAllRoute,
@@ -1203,6 +1264,8 @@ const rootRouteChildren: RootRouteChildren = {
   OgTagRoute: OgTagRoute,
   XrpcNsidRoute: XrpcNsidRoute,
   OgIndexRoute: OgIndexRoute,
+  ApiDigestPreviewRoute: ApiDigestPreviewRoute,
+  ApiDigestUnsubscribeRoute: ApiDigestUnsubscribeRoute,
   ApiAuthAtprotoAuthorizeRoute: ApiAuthAtprotoAuthorizeRoute,
   ApiAuthAtprotoCallbackRoute: ApiAuthAtprotoCallbackRoute,
   ApiAuthAtprotoJwksDotjsonRoute: ApiAuthAtprotoJwksDotjsonRoute,

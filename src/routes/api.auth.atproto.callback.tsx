@@ -1,9 +1,12 @@
+import type { OAuthSession } from "@atcute/oauth-node-client";
+
 import { Client } from "@atcute/client";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { db } from "#/db/index.server";
 import * as schema from "#/db/schema";
 import { atprotoOAuth } from "#/integrations/auth/atproto";
 import { AUTH_SESSION_TOKEN_COOKIE } from "#/integrations/auth/constants";
+import { hasEmailScope } from "#/integrations/auth/scope";
 import { ensureProfileSelfRecord } from "#/lib/atproto/repo-records";
 import {
   fetchBlueskyPublicProfileFields,
@@ -15,6 +18,57 @@ import {
 } from "#/lib/product-claim-eligibility";
 import { sanitizeAuthRedirectTarget } from "#/utils/auth-redirect";
 import { and, eq } from "drizzle-orm";
+
+async function syncDigestEmail(opts: {
+  oauthSession: OAuthSession;
+  userId: string;
+  displayName: string;
+  priorUser: typeof schema.user.$inferSelect | null;
+}) {
+  let email: string | null = null;
+  let emailConfirmed = false;
+  try {
+    const client = new Client({ handler: opts.oauthSession });
+    const res = await client.get("com.atproto.server.getSession", {});
+    if (res.ok) {
+      email = res.data.email?.trim() || null;
+      emailConfirmed = res.data.emailConfirmed === true;
+    }
+  } catch (error) {
+    console.warn("Failed to read account email on callback:", error);
+  }
+  if (!email) return;
+
+  try {
+    await db
+      .update(schema.user)
+      .set({ email, emailVerified: emailConfirmed })
+      .where(eq(schema.user.id, opts.userId));
+  } catch (error) {
+    // `user.email` is unique — another at-store account may share this address.
+    console.warn("Failed to persist account email on callback:", error);
+    return;
+  }
+
+  // `upgradeToWeeklyDigest` set the flag before redirecting here, so the row
+  // read at the top of the callback already reflects the opt-in.
+  const prior = opts.priorUser;
+  if (prior?.weeklyDigestEnabled && !prior.weeklyDigestWelcomeSentAt) {
+    const { sendDigestWelcomeEmail } =
+      await import("#/server/digest/welcome.server");
+    const sent = await sendDigestWelcomeEmail({
+      userId: opts.userId,
+      email,
+      displayName: opts.displayName,
+    });
+    if (sent) {
+      await db
+        .update(schema.user)
+        .set({ weeklyDigestWelcomeSentAt: new Date() })
+        .where(eq(schema.user.id, opts.userId));
+    }
+  }
+}
 
 export const Route = createFileRoute("/api/auth/atproto/callback")({
   server: {
@@ -114,12 +168,37 @@ export const Route = createFileRoute("/api/auth/atproto/callback")({
               .where(eq(schema.user.id, userId));
           }
 
-          if (!existingAccount) {
+          let grantedScope: string | null = null;
+          try {
+            const tokenInfo = await oauthSession.getTokenInfo();
+            grantedScope = tokenInfo.scope;
+          } catch (error) {
+            console.warn("Failed to read granted OAuth scope:", error);
+          }
+
+          if (existingAccount) {
+            await db
+              .update(schema.account)
+              .set({ scope: grantedScope })
+              .where(eq(schema.account.id, existingAccount.id));
+          } else {
             await db.insert(schema.account).values({
               id: crypto.randomUUID(),
               accountId: did,
               providerId: "atproto",
               userId,
+              scope: grantedScope,
+            });
+          }
+
+          // Weekly digest: the PDS only returns the email when the user granted
+          // `transition:email` (requested once they opt in).
+          if (hasEmailScope(grantedScope)) {
+            await syncDigestEmail({
+              oauthSession,
+              userId,
+              displayName,
+              priorUser,
             });
           }
 

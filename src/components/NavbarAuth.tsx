@@ -2,7 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLink, useNavigate } from "@tanstack/react-router";
 import { user } from "#/integrations/tanstack-query/api-user.functions";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut, Settings, Shield } from "lucide-react";
 import { useState } from "react";
 
 import { AvatarButton } from "../design-system/avatar";
@@ -102,6 +102,14 @@ export function NavbarAuth() {
               Admin
             </MenuItem>
           ) : null}
+          <MenuItem
+            onPress={() => {
+              void navigate({ to: "/settings" });
+            }}
+            suffix={<Settings />}
+          >
+            Settings
+          </MenuItem>
           <MenuSeparator />
           <LanguageSubMenu onOpenDrawer={() => setLangDrawerOpen(true)} />
           <ThemeSubMenu />
