@@ -371,6 +371,58 @@ function resolveListingVerificationStatus(input: {
 }
 
 /**
+ * The upsert below matches rows by slug, but this record may already be mirrored under a different
+ * slug (renamed listing). Inserting would then collide on `at_uri`, throw, and Tap would redeliver
+ * the event forever — holding back that repo's later events too.
+ *
+ * - Record older than the row (a replayed pre-rename event): skip so the event is acked.
+ * - Newer record whose slug is free: rename the row, then let the slug-based upsert update it.
+ * - Newer record whose slug belongs to another listing: skip; the row keeps its slug.
+ */
+async function resolveRecordSlugChange(
+  db: Database,
+  input: { did: string; rkey: string; record: FyiAtstoreListingDetail },
+): Promise<"continue" | "skip"> {
+  const { did, rkey, record } = input;
+  const t = schema.storeListings;
+  const [row] = await db
+    .select({ id: t.id, slug: t.slug, updatedAt: t.updatedAt })
+    .from(t)
+    .where(and(eq(t.repoDid, did), eq(t.rkey, rkey)))
+    .limit(1);
+  if (!row || row.slug === record.slug) return "continue";
+
+  const recordUpdatedAt = new Date(record.updatedAt);
+  if (
+    Number.isNaN(recordUpdatedAt.getTime()) ||
+    recordUpdatedAt <= row.updatedAt
+  ) {
+    console.log(
+      `[tap-ingest] skip stale listing ${atUriFor(did, rkey)} — record slug=${record.slug} updatedAt=${record.updatedAt} is older than row slug=${row.slug} (${row.updatedAt.toISOString()})`,
+    );
+    return "skip";
+  }
+
+  const [taken] = await db
+    .select({ id: t.id })
+    .from(t)
+    .where(eq(t.slug, record.slug))
+    .limit(1);
+  if (taken) {
+    console.warn(
+      `[tap-ingest] skip listing ${atUriFor(did, rkey)} — renamed to slug=${record.slug}, which another listing (${taken.id}) owns; keeping slug=${row.slug}`,
+    );
+    return "skip";
+  }
+
+  await db.update(t).set({ slug: record.slug }).where(eq(t.id, row.id));
+  console.log(
+    `[tap-ingest] renamed listing ${row.id} slug ${row.slug} → ${record.slug}`,
+  );
+  return "continue";
+}
+
+/**
  * Upsert `store_listings` from Tap (`fyi.atstore.listing.detail` only — does not touch `directory_listings`).
  * Resolves icon / hero / screenshots to Bluesky CDN URLs from blob refs (Kitchen-style).
  */
@@ -386,6 +438,13 @@ export async function upsertDirectoryListingFromTap(input: {
   const sourceUrl = record.externalUrl.trim();
   const atstoreDidRaw = process.env.ATSTORE_REPO_DID?.trim() ?? null;
   const atstoreDid = atstoreDidRaw?.startsWith("did:") ? atstoreDidRaw : null;
+
+  const slugChange = await resolveRecordSlugChange(db, {
+    did,
+    rkey,
+    record,
+  });
+  if (slugChange === "skip") return;
 
   const [existingRow] = await db
     .select({
