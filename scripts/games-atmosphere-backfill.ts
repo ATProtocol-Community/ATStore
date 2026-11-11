@@ -16,8 +16,14 @@
  *   DATABASE_URL=…                 # required unless --dry-run
  *   GAMES_BACKFILL_RELAY=https://relay1.us-east.bsky.network
  *   TAP_TRUSTED_DIDS=did:plc:…     # optional; same meaning as the Tap consumer
+ *   TAP_URL=… TAP_ADMIN_PASSWORD=… # optional; registers every game / fave repo with Tap
+ *
+ * Tap only follows repos with the signal collection (`fyi.atstore.profile`), which most game
+ * developers don't have. With `TAP_URL` set, the repos found here are added to Tap explicitly so
+ * later edits stream in live (re-run this to pick up repos that started publishing since).
  */
 import "dotenv/config";
+import { Tap } from "@atproto/tap";
 import { tryParseGameDefineRecord } from "#/lib/atproto/game-define-record";
 import {
   paginateListRecords,
@@ -25,6 +31,7 @@ import {
 } from "#/lib/atproto/list-records";
 import { COLLECTION } from "#/lib/atproto/nsids";
 import { resolveAtprotoPdsBaseUrl } from "#/lib/atproto/resolve-atproto-pds";
+import { normalizeTapUrlForRailway } from "#/lib/atproto/tap-railway-url";
 import {
   tryParseGameFaveRecord,
   upsertGameFaveFromTap,
@@ -159,6 +166,20 @@ async function main() {
     }
   }
   console.log(`${LOG} favorites: ${faves} processed`);
+
+  const rawTapUrl = process.env.TAP_URL?.trim();
+  if (rawTapUrl && !dryRun) {
+    const adminPassword = process.env.TAP_ADMIN_PASSWORD?.trim();
+    const tap = new Tap(
+      normalizeTapUrlForRailway(rawTapUrl),
+      adminPassword ? { adminPassword } : {},
+    );
+    const dids = [...new Set([...defineRepos, ...faveRepos])];
+    for (let i = 0; i < dids.length; i += 100) {
+      await tap.addRepos(dids.slice(i, i + 100));
+    }
+    console.log(`${LOG} registered ${dids.length} repo(s) with Tap`);
+  }
   process.exit(0);
 }
 
