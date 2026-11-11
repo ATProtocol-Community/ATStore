@@ -252,6 +252,7 @@ function GamesPage() {
         </div>
         <SegmentedControl
           aria-label="Sort games"
+          size="lg"
           selectedKeys={[sort]}
           style={styles.filters}
           onSelectionChange={(keys) => {
