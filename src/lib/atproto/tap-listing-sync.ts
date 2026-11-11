@@ -20,6 +20,7 @@ import {
   normalizeListingLinks,
 } from "#/lib/atproto/listing-record";
 import { COLLECTION, GAMES_NSID } from "#/lib/atproto/nsids";
+import { resolveAtprotoPdsBaseUrl } from "#/lib/atproto/resolve-atproto-pds";
 import { linkListingToGameDefine } from "#/lib/atproto/tap-game-sync";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
 import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
@@ -371,13 +372,42 @@ function resolveListingVerificationStatus(input: {
 }
 
 /**
+ * Current `slug` of a listing.detail record on its PDS: `null` when the record is gone,
+ * `undefined` when the PDS can't be reached.
+ */
+async function fetchLiveListingSlug(
+  did: string,
+  rkey: string,
+): Promise<string | null | undefined> {
+  const pds = await resolveAtprotoPdsBaseUrl(did);
+  if (!pds) return undefined;
+  try {
+    const u = new URL("/xrpc/com.atproto.repo.getRecord", `${pds}/`);
+    u.searchParams.set("repo", did);
+    u.searchParams.set("collection", COLLECTION.listingDetail);
+    u.searchParams.set("rkey", rkey);
+    const res = await fetch(u, { signal: AbortSignal.timeout(10_000) });
+    if (res.status === 400 || res.status === 404) return null;
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { value?: { slug?: unknown } };
+    return typeof data.value?.slug === "string" ? data.value.slug : null;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * The upsert below matches rows by slug, but this record may already be mirrored under a different
  * slug (renamed listing). Inserting would then collide on `at_uri`, throw, and Tap would redeliver
  * the event forever — holding back that repo's later events too.
  *
- * - Record older than the row (a replayed pre-rename event): skip so the event is acked.
- * - Newer record whose slug is free: rename the row, then let the slug-based upsert update it.
- * - Newer record whose slug belongs to another listing: skip; the row keeps its slug.
+ * Whether the event is a real rename or a replayed pre-rename event is decided by the record as it
+ * is on the PDS right now (renames are rare, so the extra fetch is cheap). `updated_at` alone can't
+ * tell: admin moderation bumps it without touching the record.
+ *
+ * - Live record has a different slug (or is gone): stale replay — skip so the event is acked.
+ * - Live record matches and the slug is free: rename the row, then let the slug-based upsert run.
+ * - Live record matches but another listing owns the slug: skip; the row keeps its slug.
  */
 async function resolveRecordSlugChange(
   db: Database,
@@ -392,13 +422,15 @@ async function resolveRecordSlugChange(
     .limit(1);
   if (!row || row.slug === record.slug) return "continue";
 
-  const recordUpdatedAt = new Date(record.updatedAt);
-  if (
-    Number.isNaN(recordUpdatedAt.getTime()) ||
-    recordUpdatedAt <= row.updatedAt
-  ) {
+  const liveSlug = await fetchLiveListingSlug(did, rkey);
+  const isCurrent =
+    liveSlug === undefined
+      ? // PDS unreachable — fall back to comparing timestamps.
+        new Date(record.updatedAt) > row.updatedAt
+      : liveSlug === record.slug;
+  if (!isCurrent) {
     console.log(
-      `[tap-ingest] skip stale listing ${atUriFor(did, rkey)} — record slug=${record.slug} updatedAt=${record.updatedAt} is older than row slug=${row.slug} (${row.updatedAt.toISOString()})`,
+      `[tap-ingest] skip stale listing ${atUriFor(did, rkey)} — event slug=${record.slug}, live record slug=${liveSlug ?? "(unknown)"}, row slug=${row.slug}`,
     );
     return "skip";
   }
