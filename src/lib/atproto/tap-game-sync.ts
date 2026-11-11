@@ -42,6 +42,13 @@ const listingRefColumns = {
   gameDefinePriorAtUris: schema.storeListings.gameDefinePriorAtUris,
   gameDetails: schema.storeListings.gameDetails,
   verificationStatus: schema.storeListings.verificationStatus,
+  name: schema.storeListings.name,
+  tagline: schema.storeListings.tagline,
+  fullDescription: schema.storeListings.fullDescription,
+  externalUrl: schema.storeListings.externalUrl,
+  iconUrl: schema.storeListings.iconUrl,
+  heroImageUrl: schema.storeListings.heroImageUrl,
+  screenshotUrls: schema.storeListings.screenshotUrls,
 };
 
 type ListingRef = {
@@ -53,7 +60,60 @@ type ListingRef = {
   gameDefinePriorAtUris: Array<string>;
   gameDetails: GameDetails | null;
   verificationStatus: string;
+  name: string;
+  tagline: string | null;
+  fullDescription: string | null;
+  externalUrl: string | null;
+  iconUrl: string | null;
+  heroImageUrl: string | null;
+  screenshotUrls: Array<string>;
 };
+
+/** JSON with sorted object keys — `jsonb` reorders keys, so plain `JSON.stringify` can't compare. */
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).toSorted(([a], [b]) =>
+            a.localeCompare(b),
+          ),
+        )
+      : v,
+  );
+}
+
+/** Whether applying `fields` from `uri` would change anything shown for this row. */
+function defineChangesRow(
+  row: ListingRef,
+  uri: string,
+  fields: ReturnType<typeof gameDefineToListingFields>,
+) {
+  if (row.gameDefineAtUri !== uri) return true;
+  if (stableJson(row.gameDetails) !== stableJson(fields.gameDetails)) {
+    return true;
+  }
+  if (!isGameOnlyRow(row)) return false;
+  return (
+    stableJson([
+      row.name,
+      row.tagline,
+      row.fullDescription,
+      row.externalUrl,
+      row.iconUrl,
+      row.heroImageUrl,
+      row.screenshotUrls,
+    ]) !==
+    stableJson([
+      fields.name,
+      fields.tagline,
+      fields.fullDescription,
+      fields.externalUrl,
+      fields.iconUrl,
+      fields.heroImageUrl,
+      fields.screenshotUrls,
+    ])
+  );
+}
 
 /** SQL form of {@link normalizeGameUrlForMatch} for a URL column. */
 function sqlNormalizedUrl(col: AnyPgColumn) {
@@ -138,8 +198,16 @@ export async function upsertGameListingFromTap(input: {
     .where(eq(t.gameDefineAtUri, uri))
     .limit(1);
   if (bound) {
-    await applyDefineToRow(db, bound, { did, rkey, uri, fields, now });
-    console.log(`[tap-game] refreshed ${uri} → listing ${bound.id}`);
+    const changed = await applyDefineToRow(db, bound, {
+      did,
+      rkey,
+      uri,
+      fields,
+      now,
+    });
+    console.log(
+      `[tap-game] ${changed ? "refreshed" : "unchanged"} ${uri} → listing ${bound.id}`,
+    );
     return;
   }
 
@@ -149,11 +217,12 @@ export async function upsertGameListingFromTap(input: {
   const otherDefineAtUri = otherGame?.gameDefineAtUri;
   if (otherGame && otherDefineAtUri) {
     const claimants = new Set(otherGame.gameDetails?.claimantDids ?? []);
+    const existingRepo = parseAtUriParts(otherDefineAtUri).repo;
     // Never let a held copy displace the developer's own record.
-    const existingIsSelfPublished = claimants.has(
-      parseAtUriParts(otherDefineAtUri).repo,
-    );
-    if (claimants.has(did) && !existingIsSelfPublished) {
+    const existingIsSelfPublished = claimants.has(existingRepo);
+    // The same repo republishing under a new rkey always replaces its own earlier record.
+    const sameRepo = existingRepo === did;
+    if (sameRepo || (claimants.has(did) && !existingIsSelfPublished)) {
       await applyDefineToRow(
         db,
         {
@@ -231,7 +300,14 @@ export async function upsertGameListingFromTap(input: {
   await refreshSnapshotSafe(db, inserted.id);
 }
 
-/** Refresh / re-point a row from a define record. Game-only rows also take the listing fields. */
+/**
+ * Refresh / re-point a row from a define record. Game-only rows also take the listing fields.
+ *
+ * No-op when nothing changed (Tap replays and backfill re-runs redeliver identical records). A
+ * rejected game-only row whose record did change goes back to `unverified`, which lands it in the
+ * admin queue's "Resubmitted after rejection" section with the prior reason — the developer's
+ * equivalent of resubmitting an app listing.
+ */
 async function applyDefineToRow(
   db: Database,
   row: ListingRef,
@@ -245,6 +321,10 @@ async function applyDefineToRow(
 ) {
   const { did, rkey, uri, fields, now } = input;
   const t = schema.storeListings;
+  if (!defineChangesRow(row, uri, fields)) return false;
+
+  const resubmitted =
+    isGameOnlyRow(row) && row.verificationStatus === "rejected";
   const base = {
     listingType: "game" as const,
     gameDefineAtUri: uri,
@@ -270,12 +350,19 @@ async function applyDefineToRow(
         rkey,
         sourceAccountDid: did,
         productAccountDid: fields.gameDetails.developer?.did ?? null,
+        ...(resubmitted ? { verificationStatus: "unverified" } : {}),
       })
       .where(eq(t.id, row.id));
+    if (resubmitted) {
+      console.log(
+        `[tap-game] rejected game ${row.id} changed (${uri}) — back to the review queue`,
+      );
+    }
   } else {
     await db.update(t).set(base).where(eq(t.id, row.id));
   }
   await refreshSnapshotSafe(db, row.id);
+  return true;
 }
 
 async function linkDefineToListing(
@@ -325,6 +412,16 @@ export async function removeGameListingFromTap(input: {
   }
 
   if (isGameOnlyRow(row)) {
+    /**
+     * Keep rejected games: deleting the row would drop the rejection, and a re-published record
+     * would come back as a fresh pending game. The row is already hidden.
+     */
+    if (row.verificationStatus === "rejected") {
+      console.log(
+        `[tap-game] delete ${uri} — keeping rejected game listing ${row.id}`,
+      );
+      return;
+    }
     await db.delete(t).where(eq(t.id, row.id));
     console.log(`[tap-game] deleted game listing ${row.id} (${uri})`);
     return;

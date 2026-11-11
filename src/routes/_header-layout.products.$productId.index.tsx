@@ -59,6 +59,7 @@ import { GermNetworkBadge } from "../components/GermNetworkBadge";
 import { HeroImage } from "../components/HeroImage";
 import { ListingOAuthScopesPopoverChip } from "../components/ListingOAuthScopesPopoverChip";
 import { listingOAuthScopesPopoverChipShouldRender } from "../components/ListingOAuthScopesPopoverChip.logic";
+import { RejectGameDialog } from "../components/RejectGameDialog";
 import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
 import { Alert } from "../design-system/alert";
 import { Avatar } from "../design-system/avatar";
@@ -1130,8 +1131,10 @@ function ProductPageEditActions({
   /** Game-only listings mirror the developer's atmosphere.games record; edits happen there. */
   const isGameOnly = isGameOnlyListing(listing);
   const canEditHere = Boolean(editAccess?.canEdit) && !isGameOnly;
+  /** No edit page for game-only listings, so admins moderate them from here. */
+  const canRejectGame = isAdmin && isGameOnly;
 
-  if (!canRemoveHero && !editAccess?.canEdit) {
+  if (!canRemoveHero && !editAccess?.canEdit && !canRejectGame) {
     return null;
   }
 
@@ -1155,6 +1158,9 @@ function ProductPageEditActions({
         >
           Edit listing
         </AppLink>
+      ) : null}
+      {canRejectGame ? (
+        <RejectGameDialog listingId={listing.id} listingName={listing.name} />
       ) : null}
       {editAccess?.canEdit && isGameOnly ? (
         <SmallBody variant="secondary">
