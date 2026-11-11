@@ -32,11 +32,11 @@ import { Description, FieldErrorMessage, Label } from "../label";
 import { ListBox, ListBoxSeparator } from "../listbox";
 import { SearchField } from "../search-field";
 import { SuffixIcon } from "../suffix-icon";
+import { radius } from "../theme/radius.stylex";
 import {
   horizontalSpace,
   verticalSpace,
 } from "../theme/semantic-spacing.stylex";
-import { radius } from "../theme/radius.stylex";
 import { useInputStyles } from "../theme/useInputStyles";
 import { estimatedRowHeights } from "../theme/useListBoxItemStyles";
 import { usePopoverStyles } from "../theme/usePopoverStyles";

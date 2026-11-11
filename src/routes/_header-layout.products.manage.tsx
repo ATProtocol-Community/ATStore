@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import {
   useMutation,
-  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -327,20 +326,6 @@ function ManageListingsPage() {
   const { data: listings } = useSuspenseQuery(
     directoryListingApi.getMyProductListingsQueryOptions(),
   );
-  const { data: session } = useQuery(user.getSessionQueryOptions);
-  const sessionDid = session?.user?.did ?? "";
-  // The manage query has no tagline or review stats; the public "products by
-  // this account" query does, so use it to fill those in where the ids match.
-  const { data: publicProducts } = useQuery({
-    ...directoryListingApi.getProfileOwnedProductListingsQueryOptions(
-      sessionDid,
-    ),
-    enabled: sessionDid !== "",
-  });
-  const publicById = useMemo(
-    () => new Map((publicProducts ?? []).map((p) => [p.id, p])),
-    [publicProducts],
-  );
   const secondaryButton = useButtonStyles({ variant: "secondary", size: "sm" });
 
   const { live: liveListings, pendingOrRejected: pendingListings } = useMemo(
@@ -446,7 +431,6 @@ function ManageListingsPage() {
   }
 
   function renderLiveRow(listing: MyListingRow) {
-    const extra = publicById.get(listing.id);
     return (
       <div key={listing.id} {...stylex.props(styles.row)}>
         <ListingIcon name={listing.name} src={listing.iconUrl} size={48} />
@@ -458,8 +442,8 @@ function ManageListingsPage() {
           >
             {listing.name}
           </RouterLink>
-          {extra?.tagline ? (
-            <div {...stylex.props(styles.tagline)}>{extra.tagline}</div>
+          {listing.tagline ? (
+            <div {...stylex.props(styles.tagline)}>{listing.tagline}</div>
           ) : null}
           <div {...stylex.props(styles.mobileStatusLive)}>
             <StatusPill status={listing.verificationStatus} />
@@ -468,16 +452,14 @@ function ManageListingsPage() {
         <div {...stylex.props(styles.stat, styles.statReviews)}>
           <span {...stylex.props(styles.statLabel)}>Reviews</span>
           <span {...stylex.props(styles.statValue)}>
-            {extra && extra.reviewCount > 0 ? (
+            {listing.reviewCount > 0 ? (
               <ListingRating
-                rating={extra.averageRating}
-                reviewCount={extra.reviewCount}
+                rating={listing.averageRating}
+                reviewCount={listing.reviewCount}
                 showCount
               />
             ) : (
-              <span {...stylex.props(styles.muted)}>
-                {extra ? "None yet" : "—"}
-              </span>
+              <span {...stylex.props(styles.muted)}>None yet</span>
             )}
           </span>
         </div>

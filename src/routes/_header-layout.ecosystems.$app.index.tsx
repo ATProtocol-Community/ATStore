@@ -10,7 +10,10 @@ import {
 import { getEcosystemIntro } from "../components/shelf/discovery/ecosystem-copy";
 import { BackLink, MoreLink, PageHero } from "../components/shelf/Section";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { fontFamily, fontWeight } from "../design-system/theme/typography.stylex";
+import {
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   getAppEcosystemCategoryIdFromRouteParam,

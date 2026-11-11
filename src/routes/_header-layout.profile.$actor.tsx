@@ -14,7 +14,6 @@ import { Link as AriaLink } from "react-aria-components";
 
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { GermNetworkBadge } from "../components/GermNetworkBadge";
-import { blueskyProfileExtrasQueryOptions } from "../components/shelf/account/bluesky-profile-extras";
 import { PersonAvatar } from "../components/shelf/account/PersonAvatar";
 import { ListingCard } from "../components/shelf/ListingCard";
 import { ListingRow } from "../components/shelf/ListingRow";
@@ -247,7 +246,6 @@ function UserProfilePage() {
     directoryListingApi.getProfileFavoriteListingsQueryOptions(did),
   );
   const { data: session } = useQuery(user.getSessionQueryOptions);
-  const { data: extras } = useQuery(blueskyProfileExtrasQueryOptions(did));
   const buttonStyles = useButtonStyles({ variant: "secondary", size: "md" });
   const [showAllFavorites, setShowAllFavorites] = useState(false);
 
@@ -280,9 +278,9 @@ function UserProfilePage() {
   return (
     <div {...stylex.props(styles.page)}>
       <div {...stylex.props(styles.banner)}>
-        {extras?.bannerUrl ? (
+        {page.bannerUrl ? (
           <img
-            src={extras.bannerUrl}
+            src={page.bannerUrl}
             alt=""
             decoding="async"
             {...stylex.props(styles.bannerImage)}
@@ -328,8 +326,8 @@ function UserProfilePage() {
       </div>
 
       <div {...stylex.props(styles.body)}>
-        {extras?.description ? (
-          <p {...stylex.props(styles.bio)}>{extras.description}</p>
+        {page.description ? (
+          <p {...stylex.props(styles.bio)}>{page.description}</p>
         ) : null}
         <div {...stylex.props(styles.stats)}>
           <span>
@@ -380,8 +378,9 @@ function UserProfilePage() {
                   slug: favorite.slug,
                   iconUrl: favorite.iconUrl,
                   tagline: favorite.tagline ?? "",
-                  rating: null,
-                  reviewCount: 0,
+                  rating: favorite.rating,
+                  reviewCount: favorite.reviewCount,
+                  appTags: favorite.appTags,
                 }}
               />
             ))}

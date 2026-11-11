@@ -657,6 +657,9 @@ export interface UserProfileReviewsPageData {
   displayName: string | null;
   handle: string | null;
   avatarUrl: string | null;
+  /** Bluesky profile banner and bio, when the public AppView has them. */
+  bannerUrl: string | null;
+  description: string | null;
   reviews: Array<DirectoryUserReview>;
   /** Germ DM URL when mirrored declaration + viewer policy allows; null otherwise. */
   germDmHref: string | null;
@@ -668,6 +671,9 @@ export interface DirectoryUserFavoriteListing {
   slug: string | null;
   iconUrl: string | null;
   tagline: string | null;
+  rating: number | null;
+  reviewCount: number;
+  appTags: Array<string>;
   favoritedAt: string;
 }
 
@@ -3626,6 +3632,8 @@ const getUserProfileReviewsPageData = createServerFn({ method: "GET" })
         profile?.avatarUrl?.trim() ||
         enriched[0]?.authorAvatarUrl?.trim() ||
         null,
+      bannerUrl: profile?.bannerUrl ?? null,
+      description: profile?.description ?? null,
       reviews: enriched,
       germDmHref,
     } satisfies UserProfileReviewsPageData;
@@ -3655,6 +3663,9 @@ const getProfileFavoriteListings = createServerFn({ method: "GET" })
         slug: list.slug,
         iconUrl: list.iconUrl,
         tagline: list.tagline,
+        reviewCount: list.reviewCount,
+        averageRating: list.averageRating,
+        appTags: list.appTags,
         favoritedAt: fav.favoriteCreatedAt,
       })
       .from(fav)
@@ -3668,6 +3679,12 @@ const getProfileFavoriteListings = createServerFn({ method: "GET" })
       slug: row.slug,
       iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
       tagline: row.tagline?.trim() || null,
+      rating:
+        row.averageRating == null
+          ? null
+          : Math.round(row.averageRating * 10) / 10,
+      reviewCount: row.reviewCount,
+      appTags: row.appTags,
       favoritedAt: row.favoritedAt.toISOString(),
     })) satisfies Array<DirectoryUserFavoriteListing>;
   });
@@ -6675,6 +6692,9 @@ const getMyProductListings = createServerFn({ method: "GET" })
         name: t.name,
         slug: t.slug,
         iconUrl: t.iconUrl,
+        tagline: t.tagline,
+        reviewCount: t.reviewCount,
+        averageRating: t.averageRating,
         verificationStatus: t.verificationStatus,
         updatedAt: t.updatedAt,
       })
@@ -6713,6 +6733,12 @@ const getMyProductListings = createServerFn({ method: "GET" })
       name: row.name,
       slug: row.slug,
       iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
+      tagline: row.tagline?.trim() || null,
+      reviewCount: row.reviewCount,
+      averageRating:
+        row.averageRating == null
+          ? null
+          : Math.round(row.averageRating * 10) / 10,
       verificationStatus: row.verificationStatus,
       updatedAt: row.updatedAt.toISOString(),
       rejectionHistory:

@@ -6,14 +6,14 @@ import { use } from "react";
 import type { Size, StyleXComponentProps } from "../theme/types";
 
 import { SizeContext } from "../context";
+import { uiColor } from "../theme/color.stylex";
+import { radius } from "../theme/radius.stylex";
 import { ui } from "../theme/semantic-color.stylex";
 import {
   gap,
   horizontalSpace,
   size as sizeSpace,
 } from "../theme/semantic-spacing.stylex";
-import { uiColor } from "../theme/color.stylex";
-import { radius } from "../theme/radius.stylex";
 import { fontFamily, fontSize, fontWeight } from "../theme/typography.stylex";
 
 const styles = stylex.create({

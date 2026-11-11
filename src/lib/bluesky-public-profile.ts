@@ -5,10 +5,13 @@ export type BlueskyPublicProfileFields = {
   handle: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  bannerUrl: string | null;
+  /** Profile bio. */
+  description: string | null;
 };
 
 /**
- * Fetch handle, display name, and avatar URL for a DID via public Bluesky API.
+ * Fetch handle, display name, avatar, banner and bio for a DID via public Bluesky API.
  */
 export async function fetchBlueskyPublicProfileFields(
   did: string,
@@ -37,6 +40,8 @@ function normalizeProfileResponse(raw: unknown): BlueskyPublicProfileFields {
     handle?: string | null;
     displayName?: string | null;
     avatar?: string | null;
+    banner?: string | null;
+    description?: string | null;
   };
   const handle = profileData.handle?.trim();
   const displayName = profileData.displayName?.trim();
@@ -45,10 +50,21 @@ function normalizeProfileResponse(raw: unknown): BlueskyPublicProfileFields {
     typeof rawAvatar === "string" && rawAvatar.trim() !== ""
       ? rawAvatar.trim()
       : null;
+  const bannerUrl =
+    typeof profileData.banner === "string" && profileData.banner.trim() !== ""
+      ? profileData.banner.trim()
+      : null;
+  const description =
+    typeof profileData.description === "string" &&
+    profileData.description.trim() !== ""
+      ? profileData.description.trim()
+      : null;
   return {
     handle: handle && handle.length > 0 ? handle : null,
     displayName: displayName && displayName.length > 0 ? displayName : null,
     avatarUrl,
+    bannerUrl,
+    description,
   };
 }
 
