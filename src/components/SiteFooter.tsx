@@ -102,7 +102,7 @@ export function SiteFooter() {
       <div {...stylex.props(styles.inner)}>
         <div {...stylex.props(styles.grid)}>
           <div {...stylex.props(styles.brand)}>
-            <AtStoreLogo />
+            <AtStoreLogo variant="footer" />
             <p {...stylex.props(styles.blurb)}>
               An open directory of Atmosphere apps. Listings are records in
               their makers&apos; own repos.

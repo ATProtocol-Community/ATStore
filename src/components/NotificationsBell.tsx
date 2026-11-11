@@ -43,9 +43,9 @@ export function NotificationsBell({ unreadCount }: NotificationsBellProps) {
     <div {...stylex.props(styles.unreadDotWrapper)}>
       <IconButtonLink
         to="/notifications"
-        size="lg"
+        size="md"
         label="Notifications"
-        variant="tertiary"
+        variant="secondary"
       >
         <Bell />
       </IconButtonLink>

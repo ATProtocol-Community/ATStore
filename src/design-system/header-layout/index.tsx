@@ -37,6 +37,9 @@ const styles = stylex.create({
     flexShrink: 0,
     position: "sticky",
     zIndex: 30,
+    borderBottomColor: uiColor.border1,
+    borderBottomStyle: "solid",
+    borderBottomWidth: 1,
     top: 0,
   },
   page: {

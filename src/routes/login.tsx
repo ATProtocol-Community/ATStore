@@ -341,7 +341,7 @@ function AuthPage() {
       <HeaderLayout.Page>
         <div {...stylex.props(styles.page)}>
           <span {...stylex.props(styles.logo)}>
-            <AtStoreLogo />
+            <AtStoreLogo variant="hero" />
           </span>
 
           <Form style={styles.card}>
