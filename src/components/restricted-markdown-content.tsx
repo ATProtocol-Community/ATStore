@@ -8,8 +8,8 @@ import type { Components } from "react-markdown";
 import type { Options as RehypeSanitizeOptions } from "rehype-sanitize";
 
 import * as stylex from "@stylexjs/stylex";
-import { primaryColor } from "#/design-system/theme/color.stylex";
-import { verticalSpace } from "#/design-system/theme/semantic-spacing.stylex";
+import { animationDuration } from "#/design-system/theme/animations.stylex";
+import { uiColor } from "#/design-system/theme/color.stylex";
 import {
   Body,
   ListItem,
@@ -29,22 +29,29 @@ const styles = stylex.create({
     fontStyle: "italic",
   },
   link: {
-    color: {
-      default: primaryColor.text2,
-      ":hover": primaryColor.text1,
-    },
+    color: uiColor.text2,
     cursor: "pointer",
     overflowWrap: "anywhere",
-    textDecorationColor: "currentColor",
+    textDecorationColor: {
+      default: uiColor.border3,
+      ":hover": uiColor.text2,
+    },
     textDecorationLine: "underline",
     textDecorationThickness: "1px",
-    textUnderlineOffset: "2px",
+    textUnderlineOffset: "3px",
+    transitionDuration: animationDuration.default,
+    transitionProperty: "text-decoration-color",
   },
   restrictedRoot: {
-    gap: verticalSpace["6xl"],
+    columnGap: "0.85em",
     display: "flex",
     flexDirection: "column",
+    rowGap: "0.85em",
     minWidth: 0,
+  },
+  /** Markdown leaves newlines inside list items; don't render them as breaks. */
+  listItem: {
+    whiteSpace: "normal",
   },
   restrictedParagraph: {
     marginBottom: 0,
@@ -147,6 +154,17 @@ export function RestrictedMarkdownContent({
 }: RestrictedMarkdownContentProps) {
   const restrictedMarkdownComponents: Components = {
     ...restrictedMarkdownBasics,
+    // List items follow the paragraph scale so lists don't shrink mid-description.
+    li: ({ className: _className, style: _style, ...rest }) => (
+      <ListItem
+        {...rest}
+        style={
+          compact
+            ? undefined
+            : ([paragraphStyle, styles.listItem] as unknown as StyleXStyles)
+        }
+      />
+    ),
     p: ({ className: _className, style: rmStyle, ...rest }) => {
       const mergedStyle = [styles.restrictedParagraph, paragraphStyle, rmStyle];
       const paragraphSx = mergedStyle as unknown as StyleXStyles;

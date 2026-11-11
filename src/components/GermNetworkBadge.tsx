@@ -1,60 +1,51 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
+import { animationDuration } from "#/design-system/theme/animations.stylex";
 import { uiColor } from "#/design-system/theme/color.stylex";
 import { radius } from "#/design-system/theme/radius.stylex";
-import {
-  gap,
-  horizontalSpace,
-  verticalSpace,
-} from "#/design-system/theme/semantic-spacing.stylex";
+import { horizontalSpace } from "#/design-system/theme/semantic-spacing.stylex";
 import { fontFamily, fontSize } from "#/design-system/theme/typography.stylex";
 import { Tooltip } from "#/design-system/tooltip";
 import { Link as AriaLink } from "react-aria-components";
 
 const styles = stylex.create({
   chip: {
-    borderColor: uiColor.border1,
+    borderColor: {
+      default: uiColor.border1,
+      ":hover": uiColor.border2,
+    },
     borderRadius: radius.full,
     borderStyle: "solid",
     borderWidth: 1,
-    gap: gap.sm,
+    paddingInline: 12,
     textDecoration: "none",
     alignItems: "center",
-    backgroundColor: {
-      default: uiColor.component1,
-      ":hover": uiColor.component2,
-    },
+    backgroundColor: uiColor.bg,
     boxSizing: "border-box",
     color: uiColor.text2,
+    columnGap: 6,
     cursor: "pointer",
     display: "inline-flex",
     flexShrink: 0,
-    fontFamily: fontFamily.mono,
-    outlineColor: {
-      ":focus-visible": uiColor.border2,
-    },
-    outlineOffset: {
-      ":focus-visible": 2,
-    },
-    outlineStyle: {
-      ":focus-visible": "solid",
-    },
-    outlineWidth: {
-      ":focus-visible": 2,
-    },
-    paddingBottom: verticalSpace.sm,
-    paddingLeft: horizontalSpace.lg,
-    paddingRight: horizontalSpace.xl,
-    paddingTop: verticalSpace.sm,
+    fontFamily: fontFamily.sans,
+    fontSize: 13,
+    fontWeight: 500,
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    transitionDuration: animationDuration.default,
+    transitionProperty: "border-color",
+    height: 30,
   },
   chipMd: {
+    paddingInline: horizontalSpace["2xl"],
     fontSize: fontSize.base,
-    paddingLeft: horizontalSpace["2xl"],
-    paddingRight: horizontalSpace["2xl"],
+    height: 36,
   },
   chipSm: {
-    fontSize: fontSize.sm,
+    paddingInlineStart: 6,
   },
   germIcon: {
     display: "block",

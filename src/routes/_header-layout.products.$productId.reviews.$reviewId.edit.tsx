@@ -1,4 +1,3 @@
-import * as stylex from "@stylexjs/stylex";
 import {
   useMutation,
   useQuery,
@@ -11,23 +10,13 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
-import { Form } from "#/design-system/form";
-import { TextArea } from "#/design-system/text-area";
 import { useLayoutEffect, useState } from "react";
 
-import { Button } from "../design-system/button";
-import { Card } from "../design-system/card";
-import { Flex } from "../design-system/flex";
-import { Link } from "../design-system/link";
-import { StarRatingInput } from "../design-system/star-rating";
 import {
-  gap,
-  horizontalSpace,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { shadow } from "../design-system/theme/shadow.stylex";
-import { Body } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+  ReviewFormCard,
+  ReviewNoticeCard,
+} from "../components/shelf/listing/ReviewFormCard";
+import { Button } from "../design-system/button";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
@@ -80,24 +69,7 @@ export const Route = createFileRoute(
   component: ProductReviewEditPage,
 });
 
-const AppLink = createLink(Link);
-
-const styles = stylex.create({
-  reviewCard: {
-    boxShadow: shadow.sm,
-    height: "100%",
-  },
-  reviewCardBody: {
-    gap: gap["5xl"],
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
-});
+const ButtonLink = createLink(Button);
 
 function ProductReviewEditPage() {
   const { productId, productSlug } = ProductReviewsRoute.useLoaderData();
@@ -188,78 +160,47 @@ function ProductReviewEditPage() {
     return null;
   }
 
-  return (
-    <Flex direction="column" gap="5xl">
-      <Text weight="semibold" size="3xl">
-        Edit review
-      </Text>
-
-      {session?.user ? (
-        listing.atUri ? (
-          <Card style={styles.reviewCard}>
-            <Form
-              style={styles.reviewCardBody}
-              onSubmit={(e) => {
-                e.preventDefault();
-                saveReview.mutate();
-              }}
-            >
-              <Flex gap="2xl" align="center">
-                <Text size="sm" variant="secondary">
-                  Rating
-                </Text>
-                <StarRatingInput
-                  value={draftRating}
-                  onChange={setDraftRating}
-                  aria-label="Your star rating"
-                />
-              </Flex>
-              <TextArea
-                size="lg"
-                id="review-body"
-                aria-label="Review (optional)"
-                value={draftText}
-                onChange={setDraftText}
-                rows={4}
-                placeholder="Write your review here... (optional)"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && e.metaKey) {
-                    saveReview.mutate();
-                  }
-                }}
-              />
-              {formError ? (
-                <Text size="sm" variant="secondary">
-                  {formError}
-                </Text>
-              ) : null}
-              <Button
-                size="lg"
-                variant="secondary"
-                isPending={saveReview.isPending}
-                onPress={() => saveReview.mutate()}
-                type="submit"
-              >
-                Save changes
-              </Button>
-            </Form>
-          </Card>
-        ) : (
-          <Body variant="secondary">
-            This listing is not linked to an AT Protocol record yet, so reviews
-            cannot be updated.
-          </Body>
-        )
-      ) : (
-        <AppLink
+  return session?.user ? (
+    listing.atUri ? (
+      <ReviewFormCard
+        title="Edit your review"
+        listingName={listing.name}
+        rating={draftRating}
+        onRatingChange={setDraftRating}
+        text={draftText}
+        onTextChange={setDraftText}
+        error={formError}
+        isPending={saveReview.isPending}
+        submitLabel="Save changes"
+        onSubmit={() => saveReview.mutate()}
+        cancel={{
+          to: "/products/$productId",
+          params: { productId: productSlug },
+        }}
+      />
+    ) : (
+      <ReviewNoticeCard title="Reviews aren't open yet">
+        This listing is not linked to an AT Protocol record yet, so reviews
+        cannot be updated.
+      </ReviewNoticeCard>
+    )
+  ) : (
+    <ReviewNoticeCard
+      title="Edit your review"
+      action={
+        <ButtonLink
           to="/login"
           search={{
             redirect: `/products/${productSlug}/reviews/${review.id}/edit`,
           }}
+          size="lg"
         >
           Sign in to edit your review
-        </AppLink>
-      )}
-    </Flex>
+        </ButtonLink>
+      }
+    >
+      Reviews are saved to your own repo, so you need to sign in to change
+      yours.
+    </ReviewNoticeCard>
   );
 }

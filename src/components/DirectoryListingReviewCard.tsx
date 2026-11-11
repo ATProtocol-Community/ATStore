@@ -3,11 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link as TanstackLink, createLink } from "@tanstack/react-router";
 import {
   ChevronDown,
-  ChevronUp,
   MessageCircle,
-  MoreVertical,
+  MoreHorizontal,
   Pencil,
-  Share2,
+  Share,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -33,72 +32,264 @@ import {
 } from "../design-system/alert-dialog";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  CardHeaderAction,
-} from "../design-system/card";
-import { Flex } from "../design-system/flex";
 import { Form } from "../design-system/form";
 import { IconButton } from "../design-system/icon-button";
 import { Menu, MenuItem } from "../design-system/menu";
 import { StarRating } from "../design-system/star-rating";
 import { TextArea } from "../design-system/text-area";
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
-import {
-  gap,
-  horizontalSpace,
-  size,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { shadow } from "../design-system/theme/shadow.stylex";
-import { fontSize } from "../design-system/theme/typography.stylex";
-import { Text } from "../design-system/typography/text";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { fontWeight } from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { getInitials } from "../lib/get-initials";
 import { RestrictedMarkdownContent } from "./restricted-markdown-content";
+import { formatReviewDate } from "./shelf/listing/listing-helpers";
+import { ListingIcon } from "./shelf/ListingIcon";
 
 const IconButtonLink = createLink(IconButton);
 
+const fullDate = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+function formatFullDate(iso: string) {
+  const time = Date.parse(iso);
+  return Number.isNaN(time) ? "" : fullDate.format(time);
+}
+
 const styles = stylex.create({
-  repliesDisclosure: {
-    paddingTop: gap["xl"],
+  /** Default: a flat row between hairlines, for review lists. */
+  row: {
+    paddingBlock: 22,
+    borderTopColor: uiColor.border1,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    scrollMarginTop: 96,
   },
-  reviewedListingCardBody: {
-    paddingBottom: verticalSpace["xl"],
-    paddingTop: verticalSpace["xl"],
+  /** With `reviewedListing`: a standalone card (profile grids). */
+  card: {
+    padding: 20,
+    borderColor: uiColor.border1,
+    borderRadius: 18,
+    borderStyle: "solid",
+    borderWidth: 1,
+    backgroundColor: uiColor.bg,
+    minWidth: 0,
+    scrollMarginTop: 96,
   },
-  reviewCard: {
-    boxShadow: shadow.sm,
-    height: "100%",
-  },
-  reviewCardBody: {
-    gap: gap["5xl"],
-    height: "100%",
-  },
-  reviewHeader: {
+  forLink: {
+    textDecoration: "none",
     alignItems: "center",
+    color: "inherit",
+    columnGap: 12,
+    display: "flex",
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    borderBottomColor: uiColor.border1,
+    borderBottomStyle: "solid",
+    borderBottomWidth: 1,
+    marginBottom: 14,
+    minWidth: 0,
+    paddingBottom: 14,
   },
-  reviewAuthor: {
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
+  forText: {
+    display: "flex",
+    flexDirection: "column",
+    fontSize: 14,
     minWidth: 0,
   },
-  reviewMeta: {
+  forName: {
+    color: {
+      default: uiColor.text2,
+      ":hover": uiColor.text1,
+    },
+    fontWeight: fontWeight.semibold,
+  },
+  forTagline: {
+    overflow: "hidden",
+    color: uiColor.text1,
+    fontSize: 13,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  who: {
+    alignItems: "center",
+    columnGap: 12,
+    display: "flex",
+    minWidth: 0,
+  },
+  whoText: {
+    flexBasis: 0,
+    flexGrow: 1,
+    minWidth: 0,
+  },
+  avatar: {
+    borderRadius: "50%",
+    flexShrink: 0,
+    height: 38,
+    width: 38,
+  },
+  avatarSmall: {
+    borderRadius: "50%",
+    flexShrink: 0,
+    height: 28,
+    width: 28,
+  },
+  avatarLink: {
+    borderRadius: "50%",
+    display: "block",
+    flexShrink: 0,
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+  },
+  name: {
+    overflow: "hidden",
+    textDecoration: "none",
+    color: uiColor.text2,
+    display: "block",
+    fontSize: 15,
+    fontWeight: fontWeight.semibold,
+    textDecorationLine: { default: "none", ":hover": "underline" },
+    textOverflow: "ellipsis",
+    textUnderlineOffset: 3,
+    whiteSpace: "nowrap",
+  },
+  sub: {
+    overflow: "hidden",
+    color: uiColor.text1,
+    fontSize: 13,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    marginTop: 1,
+  },
+  right: {
+    alignItems: "center",
+    columnGap: 2,
+    display: "flex",
+    flexShrink: 0,
+    marginLeft: "auto",
+  },
+  stars: {
+    marginRight: 6,
+  },
+  ghostIcon: {
     color: uiColor.text1,
   },
-  reviewQuoteParagraph: {
-    fontSize: fontSize["lg"],
+  text: {
+    marginTop: 12,
   },
-  ratingActions: {
-    gap: gap.sm,
+  paragraph: {
+    color: uiColor.text2,
+    fontSize: { default: 15, [breakpoints.md]: 16 },
+    lineHeight: 1.6,
+    whiteSpace: "pre-wrap",
+  },
+  thread: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 12,
+    marginTop: 12,
+  },
+  repliesToggle: {
+    borderRadius: 999,
+    borderWidth: 0,
+    paddingBlock: 5,
+    paddingInline: 12,
     alignItems: "center",
-    flexShrink: 0,
+    alignSelf: "flex-start",
+    backgroundColor: {
+      default: uiColor.component1,
+      ":is([data-hovered])": uiColor.component2,
+    },
+    color: uiColor.text2,
+    columnGap: 6,
+    cursor: "pointer",
+    display: "inline-flex",
+    fontSize: 13,
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: {
+      default: "none",
+      ":is([data-focus-visible])": "solid",
+    },
+    outlineWidth: 2,
+    transitionDuration: animationDuration.default,
+    transitionProperty: "background-color",
+  },
+  chevron: {
+    transform: {
+      default: null,
+      ":is([data-expanded] *)": "rotate(180deg)",
+    },
+    transitionDuration: animationDuration.default,
+    transitionProperty: "transform",
+  },
+  repliesPanel: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 12,
+    paddingTop: 12,
+  },
+  rail: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 16,
+    borderLeftColor: uiColor.border1,
+    borderLeftStyle: "solid",
+    borderLeftWidth: 2,
+    marginLeft: 6,
+    paddingLeft: 16,
+  },
+  reply: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 8,
+    scrollMarginTop: 96,
+  },
+  replyHeader: {
+    alignItems: "center",
+    columnGap: 10,
+    display: "flex",
+    minWidth: 0,
+  },
+  replyText: {
+    paddingLeft: 38,
+  },
+  replyParagraph: {
+    color: uiColor.text2,
+    fontSize: 15,
+    lineHeight: 1.55,
+    whiteSpace: "pre-wrap",
+  },
+  replyEdit: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 8,
+    paddingLeft: 38,
+  },
+  replyEditActions: {
+    columnGap: 8,
+    display: "flex",
+  },
+  composer: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 6,
+  },
+  composerButton: {
+    marginTop: 4,
+  },
+  muted: {
+    color: uiColor.text1,
+    fontSize: 13,
   },
   /** Inert trigger so `AlertDialog` can be opened only via `isOpen` (e.g. from the menu). */
   dialogTriggerPlaceholder: {
@@ -112,113 +303,6 @@ const styles = stylex.create({
     height: 1,
     width: 1,
   },
-  profileLink: {
-    borderRadius: radius.md,
-    textDecoration: "none",
-    color: "inherit",
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    outlineOffset: 2,
-    minWidth: 0,
-  },
-  authorLinkRow: {
-    gap: gap["xl"],
-    alignItems: "center",
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    minWidth: 0,
-  },
-  reviewSubjectLink: {
-    textDecoration: "none",
-    color: "inherit",
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    minWidth: 0,
-  },
-  reviewSubjectMedia: {
-    gap: gap["2xl"],
-    alignItems: "center",
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    minWidth: 0,
-  },
-  listingTagline: {
-    overflow: "hidden",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: 2,
-    display: "-webkit-box",
-  },
-  replySection: {
-    gap: gap.md,
-    borderTopColor: uiColor.component3,
-    borderTopStyle: "solid",
-    borderTopWidth: 1,
-    paddingTop: verticalSpace.lg,
-  },
-  repliesToggleRow: {
-    borderRadius: radius.md,
-    borderWidth: 0,
-    gap: gap["2xl"],
-    alignItems: "center",
-    backgroundColor: "transparent",
-    color: {
-      default: uiColor.text1,
-      ":is([data-hovered])": uiColor.text2,
-    },
-    cursor: "pointer",
-    display: "flex",
-    justifyContent: "space-between",
-    height: size["3xl"],
-    paddingBottom: verticalSpace.sm,
-    paddingTop: verticalSpace.sm,
-    width: "100%",
-  },
-  repliesToggleLeading: {
-    gap: gap["2xl"],
-    alignItems: "center",
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  repliesIconWrap: {
-    flexShrink: 0,
-  },
-  threadRail: {
-    borderLeftColor: uiColor.border1,
-    borderLeftStyle: "solid",
-    borderLeftWidth: 1,
-    marginLeft: horizontalSpace.sm,
-    paddingLeft: horizontalSpace["2xl"],
-  },
-  replyBubble: {
-    borderColor: uiColor.component3,
-    borderRadius: radius.md,
-    borderStyle: "solid",
-    borderWidth: 1,
-    gap: gap["4xl"],
-    backgroundColor: uiColor.bgSubtle,
-    display: "flex",
-    flexDirection: "column",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["2xl"],
-  },
-  replyBubbleHeaderRow: {
-    gap: gap["2xl"],
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  replyBodyParagraph: {
-    fontSize: fontSize.sm,
-  },
-  replyComposerButton: {
-    marginTop: verticalSpace["sm"],
-  },
 });
 
 export type DirectoryListingReviewCardProps = {
@@ -228,7 +312,7 @@ export type DirectoryListingReviewCardProps = {
   /** When set and equal to `review.authorDid`, shows the overflow menu for edit/delete. */
   viewerDid?: string | null;
   onEditReview?: () => void;
-  /** Forwarded to the outer `Card` for layout contexts (e.g. grids). */
+  /** Forwarded to the outer element for layout contexts (e.g. grids). */
   style?: stylex.StyleXStyles;
   /** When true (default), avatar and name link to the reviewer profile. */
   linkAuthorProfile?: boolean;
@@ -391,52 +475,14 @@ function ReviewConversationSection({
   });
 
   const replies = repliesQuery.data ?? [];
-  const showComposerControls = showReplyComposer;
-
-  const authorRowForReply = (reply: DirectoryListingReviewReply) => {
-    const label = authorLabelForReply(reply);
-    const handleSubtitle = replyHandleLabel(reply.authorHandle);
-
-    const nameBlock = (
-      <Flex style={styles.authorLinkRow}>
-        <Avatar
-          alt={handleSubtitle ? `${label} (${handleSubtitle})` : `${label}`}
-          fallback={getInitials(label)}
-          src={reply.authorAvatarUrl || undefined}
-        />
-        <Flex direction="column" gap="lg" style={styles.reviewAuthor}>
-          <Text weight="medium" size="base">
-            {label}
-          </Text>
-          {handleSubtitle ? (
-            <Text size="xs" variant="secondary">
-              {handleSubtitle}
-            </Text>
-          ) : null}
-        </Flex>
-      </Flex>
-    );
-
-    return linkAuthorProfile ? (
-      <TanstackLink
-        to="/profile/$actor"
-        params={{ actor: reply.authorDid }}
-        {...stylex.props(styles.profileLink)}
-      >
-        {nameBlock}
-      </TanstackLink>
-    ) : (
-      nameBlock
-    );
-  };
 
   const isReplyAuthor = (did: string) =>
     viewerDid != null && viewerDid !== "" && viewerDid.trim() === did.trim();
 
   const replyHeadingLabel =
-    review.replyCount === 1 ? "1 Reply" : `${review.replyCount} Replies`;
+    review.replyCount === 1 ? "1 reply" : `${review.replyCount} replies`;
 
-  const composer = showComposerControls ? (
+  const composer = showReplyComposer ? (
     <Form
       onSubmit={(e) => {
         e.preventDefault();
@@ -446,7 +492,7 @@ function ReviewConversationSection({
         createReply.mutate();
       }}
     >
-      <Flex direction="column" gap="sm">
+      <div {...stylex.props(styles.composer)}>
         <TextArea
           aria-label="Write a reply"
           size="lg"
@@ -468,194 +514,91 @@ function ReviewConversationSection({
             <Button
               type="submit"
               variant="tertiary"
+              size="sm"
               isDisabled={draft.trim().length === 0}
               isPending={createReply.isPending}
-              style={styles.replyComposerButton}
+              style={styles.composerButton}
             >
               Reply
             </Button>
           }
         />
         {formError ? (
-          <Text size="xs" variant="secondary">
-            {formError}
-          </Text>
+          <span {...stylex.props(styles.muted)}>{formError}</span>
         ) : null}
-      </Flex>
+      </div>
     </Form>
   ) : null;
 
   return (
     <>
-      <Flex direction="column" style={styles.replySection}>
+      <div {...stylex.props(styles.thread)}>
         {review.replyCount > 0 ? (
           <Disclosure>
-            {({ isExpanded }) => (
-              <>
-                <AriaDisclosureTriggerButton
-                  slot="trigger"
-                  {...stylex.props(styles.repliesToggleRow)}
-                >
-                  <Flex style={styles.repliesToggleLeading}>
-                    <span {...stylex.props(styles.repliesIconWrap)}>
-                      <MessageCircle size={20} aria-hidden strokeWidth={2} />
+            <AriaDisclosureTriggerButton
+              slot="trigger"
+              {...stylex.props(styles.repliesToggle)}
+            >
+              <MessageCircle size={14} aria-hidden />
+              {replyHeadingLabel}
+              <ChevronDown
+                size={14}
+                aria-hidden
+                {...stylex.props(styles.chevron)}
+              />
+            </AriaDisclosureTriggerButton>
+            <DisclosurePanel>
+              <div {...stylex.props(styles.repliesPanel)}>
+                <div {...stylex.props(styles.rail)}>
+                  {repliesQuery.isPending ? (
+                    <span {...stylex.props(styles.muted)}>
+                      Loading replies…
                     </span>
-                    <Text weight="medium">{replyHeadingLabel}</Text>
-                  </Flex>
-                  {isExpanded ? (
-                    <ChevronUp size={20} aria-hidden strokeWidth={2} />
                   ) : (
-                    <ChevronDown size={20} aria-hidden strokeWidth={2} />
+                    replies.map((reply) => (
+                      <ReplyItem
+                        key={reply.id}
+                        reply={reply}
+                        linkAuthorProfile={linkAuthorProfile}
+                        canManage={isReplyAuthor(reply.authorDid)}
+                        isEditing={editingReplyId === reply.id}
+                        editDraft={editDraft}
+                        onEditDraftChange={setEditDraft}
+                        formError={
+                          editingReplyId === reply.id ? formError : null
+                        }
+                        isSaving={updateReply.isPending}
+                        onStartEdit={() => {
+                          setEditingReplyId(reply.id);
+                          setEditDraft(reply.text);
+                        }}
+                        onCancelEdit={() => {
+                          setEditingReplyId(null);
+                          setEditDraft("");
+                          setFormError(null);
+                        }}
+                        onSaveEdit={() => {
+                          const trimmed = editDraft.trim();
+                          if (trimmed.length === 0) return;
+                          setFormError(null);
+                          updateReply.mutate({
+                            replyId: reply.id,
+                            text: trimmed,
+                          });
+                        }}
+                        onDelete={() => setDeleteReplyId(reply.id)}
+                      />
+                    ))
                   )}
-                </AriaDisclosureTriggerButton>
-                <DisclosurePanel>
-                  <Flex
-                    direction="column"
-                    gap="3xl"
-                    style={styles.repliesDisclosure}
-                  >
-                    <Flex
-                      direction="column"
-                      gap="3xl"
-                      style={styles.threadRail}
-                    >
-                      {repliesQuery.isPending ? (
-                        <Text size="sm" variant="secondary">
-                          Loading replies…
-                        </Text>
-                      ) : (
-                        <Flex direction="column" gap="lg">
-                          {replies.map((reply) => (
-                            <Flex
-                              key={reply.id}
-                              direction="column"
-                              id={`listing-review-reply-${reply.id}`}
-                              style={styles.replyBubble}
-                            >
-                              <Flex
-                                style={styles.replyBubbleHeaderRow}
-                                align="start"
-                              >
-                                <Flex style={styles.reviewAuthor}>
-                                  {authorRowForReply(reply)}
-                                </Flex>
-                                {isReplyAuthor(reply.authorDid) ? (
-                                  <Menu
-                                    placement="bottom end"
-                                    trigger={
-                                      <IconButton
-                                        aria-label="Reply actions"
-                                        variant="tertiary"
-                                      >
-                                        <MoreVertical size={18} />
-                                      </IconButton>
-                                    }
-                                  >
-                                    <MenuItem
-                                      prefix={<Pencil size={16} />}
-                                      onPress={() => {
-                                        setEditingReplyId(reply.id);
-                                        setEditDraft(reply.text);
-                                      }}
-                                    >
-                                      Edit reply
-                                    </MenuItem>
-                                    <MenuItem
-                                      variant="destructive"
-                                      prefix={<Trash2 size={16} />}
-                                      onPress={() => setDeleteReplyId(reply.id)}
-                                    >
-                                      Delete reply
-                                    </MenuItem>
-                                  </Menu>
-                                ) : null}
-                              </Flex>
-                              {editingReplyId === reply.id ? (
-                                <Form
-                                  onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const trimmed = editDraft.trim();
-                                    if (trimmed.length === 0) return;
-                                    setFormError(null);
-                                    updateReply.mutate({
-                                      replyId: reply.id,
-                                      text: trimmed,
-                                    });
-                                  }}
-                                >
-                                  <Flex direction="column" gap="md">
-                                    <TextArea
-                                      aria-label="Edit reply"
-                                      value={editDraft}
-                                      rows={4}
-                                      onChange={setEditDraft}
-                                      size="lg"
-                                    />
-                                    {formError &&
-                                    editingReplyId === reply.id ? (
-                                      <Text size="xs" variant="secondary">
-                                        {formError}
-                                      </Text>
-                                    ) : null}
-                                    <Flex gap="md">
-                                      <Button
-                                        size="sm"
-                                        type="submit"
-                                        variant="secondary"
-                                        isPending={updateReply.isPending}
-                                      >
-                                        Save
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        type="button"
-                                        variant="tertiary"
-                                        onPress={() => {
-                                          setEditingReplyId(null);
-                                          setEditDraft("");
-                                          setFormError(null);
-                                        }}
-                                      >
-                                        Cancel
-                                      </Button>
-                                    </Flex>
-                                  </Flex>
-                                </Form>
-                              ) : (
-                                <RestrictedMarkdownContent
-                                  content={reply.text}
-                                  paragraphStyle={styles.replyBodyParagraph}
-                                />
-                              )}
-                              <Text
-                                size="xs"
-                                variant="secondary"
-                                style={styles.reviewMeta}
-                              >
-                                {new Date(reply.replyCreatedAt).toLocaleString(
-                                  undefined,
-                                  {
-                                    dateStyle: "medium",
-                                    timeStyle: "short",
-                                  },
-                                )}
-                              </Text>
-                            </Flex>
-                          ))}
-                        </Flex>
-                      )}
-                    </Flex>
-
-                    {composer}
-                  </Flex>
-                </DisclosurePanel>
-              </>
-            )}
+                </div>
+                {composer}
+              </div>
+            </DisclosurePanel>
           </Disclosure>
         ) : (
           composer
         )}
-      </Flex>
+      </div>
 
       <AlertDialog
         isOpen={deleteReplyId != null}
@@ -693,6 +636,161 @@ function ReviewConversationSection({
   );
 }
 
+function ReplyItem({
+  reply,
+  linkAuthorProfile,
+  canManage,
+  isEditing,
+  editDraft,
+  onEditDraftChange,
+  formError,
+  isSaving,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onDelete,
+}: {
+  reply: DirectoryListingReviewReply;
+  linkAuthorProfile: boolean;
+  canManage: boolean;
+  isEditing: boolean;
+  editDraft: string;
+  onEditDraftChange: (value: string) => void;
+  formError: string | null;
+  isSaving: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: () => void;
+  onDelete: () => void;
+}) {
+  const label = authorLabelForReply(reply);
+  const handle = replyHandleLabel(reply.authorHandle);
+  const avatar = (
+    <Avatar
+      alt={handle ? `${label} (${handle})` : label}
+      fallback={getInitials(label)}
+      src={reply.authorAvatarUrl || undefined}
+      style={styles.avatarSmall}
+    />
+  );
+
+  return (
+    <div
+      id={`listing-review-reply-${reply.id}`}
+      {...stylex.props(styles.reply)}
+    >
+      <div {...stylex.props(styles.replyHeader)}>
+        {linkAuthorProfile ? (
+          <TanstackLink
+            to="/profile/$actor"
+            params={{ actor: reply.authorDid }}
+            aria-hidden
+            tabIndex={-1}
+            {...stylex.props(styles.avatarLink)}
+          >
+            {avatar}
+          </TanstackLink>
+        ) : (
+          avatar
+        )}
+        <div {...stylex.props(styles.whoText)}>
+          {linkAuthorProfile ? (
+            <TanstackLink
+              to="/profile/$actor"
+              params={{ actor: reply.authorDid }}
+              {...stylex.props(styles.name)}
+            >
+              {label}
+            </TanstackLink>
+          ) : (
+            <span {...stylex.props(styles.name)}>{label}</span>
+          )}
+          <div {...stylex.props(styles.sub)}>
+            {handle ? `${handle} · ` : ""}
+            <time
+              dateTime={reply.replyCreatedAt}
+              title={formatFullDate(reply.replyCreatedAt)}
+            >
+              {formatReviewDate(reply.replyCreatedAt)}
+            </time>
+          </div>
+        </div>
+        {canManage ? (
+          <Menu
+            placement="bottom end"
+            trigger={
+              <IconButton
+                aria-label="Reply actions"
+                variant="tertiary"
+                size="sm"
+                style={styles.ghostIcon}
+              >
+                <MoreHorizontal size={16} />
+              </IconButton>
+            }
+          >
+            <MenuItem prefix={<Pencil size={16} />} onPress={onStartEdit}>
+              Edit reply
+            </MenuItem>
+            <MenuItem
+              variant="destructive"
+              prefix={<Trash2 size={16} />}
+              onPress={onDelete}
+            >
+              Delete reply
+            </MenuItem>
+          </Menu>
+        ) : null}
+      </div>
+      {isEditing ? (
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSaveEdit();
+          }}
+        >
+          <div {...stylex.props(styles.replyEdit)}>
+            <TextArea
+              aria-label="Edit reply"
+              value={editDraft}
+              rows={4}
+              onChange={onEditDraftChange}
+              size="lg"
+            />
+            {formError ? (
+              <span {...stylex.props(styles.muted)}>{formError}</span>
+            ) : null}
+            <div {...stylex.props(styles.replyEditActions)}>
+              <Button
+                size="sm"
+                type="submit"
+                variant="primary"
+                isPending={isSaving}
+              >
+                Save
+              </Button>
+              <Button
+                size="sm"
+                type="button"
+                variant="secondary"
+                onPress={onCancelEdit}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Form>
+      ) : (
+        <RestrictedMarkdownContent
+          content={reply.text}
+          style={styles.replyText}
+          paragraphStyle={styles.replyParagraph}
+        />
+      )}
+    </div>
+  );
+}
+
 export function DirectoryListingReviewCard({
   review,
   listingId,
@@ -725,16 +823,13 @@ export function DirectoryListingReviewCard({
   const showReplyThreadChrome = review.replyCount > 0 || showReplyComposer;
 
   const authorLabel = authorLabelFor(review);
-  const reviewerHandleSubtitle = replyHandleLabel(review.authorHandle);
+  const reviewerHandle = replyHandleLabel(review.authorHandle);
   const isAuthor =
     viewerDid != null && viewerDid !== "" && viewerDid === review.authorDid;
-  const showAuthorMenu = isAuthor;
   const listingProductId = reviewedListing
     ? getDirectoryListingSlug(reviewedListing)
     : null;
-  const listingInitials = reviewedListing
-    ? getInitials(reviewedListing.name)
-    : "";
+  const showsListing = Boolean(reviewedListing && listingProductId);
 
   const deleteReview = useMutation({
     mutationFn: () =>
@@ -768,263 +863,158 @@ export function DirectoryListingReviewCard({
     },
   });
 
+  const avatar = (
+    <Avatar
+      alt={reviewerHandle ? `${authorLabel} (${reviewerHandle})` : authorLabel}
+      fallback={getInitials(authorLabel)}
+      src={review.authorAvatarUrl || undefined}
+      style={styles.avatar}
+    />
+  );
+
+  const date = (
+    <time
+      dateTime={review.reviewCreatedAt}
+      title={formatFullDate(review.reviewCreatedAt)}
+    >
+      {formatReviewDate(review.reviewCreatedAt)}
+    </time>
+  );
+
   return (
     <>
-      <Card id={anchorId} style={[styles.reviewCard, style]}>
+      <article
+        id={anchorId}
+        {...stylex.props(showsListing ? styles.card : styles.row, style)}
+      >
         {reviewedListing && listingProductId ? (
-          <CardHeader hasBorder>
-            <TanstackLink
-              to="/products/$productId"
-              params={{ productId: listingProductId }}
-              {...stylex.props(styles.reviewSubjectLink)}
-            >
-              <Flex style={styles.reviewSubjectMedia}>
-                <Avatar
-                  alt={reviewedListing.name}
-                  fallback={listingInitials}
-                  size="lg"
-                  src={reviewedListing.iconUrl || undefined}
-                />
-                <Flex direction="column" gap="sm" style={styles.reviewAuthor}>
-                  <Text size="xs" variant="secondary">
-                    Review for
-                  </Text>
-                  <Text weight="semibold" size="lg">
-                    {reviewedListing.name}
-                  </Text>
-                  {reviewedListing.tagline ? (
-                    <Text
-                      size="sm"
-                      variant="secondary"
-                      style={styles.listingTagline}
-                    >
-                      {reviewedListing.tagline}
-                    </Text>
-                  ) : null}
-                </Flex>
-              </Flex>
-            </TanstackLink>
-            <CardHeaderAction>
-              <Flex style={styles.ratingActions}>
-                <StarRating rating={review.rating} showReviewCount={false} />
-                {shareProductSlug ? (
-                  <IconButtonLink
-                    to={blueskyReviewShareIntentHref(
-                      shareProductSlug,
-                      review.id,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Share review on Bluesky"
-                    variant="tertiary"
-                    size="lg"
-                  >
-                    <Share2 size={18} />
-                  </IconButtonLink>
-                ) : null}
-                {showAuthorMenu ? (
-                  <Menu
-                    placement="bottom end"
-                    trigger={
-                      <IconButton
-                        aria-label="Review actions"
-                        variant="tertiary"
-                      >
-                        <MoreVertical size={18} />
-                      </IconButton>
-                    }
-                  >
-                    <MenuItem
-                      onPress={() => onEditReview?.()}
-                      isDisabled={onEditReview == null}
-                      prefix={<Pencil size={16} />}
-                    >
-                      Edit review
-                    </MenuItem>
-                    <MenuItem
-                      variant="destructive"
-                      onPress={() => setDeleteDialogOpen(true)}
-                      prefix={<Trash2 size={16} />}
-                    >
-                      Delete review
-                    </MenuItem>
-                  </Menu>
-                ) : null}
-              </Flex>
-            </CardHeaderAction>
-          </CardHeader>
-        ) : null}
-        <CardBody>
-          <Flex
-            direction="column"
-            style={[
-              styles.reviewCardBody,
-              listingProductId && reviewedListing
-                ? styles.reviewedListingCardBody
-                : undefined,
-            ]}
+          <TanstackLink
+            to="/products/$productId"
+            params={{ productId: listingProductId }}
+            {...stylex.props(styles.forLink)}
           >
-            {reviewedListing && listingProductId ? (
-              <>
-                {review.text ? (
-                  <RestrictedMarkdownContent
-                    content={review.text}
-                    paragraphStyle={styles.reviewQuoteParagraph}
-                  />
-                ) : null}
-                <Text size="sm" variant="secondary" style={styles.reviewMeta}>
-                  {new Date(review.reviewCreatedAt).toLocaleDateString(
-                    undefined,
-                    {
-                      dateStyle: "medium",
-                    },
-                  )}
-                </Text>
-                {showReplyThreadChrome ? (
-                  <ReviewConversationSection
-                    listingId={listingId}
-                    linkAuthorProfile={linkAuthorProfile}
-                    review={review}
-                    showReplyComposer={showReplyComposer}
-                    viewerDid={viewerDid ?? null}
-                  />
-                ) : null}
-              </>
+            <ListingIcon
+              name={reviewedListing.name}
+              src={reviewedListing.iconUrl}
+              size={36}
+            />
+            <span {...stylex.props(styles.forText)}>
+              <span {...stylex.props(styles.forName)}>
+                {reviewedListing.name}
+              </span>
+              {reviewedListing.tagline ? (
+                <span {...stylex.props(styles.forTagline)}>
+                  {reviewedListing.tagline}
+                </span>
+              ) : null}
+            </span>
+          </TanstackLink>
+        ) : null}
+
+        <div {...stylex.props(styles.who)}>
+          {showsListing ? null : linkAuthorProfile ? (
+            <TanstackLink
+              to="/profile/$actor"
+              params={{ actor: review.authorDid }}
+              aria-hidden
+              tabIndex={-1}
+              {...stylex.props(styles.avatarLink)}
+            >
+              {avatar}
+            </TanstackLink>
+          ) : (
+            avatar
+          )}
+          <div {...stylex.props(styles.whoText)}>
+            {showsListing ? null : linkAuthorProfile ? (
+              <TanstackLink
+                to="/profile/$actor"
+                params={{ actor: review.authorDid }}
+                {...stylex.props(styles.name)}
+              >
+                {authorLabel}
+              </TanstackLink>
             ) : (
-              <>
-                <Flex gap="2xl" style={styles.reviewHeader}>
-                  {linkAuthorProfile ? (
-                    <TanstackLink
-                      to="/profile/$actor"
-                      params={{ actor: review.authorDid }}
-                      {...stylex.props(styles.profileLink)}
-                    >
-                      <Flex style={styles.authorLinkRow}>
-                        <Avatar
-                          alt={
-                            reviewerHandleSubtitle
-                              ? `${authorLabel} (${reviewerHandleSubtitle})`
-                              : authorLabel
-                          }
-                          fallback={getInitials(authorLabel)}
-                          src={review.authorAvatarUrl || undefined}
-                        />
-                        <Flex
-                          direction="column"
-                          gap="lg"
-                          style={styles.reviewAuthor}
-                        >
-                          <Text weight="semibold">{authorLabel}</Text>
-                          {reviewerHandleSubtitle ? (
-                            <Text size="xs" variant="secondary">
-                              {reviewerHandleSubtitle}
-                            </Text>
-                          ) : null}
-                        </Flex>
-                      </Flex>
-                    </TanstackLink>
-                  ) : (
-                    <Flex style={styles.authorLinkRow}>
-                      <Avatar
-                        alt={
-                          reviewerHandleSubtitle
-                            ? `${authorLabel} (${reviewerHandleSubtitle})`
-                            : authorLabel
-                        }
-                        fallback={getInitials(authorLabel)}
-                        src={review.authorAvatarUrl || undefined}
-                      />
-                      <Flex
-                        direction="column"
-                        gap="xxs"
-                        style={styles.reviewAuthor}
-                      >
-                        <Text weight="semibold">{authorLabel}</Text>
-                        {reviewerHandleSubtitle ? (
-                          <Text size="xs" variant="secondary">
-                            {reviewerHandleSubtitle}
-                          </Text>
-                        ) : null}
-                      </Flex>
-                    </Flex>
-                  )}
-                  <Flex style={styles.ratingActions}>
-                    <StarRating
-                      rating={review.rating}
-                      showReviewCount={false}
-                    />
-                    {shareProductSlug ? (
-                      <IconButtonLink
-                        to={blueskyReviewShareIntentHref(
-                          shareProductSlug,
-                          review.id,
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Share review on Bluesky"
-                        variant="tertiary"
-                      >
-                        <Share2 size={18} />
-                      </IconButtonLink>
-                    ) : null}
-                    {showAuthorMenu ? (
-                      <Menu
-                        placement="bottom end"
-                        trigger={
-                          <IconButton
-                            aria-label="Review actions"
-                            variant="tertiary"
-                          >
-                            <MoreVertical size={18} />
-                          </IconButton>
-                        }
-                      >
-                        <MenuItem
-                          onPress={() => onEditReview?.()}
-                          isDisabled={onEditReview == null}
-                          prefix={<Pencil size={16} />}
-                        >
-                          Edit review
-                        </MenuItem>
-                        <MenuItem
-                          variant="destructive"
-                          onPress={() => setDeleteDialogOpen(true)}
-                          prefix={<Trash2 size={16} />}
-                        >
-                          Delete review
-                        </MenuItem>
-                      </Menu>
-                    ) : null}
-                  </Flex>
-                </Flex>
-                {review.text ? (
-                  <RestrictedMarkdownContent
-                    content={review.text}
-                    paragraphStyle={styles.reviewQuoteParagraph}
-                  />
-                ) : null}
-                <Text size="sm" variant="secondary" style={styles.reviewMeta}>
-                  {new Date(review.reviewCreatedAt).toLocaleDateString(
-                    undefined,
-                    {
-                      dateStyle: "medium",
-                    },
-                  )}
-                </Text>
-                {showReplyThreadChrome ? (
-                  <ReviewConversationSection
-                    listingId={listingId}
-                    linkAuthorProfile={linkAuthorProfile}
-                    review={review}
-                    showReplyComposer={showReplyComposer}
-                    viewerDid={viewerDid ?? null}
-                  />
-                ) : null}
-              </>
+              <span {...stylex.props(styles.name)}>{authorLabel}</span>
             )}
-          </Flex>
-        </CardBody>
-      </Card>
+            <div {...stylex.props(styles.sub)}>
+              {!showsListing && reviewerHandle ? `${reviewerHandle} · ` : ""}
+              {date}
+            </div>
+          </div>
+          <div {...stylex.props(styles.right)}>
+            <StarRating
+              rating={review.rating}
+              showReviewCount={false}
+              size={13}
+              aria-label={`${String(review.rating)} out of 5 stars`}
+              role="img"
+              style={styles.stars}
+            />
+            {shareProductSlug ? (
+              <IconButtonLink
+                to={blueskyReviewShareIntentHref(shareProductSlug, review.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Share review on Bluesky"
+                variant="tertiary"
+                size="sm"
+                style={styles.ghostIcon}
+              >
+                <Share size={15} />
+              </IconButtonLink>
+            ) : null}
+            {isAuthor ? (
+              <Menu
+                placement="bottom end"
+                trigger={
+                  <IconButton
+                    aria-label="Review actions"
+                    variant="tertiary"
+                    size="sm"
+                    style={styles.ghostIcon}
+                  >
+                    <MoreHorizontal size={16} />
+                  </IconButton>
+                }
+              >
+                <MenuItem
+                  onPress={() => onEditReview?.()}
+                  isDisabled={onEditReview == null}
+                  prefix={<Pencil size={16} />}
+                >
+                  Edit review
+                </MenuItem>
+                <MenuItem
+                  variant="destructive"
+                  onPress={() => setDeleteDialogOpen(true)}
+                  prefix={<Trash2 size={16} />}
+                >
+                  Delete review
+                </MenuItem>
+              </Menu>
+            ) : null}
+          </div>
+        </div>
+
+        {review.text ? (
+          <RestrictedMarkdownContent
+            content={review.text}
+            style={styles.text}
+            paragraphStyle={styles.paragraph}
+          />
+        ) : null}
+
+        {showReplyThreadChrome ? (
+          <ReviewConversationSection
+            listingId={listingId}
+            linkAuthorProfile={linkAuthorProfile}
+            review={review}
+            showReplyComposer={showReplyComposer}
+            viewerDid={viewerDid ?? null}
+          />
+        ) : null}
+      </article>
 
       <AlertDialog
         isOpen={deleteDialogOpen}

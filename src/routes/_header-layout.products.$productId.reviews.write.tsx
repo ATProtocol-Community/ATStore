@@ -11,10 +11,12 @@ import {
   notFound,
   useNavigate,
 } from "@tanstack/react-router";
-import { Form } from "#/design-system/form";
-import { TextArea } from "#/design-system/text-area";
 import { useRef, useState } from "react";
 
+import {
+  ReviewFormCard,
+  ReviewNoticeCard,
+} from "../components/shelf/listing/ReviewFormCard";
 import {
   AlertDialog,
   AlertDialogActionButton,
@@ -24,18 +26,6 @@ import {
   AlertDialogHeader,
 } from "../design-system/alert-dialog";
 import { Button } from "../design-system/button";
-import { Card } from "../design-system/card";
-import { Flex } from "../design-system/flex";
-import { Link } from "../design-system/link";
-import { StarRatingInput } from "../design-system/star-rating";
-import {
-  gap,
-  horizontalSpace,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { shadow } from "../design-system/theme/shadow.stylex";
-import { Body } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { blueskyReviewShareIntentHref } from "../lib/bluesky-review-share";
@@ -77,23 +67,9 @@ export const Route = createFileRoute(
   component: ProductReviewWritePage,
 });
 
-const AppLink = createLink(Link);
+const ButtonLink = createLink(Button);
 
 const styles = stylex.create({
-  reviewCard: {
-    boxShadow: shadow.sm,
-    height: "100%",
-  },
-  reviewCardBody: {
-    gap: gap["5xl"],
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
   /** Inert trigger for a controlled `AlertDialog`. */
   dialogTriggerPlaceholder: {
     margin: -1,
@@ -178,11 +154,7 @@ function ProductReviewWritePage() {
   });
 
   return (
-    <Flex direction="column" gap="5xl">
-      <Text weight="semibold" size="3xl">
-        Write a review
-      </Text>
-
+    <>
       <AlertDialog
         isOpen={shareReviewId !== null}
         onOpenChange={(open) => {
@@ -210,8 +182,8 @@ function ProductReviewWritePage() {
       >
         <AlertDialogHeader>Share on Bluesky?</AlertDialogHeader>
         <AlertDialogDescription>
-          Open Bluesky with a draft post that links to your review, same as the
-          share button on the reviews page. You can edit before you publish.
+          Open Bluesky with a draft post that links to your review. You can edit
+          it before you publish.
         </AlertDialogDescription>
         <AlertDialogFooter>
           <AlertDialogCancelButton>Not now</AlertDialogCancelButton>
@@ -237,69 +209,46 @@ function ProductReviewWritePage() {
 
       {session?.user ? (
         listing.atUri ? (
-          <Card style={styles.reviewCard}>
-            <Form
-              style={styles.reviewCardBody}
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitReview.mutate();
-              }}
-            >
-              <Flex gap="2xl" align="center">
-                <Text size="sm" variant="secondary">
-                  Rating
-                </Text>
-                <StarRatingInput
-                  value={draftRating}
-                  onChange={setDraftRating}
-                  aria-label="Your star rating"
-                />
-              </Flex>
-              <TextArea
-                size="lg"
-                id="review-body"
-                aria-label="Review (optional)"
-                value={draftText}
-                onChange={setDraftText}
-                rows={4}
-                placeholder="Write your review here... (optional)"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && e.metaKey) {
-                    submitReview.mutate();
-                  }
-                }}
-              />
-              {formError ? (
-                <Text size="sm" variant="secondary">
-                  {formError}
-                </Text>
-              ) : null}
-              <Button
-                size="lg"
-                variant="secondary"
-                isPending={submitReview.isPending}
-                type="submit"
-              >
-                Publish review
-              </Button>
-            </Form>
-          </Card>
+          <ReviewFormCard
+            title="Write a review"
+            listingName={listing.name}
+            rating={draftRating}
+            onRatingChange={setDraftRating}
+            text={draftText}
+            onTextChange={setDraftText}
+            error={formError}
+            isPending={submitReview.isPending}
+            submitLabel="Publish review"
+            onSubmit={() => submitReview.mutate()}
+            cancel={{
+              to: "/products/$productId",
+              params: { productId: productSlug },
+            }}
+          />
         ) : (
-          <Body variant="secondary">
+          <ReviewNoticeCard title="Reviews aren't open yet">
             This listing is not linked to an AT Protocol record yet, so reviews
             cannot be published.
-          </Body>
+          </ReviewNoticeCard>
         )
       ) : (
-        <AppLink
-          to="/login"
-          search={{
-            redirect: `/products/${productSlug}/reviews/write`,
-          }}
+        <ReviewNoticeCard
+          title="Write a review"
+          action={
+            <ButtonLink
+              to="/login"
+              search={{
+                redirect: `/products/${productSlug}/reviews/write`,
+              }}
+              size="lg"
+            >
+              Sign in to write a review
+            </ButtonLink>
+          }
         >
-          Sign in to write a review
-        </AppLink>
+          Reviews are saved to your own repo, so you need to sign in first.
+        </ReviewNoticeCard>
       )}
-    </Flex>
+    </>
   );
 }

@@ -2,103 +2,165 @@ import type { ReactNode } from "react";
 
 import { RichText } from "@atproto/api";
 import * as stylex from "@stylexjs/stylex";
-import { Link as RouterLink, createLink } from "@tanstack/react-router";
-import { IconButton } from "#/design-system/icon-button";
-import { ExternalLink } from "lucide-react";
+import { Link as RouterLink } from "@tanstack/react-router";
+import { ArrowUpRight } from "lucide-react";
 
 import type { DirectoryListingMention } from "../integrations/tanstack-query/api-directory-listings.functions";
 
 import { Avatar } from "../design-system/avatar";
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  CardHeaderAction,
-} from "../design-system/card";
-import { Flex } from "../design-system/flex";
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
-import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
-import { Body, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { fontWeight } from "../design-system/theme/typography.stylex";
 import { getInitials } from "../lib/get-initials";
-
-const IconButtonLink = createLink(IconButton);
+import { formatReviewDate } from "./shelf/listing/listing-helpers";
 
 const styles = stylex.create({
-  mentionCard: {
-    borderColor: uiColor.component2,
-    borderBottomLeftRadius: {
-      default: 0,
-      ":last-child": radius.lg,
-    },
-    borderBottomRightRadius: {
-      default: 0,
-      ":last-child": radius.lg,
-    },
-    borderTopLeftRadius: {
-      default: 0,
-      ":first-child": radius.lg,
-    },
-    borderTopRightRadius: {
-      default: 0,
-      ":first-child": radius.lg,
-    },
-    borderTopWidth: {
-      default: 0,
-      ":first-child": 1,
-    },
+  row: {
+    paddingBlock: 20,
+    borderTopColor: uiColor.border1,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
   },
-  mentionProfileLink: {
-    borderRadius: radius.md,
-    textDecoration: "none",
-    color: "inherit",
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
+  who: {
+    alignItems: "center",
+    columnGap: 12,
+    display: "flex",
+    minWidth: 0,
+  },
+  avatarLink: {
+    borderRadius: "50%",
+    display: "block",
+    flexShrink: 0,
+  },
+  avatar: {
+    borderRadius: "50%",
+    height: 38,
+    width: 38,
+  },
+  whoText: {
+    flexBasis: 0,
+    flexGrow: 1,
+    minWidth: 0,
+  },
+  name: {
+    overflow: "hidden",
+    color: uiColor.text2,
+    display: "block",
+    fontSize: 15,
+    fontWeight: fontWeight.semibold,
+    textDecorationLine: { default: "none", ":hover": "underline" },
+    textOverflow: "ellipsis",
+    textUnderlineOffset: 3,
+    whiteSpace: "nowrap",
+  },
+  sub: {
+    overflow: "hidden",
+    color: uiColor.text1,
+    fontSize: 13,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    marginTop: 1,
+  },
+  open: {
+    borderRadius: 999,
+    alignItems: "center",
+    backgroundColor: {
+      default: "transparent",
+      ":hover": uiColor.component1,
+    },
+    color: {
+      default: uiColor.text1,
+      ":hover": uiColor.text2,
+    },
+    display: "inline-flex",
+    flexShrink: 0,
+    justifyContent: "center",
+    outlineColor: uiColor.text2,
     outlineOffset: 2,
-    minWidth: 0,
-  },
-  mentionAuthorRow: {
-    minWidth: 0,
-  },
-  mentionAuthorTextColumn: {
-    minWidth: 0,
-  },
-  mentionPostText: {
-    paddingTop: verticalSpace["md"],
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    transitionDuration: animationDuration.default,
+    transitionProperty: "background-color, color",
+    height: 32,
+    width: 32,
   },
   postText: {
+    color: uiColor.text2,
+    fontSize: { default: 15, [breakpoints.md]: 16 },
+    lineHeight: 1.6,
+    overflowWrap: "anywhere",
     whiteSpace: "pre-wrap",
+    marginBottom: 0,
+    marginTop: 12,
   },
   facetLink: {
-    textDecoration: "underline",
-    color: uiColor.solid1,
+    color: uiColor.text2,
+    textDecorationColor: uiColor.border3,
+    textDecorationLine: "underline",
+    textUnderlineOffset: 3,
   },
   embedCard: {
-    borderColor: uiColor.component2,
-    borderRadius: radius.md,
+    borderColor: {
+      default: uiColor.border1,
+      ":hover": uiColor.border2,
+    },
+    borderRadius: 14,
     borderStyle: "solid",
     borderWidth: 1,
     overflow: "hidden",
     textDecoration: "none",
+    backgroundColor: uiColor.bg,
     color: "inherit",
-    maxWidth: 400,
+    display: "block",
+    transitionDuration: animationDuration.default,
+    transitionProperty: "border-color",
+    marginTop: 12,
+    maxWidth: 420,
   },
   embedThumb: {
-    aspectRatio: 16 / 9,
     display: "block",
     objectFit: "cover",
-    height: 120,
+    height: 140,
     width: "100%",
   },
   embedBody: {
-    padding: verticalSpace["3xl"],
+    paddingBlock: 12,
+    paddingInline: 14,
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 4,
+  },
+  embedTitle: {
+    color: uiColor.text2,
+    fontSize: 14,
+    fontWeight: fontWeight.semibold,
+  },
+  embedDescription: {
+    overflow: "hidden",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 2,
+    color: uiColor.text1,
+    display: "-webkit-box",
+    fontSize: 13,
+    lineHeight: 1.45,
   },
   embedUrl: {
-    overflowWrap: "anywhere",
+    overflow: "hidden",
+    color: uiColor.text1,
+    fontSize: 12,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
 });
+
+function hostOf(uri: string) {
+  try {
+    return new URL(uri).hostname.replace(/^www\./, "");
+  } catch {
+    return uri;
+  }
+}
 
 function mentionAuthorLabel(mention: DirectoryListingMention): string {
   return (
@@ -115,7 +177,7 @@ function renderPostText(mention: DirectoryListingMention) {
   if (!text) return null;
   const facets = mention.postFacets;
   if (!facets || facets.length === 0) {
-    return <Body style={styles.postText}>{text}</Body>;
+    return <p {...stylex.props(styles.postText)}>{text}</p>;
   }
 
   const richText = new RichText({
@@ -172,9 +234,10 @@ function renderPostText(mention: DirectoryListingMention) {
     parts.push(<span key={key}>{segment.text}</span>);
   }
 
-  return <Body style={styles.postText}>{parts}</Body>;
+  return <p {...stylex.props(styles.postText)}>{parts}</p>;
 }
 
+/** A Bluesky post that mentions a listing, as a row between hairlines. */
 export function BlueskyMentionCard({
   mention,
 }: {
@@ -184,94 +247,84 @@ export function BlueskyMentionCard({
   const authorLabel = mentionAuthorLabel(mention);
   const handlePlain = mention.authorHandle?.replace(/^@/, "").trim() ?? "";
   const displayName = mention.authorDisplayName?.trim();
-  const showHandleSubline =
-    Boolean(displayName) &&
+  const showHandle =
     handlePlain.length > 0 &&
     (displayName ?? "").toLowerCase() !== handlePlain.toLowerCase();
   const embed = mention.postEmbed;
+
   return (
-    <Card size="lg" style={styles.mentionCard}>
-      <CardHeader>
+    <article {...stylex.props(styles.row)}>
+      <div {...stylex.props(styles.who)}>
         <RouterLink
           to="/profile/$actor"
           params={{ actor: mention.authorDid }}
-          {...stylex.props(styles.mentionProfileLink)}
+          aria-hidden
+          tabIndex={-1}
+          {...stylex.props(styles.avatarLink)}
         >
-          <Flex align="center" gap="2xl" style={styles.mentionAuthorRow}>
-            <Avatar
-              alt={authorLabel}
-              fallback={getInitials(authorLabel)}
-              src={mention.authorAvatarUrl || undefined}
-            />
-            <Flex
-              direction="column"
-              gap="lg"
-              style={styles.mentionAuthorTextColumn}
-            >
-              <Text size="base" weight="semibold">
-                {authorLabel}
-              </Text>
-              {showHandleSubline ? (
-                <Text size="sm" variant="secondary">
-                  @{handlePlain}
-                </Text>
-              ) : null}
-            </Flex>
-          </Flex>
+          <Avatar
+            alt={authorLabel}
+            fallback={getInitials(authorLabel)}
+            src={mention.authorAvatarUrl || undefined}
+            style={styles.avatar}
+          />
         </RouterLink>
-        <CardHeaderAction>
-          {href ? (
-            <IconButtonLink
-              to={href}
-              target="_blank"
-              variant="tertiary"
-              rel="noreferrer"
-            >
-              <ExternalLink size={14} />
-            </IconButtonLink>
+        <div {...stylex.props(styles.whoText)}>
+          <RouterLink
+            to="/profile/$actor"
+            params={{ actor: mention.authorDid }}
+            {...stylex.props(styles.name)}
+          >
+            {authorLabel}
+          </RouterLink>
+          <div {...stylex.props(styles.sub)}>
+            {showHandle ? `@${handlePlain} · ` : ""}
+            <time dateTime={mention.postCreatedAt}>
+              {formatReviewDate(mention.postCreatedAt)}
+            </time>
+          </div>
+        </div>
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open post on Bluesky"
+            {...stylex.props(styles.open)}
+          >
+            <ArrowUpRight size={16} aria-hidden />
+          </a>
+        ) : null}
+      </div>
+      {renderPostText(mention)}
+      {embed ? (
+        <a
+          href={embed.uri}
+          target="_blank"
+          rel="noreferrer"
+          {...stylex.props(styles.embedCard)}
+        >
+          {embed.thumbUrl ? (
+            <img
+              alt=""
+              src={embed.thumbUrl}
+              loading="lazy"
+              {...stylex.props(styles.embedThumb)}
+            />
           ) : null}
-        </CardHeaderAction>
-      </CardHeader>
-      <CardBody>
-        <Flex direction="column" gap="4xl" style={styles.mentionPostText}>
-          {renderPostText(mention)}
-          {embed ? (
-            <a
-              href={embed.uri}
-              target="_blank"
-              rel="noreferrer"
-              {...stylex.props(styles.embedCard)}
-            >
-              {embed.thumbUrl ? (
-                <img
-                  alt=""
-                  src={embed.thumbUrl}
-                  {...stylex.props(styles.embedThumb)}
-                />
-              ) : null}
-              <Flex direction="column" gap="lg" style={styles.embedBody}>
-                {embed.title ? (
-                  <Text size="sm" weight="semibold">
-                    {embed.title}
-                  </Text>
-                ) : null}
-                {embed.description ? (
-                  <SmallBody variant="secondary">{embed.description}</SmallBody>
-                ) : null}
-                <SmallBody variant="secondary" style={styles.embedUrl}>
-                  {embed.uri}
-                </SmallBody>
-              </Flex>
-            </a>
-          ) : null}
-          <SmallBody variant="secondary">
-            {Intl.DateTimeFormat("en-US", {
-              dateStyle: "short",
-              timeStyle: "short",
-            }).format(new Date(mention.postCreatedAt))}
-          </SmallBody>
-        </Flex>
-      </CardBody>
-    </Card>
+          <span {...stylex.props(styles.embedBody)}>
+            {embed.title ? (
+              <span {...stylex.props(styles.embedTitle)}>{embed.title}</span>
+            ) : null}
+            {embed.description ? (
+              <span {...stylex.props(styles.embedDescription)}>
+                {embed.description}
+              </span>
+            ) : null}
+            <span {...stylex.props(styles.embedUrl)}>{hostOf(embed.uri)}</span>
+          </span>
+        </a>
+      ) : null}
+    </article>
   );
 }

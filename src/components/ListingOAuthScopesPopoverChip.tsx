@@ -14,6 +14,7 @@ import { Button as DsButton } from "../design-system/button";
 import { Flex } from "../design-system/flex";
 import { HoverCard } from "../design-system/hover-card";
 import { Separator } from "../design-system/separator";
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor, warningColor } from "../design-system/theme/color.stylex";
 import { radius } from "../design-system/theme/radius.stylex";
 import {
@@ -178,37 +179,32 @@ const styles = stylex.create({
     paddingTop: verticalSpace["4xl"],
   },
   scopesLinkChip: {
-    borderColor: uiColor.border1,
+    borderColor: {
+      default: uiColor.border1,
+      ":hover": uiColor.border2,
+    },
     borderRadius: radius.full,
     borderStyle: "solid",
     borderWidth: 1,
+    paddingInline: 12,
     textDecoration: "none",
     alignItems: "center",
-    backgroundColor: {
-      default: uiColor.component1,
-      ":hover": uiColor.component2,
-    },
+    backgroundColor: uiColor.bg,
+    boxSizing: "border-box",
     color: uiColor.text2,
     cursor: "pointer",
     display: "inline-flex",
-    fontFamily: fontFamily.mono,
-    fontSize: fontSize.sm,
-    outlineColor: {
-      ":focus-visible": uiColor.border2,
-    },
-    outlineOffset: {
-      ":focus-visible": 2,
-    },
-    outlineStyle: {
-      ":focus-visible": "solid",
-    },
-    outlineWidth: {
-      ":focus-visible": 2,
-    },
-    paddingBottom: verticalSpace.sm,
-    paddingLeft: horizontalSpace.xl,
-    paddingRight: horizontalSpace.xl,
-    paddingTop: verticalSpace.sm,
+    flexShrink: 0,
+    fontFamily: fontFamily.sans,
+    fontSize: 13,
+    fontWeight: 500,
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    transitionDuration: animationDuration.default,
+    transitionProperty: "border-color",
+    height: 30,
   },
   scopesChipInner: {
     gap: gap.sm,

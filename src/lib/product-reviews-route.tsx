@@ -2,39 +2,60 @@ import type { ReactNode } from "react";
 
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createLink, notFound } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
+import { notFound } from "@tanstack/react-router";
 
-import { Avatar } from "../design-system/avatar";
-import { Flex } from "../design-system/flex";
-import { Link } from "../design-system/link";
-import { Page } from "../design-system/page";
-import {
-  size,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+import { ListingIcon } from "../components/shelf/ListingIcon";
+import { BackLink } from "../components/shelf/Section";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { fontFamily } from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getInitials } from "./get-initials";
-
-const AppLink = createLink(Link);
 
 const styles = stylex.create({
   page: {
-    paddingBottom: verticalSpace["11xl"],
-    paddingTop: verticalSpace["6xl"],
+    marginInline: "auto",
+    maxWidth: 820,
+    paddingBottom: { default: 56, [breakpoints.md]: 88 },
+    paddingTop: { default: 24, [breakpoints.md]: 36 },
   },
-  backLinkRow: {
+  chrome: {
     alignItems: "center",
+    columnGap: { default: 14, [breakpoints.md]: 18 },
+    display: "flex",
+    marginBottom: 32,
+    marginTop: 12,
+    minWidth: 0,
   },
-  avatar: {
-    flexShrink: 0,
-    height: size["6xl"],
-    width: size["6xl"],
+  icon: {
+    borderRadius: { default: 13, [breakpoints.md]: 16 },
+    fontSize: { default: 22, [breakpoints.md]: 28 },
+    height: { default: 52, [breakpoints.md]: 64 },
+    width: { default: 52, [breakpoints.md]: 64 },
+  },
+  text: {
+    minWidth: 0,
+  },
+  name: {
+    margin: 0,
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: { default: 30, [breakpoints.md]: 40 },
+    fontWeight: 750,
+    letterSpacing: "-0.045em",
+    lineHeight: 1,
+    overflowWrap: "anywhere",
+  },
+  tagline: {
+    color: uiColor.text1,
+    marginBottom: 0,
+    marginTop: 6,
   },
 });
 
+/**
+ * Compact listing chrome for the reviews sub-pages: a back link, the icon,
+ * name and tagline, then the page content in a narrow column.
+ */
 export function ProductReviewsPageChrome({
   productId,
   productSlug,
@@ -53,40 +74,27 @@ export function ProductReviewsPageChrome({
   }
 
   return (
-    <Page.Root variant="small" style={styles.page}>
-      <Flex direction="column" gap="7xl">
-        <Flex style={styles.backLinkRow}>
-          <AppLink
-            to="/products/$productId"
-            params={{ productId: productSlug }}
-          >
-            <ChevronLeft />
-            Back to product
-          </AppLink>
-        </Flex>
+    <div {...stylex.props(styles.page)}>
+      <BackLink to="/products/$productId" params={{ productId: productSlug }}>
+        Back to {listing.name}
+      </BackLink>
 
-        <Flex gap="2xl" align="center">
-          <Avatar
-            alt={listing.name}
-            fallback={getInitials(listing.name)}
-            size="xl"
-            src={listing.iconUrl || undefined}
-            style={styles.avatar}
-          />
-          <Flex direction="column" gap="2xl">
-            <Text
-              font="title"
-              size={{ default: "4xl", sm: "4xl" }}
-              weight="semibold"
-            >
-              {listing.name}
-            </Text>
-            <SmallBody variant="secondary">{listing.tagline}</SmallBody>
-          </Flex>
-        </Flex>
+      <div {...stylex.props(styles.chrome)}>
+        <ListingIcon
+          name={listing.name}
+          src={listing.iconUrl}
+          size={64}
+          style={styles.icon}
+        />
+        <div {...stylex.props(styles.text)}>
+          <h1 {...stylex.props(styles.name)}>{listing.name}</h1>
+          {listing.tagline ? (
+            <p {...stylex.props(styles.tagline)}>{listing.tagline}</p>
+          ) : null}
+        </div>
+      </div>
 
-        {children}
-      </Flex>
-    </Page.Root>
+      {children}
+    </div>
   );
 }

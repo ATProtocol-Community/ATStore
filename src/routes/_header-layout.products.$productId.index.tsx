@@ -1,91 +1,52 @@
-import type { ListingLink } from "#/lib/atproto/listing-record";
-import type { FundingDetail } from "#/lib/atproto/load-funding-summaries";
-
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Link as RouterLink,
   createFileRoute,
   createLink,
   notFound,
   redirect,
-  useCanGoBack,
-  useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { BlueskyIcon } from "#/components/bluesky-icon";
-import { FundingPopoverChip } from "#/components/funding-popover-chip";
-import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
-import { ToggleButton } from "#/design-system/toggle-button";
-import {
-  BadgeCheck,
-  BookOpen,
-  ChevronLeft,
-  Code2,
-  ExternalLink,
-  FileText,
-  Heart,
-  HeartHandshake,
-  LifeBuoy,
-  Link as LinkIcon,
-  Mail,
-  MessagesSquare,
-  Newspaper,
-  Scale,
-  ScrollText,
-  Shield,
-  Zap,
-} from "lucide-react";
-import { useState } from "react";
-import { Link as AriaLink, Pressable } from "react-aria-components";
+import { Pencil } from "lucide-react";
 
 import type {
   DirectoryListingCard,
   DirectoryListingDetail,
-  DirectoryListingOAuthProbe,
   DirectoryListingProductUpdate,
 } from "../integrations/tanstack-query/api-directory-listings.functions";
-import type {
-  DirectoryCategoryOption,
-  DirectoryCategoryTreeNode,
-} from "../lib/directory-categories";
+import type { DirectoryCategoryTreeNode } from "../lib/directory-categories";
 import type { StoreListingPageSnapshotPayload } from "../lib/listing-page-snapshot.types";
 
 import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
-import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
 import { GameDetailsPanel } from "../components/GameDetailsPanel";
-import { GermNetworkBadge } from "../components/GermNetworkBadge";
 import { HeroImage } from "../components/HeroImage";
-import { ListingOAuthScopesPopoverChip } from "../components/ListingOAuthScopesPopoverChip";
-import { listingOAuthScopesPopoverChipShouldRender } from "../components/ListingOAuthScopesPopoverChip.logic";
 import { RejectGameDialog } from "../components/RejectGameDialog";
-import { RestrictedMarkdownContent } from "../components/restricted-markdown-content";
-import { Alert } from "../design-system/alert";
-import { Avatar } from "../design-system/avatar";
-import { Badge } from "../design-system/badge";
+import { ExpandableDescription } from "../components/shelf/listing/ExpandableDescription";
+import { getEcosystemCategorySlug } from "../components/shelf/listing/listing-helpers";
+import { ListingHeader } from "../components/shelf/listing/ListingHeader";
+import {
+  BlockHeading,
+  Breadcrumbs,
+  Crumb,
+  CurrentCrumb,
+  MoreExternalLink,
+} from "../components/shelf/listing/ListingParts";
+import { ListingReviewsBlock } from "../components/shelf/listing/ListingReviewsBlock";
+import { ListingSidebar } from "../components/shelf/listing/ListingSidebar";
+import { ScreenshotGallery } from "../components/shelf/listing/ScreenshotGallery";
+import { ListingCard } from "../components/shelf/ListingCard";
+import {
+  MoreLink,
+  SectionHeader,
+  ShelfSection,
+} from "../components/shelf/Section";
 import { Button } from "../design-system/button";
-import { Card, CardBody, CardImage } from "../design-system/card";
-import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
-import { Lightbox } from "../design-system/lightbox";
-import { Link } from "../design-system/link";
-import { Page } from "../design-system/page";
-import { StarRating } from "../design-system/star-rating";
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
-import {
-  gap,
-  horizontalSpace,
-  size,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
 import { shadow } from "../design-system/theme/shadow.stylex";
-import { fontFamily, fontSize } from "../design-system/theme/typography.stylex";
-import { Tooltip } from "../design-system/tooltip";
-import { Body, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+import { fontWeight } from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import {
@@ -96,25 +57,16 @@ import {
   getAppSegmentFromEcosystemRootCategoryId,
   getDirectoryCategoryOption,
 } from "../lib/directory-categories";
-import {
-  getDirectoryListingSlug,
-  getLegacyDirectoryListingId,
-} from "../lib/directory-listing-slugs";
-import {
-  ATMOSPHERE_GAMES_URL,
-  getGamePlayLabel,
-  getGameStatus,
-  isGameOnlyListing,
-} from "../lib/game-listing";
-import { getInitials } from "../lib/get-initials";
+import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
+import { ATMOSPHERE_GAMES_URL, isGameOnlyListing } from "../lib/game-listing";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { PRODUCT_REVIEW_PREVIEW_COUNT } from "../lib/product-reviews";
 
 const PRODUCT_UPDATES_PREVIEW_COUNT = 3;
+const MENTIONS_PREVIEW_COUNT = 3;
+const RELATED_CARD_COUNT = 4;
 
 const ButtonLink = createLink(Button);
-const AppLink = createLink(Link);
 
 export const Route = createFileRoute("/_header-layout/products/$productId/")({
   loader: async ({ context, params }) => {
@@ -198,450 +150,141 @@ export const Route = createFileRoute("/_header-layout/products/$productId/")({
 });
 
 const styles = stylex.create({
-  header: {
-    alignItems: "center",
-    display: "flex",
-    height: size["3xl"],
-  },
-  iconButton: {
-    height: size["4xl"],
-    width: size["4xl"],
-  },
-  noReviews: {
-    borderColor: uiColor.border2,
-    borderRadius: radius["xl"],
-    borderStyle: "dashed",
-    borderWidth: 1,
-    paddingBottom: verticalSpace["8xl"],
-    paddingTop: verticalSpace["8xl"],
-  },
-  ecosystemSection: {
-    marginTop: {
-      default: verticalSpace["lg"],
-      [breakpoints.sm]: verticalSpace["5xl"],
-    },
-  },
-  heroAvatar: {
-    borderRadius: {
-      default: radius["xl"],
-      [breakpoints.sm]: radius["3xl"],
-    },
-    height: {
-      default: size["5xl"],
-      [breakpoints.sm]: size["7xl"],
-    },
-    width: {
-      default: size["5xl"],
-      [breakpoints.sm]: size["7xl"],
-    },
-  },
   page: {
-    position: "relative",
-    paddingBottom: verticalSpace["11xl"],
-    paddingTop: verticalSpace["6xl"],
+    paddingBottom: { default: 56, [breakpoints.md]: 88 },
   },
-  backLinkRow: {
+  topRow: {
     alignItems: "center",
-    width: "100%",
+    columnGap: 16,
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+    paddingTop: { default: 20, [breakpoints.md]: 28 },
   },
-  heroHeader: {
-    boxSizing: "border-box",
-    color: uiColor.textContrast,
-    paddingBottom: verticalSpace["2xl"],
+  editActions: {
+    alignItems: "center",
+    columnGap: 10,
+    display: "flex",
+    flexWrap: "wrap",
+    rowGap: 8,
   },
-  heroHeaderText: {
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    minWidth: 0,
-  },
-  heroTitle: {
-    color: uiColor.text2,
-    display: "block",
-  },
-  heroTagline: {
+  editNote: {
     color: uiColor.text1,
+    fontSize: 13,
   },
-  desktopOnly: {
-    display: {
-      default: "none",
-      [breakpoints.sm]: "block",
+  inlineLink: {
+    color: uiColor.text2,
+    textDecorationColor: uiColor.border3,
+    textDecorationLine: "underline",
+    textUnderlineOffset: 3,
+  },
+  grid: {
+    alignItems: "start",
+    columnGap: { default: 48, [breakpoints.lg]: 72 },
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.md]: "minmax(0, 1fr) 280px",
+      [breakpoints.lg]: "minmax(0, 1fr) 320px",
     },
+    rowGap: 44,
+    paddingBottom: 24,
+    paddingTop: { default: 36, [breakpoints.md]: 56 },
   },
-  mobileOnly: {
-    display: {
-      default: "flex",
-      [breakpoints.sm]: "none",
-    },
-  },
-  tagRow: {
-    flexWrap: "wrap",
-  },
-  tagLink: {
-    textDecoration: "none",
-  },
-  heroContent: {
-    position: "relative",
-  },
-  ratingRow: {
-    alignItems: "center",
-  },
-  descriptionText: {
-    fontSize: {
-      default: fontSize["lg"],
-      [breakpoints.sm]: fontSize["xl"],
-    },
-    whiteSpace: "pre-wrap",
-  },
-  reviewsHeader: {
-    paddingTop: verticalSpace["5xl"],
-  },
-  reviewsHeaderTop: {
-    width: "100%",
-  },
-  reviewsActions: {
-    flexWrap: "wrap",
-  },
-  grow: {
-    flexGrow: 1,
-  },
-  productUpdateTextCol: {
-    flexBasis: "0%",
-    flexGrow: 1,
-    flexShrink: 1,
+  main: {
     minWidth: 0,
   },
-  productUpdateDescriptionWrap: {
-    // oxlint-disable-next-line @stylexjs/valid-styles
-    lineClamp: 2,
+  block: {
+    marginTop: { default: 44, [breakpoints.md]: 56 },
+  },
+  blockLede: {
+    color: uiColor.text1,
+    fontSize: 15,
+    lineHeight: 1.5,
+    marginBottom: 18,
+    marginTop: -8,
+  },
+  twoUp: {
+    columnGap: 12,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+    },
+    rowGap: 12,
+  },
+  updateCard: {
+    borderColor: {
+      default: uiColor.border1,
+      ":hover": uiColor.border2,
+    },
+    borderRadius: 18,
+    borderStyle: "solid",
+    borderWidth: 1,
+    overflow: "hidden",
+    textDecoration: "none",
+    backgroundColor: uiColor.bg,
+    boxShadow: { default: shadow.none, ":hover": shadow.md },
+    color: "inherit",
+    display: "flex",
+    flexDirection: "column",
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    transform: { default: null, ":hover": "translateY(-2px)" },
+    transitionDuration: animationDuration.slow,
+    transitionProperty: "border-color, box-shadow, transform",
+    minWidth: 0,
+  },
+  updateCover: {
+    aspectRatio: "1.91 / 1",
+    backgroundColor: uiColor.component1,
+    display: "block",
+    objectFit: "cover",
+    width: "100%",
+  },
+  updateBody: {
+    padding: 16,
+    display: "flex",
+    flexDirection: "column",
+    flexGrow: 1,
+    rowGap: 6,
+  },
+  updateTitle: {
+    color: uiColor.text2,
+    fontSize: 15,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: "-0.01em",
+  },
+  updateDescription: {
     overflow: "hidden",
     WebkitBoxOrient: "vertical",
     WebkitLineClamp: 2,
+    color: uiColor.text1,
     display: "-webkit-box",
-    textOverflow: "ellipsis",
-    maxHeight: "7.5rem",
-    minWidth: 0,
+    fontSize: 14,
+    lineHeight: 1.45,
   },
-  productUpdatesGrid: {
-    gap: gap["xl"],
-    display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    width: "100%",
+  updateDate: {
+    color: uiColor.text1,
+    fontSize: 13,
+    marginTop: "auto",
+    paddingTop: 6,
   },
-  productUpdateCardWrap: {
-    textDecoration: "none",
-    display: "flex",
-    flexBasis: 240,
-    flexGrow: 1,
-    flexShrink: 1,
-    maxWidth: "100%",
-    minWidth: 0,
-    width: {
-      default: "100%",
-      [breakpoints.sm]: "auto",
-    },
-  },
-  card: {
-    width: "100%",
-  },
-  relatedSection: {
-    paddingTop: verticalSpace["6xl"],
-  },
-  relatedGrid: {
-    gap: gap["xl"],
+  cards: {
+    gap: { default: 12, [breakpoints.md]: 16 },
     display: "grid",
     gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
+      default: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
     },
   },
-  ecosystemGrid: {
-    gap: gap["2xl"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
-    },
-  },
-  ecosystemHeader: {
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  ecosystemLinks: {
-    flexWrap: "wrap",
-  },
-  relatedLink: {
-    textDecoration: "none",
-    display: "block",
-    height: "100%",
-  },
-  relatedCard: {
-    boxShadow: shadow.sm,
-    height: "100%",
-  },
-  relatedCardBody: {
-    gap: gap["4xl"],
-    height: "100%",
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
-  relatedHeader: {
-    gap: gap["2xl"],
-  },
-  relatedInfo: {
-    flexBasis: "0%",
-    flexGrow: "1",
-    flexShrink: "1",
-    minWidth: 0,
-  },
-  relatedTagline: {
-    flexGrow: 1,
-  },
-  relatedFooter: {
-    alignItems: "center",
-  },
-  screenshotsSection: {
-    paddingTop: verticalSpace["4xl"],
-  },
-  screenshotCarousel: {
-    gap: gap["xl"],
-    scrollSnapType: "x mandatory",
-    display: "flex",
-    flexDirection: "row",
-    overflowX: "auto",
-    overscrollBehaviorX: "contain",
-    width: "100%",
-  },
-  screenshotSlide: {
-    flexBasis: "auto",
-    flexShrink: 0,
-    scrollSnapAlign: "start",
-  },
-  screenshotButton: {
-    margin: 0,
-    padding: 0,
-    borderColor: "transparent",
-    borderStyle: "solid",
-    borderWidth: 0,
-    appearance: "none",
-    backgroundColor: "transparent",
-    cursor: "zoom-in",
-    display: "block",
-    width: "auto",
-  },
-  screenshotImage: {
-    borderRadius: radius["md"],
-    backgroundColor: `color-mix(in srgb, ${uiColor.overlayBackdrop} 8%, transparent)`,
-    display: "block",
-    objectFit: "contain",
-    height: "auto",
-    maxHeight: 180,
-    width: "auto",
-  },
-  linksRow: {
-    alignItems: "center",
-    flexWrap: "wrap",
-    rowGap: gap["md"],
-  },
-  linkChip: {
-    borderColor: uiColor.border1,
-    borderRadius: radius.full,
-    borderStyle: "solid",
-    borderWidth: 1,
-    gap: gap.sm,
-    textDecoration: "none",
-    alignItems: "center",
-    backgroundColor: {
-      default: uiColor.component1,
-      ":hover": uiColor.component2,
-    },
-    color: uiColor.text2,
-    cursor: "pointer",
-    display: "inline-flex",
-    fontFamily: fontFamily.mono,
-    fontSize: fontSize.sm,
-    paddingBottom: verticalSpace.sm,
-    paddingLeft: horizontalSpace.xl,
-    paddingRight: horizontalSpace.xl,
-    paddingTop: verticalSpace.sm,
+  related: {
+    marginTop: { default: 24, [breakpoints.md]: 40 },
   },
 });
-
-const LISTING_LINK_ICONS = {
-  privacy: Shield,
-  terms: ScrollText,
-  support: LifeBuoy,
-  contact: Mail,
-  community: MessagesSquare,
-  docs: BookOpen,
-  blog: Newspaper,
-  changelog: FileText,
-  source: Code2,
-  license: Scale,
-  status: Zap,
-  donate: HeartHandshake,
-  other: LinkIcon,
-} as const satisfies Record<string, typeof LinkIcon>;
-
-const LISTING_LINK_DEFAULT_LABELS = {
-  privacy: "Privacy",
-  terms: "Terms",
-  support: "Support",
-  contact: "Contact",
-  community: "Community",
-  docs: "Docs",
-  blog: "Blog",
-  changelog: "Changelog",
-  source: "Source",
-  license: "License",
-  status: "Status",
-  donate: "Donate",
-  other: "Link",
-} as const satisfies Record<string, string>;
-
-type KnownListingLinkType = keyof typeof LISTING_LINK_ICONS;
-
-function isKnownListingLinkType(type: string): type is KnownListingLinkType {
-  return type in LISTING_LINK_ICONS;
-}
-
-function getListingLinkLabel(link: ListingLink): string {
-  const fallbackByType = isKnownListingLinkType(link.type)
-    ? LISTING_LINK_DEFAULT_LABELS[link.type]
-    : LISTING_LINK_DEFAULT_LABELS.other;
-
-  const custom = link.label?.trim();
-  if (custom) return custom;
-  return fallbackByType;
-}
-
-function getListingLinkIcon(type: string) {
-  return isKnownListingLinkType(type)
-    ? LISTING_LINK_ICONS[type]
-    : LISTING_LINK_ICONS.other;
-}
-
-function ListingLinksRow({
-  links,
-  externalUrl,
-  oauthProbe,
-  germDmHref,
-  fundingDetail,
-  productName,
-  devListingId,
-  devListingSlug,
-}: {
-  links: Array<ListingLink>;
-  externalUrl: string | null | undefined;
-  oauthProbe: DirectoryListingOAuthProbe | null;
-  germDmHref: string | null | undefined;
-  fundingDetail: FundingDetail | null;
-  productName: string;
-  devListingId?: string;
-  devListingSlug?: string | null;
-}) {
-  const trimmedStorefront = externalUrl?.trim() ?? "";
-  const showScopesChip =
-    trimmedStorefront.length > 0 &&
-    listingOAuthScopesPopoverChipShouldRender({
-      oauthProbe,
-    });
-  const trimmedGermHref =
-    typeof germDmHref === "string" ? germDmHref.trim() : "";
-  const germHrefChip = trimmedGermHref.length > 0 ? trimmedGermHref : null;
-  /**
-   * Funding chip is gated on at least one actionable field (URL / channel / plan /
-   * dependency); a bare declaration with nothing else attached doesn't render.
-   * `<FundingPopoverChip/>` returns null in that case so we can mirror the gate here
-   * for the row-level "do we render anything" check.
-   */
-  const showFundingChip =
-    fundingDetail != null &&
-    (Boolean(fundingDetail.contribute?.url) ||
-      fundingDetail.channels.length > 0 ||
-      fundingDetail.plans.length > 0 ||
-      fundingDetail.dependencies.length > 0);
-  if (
-    links.length === 0 &&
-    !showScopesChip &&
-    !germHrefChip &&
-    !showFundingChip
-  ) {
-    return null;
-  }
-
-  return (
-    <Flex
-      align="center"
-      gap="md"
-      wrap
-      style={styles.linksRow}
-      aria-label="Project links, OAuth scopes, integrations, and funding"
-    >
-      {links.map((link, index) => {
-        const Icon = getListingLinkIcon(link.type);
-        return (
-          <AriaLink
-            key={`${link.type}-${link.url}-${String(index)}`}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            {...stylex.props(styles.linkChip)}
-          >
-            <Icon size={14} />
-            <span>{getListingLinkLabel(link)}</span>
-          </AriaLink>
-        );
-      })}
-      {showScopesChip ? (
-        <ListingOAuthScopesPopoverChip
-          oauthProbe={oauthProbe}
-          storefrontUrl={trimmedStorefront}
-          devListingId={devListingId}
-          devListingSlug={devListingSlug}
-        />
-      ) : null}
-      {showFundingChip ? (
-        <FundingPopoverChip funding={fundingDetail} productName={productName} />
-      ) : null}
-      {germHrefChip ? <GermNetworkBadge href={germHrefChip} /> : null}
-    </Flex>
-  );
-}
-
-function collectSubproductCategories(
-  categorySlugs: ReadonlyArray<string | null | undefined>,
-): Array<DirectoryCategoryOption> {
-  const seen = new Set<string>();
-  const result: Array<DirectoryCategoryOption> = [];
-  for (const slug of categorySlugs) {
-    const option = getDirectoryCategoryOption(slug);
-    if (!option) continue;
-    if (option.pathIds[0] !== "apps" || option.pathIds.length < 3) continue;
-    if (seen.has(option.id)) continue;
-    seen.add(option.id);
-    result.push(option);
-  }
-  return result;
-}
-
-function formatSubproductBadgeLabel(option: DirectoryCategoryOption): string {
-  const appLabel = option.pathLabels[1];
-  const subLabel = option.pathLabels[2];
-  if (!appLabel || !subLabel) return option.label;
-  return `${appLabel} ${subLabel.toLowerCase()}`;
-}
-
-function productUpdateExternalHref(update: DirectoryListingProductUpdate) {
-  return (
-    update.canonicalPostUrl ??
-    `https://pdsls.dev/${encodeURIComponent(update.atUri)}`
-  );
-}
 
 function ProductPage() {
   const { productId, productSlug, ecosystemRootId, listing, page } =
@@ -653,103 +296,78 @@ function ProductPage() {
 
   const [type, scope, domain] = listing.categoryPathLabel?.split(" / ") || [];
   const isRootApp = type === "Apps" && scope && !domain;
-  const canGoBack = useCanGoBack();
-  const router = useRouter();
-  const [isScreenshotLightboxOpen, setIsScreenshotLightboxOpen] =
-    useState(false);
-  const [screenshotLightboxIndex, setScreenshotLightboxIndex] = useState(0);
+  const isGame = listing.listingType === "game";
 
   return (
-    <Page.Root variant="small" style={styles.page}>
-      <Flex direction="column" gap="6xl">
-        <ProductClaimBanner listing={listing} productId={productId} />
-        <Flex
-          align="center"
-          justify="between"
-          gap="xl"
-          style={styles.backLinkRow}
-        >
-          <Flex align="center">
-            {canGoBack ? (
-              <Link onClick={() => router.history.back()}>
-                <ChevronLeft />
-                Back
-              </Link>
-            ) : (
-              <AppLink to="/home">
-                <ChevronLeft />
-                Home
-              </AppLink>
-            )}
-          </Flex>
-          <ProductPageEditActions listing={listing} productSlug={productSlug} />
-        </Flex>
-        <HeroSection listing={listing} productId={productId} />
-        <RestrictedMarkdownContent
-          content={listing.description}
-          paragraphStyle={styles.descriptionText}
+    <div {...stylex.props(styles.page)}>
+      <div {...stylex.props(styles.topRow)}>
+        <ListingBreadcrumbs listing={listing} />
+        <ProductPageEditActions listing={listing} productSlug={productSlug} />
+      </div>
+
+      <ListingHeader
+        listing={listing}
+        productId={productId}
+        productSlug={productSlug}
+      />
+
+      {listing.heroImageUrl ? (
+        <HeroImage
+          alt={getDirectoryListingHeroImageAlt(listing)}
+          src={listing.heroImageUrl}
         />
-        <ProductListingLinksRow listing={listing} productSlug={productSlug} />
-        {listing.listingType === "game" && listing.game ? (
-          <GameDetailsPanel
-            game={listing.game}
-            gameName={listing.name}
-            isGameOnly={isGameOnlyListing(listing)}
-          />
-        ) : null}
-        {/* screenshots */}
-        {listing.screenshots.length > 0 ? (
-          <Flex direction="column" gap="3xl" style={styles.screenshotsSection}>
-            <Text size="2xl" weight="semibold" style={styles.header}>
-              Screenshots
-            </Text>
-            <div {...stylex.props(styles.screenshotCarousel)}>
-              {listing.screenshots.map((screenshot, index) => (
-                <div
-                  key={`${screenshot}-${String(index)}`}
-                  {...stylex.props(styles.screenshotSlide)}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setScreenshotLightboxIndex(index);
-                      setIsScreenshotLightboxOpen(true);
-                    }}
-                    {...stylex.props(styles.screenshotButton)}
-                  >
-                    <img
-                      src={screenshot}
-                      alt={`${listing.name} screenshot ${String(index + 1)}`}
-                      {...stylex.props(styles.screenshotImage)}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <Lightbox
-              isOpen={isScreenshotLightboxOpen}
-              onOpenChange={setIsScreenshotLightboxOpen}
-              images={listing.screenshots}
-              initialIndex={screenshotLightboxIndex}
-              alt={`${listing.name} screenshot`}
+      ) : null}
+
+      <div {...stylex.props(styles.grid)}>
+        <div {...stylex.props(styles.main)}>
+          {listing.description.trim() ? (
+            <section aria-labelledby="listing-about-heading">
+              <BlockHeading id="listing-about-heading">About</BlockHeading>
+              <ExpandableDescription content={listing.description} />
+            </section>
+          ) : null}
+
+          {listing.screenshots.length > 0 ? (
+            <section
+              aria-labelledby="listing-screenshots-heading"
+              {...stylex.props(styles.block)}
+            >
+              <BlockHeading
+                id="listing-screenshots-heading"
+                count={listing.screenshots.length}
+              >
+                Screenshots
+              </BlockHeading>
+              <ScreenshotGallery
+                screenshots={listing.screenshots}
+                name={listing.name}
+              />
+            </section>
+          ) : null}
+
+          {isGame && listing.game ? (
+            <GameDetailsPanel
+              game={listing.game}
+              gameName={listing.name}
+              isGameOnly={isGameOnlyListing(listing)}
             />
-          </Flex>
-        ) : null}
+          ) : null}
 
-        {ecosystemRootId && isRootApp ? (
-          <ProductEcosystemSection
-            ecosystemRootId={ecosystemRootId}
-            ecosystemChildren={page.ecosystemChildren}
-          />
-        ) : null}
+          {ecosystemRootId && isRootApp ? (
+            <ProductEcosystemSection
+              ecosystemRootId={ecosystemRootId}
+              ecosystemChildren={page.ecosystemChildren}
+            />
+          ) : null}
 
-        <Flex gap="4xl" direction="column">
-          <ProductReviewsSection
-            listing={listing}
-            productId={productId}
-            productSlug={productSlug}
-            previewReviews={page.reviewPreview}
-          />
+          <div {...stylex.props(styles.block)}>
+            <ListingReviewsBlock
+              listing={listing}
+              productId={productId}
+              productSlug={productSlug}
+              previewReviews={page.reviewPreview}
+            />
+          </div>
 
           {listing.productAccountDid ? (
             <ProductUpdatesSection
@@ -763,325 +381,76 @@ function ProductPage() {
             mentionTotal={page.mentionTotal}
             productSlug={productSlug}
           />
+        </div>
 
-          <ProductRelatedSections
-            relatedByTag={page.relatedByTag}
-            relatedInCategory={page.relatedInCategory}
-            relatedByLexicon={page.relatedByLexicon}
-            productSlug={productSlug}
-          />
-        </Flex>
-      </Flex>
-    </Page.Root>
+        <ListingSidebar
+          listing={listing}
+          productId={productId}
+          productSlug={productSlug}
+          hasCompatibleApps={page.relatedByLexicon.length > 0}
+        />
+      </div>
+
+      <ProductRelatedSections
+        listingName={listing.name}
+        relatedByTag={page.relatedByTag}
+        relatedInCategory={page.relatedInCategory}
+        relatedByLexicon={page.relatedByLexicon}
+        productSlug={productSlug}
+      />
+    </div>
   );
 }
 
-function HeroSection({
-  listing,
-  productId,
-}: {
-  listing: DirectoryListingDetail;
-  productId: string;
-}) {
-  const primaryLink = listing.externalUrl || undefined;
-  const gameStatus =
-    listing.listingType === "game" && listing.game
-      ? getGameStatus(listing.game.status)
-      : null;
-  const isGameOnly = isGameOnlyListing(listing);
-  const buttonStyles = useButtonStyles({ variant: "secondary", size: "lg" });
-  const { data: session } = useQuery(user.getSessionQueryOptions);
-  const { data: favoriteStatus } = useQuery(
-    directoryListingApi.getDirectoryListingFavoriteStatusQueryOptions(
-      productId,
-    ),
-  );
-  const queryClient = useQueryClient();
-  const favoriteStatusQueryOptions =
-    directoryListingApi.getDirectoryListingFavoriteStatusQueryOptions(
-      productId,
-    );
-  const profileFavoritesQueryOptions = session?.user?.did
-    ? directoryListingApi.getProfileFavoriteListingsQueryOptions(
-        session.user.did,
+/** Apps › ecosystem › category, Apps › first tag, or Games. */
+function ListingBreadcrumbs({ listing }: { listing: DirectoryListingDetail }) {
+  const ecosystemSlug = getEcosystemCategorySlug(listing.categorySlugs);
+  const ecosystem = ecosystemSlug
+    ? getDirectoryCategoryOption(ecosystemSlug)
+    : null;
+  const appSegment = ecosystem
+    ? getAppSegmentFromEcosystemRootCategoryId(
+        ecosystem.pathIds.slice(0, 2).join("/"),
       )
     : null;
-  const favoriteMutation = useMutation({
-    mutationFn: async (nextIsFavorited: boolean) => {
-      if (nextIsFavorited) {
-        await directoryListingApi.favoriteDirectoryListing({
-          data: { listingId: productId },
-        });
-        return;
-      }
-      await directoryListingApi.unfavoriteDirectoryListing({
-        data: { listingId: productId },
-      });
-    },
-    onMutate: async (nextIsFavorited: boolean) => {
-      await queryClient.cancelQueries({
-        queryKey: favoriteStatusQueryOptions.queryKey,
-        exact: true,
-      });
-      const previousFavoriteStatus = queryClient.getQueryData(
-        favoriteStatusQueryOptions.queryKey,
-      );
-      queryClient.setQueryData(favoriteStatusQueryOptions.queryKey, {
-        isFavorited: nextIsFavorited,
-      });
-      return { previousFavoriteStatus };
-    },
-    onError: (_error, _nextIsFavorited, context) => {
-      if (context?.previousFavoriteStatus !== undefined) {
-        queryClient.setQueryData(
-          favoriteStatusQueryOptions.queryKey,
-          context.previousFavoriteStatus,
-        );
-      }
-    },
-    onSuccess: async (_result, nextIsFavorited) => {
-      queryClient.setQueryData(favoriteStatusQueryOptions.queryKey, {
-        isFavorited: nextIsFavorited,
-      });
-      if (profileFavoritesQueryOptions) {
-        await queryClient.invalidateQueries({
-          queryKey: profileFavoritesQueryOptions.queryKey,
-          exact: true,
-        });
-      }
-      globalThis.setTimeout(() => {
-        void queryClient.invalidateQueries({
-          queryKey: favoriteStatusQueryOptions.queryKey,
-          exact: true,
-        });
-      }, 10_000);
-    },
-  });
-  const canFavorite =
-    Boolean(session?.user?.did) && Boolean(listing.atUri?.trim());
-
-  const subproductCategories = collectSubproductCategories(
-    listing.categorySlugs,
-  );
-
-  const verificationBadge = listing.isStoreManaged ? (
-    <Tooltip text="This listing is managed by the ATStore team. Claim it to add more details.">
-      <Pressable>
-        <Badge size="sm" variant="warning" aria-label="Unverified listing">
-          Unverified
-        </Badge>
-      </Pressable>
-    </Tooltip>
-  ) : (
-    <Tooltip
-      text={
-        isGameOnly
-          ? "This listing comes from the developer's record on atmosphere.games."
-          : "This listing is managed by the owner of the product."
-      }
-    >
-      <Pressable>
-        <Badge size="sm" variant="success" aria-label="Claimed by owner">
-          <BadgeCheck aria-hidden />
-          Verified
-        </Badge>
-      </Pressable>
-    </Tooltip>
-  );
-
-  const tags = (listing.appTags.length > 0 ||
-    subproductCategories.length > 0) && (
-    <Flex gap="md" style={styles.tagRow}>
-      {subproductCategories.map((option) => (
-        <RouterLink
-          key={option.id}
-          to="/apps"
-          search={{ in: option.id }}
-          {...stylex.props(styles.tagLink)}
-        >
-          <Badge size="sm" variant="default">
-            {formatSubproductBadgeLabel(option)}
-          </Badge>
-        </RouterLink>
-      ))}
-      {listing.appTags.map((tag) => (
-        <RouterLink
-          key={tag}
-          {...getAppTagLinkOptions(tag)}
-          {...stylex.props(styles.tagLink)}
-        >
-          <Badge size="sm" variant="primary">
-            {formatAppTagLabel(tag)}
-          </Badge>
-        </RouterLink>
-      ))}
-    </Flex>
-  );
-
-  const actions = (
-    <Flex align="center" gap="md">
-      {session?.user?.did && canFavorite && favoriteStatus ? (
-        <ToggleButton
-          variant="secondary"
-          size="lg"
-          isSelected={favoriteStatus.isFavorited}
-          isDisabled={favoriteMutation.isPending}
-          onPress={() =>
-            void favoriteMutation.mutateAsync(!favoriteStatus.isFavorited)
-          }
-          aria-label={favoriteStatus.isFavorited ? "Unfavorite" : "Favorite"}
-        >
-          <Heart
-            size={16}
-            fill={favoriteStatus.isFavorited ? "currentColor" : "none"}
-          />
-        </ToggleButton>
-      ) : null}
-      {listing.productAccountDid ? (
-        <AriaLink
-          {...stylex.props(buttonStyles, styles.iconButton)}
-          href={`https://bsky.app/profile/${listing.productAccountDid}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <BlueskyIcon />
-        </AriaLink>
-      ) : null}
-      {primaryLink ? (
-        <ButtonLink
-          to={primaryLink}
-          size="lg"
-          variant={
-            gameStatus === "coming" || gameStatus === "archived"
-              ? "secondary"
-              : undefined
-          }
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {gameStatus ? getGamePlayLabel(gameStatus) : "Explore"}{" "}
-          <ExternalLink />
-        </ButtonLink>
-      ) : null}
-    </Flex>
+  const firstTag = listing.appTags.find(
+    (tag) => formatAppTagLabel(tag).toLowerCase() !== "games",
   );
 
   return (
-    <Flex direction="column" gap="6xl">
-      {listing.heroImageUrl && (
-        <HeroImage
-          alt={getDirectoryListingHeroImageAlt(listing)}
-          glowIntensity={0.6}
-          src={listing.heroImageUrl}
-        />
+    <Breadcrumbs>
+      {listing.listingType === "game" ? (
+        <Crumb to="/games">Games</Crumb>
+      ) : (
+        <>
+          <Crumb to="/apps">Apps</Crumb>
+          {ecosystem && ecosystemSlug ? (
+            <>
+              {appSegment ? (
+                <Crumb to="/ecosystems/$app" params={{ app: appSegment }}>
+                  {ecosystem.pathLabels[1]}
+                </Crumb>
+              ) : null}
+              <Crumb to="/apps" search={{ in: ecosystemSlug }}>
+                {ecosystem.pathLabels.slice(2).join(" › ")}
+              </Crumb>
+            </>
+          ) : firstTag ? (
+            <Crumb {...getAppTagLinkOptions(firstTag)}>
+              {formatAppTagLabel(firstTag)}
+            </Crumb>
+          ) : null}
+        </>
       )}
-
-      <Flex direction="column" gap="3xl" style={styles.heroContent}>
-        <Flex
-          style={styles.mobileOnly}
-          justify="between"
-          gap="lg"
-          align="center"
-        >
-          {tags}
-          {actions}
-        </Flex>
-        <Flex direction="column" gap="lg">
-          <Flex gap="2xl" align="center" style={styles.heroHeader}>
-            <Avatar
-              alt={listing.name}
-              fallback={getInitials(listing.name)}
-              size="xl"
-              src={listing.iconUrl || undefined}
-              style={styles.heroAvatar}
-            />
-            <Flex direction="column" gap="2xl" style={styles.heroHeaderText}>
-              <Flex gap="xl" align="center" wrap>
-                <Text
-                  font="title"
-                  size={{ default: "4xl", sm: "4xl" }}
-                  weight="semibold"
-                  style={styles.heroTitle}
-                >
-                  {listing.name}
-                </Text>
-                {verificationBadge}
-                <div {...stylex.props(styles.desktopOnly)}>{tags}</div>
-              </Flex>
-              <Body style={[styles.heroTagline, styles.desktopOnly]}>
-                {listing.tagline}
-              </Body>
-            </Flex>
-
-            <div {...stylex.props(styles.desktopOnly)}>{actions}</div>
-          </Flex>
-          <Body style={[styles.heroTagline, styles.mobileOnly]}>
-            {listing.tagline}
-          </Body>
-        </Flex>
-      </Flex>
-    </Flex>
+      <CurrentCrumb>{listing.name}</CurrentCrumb>
+    </Breadcrumbs>
   );
 }
 
-function ProductListingLinksRow({
-  listing,
-  productSlug,
-}: {
-  listing: DirectoryListingDetail;
-  productSlug: string;
-}) {
+function productUpdateExternalHref(update: DirectoryListingProductUpdate) {
   return (
-    <ListingLinksRow
-      externalUrl={listing.externalUrl}
-      links={listing.links}
-      oauthProbe={listing.oauthProbe}
-      germDmHref={listing.germDmHref}
-      fundingDetail={listing.fundingDetail}
-      productName={listing.name}
-      devListingId={listing.id}
-      devListingSlug={productSlug}
-    />
-  );
-}
-
-function ProductClaimBanner({
-  listing,
-  productId,
-}: {
-  listing: DirectoryListingDetail;
-  productId: string;
-}) {
-  const { data: editAccess } = useQuery(
-    directoryListingApi.getProductListingEditAccessQueryOptions(productId),
-  );
-
-  if (
-    !listing.isStoreManaged ||
-    editAccess?.canEdit ||
-    isGameOnlyListing(listing)
-  ) {
-    return null;
-  }
-
-  return (
-    <Alert
-      variant="warning"
-      title="Unverified listing"
-      action={
-        <ButtonLink
-          to="/product/claim"
-          search={{ listing: listing.id }}
-          variant="secondary"
-          size="sm"
-        >
-          Claim listing
-        </ButtonLink>
-      }
-    >
-      This listing is managed by the at-store team. Claim it to update details,
-      links, and respond to reviews.
-    </Alert>
+    update.canonicalPostUrl ??
+    `https://pdsls.dev/${encodeURIComponent(update.atUri)}`
   );
 }
 
@@ -1138,7 +507,7 @@ function ProductPageEditActions({
   }
 
   return (
-    <Flex align="center" gap="lg">
+    <div {...stylex.props(styles.editActions)}>
       {canRemoveHero ? (
         <Button
           variant="critical-outline"
@@ -1151,131 +520,41 @@ function ProductPageEditActions({
         </Button>
       ) : null}
       {canEditHere ? (
-        <AppLink
+        <ButtonLink
           to="/products/$productId/edit"
           params={{ productId: productSlug }}
+          variant="secondary"
+          size="sm"
         >
+          <Pencil />
           Edit listing
-        </AppLink>
+        </ButtonLink>
       ) : null}
       {canRejectGame ? (
         <RejectGameDialog listingId={listing.id} listingName={listing.name} />
       ) : null}
       {editAccess?.canEdit && isGameOnly ? (
-        <SmallBody variant="secondary">
+        <span {...stylex.props(styles.editNote)}>
           Edit this game on{" "}
-          <Link
+          <a
             href={ATMOSPHERE_GAMES_URL}
             target="_blank"
             rel="noopener noreferrer"
+            {...stylex.props(styles.inlineLink)}
           >
             atmosphere.games
-          </Link>
-        </SmallBody>
+          </a>
+        </span>
       ) : null}
-    </Flex>
+    </div>
   );
 }
 
-function ProductReviewsSection({
-  listing,
-  productId,
-  productSlug,
-  previewReviews,
-}: {
-  listing: DirectoryListingDetail;
-  productId: string;
-  productSlug: string;
-  previewReviews: StoreListingPageSnapshotPayload["reviewPreview"];
-}) {
-  const navigate = useNavigate();
-  const { data: session } = useQuery(user.getSessionQueryOptions);
-
-  return (
-    <>
-      <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
-        <Flex
-          align="center"
-          gap="2xl"
-          justify="between"
-          style={styles.reviewsHeaderTop}
-        >
-          <Flex gap="3xl" align="center">
-            <Text size="2xl" weight="semibold" style={styles.header}>
-              Reviews
-            </Text>
-            <Flex gap="md" style={styles.ratingRow}>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
-              />
-              <Text weight="semibold">
-                {listing.rating == null ? "—" : listing.rating.toFixed(1)}
-              </Text>
-            </Flex>
-          </Flex>
-          <Flex gap="xl" style={styles.reviewsActions}>
-            <ButtonLink
-              to="/products/$productId/reviews/write"
-              params={{ productId: productSlug }}
-              variant="secondary"
-            >
-              Create review
-            </ButtonLink>
-          </Flex>
-        </Flex>
-      </Flex>
-
-      {previewReviews.length > 0 ? (
-        <Flex direction="column" gap="2xl">
-          {previewReviews.map((review) => (
-            <DirectoryListingReviewCard
-              key={review.id}
-              listingId={productId}
-              review={review}
-              viewerDid={session?.user?.did ?? null}
-              anchorId={`listing-review-${review.id}`}
-              shareProductSlug={productSlug}
-              listingRepoDid={listing.repoDid}
-              listingProductAccountDid={listing.productAccountDid}
-              onEditReview={() => {
-                void navigate({
-                  to: "/products/$productId/reviews/$reviewId/edit",
-                  params: {
-                    productId: productSlug,
-                    reviewId: review.id,
-                  },
-                });
-              }}
-            />
-          ))}
-        </Flex>
-      ) : (
-        <Flex
-          direction="column"
-          justify="center"
-          align="center"
-          gap="2xl"
-          style={styles.noReviews}
-        >
-          <Body variant="secondary">Be the first to review this product.</Body>
-        </Flex>
-      )}
-
-      {(listing.reviewCount ?? 0) > PRODUCT_REVIEW_PREVIEW_COUNT ? (
-        <ButtonLink
-          to="/products/$productId/reviews"
-          params={{ productId: productSlug }}
-          variant="secondary"
-          size="lg"
-        >
-          View all
-        </ButtonLink>
-      ) : null}
-    </>
-  );
-}
+const updateDate = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
 function ProductUpdatesSection({
   updates,
@@ -1284,99 +563,68 @@ function ProductUpdatesSection({
   updates: StoreListingPageSnapshotPayload["productUpdates"];
   publicationUrl: string | null;
 }) {
-  const listingProductUpdates = updates;
-  const productUpdatesPublicationUrl = publicationUrl;
-  const previewProductUpdates = listingProductUpdates.slice(
-    0,
-    PRODUCT_UPDATES_PREVIEW_COUNT,
-  );
-  const showProductUpdatesViewMore =
-    listingProductUpdates.length > PRODUCT_UPDATES_PREVIEW_COUNT &&
-    productUpdatesPublicationUrl != null &&
-    productUpdatesPublicationUrl.length > 0;
-
-  if (listingProductUpdates.length === 0) {
+  if (updates.length === 0) {
     return null;
   }
 
+  const preview = updates.slice(0, PRODUCT_UPDATES_PREVIEW_COUNT);
+  const showViewAll =
+    updates.length > PRODUCT_UPDATES_PREVIEW_COUNT &&
+    publicationUrl != null &&
+    publicationUrl.length > 0;
+
   return (
-    <Flex direction="column" gap="2xl" style={styles.reviewsHeader}>
-      <Flex
-        align="center"
-        gap="2xl"
-        justify="between"
-        style={styles.reviewsHeaderTop}
+    <section
+      aria-labelledby="listing-updates-heading"
+      {...stylex.props(styles.block)}
+    >
+      <BlockHeading
+        id="listing-updates-heading"
+        action={
+          showViewAll ? (
+            <MoreExternalLink href={publicationUrl}>
+              All updates
+            </MoreExternalLink>
+          ) : null
+        }
       >
-        <Text size="2xl" weight="semibold" style={styles.header}>
-          Updates
-        </Text>
-        {showProductUpdatesViewMore ? (
-          <ButtonLink
-            to={productUpdatesPublicationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="secondary"
-          >
-            View all
-          </ButtonLink>
-        ) : null}
-      </Flex>
-      <div {...stylex.props(styles.productUpdatesGrid)}>
-        {previewProductUpdates.map((update) => (
-          <a
-            key={update.id}
-            href={productUpdateExternalHref(update)}
-            target="_blank"
-            rel="noopener noreferrer"
-            {...stylex.props(styles.productUpdateCardWrap)}
-          >
-            <Card size="sm" style={styles.card}>
+        Updates
+      </BlockHeading>
+      <div {...stylex.props(styles.twoUp)}>
+        {preview.map((update) => {
+          const title = update.title?.trim() || update.path.replace(/^\//, "");
+          return (
+            <a
+              key={update.id}
+              href={productUpdateExternalHref(update)}
+              target="_blank"
+              rel="noopener noreferrer"
+              {...stylex.props(styles.updateCard)}
+            >
               {update.coverImageUrl ? (
-                <CardImage
+                <img
                   src={update.coverImageUrl}
-                  alt={update.title?.trim() || update.path.replace(/^\//, "")}
-                  aspectRatio={1.91 / 1}
+                  alt=""
+                  loading="lazy"
+                  {...stylex.props(styles.updateCover)}
                 />
               ) : null}
-              <CardBody style={styles.grow}>
-                <Flex
-                  direction="column"
-                  gap="lg"
-                  style={styles.productUpdateTextCol}
-                >
-                  <Flex direction="column" gap="md" style={styles.grow}>
-                    <Text weight="semibold" size="base">
-                      {update.title?.trim() || update.path.replace(/^\//, "")}
-                    </Text>
-                    {update.description?.trim() ? (
-                      <Text
-                        variant="secondary"
-                        size="sm"
-                        leading="sm"
-                        style={styles.productUpdateDescriptionWrap}
-                      >
-                        {update.description}
-                      </Text>
-                    ) : null}
-                  </Flex>
-
-                  <Text size="xs" variant="secondary">
-                    {new Date(update.publishedAt).toLocaleDateString(
-                      undefined,
-                      {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      },
-                    )}
-                  </Text>
-                </Flex>
-              </CardBody>
-            </Card>
-          </a>
-        ))}
+              <span {...stylex.props(styles.updateBody)}>
+                <span {...stylex.props(styles.updateTitle)}>{title}</span>
+                {update.description?.trim() ? (
+                  <span {...stylex.props(styles.updateDescription)}>
+                    {update.description}
+                  </span>
+                ) : null}
+                <span {...stylex.props(styles.updateDate)}>
+                  {updateDate.format(new Date(update.publishedAt))}
+                </span>
+              </span>
+            </a>
+          );
+        })}
       </div>
-    </Flex>
+    </section>
   );
 }
 
@@ -1389,114 +637,36 @@ function ProductMentionsSection({
   mentionTotal: number;
   productSlug: string;
 }) {
-  const listingMentions = mentions;
-  const listingMentionTotal = mentionTotal;
-
-  if (listingMentions.length === 0) {
+  if (mentions.length === 0) {
     return null;
   }
 
   return (
-    <Flex direction="column" gap="3xl">
-      <Flex
-        align="center"
-        justify="between"
-        gap="2xl"
-        wrap
-        style={styles.reviewsHeader}
-      >
-        <Text size="2xl" weight="semibold" style={styles.header}>
-          Mentions
-        </Text>
-        {listingMentionTotal > 3 ? (
-          <Flex gap="xl">
-            <ButtonLink
+    <section
+      aria-labelledby="listing-mentions-heading"
+      {...stylex.props(styles.block)}
+    >
+      <BlockHeading
+        id="listing-mentions-heading"
+        action={
+          mentionTotal > MENTIONS_PREVIEW_COUNT ? (
+            <MoreLink
               to="/products/$productId/mentions"
               params={{ productId: productSlug }}
-              variant="secondary"
             >
-              View all
-            </ButtonLink>
-          </Flex>
-        ) : null}
-      </Flex>
-      <Flex direction="column">
-        {listingMentions.map((mention) => (
+              All mentions
+            </MoreLink>
+          ) : null
+        }
+      >
+        On Bluesky
+      </BlockHeading>
+      <div>
+        {mentions.map((mention) => (
           <BlueskyMentionCard key={mention.id} mention={mention} />
         ))}
-      </Flex>
-    </Flex>
-  );
-}
-
-function ProductRelatedSections({
-  relatedByTag,
-  relatedInCategory,
-  relatedByLexicon,
-  productSlug,
-}: {
-  relatedByTag: Array<DirectoryListingCard>;
-  relatedInCategory: Array<DirectoryListingCard>;
-  relatedByLexicon: Array<DirectoryListingCard>;
-  productSlug: string;
-}) {
-  const relatedProducts = relatedByTag;
-  const relatedAppsByOAuthLexicon = { listings: relatedByLexicon };
-  const relatedCategoryListings = relatedInCategory;
-
-  const compatibleRelatedIds = new Set(
-    relatedAppsByOAuthLexicon.listings.map((l) => l.id),
-  );
-  const relatedSectionListingsBase =
-    relatedCategoryListings.length > 0
-      ? relatedCategoryListings
-      : relatedProducts;
-  const relatedSectionListings = relatedSectionListingsBase.filter(
-    (l) => !compatibleRelatedIds.has(l.id),
-  );
-  const relatedSectionTitle =
-    relatedCategoryListings.length > 0
-      ? "More in this category"
-      : "Similar apps";
-
-  return (
-    <>
-      {relatedAppsByOAuthLexicon.listings.length > 0 ? (
-        <Flex direction="column" gap="3xl" style={styles.relatedSection}>
-          <Flex
-            align="center"
-            justify="between"
-            gap="2xl"
-            wrap
-            style={styles.reviewsHeader}
-          >
-            <Text size="2xl" weight="semibold" style={styles.header}>
-              Compatible apps
-            </Text>
-            <ButtonLink
-              to="/products/$productId/lexicon-compatible"
-              params={{ productId: productSlug }}
-              search={{ sort: "popular" }}
-              variant="secondary"
-            >
-              View all
-            </ButtonLink>
-          </Flex>
-          <Grid style={styles.relatedGrid}>
-            {relatedAppsByOAuthLexicon.listings.map((lexListing) => (
-              <RelatedProductCard key={lexListing.id} listing={lexListing} />
-            ))}
-          </Grid>
-        </Flex>
-      ) : null}
-
-      {relatedSectionListings.length > 0 ? (
-        <RelatedProductsSection
-          listings={relatedSectionListings}
-          title={relatedSectionTitle}
-        />
-      ) : null}
-    </>
+      </div>
+    </section>
   );
 }
 
@@ -1514,98 +684,98 @@ function ProductEcosystemSection({
   }
 
   return (
-    <Flex direction="column" gap="4xl" style={styles.ecosystemSection}>
-      <Flex align="end" gap="3xl" style={styles.ecosystemHeader}>
-        <Flex direction="column" gap="lg">
-          <Text size="2xl" weight="semibold" style={styles.header}>
-            Ecosystem
-          </Text>
-          <Body variant="secondary">
-            Discover tools and products built for this app.
-          </Body>
-        </Flex>
-        <Flex gap="2xl" style={styles.ecosystemLinks}>
-          <ButtonLink
-            variant="secondary"
-            to="/ecosystems/$app"
-            params={{ app: appSegment }}
-          >
+    <section
+      aria-labelledby="listing-ecosystem-heading"
+      {...stylex.props(styles.block)}
+    >
+      <BlockHeading
+        id="listing-ecosystem-heading"
+        action={
+          <MoreLink to="/ecosystems/$app" params={{ app: appSegment }}>
             Explore
-          </ButtonLink>
-        </Flex>
-      </Flex>
-      <Grid style={styles.ecosystemGrid}>
+          </MoreLink>
+        }
+      >
+        Ecosystem
+      </BlockHeading>
+      <p {...stylex.props(styles.blockLede)}>
+        Discover tools and products built for this app.
+      </p>
+      <div {...stylex.props(styles.twoUp)}>
         {ecosystemChildren.map((child) => (
           <EcosystemCategoryCard key={child.id} category={child} />
         ))}
-      </Grid>
-    </Flex>
+      </div>
+    </section>
   );
 }
 
-function RelatedProductsSection({
-  listings,
-  title = "Similar apps",
+/**
+ * "More like X" (listings sharing a tag or category) and apps that work with
+ * the same data. Each listing appears in at most one row.
+ */
+function ProductRelatedSections({
+  listingName,
+  relatedByTag,
+  relatedInCategory,
+  relatedByLexicon,
+  productSlug,
 }: {
-  listings: Array<DirectoryListingCard>;
-  title?: string;
+  listingName: string;
+  relatedByTag: Array<DirectoryListingCard>;
+  relatedInCategory: Array<DirectoryListingCard>;
+  relatedByLexicon: Array<DirectoryListingCard>;
+  productSlug: string;
 }) {
-  return (
-    <Flex direction="column" gap="3xl" style={styles.relatedSection}>
-      <Text size="2xl" weight="semibold" style={styles.header}>
-        {title}
-      </Text>
-      <Grid style={styles.relatedGrid}>
-        {listings.map((listing) => (
-          <RelatedProductCard key={listing.id} listing={listing} />
-        ))}
-      </Grid>
-    </Flex>
-  );
-}
+  const compatible = relatedByLexicon.slice(0, RELATED_CARD_COUNT);
+  const compatibleIds = new Set(compatible.map((listing) => listing.id));
+  const seen = new Set<string>();
+  const similar = [...relatedInCategory, ...relatedByTag]
+    .filter((listing) => {
+      if (compatibleIds.has(listing.id) || seen.has(listing.id)) return false;
+      seen.add(listing.id);
+      return true;
+    })
+    .slice(0, RELATED_CARD_COUNT);
 
-function RelatedProductCard({ listing }: { listing: DirectoryListingCard }) {
+  if (similar.length === 0 && compatible.length === 0) {
+    return null;
+  }
+
   return (
-    <RouterLink
-      to="/products/$productId"
-      params={{ productId: getDirectoryListingSlug(listing) }}
-      {...stylex.props(styles.relatedLink)}
-    >
-      <Card style={styles.relatedCard}>
-        <Flex direction="column" style={styles.relatedCardBody}>
-          <Flex align="center" gap="2xl" style={styles.relatedHeader}>
-            <Avatar
-              alt={listing.name}
-              fallback={getInitials(listing.name)}
-              size="xl"
-              src={listing.iconUrl || undefined}
-            />
-            <Flex direction="column" gap="lg" style={styles.relatedInfo}>
-              <Text size="xl" weight="semibold">
-                {listing.name}
-              </Text>
-              <Text size="sm" variant="secondary">
-                {listing.category}
-              </Text>
-            </Flex>
-          </Flex>
-          <Body variant="secondary" style={styles.relatedTagline}>
-            {listing.tagline}
-          </Body>
-          <Flex justify="end" gap="xl" style={styles.relatedFooter}>
-            <Flex align="center" gap="sm">
-              <SmallBody variant="secondary">
-                {listing.rating == null ? "—" : listing.rating.toFixed(1)}
-              </SmallBody>
-              <StarRating
-                rating={listing.rating}
-                reviewCount={listing.reviewCount}
-                showReviewCount
-              />
-            </Flex>
-          </Flex>
-        </Flex>
-      </Card>
-    </RouterLink>
+    <div {...stylex.props(styles.related)}>
+      {similar.length > 0 ? (
+        <ShelfSection>
+          <SectionHeader title={`More like ${listingName}`} />
+          <div {...stylex.props(styles.cards)}>
+            {similar.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        </ShelfSection>
+      ) : null}
+      {compatible.length > 0 ? (
+        <ShelfSection>
+          <SectionHeader
+            title="Works with the same data"
+            description={`These apps read and write the same records as ${listingName}, so what you make in one shows up in the others.`}
+            action={
+              <MoreLink
+                to="/products/$productId/lexicon-compatible"
+                params={{ productId: productSlug }}
+                search={{ sort: "popular" }}
+              >
+                All compatible apps
+              </MoreLink>
+            }
+          />
+          <div {...stylex.props(styles.cards)}>
+            {compatible.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        </ShelfSection>
+      ) : null}
+    </div>
   );
 }
