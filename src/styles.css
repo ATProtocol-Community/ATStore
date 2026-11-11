@@ -11,3 +11,17 @@ body {
   background-color: light-dark(#1c4ef5, #7b97ff);
   color: light-dark(#fff, #12110f);
 }
+
+/* Base font for anything that doesn't set its own (matches fontFamily.sans). */
+body {
+  font-family:
+    "SF Pro Text",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Inter",
+    "Segoe UI",
+    Roboto,
+    system-ui,
+    sans-serif;
+  color: light-dark(#191816, #f2efe8);
+}

@@ -123,6 +123,7 @@ import {
   suggestedTagsForListing,
 } from "../../lib/app-tags";
 import {
+  getDataGroupKey,
   queryBrowseListings,
   validateBrowseSearch,
 } from "../../lib/browse-listings";
@@ -737,13 +738,55 @@ export interface DirectoryListingAppTagAssignment {
   rawCategoryHint: string | null;
 }
 
+/** Just enough of a listing to draw it in an icon stack. */
+export interface DirectoryListingIcon {
+  name: string;
+  iconUrl: string | null;
+}
+
+/** One `apps/<app>/<branch>` category in the home page ecosystem strip. */
+export interface DirectoryHomeEcosystemBranch {
+  id: string;
+  label: string;
+  count: number;
+  /** Most popular listings in the branch, for the icon stack. */
+  icons: Array<DirectoryListingIcon>;
+}
+
+/** A data producer (`app.bsky`, `site.standard`, …) and the apps that use its records. */
+export interface DirectoryHomeDataProducer {
+  /** First two NSID segments, the `/apps?data=` filter value. */
+  groupKey: string;
+  count: number;
+  icons: Array<DirectoryListingIcon>;
+}
+
 export interface DirectoryHomePageData {
-  featured: DirectoryListingCard;
-  spotlights: Array<DirectoryListingCard>;
+  /**
+   * The home hero: the first admin-picked hero listing with a hero image, then
+   * the admin promo, then the most popular app with an image.
+   */
+  featured: DirectoryListingCard & { externalUrl: string | null };
+  /** Top apps by trending score (games have their own row). */
   popular: Array<DirectoryListingCard>;
-  fresh: Array<DirectoryListingCard>;
-  promo: DirectoryListingCard | null;
+  /** Newest listings of any kind. */
+  fresh: Array<DirectoryListingCard & { createdAt: string }>;
+  /** Most popular games. */
+  games: Array<DirectoryListingCard>;
+  /** Most used app tags (without `games`, which is its own section). */
   tags: Array<DirectoryAppTagSummary>;
+  /** Distinct app tags in use, for "+N more". */
+  tagCount: number;
+  /** Public listing counts by kind. */
+  stats: { apps: number; games: number };
+  /** Bluesky's tool categories, largest first. */
+  blueskyEcosystem: {
+    /** Distinct listings across all branches. */
+    total: number;
+    branches: Array<DirectoryHomeEcosystemBranch>;
+  };
+  /** Data producers whose records are used by the most apps. */
+  dataProducers: Array<DirectoryHomeDataProducer>;
 }
 
 const CATEGORY_ACCENTS: Array<CategoryAccent> = [
@@ -1371,8 +1414,12 @@ function dedupeListings(rows: Array<DirectoryListingRow>) {
   });
 }
 
-/** Small cards shown beside (desktop) or under (tablet) the home hero. */
-const HOME_SPOTLIGHT_COUNT = 3;
+const HOME_POPULAR_COUNT = 10;
+const HOME_FRESH_COUNT = 4;
+const HOME_GAME_COUNT = 4;
+const HOME_TAG_COUNT = 16;
+const HOME_DATA_PRODUCER_COUNT = 8;
+const HOME_ICON_STACK_COUNT = 4;
 
 function requireCards(
   cards: Array<DirectoryListingCard>,
@@ -1384,24 +1431,6 @@ function requireCards(
   }
 
   return cards.slice(0, desiredCount);
-}
-
-/**
- * Admin-picked hero rows first, in order, then recent apps to fill any empty
- * slots. A partial admin list is kept rather than discarded, so adding a slot
- * never throws away an existing configuration.
- */
-function resolveConfiguredHomeHeroRows(input: {
-  configuredRows: Array<DirectoryListingRow>;
-  fallbackRows: Array<DirectoryListingRow>;
-  desiredCount: number;
-}) {
-  const configuredIds = new Set(input.configuredRows.map((row) => row.id));
-
-  return [
-    ...input.configuredRows,
-    ...input.fallbackRows.filter((row) => !configuredIds.has(row.id)),
-  ].slice(0, input.desiredCount);
 }
 
 function buildCategories(rows: Array<DirectoryListingRow>, limit = 4) {
@@ -1501,14 +1530,6 @@ function buildAppTagGroups(
     });
 }
 
-function isHomePageFeaturedAppRow(
-  row: Pick<DirectoryListingRow, "categorySlugs">,
-) {
-  return row.categorySlugs.some(
-    (slug) => slug.startsWith("apps/") && slug.split("/").length === 2,
-  );
-}
-
 function isBrowseableProtocolRow(
   row: Pick<DirectoryListingRow, "categorySlugs">,
 ) {
@@ -1531,20 +1552,101 @@ function getRootProtocolCategoryId(slug: string): string | null {
   return `protocol/${rootSegment}`;
 }
 
+function toListingIcon(listing: BrowseListing): DirectoryListingIcon {
+  return { name: listing.name, iconUrl: listing.iconUrl };
+}
+
+/**
+ * App tags on top-level apps, most used first. `games` is left out: games
+ * have their own home section and `/games` page.
+ */
 function buildHomePageTagSummaries(
-  rows: Array<DirectoryListingAppTagRow>,
-  limit = 4,
+  listings: ReadonlyArray<BrowseListing>,
 ): Array<DirectoryAppTagSummary> {
-  const groups = buildAppTagGroups(rows);
-
-  if (groups.length > 0) {
-    return groups.slice(0, limit).map(({ tag, count: listingCount }) => ({
-      tag,
-      count: listingCount,
-    }));
+  const counts = new Map<string, number>();
+  for (const listing of listings) {
+    if (!isBrowseableAppRow(listing)) continue;
+    for (const tag of new Set(listing.appTags)) {
+      if (tag === "games") continue;
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
   }
+  return [...counts.entries()]
+    .map(([tag, tagCount]) => ({ tag, count: tagCount }))
+    .toSorted(
+      (left, right) =>
+        right.count - left.count || left.tag.localeCompare(right.tag),
+    );
+}
 
-  throw new Error("No app tag summaries found");
+/** `apps/<app>/<branch>` categories under one app ecosystem, largest first. */
+function buildHomeEcosystemBranches(
+  listings: ReadonlyArray<BrowseListing>,
+  rootId: string,
+): DirectoryHomePageData["blueskyEcosystem"] {
+  const branches = new Map<string, Array<BrowseListing>>();
+  const members = new Set<string>();
+  for (const listing of listings) {
+    const ids = new Set(
+      listing.categorySlugs
+        .filter((slug) => slug.startsWith(`${rootId}/`))
+        .map((slug) => slug.split("/").slice(0, 3).join("/")),
+    );
+    for (const id of ids) {
+      const branch = branches.get(id) ?? [];
+      branch.push(listing);
+      branches.set(id, branch);
+      members.add(listing.id);
+    }
+  }
+  return {
+    total: members.size,
+    branches: [...branches.entries()]
+      .map(([id, branchListings]) => ({
+        id,
+        label: getDirectoryCategoryOption(id)?.label ?? id,
+        count: branchListings.length,
+        // Listings arrive in popular order.
+        icons: branchListings
+          .slice(0, HOME_ICON_STACK_COUNT)
+          .map((listing) => toListingIcon(listing)),
+      }))
+      .toSorted(
+        (left, right) =>
+          right.count - left.count || left.label.localeCompare(right.label),
+      ),
+  };
+}
+
+/** Data producers (by NSID group) whose records the most listings use. */
+function buildHomeDataProducers(
+  listings: ReadonlyArray<BrowseListing>,
+): Array<DirectoryHomeDataProducer> {
+  const producers = new Map<string, Array<BrowseListing>>();
+  for (const listing of listings) {
+    const groups = new Set(
+      listing.dataNsids.flatMap((nsid) => getDataGroupKey(nsid) ?? []),
+    );
+    for (const groupKey of groups) {
+      const users = producers.get(groupKey) ?? [];
+      users.push(listing);
+      producers.set(groupKey, users);
+    }
+  }
+  return [...producers.entries()]
+    .filter(([, users]) => users.length >= 2)
+    .map(([groupKey, users]) => ({
+      groupKey,
+      count: users.length,
+      icons: users
+        .slice(0, HOME_ICON_STACK_COUNT)
+        .map((listing) => toListingIcon(listing)),
+    }))
+    .toSorted(
+      (left, right) =>
+        right.count - left.count || left.groupKey.localeCompare(right.groupKey),
+    )
+    .slice(0, HOME_DATA_PRODUCER_COUNT);
 }
 
 /** Public listing card projection — never include `claim_pending_for_did` (server-only). */
@@ -1978,46 +2080,44 @@ const getHomePageData = createServerFn({ method: "GET" })
     const homeHeroTable = context.schema.homePageHeroListings;
     const homePromoTable = context.schema.homePagePromoListing;
     const listingSelect = getListingSelect(table);
+    const topLevelApps = sqlCategorySlugsHasRootTwoSegment(
+      table.categorySlugs,
+      "apps",
+    );
 
     const [
       recentRows,
       newestRows,
-      tagRows,
+      gameRows,
+      kindCounts,
+      browseListings,
       configuredHomeHeroRows,
       configuredHomePromoRow,
     ] = await Promise.all([
       context.db
         .select(listingSelect)
         .from(table)
-        .where(
-          listingPublicWhere(
-            table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
-          ),
-        )
+        .where(listingPublicWhere(table, topLevelApps))
         .orderBy(...orderByPopularListingSort(table))
-        .limit(30),
+        .limit(60),
       context.db
-        .select(listingSelect)
+        .select({ ...listingSelect, createdAt: table.createdAt })
         .from(table)
-        .where(
-          listingPublicWhere(
-            table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
-          ),
-        )
+        .where(listingPublicWhere(table, topLevelApps))
         .orderBy(desc(table.createdAt))
-        .limit(6),
+        .limit(HOME_FRESH_COUNT + 1),
       context.db
         .select(listingSelect)
         .from(table)
-        .where(
-          listingPublicWhere(
-            table,
-            sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
-          ),
-        )
-        .orderBy(...orderByPopularListingSort(table)),
+        .where(listingPublicWhere(table, eq(table.listingType, "game")))
+        .orderBy(...orderByPopularListingSort(table))
+        .limit(HOME_GAME_COUNT),
+      context.db
+        .select({ listingType: table.listingType, count: count() })
+        .from(table)
+        .where(listingPublicWhere(table))
+        .groupBy(table.listingType),
+      getCachedBrowseListings(context),
       (async (): Promise<Array<DirectoryListingRow>> => {
         const configured = await context.db
           .select({
@@ -2037,10 +2137,7 @@ const getHomePageData = createServerFn({ method: "GET" })
           .where(
             listingPublicWhere(
               table,
-              and(
-                inArray(table.id, configuredListingIds),
-                sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
-              ),
+              and(inArray(table.id, configuredListingIds), topLevelApps),
             ),
           )) as Array<DirectoryListingRow>;
 
@@ -2069,10 +2166,7 @@ const getHomePageData = createServerFn({ method: "GET" })
           .where(
             listingPublicWhere(
               table,
-              and(
-                eq(table.id, configured.listingId),
-                sqlCategorySlugsHasRootTwoSegment(table.categorySlugs, "apps"),
-              ),
+              and(eq(table.id, configured.listingId), topLevelApps),
             ),
           )
           .limit(1)) as Array<DirectoryListingRow>;
@@ -2085,91 +2179,78 @@ const getHomePageData = createServerFn({ method: "GET" })
       throw new Error("No recent rows found");
     }
 
-    const dedupedRecentRows = dedupeListings(recentRows);
-    const dedupedRecentAppRows = dedupedRecentRows.filter((row) =>
-      isHomePageFeaturedAppRow(row),
+    const popularAppRows = dedupeListings(recentRows).filter(
+      (row) => row.listingType !== "game",
     );
-    const fallbackFeaturedSource =
-      dedupedRecentAppRows.find(
-        (row) =>
-          row.heroImageUrl || row.screenshotUrls.length > 0 || row.iconUrl,
-      ) || dedupedRecentAppRows[0];
 
-    const heroRows = resolveConfiguredHomeHeroRows({
-      configuredRows: dedupeListings(configuredHomeHeroRows),
-      fallbackRows: dedupedRecentAppRows,
-      desiredCount: 1 + HOME_SPOTLIGHT_COUNT,
-    });
-    const featuredSource = heroRows[0] ?? fallbackFeaturedSource;
+    // Admin-picked hero listings first (in order), then the admin promo, then
+    // popular apps; the hero block wants an image, so take the first that has one.
+    const featuredCandidates = dedupeListings([
+      ...configuredHomeHeroRows,
+      ...(configuredHomePromoRow ? [configuredHomePromoRow] : []),
+      ...popularAppRows,
+    ]);
+    const featuredSource =
+      featuredCandidates.find((row) => row.heroImageUrl) ??
+      featuredCandidates[0];
 
     if (!featuredSource) {
       throw new Error("No homepage featured listing found");
     }
 
-    const featured = toListingCard(featuredSource);
-    const remainingAppRows =
-      heroRows.length > 1
-        ? heroRows.slice(1)
-        : dedupedRecentAppRows.filter((row) => row.id !== featuredSource.id);
+    const [featuredLinks] = await context.db
+      .select({ externalUrl: table.externalUrl })
+      .from(table)
+      .where(eq(table.id, featuredSource.id))
+      .limit(1);
+    const featured = {
+      ...toListingCard(featuredSource),
+      externalUrl: featuredLinks?.externalUrl ?? null,
+    };
 
-    const spotlightRows = remainingAppRows.slice(0, HOME_SPOTLIGHT_COUNT);
-    const spotlights = requireCards(
-      spotlightRows.map((row) => toListingCard(row)),
-      HOME_SPOTLIGHT_COUNT,
-      "homepage spotlights",
-    );
-
-    const popularRows = dedupedRecentRows
-      .filter((row) => row.id !== featuredSource.id)
-      .slice(0, 6);
     const popular = requireCards(
-      popularRows.map((row) => toListingCard(row)),
-      6,
+      popularAppRows
+        .filter((row) => row.id !== featuredSource.id)
+        .slice(0, HOME_POPULAR_COUNT)
+        .map((row) => toListingCard(row)),
+      HOME_POPULAR_COUNT,
       "homepage popular listings",
     );
 
-    const freshRows = dedupeListings(newestRows)
+    const fresh = newestRows
       .filter((row) => row.id !== featuredSource.id)
-      .slice(0, 3);
-    const fresh = requireCards(
-      freshRows.map((row) => toListingCard(row)),
-      3,
-      "homepage fresh listings",
-    );
+      .slice(0, HOME_FRESH_COUNT)
+      .map((row) => ({
+        ...toListingCard(row),
+        createdAt: row.createdAt.toISOString(),
+      }));
 
-    // Use the admin-configured promo when present; otherwise auto-pick a
-    // listing that isn't already shown elsewhere so the slot acts as a
-    // discovery surface rather than a re-feature.
-    const displayedListingIds = new Set<string>([
-      featuredSource.id,
-      ...spotlightRows.map((row) => row.id),
-      ...popularRows.map((row) => row.id),
-      ...freshRows.map((row) => row.id),
-    ]);
-    let promoSource: DirectoryListingRow | null = configuredHomePromoRow;
-    if (!promoSource) {
-      const promoCandidates = dedupedRecentAppRows.filter(
-        (row) => !displayedListingIds.has(row.id),
-      );
-      promoSource =
-        promoCandidates.find((row) => row.heroImageUrl) ??
-        promoCandidates.find(
-          (row) => row.screenshotUrls.length > 0 || row.iconUrl,
-        ) ??
-        promoCandidates[0] ??
-        null;
+    const games = gameRows.map((row) => toListingCard(row));
+
+    let gameCount = 0;
+    let appCount = 0;
+    for (const row of kindCounts) {
+      if (row.listingType === "game") gameCount += row.count;
+      else appCount += row.count;
     }
-    const promo = promoSource ? toListingCard(promoSource) : null;
 
-    const tags = buildHomePageTagSummaries(tagRows, 9);
+    const tagSummaries = buildHomePageTagSummaries(browseListings);
 
     return {
       featured,
-      spotlights,
       popular,
       fresh,
-      promo,
-      tags,
+      games,
+      tags: tagSummaries.slice(0, HOME_TAG_COUNT),
+      tagCount: tagSummaries.length,
+      stats: { apps: appCount, games: gameCount },
+      blueskyEcosystem: buildHomeEcosystemBranches(
+        browseListings,
+        "apps/bluesky",
+      ),
+      dataProducers: buildHomeDataProducers(
+        browseListings.filter((listing) => !isProtocolListing(listing)),
+      ),
     } satisfies DirectoryHomePageData;
   });
 

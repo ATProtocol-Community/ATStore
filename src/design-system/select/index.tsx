@@ -36,11 +36,16 @@ import {
   horizontalSpace,
   verticalSpace,
 } from "../theme/semantic-spacing.stylex";
+import { radius } from "../theme/radius.stylex";
 import { useInputStyles } from "../theme/useInputStyles";
 import { estimatedRowHeights } from "../theme/useListBoxItemStyles";
 import { usePopoverStyles } from "../theme/usePopoverStyles";
 
 const styles = stylex.create({
+  // Shelf: select triggers are pills, like buttons and search fields.
+  pill: {
+    borderRadius: radius.full,
+  },
   matchWidth: {
     minWidth: "max(var(--trigger-width), 180px)",
   },
@@ -177,7 +182,7 @@ function SelectContent<T extends object>({
           ) : null}
         </Label>
       )}
-      <Button {...stylex.props(inputStyles.wrapper)}>
+      <Button {...stylex.props(inputStyles.wrapper, styles.pill)}>
         {prefix != null && (
           <div {...stylex.props(inputStyles.addon)}>{prefix}</div>
         )}

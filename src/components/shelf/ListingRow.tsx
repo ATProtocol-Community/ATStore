@@ -138,6 +138,10 @@ const styles = stylex.create({
     fontSize: 13,
     rowGap: 4,
   },
+  // Compact rows only show the short rating, so it fits on phones too.
+  asideCompact: {
+    display: "flex",
+  },
   muted: {
     color: uiColor.text1,
     whiteSpace: "nowrap",
@@ -221,7 +225,7 @@ export function ListingRow({
           </span>
         ) : null}
       </span>
-      <span {...stylex.props(styles.aside)}>
+      <span {...stylex.props(styles.aside, !detailed && styles.asideCompact)}>
         <ListingRating
           rating={listing.rating}
           reviewCount={listing.reviewCount}

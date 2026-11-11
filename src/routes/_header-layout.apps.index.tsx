@@ -12,8 +12,9 @@ import type {
   BrowseSort,
 } from "../lib/browse-listings";
 
-import { DetailedAppRow } from "../components/AppListRow";
 import { BrowseFilterPanel } from "../components/BrowseFilterPanel";
+import { ListingRow } from "../components/shelf/ListingRow";
+import { BackLink, PageHero } from "../components/shelf/Section";
 import { Button } from "../design-system/button";
 import {
   Drawer,
@@ -28,18 +29,16 @@ import {
   EmptyStateImage,
   EmptyStateTitle,
 } from "../design-system/empty-state";
-import { Flex } from "../design-system/flex";
-import { Page } from "../design-system/page";
 import { Pagination } from "../design-system/pagination";
 import { SearchField } from "../design-system/search-field";
 import { Select, SelectItem } from "../design-system/select";
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
-  gap,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body, Heading1, SmallBody } from "../design-system/typography";
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   formatAppTagLabel,
@@ -51,6 +50,7 @@ import {
   TOP_LEVEL_APPS_CATEGORY,
   clearBrowseFilters,
   countActiveBrowseFilters,
+  getBrowseCategoryLabel,
   getBrowseFilterValueLabel,
   getBrowseFilters,
   toggleBrowseFilter,
@@ -165,64 +165,134 @@ export const Route = createFileRoute("/_header-layout/apps/")({
 });
 
 const styles = stylex.create({
-  page: {
-    paddingBottom: verticalSpace["10xl"],
-    paddingTop: verticalSpace["6xl"],
+  root: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.sans,
+    paddingBottom: { default: 48, [breakpoints.md]: 72 },
   },
   layout: {
     alignItems: "start",
-    columnGap: gap["7xl"],
+    columnGap: { default: 36, [breakpoints.xl]: 56 },
     display: "grid",
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
-      [breakpoints.lg]: "16rem minmax(0, 1fr)",
+      [breakpoints.lg]: "220px minmax(0, 1fr)",
+      [breakpoints.xl]: "248px minmax(0, 1fr)",
     },
-    rowGap: gap["4xl"],
   },
   sidebar: {
-    display: {
-      default: "none",
-      [breakpoints.lg]: "block",
-    },
+    display: { default: "none", [breakpoints.lg]: "block" },
     position: "sticky",
-    maxHeight: "calc(100vh - 6rem)",
+    scrollbarWidth: "thin",
+    maxHeight: "calc(100vh - 110px)",
     overflowY: "auto",
-    top: verticalSpace["6xl"],
-  },
-  mobileFilters: {
-    display: {
-      default: "block",
-      [breakpoints.lg]: "none",
-    },
+    paddingRight: 8,
+    top: 88,
   },
   toolbar: {
-    flexWrap: "wrap",
+    alignItems: "center",
+    columnGap: 10,
+    display: "flex",
+    flexWrap: { default: "wrap", [breakpoints.md]: "nowrap" },
+    rowGap: 10,
   },
   searchField: {
-    flexBasis: "16rem",
+    flexBasis: { default: "100%", [breakpoints.md]: "auto" },
     flexGrow: 1,
+    minWidth: 0,
+  },
+  mobileFilters: {
+    display: { default: "block", [breakpoints.lg]: "none" },
   },
   sortSelect: {
-    minWidth: "12rem",
+    minWidth: "11rem",
   },
   chips: {
+    alignItems: "center",
+    columnGap: 8,
+    display: "flex",
     flexWrap: "wrap",
+    rowGap: 8,
+    marginTop: 16,
+  },
+  chip: {
+    borderRadius: 999,
+    borderWidth: 0,
+    alignItems: "center",
+    backgroundColor: uiColor.text2,
+    color: uiColor.bg,
+    columnGap: 6,
+    cursor: "pointer",
+    display: "inline-flex",
+    fontFamily: "inherit",
+    fontSize: 13,
+    fontWeight: fontWeight.medium,
+    opacity: { default: 1, ":hover": 0.88 },
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    rowGap: 6,
+    transitionDuration: animationDuration.fast,
+    transitionProperty: "opacity",
+    whiteSpace: "nowrap",
+    height: 30,
+    paddingLeft: 12,
+    paddingRight: 10,
+  },
+  clearAll: {
+    padding: 0,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    color: {
+      default: uiColor.text1,
+      ":hover": uiColor.text2,
+    },
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: 13,
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    textDecorationColor: {
+      default: uiColor.border2,
+      ":hover": "currentColor",
+    },
+    textDecorationLine: "underline",
+    textUnderlineOffset: 3,
+    marginLeft: 4,
   },
   resultCount: {
     color: uiColor.text1,
+    fontSize: 13,
+    fontVariantNumeric: "tabular-nums",
+    marginBottom: 6,
+    marginTop: 20,
   },
-  // Rows carry the spacing between them (see DetailedAppRow); pull the list
-  // out by that amount so the first and last rows line up as before.
   results: {
+    margin: 0,
     padding: 0,
     listStyle: "none",
-    marginBottom: `calc(${verticalSpace.sm} * -1)`,
-    marginLeft: 0,
-    marginRight: 0,
-    marginTop: `calc(${verticalSpace.sm} * -1)`,
   },
   emptyState: {
-    padding: verticalSpace["10xl"],
+    marginTop: 16,
+  },
+  pagination: {
+    borderTopColor: uiColor.border1,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    marginTop: 32,
+    paddingTop: 24,
+  },
+  drawerFooter: {
+    columnGap: 8,
+    display: "flex",
+    rowGap: 8,
+  },
+  drawerButton: {
+    flexBasis: 0,
+    flexGrow: 1,
   },
 });
 
@@ -257,149 +327,217 @@ function BrowseAppsPage() {
       onToggle={toggleFilter}
     />
   );
+  const showLabel = `Show ${total} ${total === 1 ? "app" : "apps"}`;
 
   return (
-    <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" gap="7xl">
-        <BrowseHeader />
+    <div {...stylex.props(styles.root)}>
+      <BrowseHero search={search} facets={facets} total={total} />
 
-        <div {...stylex.props(styles.layout)}>
-          <aside aria-label="Filters" {...stylex.props(styles.sidebar)}>
-            {filterPanel}
-          </aside>
+      <div {...stylex.props(styles.layout)}>
+        <aside aria-label="Filters" {...stylex.props(styles.sidebar)}>
+          {filterPanel}
+        </aside>
 
-          <Flex direction="column" gap="2xl">
-            <Flex align="center" gap="xl" style={styles.toolbar}>
-              <div {...stylex.props(styles.searchField)}>
-                <BrowseQueryField query={search.q ?? ""} />
-              </div>
-              <div {...stylex.props(styles.mobileFilters)}>
-                <Drawer
-                  direction="left"
-                  trigger={
-                    <Button variant="secondary" size="lg">
-                      <SlidersHorizontal />
-                      {activeFilterCount > 0
-                        ? `Filters (${activeFilterCount})`
-                        : "Filters"}
+        <div>
+          <div {...stylex.props(styles.toolbar)}>
+            <div {...stylex.props(styles.searchField)}>
+              <BrowseQueryField query={search.q ?? ""} />
+            </div>
+            <div {...stylex.props(styles.mobileFilters)}>
+              <Drawer
+                direction="left"
+                trigger={
+                  <Button variant="secondary" size="lg">
+                    <SlidersHorizontal size={16} />
+                    {activeFilterCount > 0
+                      ? `Filters (${activeFilterCount})`
+                      : "Filters"}
+                  </Button>
+                }
+              >
+                <DrawerHeader>Filters</DrawerHeader>
+                <DrawerBody>{filterPanel}</DrawerBody>
+                <DrawerFooter>
+                  <div {...stylex.props(styles.drawerFooter)}>
+                    <Button
+                      variant="secondary"
+                      isDisabled={activeFilterCount === 0}
+                      onPress={clearFilters}
+                      style={styles.drawerButton}
+                    >
+                      Clear all
                     </Button>
+                    <Button slot="close" style={styles.drawerButton}>
+                      {showLabel}
+                    </Button>
+                  </div>
+                </DrawerFooter>
+              </Drawer>
+            </div>
+            <Select
+              aria-label="Sort apps"
+              items={sortOptions}
+              size="lg"
+              style={styles.sortSelect}
+              value={sort}
+              variant="secondary"
+              onChange={(key) => {
+                const next = BROWSE_SORTS.find((id) => id === key);
+                if (!next) return;
+                void navigate({
+                  search: (prev) => ({
+                    ...prev,
+                    sort: next === "popular" ? undefined : next,
+                    page: undefined,
+                  }),
+                  resetScroll: false,
+                });
+              }}
+            >
+              {(item) => <SelectItem>{item.label}</SelectItem>}
+            </Select>
+          </div>
+
+          <ActiveFilterChips
+            filters={filters}
+            facets={facets}
+            onRemove={toggleFilter}
+            onClear={clearFilters}
+          />
+
+          <p {...stylex.props(styles.resultCount)}>
+            {total === totalListings
+              ? `${totalListings} apps`
+              : `${total} of ${totalListings} apps`}
+          </p>
+
+          {results.length > 0 ? (
+            <ul role="list" {...stylex.props(styles.results)}>
+              {results.map((listing) => (
+                <li key={listing.id}>
+                  <ListingRow listing={listing} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState size="lg" style={styles.emptyState}>
+              <EmptyStateImage>
+                <SearchX size={20} />
+              </EmptyStateImage>
+              <EmptyStateTitle>No apps match these filters</EmptyStateTitle>
+              <EmptyStateDescription>
+                Try removing a filter or searching for something broader.
+              </EmptyStateDescription>
+              <EmptyStateActions>
+                <Button
+                  variant="secondary"
+                  onPress={() =>
+                    void navigate({ search: {}, resetScroll: false })
                   }
                 >
-                  <DrawerHeader>Filters</DrawerHeader>
-                  <DrawerBody>{filterPanel}</DrawerBody>
-                  <DrawerFooter>
-                    <Flex gap="md" justify="between">
-                      <Button
-                        variant="tertiary"
-                        isDisabled={activeFilterCount === 0}
-                        onPress={clearFilters}
-                      >
-                        Clear all
-                      </Button>
-                      <Button slot="close">
-                        {`Show ${total} ${total === 1 ? "app" : "apps"}`}
-                      </Button>
-                    </Flex>
-                  </DrawerFooter>
-                </Drawer>
-              </div>
-              <Select
-                aria-label="Sort apps"
-                items={sortOptions}
-                size="lg"
-                style={styles.sortSelect}
-                value={sort}
-                variant="secondary"
-                onChange={(key) => {
-                  const next = BROWSE_SORTS.find((id) => id === key);
-                  if (!next) return;
-                  void navigate({
-                    search: (prev) => ({
-                      ...prev,
-                      sort: next === "popular" ? undefined : next,
-                      page: undefined,
-                    }),
-                    resetScroll: false,
-                  });
-                }}
-              >
-                {(item) => <SelectItem>{item.label}</SelectItem>}
-              </Select>
-            </Flex>
+                  Clear search and filters
+                </Button>
+              </EmptyStateActions>
+            </EmptyState>
+          )}
 
-            <ActiveFilterChips
-              filters={filters}
-              facets={facets}
-              onRemove={toggleFilter}
-              onClear={clearFilters}
+          {totalPages > 1 ? (
+            <Pagination
+              totalPages={totalPages}
+              selectedPage={page}
+              style={styles.pagination}
+              onSelectedPageChange={(next) => {
+                void navigate({
+                  search: (prev) => ({
+                    ...prev,
+                    page: next > 1 ? next : undefined,
+                  }),
+                });
+              }}
             />
-
-            <SmallBody style={styles.resultCount}>
-              {total === totalListings
-                ? `${totalListings} apps`
-                : `${total} of ${totalListings} apps`}
-            </SmallBody>
-
-            {results.length > 0 ? (
-              <ul role="list" {...stylex.props(styles.results)}>
-                {results.map((listing) => (
-                  <li key={listing.id}>
-                    <DetailedAppRow listing={listing} />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState size="lg" style={styles.emptyState}>
-                <EmptyStateImage>
-                  <SearchX size={64} strokeWidth={2} />
-                </EmptyStateImage>
-                <EmptyStateTitle>No apps match these filters</EmptyStateTitle>
-                <EmptyStateDescription>
-                  Try removing a filter or searching for something broader.
-                </EmptyStateDescription>
-                <EmptyStateActions>
-                  <Button
-                    variant="secondary"
-                    onPress={() =>
-                      void navigate({ search: {}, resetScroll: false })
-                    }
-                  >
-                    Clear search and filters
-                  </Button>
-                </EmptyStateActions>
-              </EmptyState>
-            )}
-
-            {totalPages > 1 ? (
-              <Pagination
-                totalPages={totalPages}
-                selectedPage={page}
-                onSelectedPageChange={(next) => {
-                  void navigate({
-                    search: (prev) => ({
-                      ...prev,
-                      page: next > 1 ? next : undefined,
-                    }),
-                  });
-                }}
-              />
-            ) : null}
-          </Flex>
+          ) : null}
         </div>
-      </Flex>
-    </Page.Root>
+      </div>
+    </div>
   );
 }
 
-function BrowseHeader() {
+function formatApps(count: number) {
+  return `${count.toLocaleString("en-US")} ${count === 1 ? "app" : "apps"}`;
+}
+
+/**
+ * The heading follows what you're looking at: search results, a single tag,
+ * a single category, or everything.
+ */
+function BrowseHero({
+  search,
+  facets,
+  total,
+}: {
+  search: BrowseSearch;
+  facets: BrowseFacets;
+  total: number;
+}) {
+  const query = search.q?.trim();
+  if (query) {
+    return (
+      <PageHero
+        eyebrow="Search"
+        title={`Results for “${query}”`}
+        description={`${formatApps(total)} ${total === 1 ? "matches" : "match"} your search.`}
+      />
+    );
+  }
+
+  const tagPreset = getSingleTagPreset(search, facets);
+  if (tagPreset) {
+    return (
+      <PageHero
+        back={<BackLink to="/apps/tags">All tags</BackLink>}
+        eyebrow={`Tag · ${formatApps(total)}`}
+        title={formatAppTagLabel(tagPreset.tag)}
+        description={getAppTagDescription(tagPreset.tag)}
+      />
+    );
+  }
+
+  const category = getSingleCategoryPreset(search);
+  if (category) {
+    // Only app ecosystems with tool categories have an ecosystem page.
+    const ecosystem =
+      category.pathIds[0] === "apps" &&
+      facets.categories.some(
+        (option) =>
+          option.id === `apps/${category.pathIds[1]}` &&
+          (option.children?.length ?? 0) > 0,
+      )
+        ? category.pathIds[1]
+        : undefined;
+    const ecosystemLabel = ecosystem
+      ? getDirectoryCategoryOption(`apps/${ecosystem}`)?.label
+      : undefined;
+    return (
+      <PageHero
+        back={
+          ecosystem && ecosystemLabel ? (
+            <BackLink to="/ecosystems/$app" params={{ app: ecosystem }}>
+              {`${ecosystemLabel} ecosystem`}
+            </BackLink>
+          ) : undefined
+        }
+        eyebrow={`Category · ${formatApps(total)}`}
+        title={getBrowseCategoryLabel(category.id)}
+        description={category.description}
+      />
+    );
+  }
+
   return (
-    <Flex direction="column" gap="2xl">
-      <Heading1>Browse apps</Heading1>
-      <Body variant="secondary">
-        Every app, client and feed on the Atmosphere in one list. Narrow it down
-        with the filters.
-      </Body>
-    </Flex>
+    <PageHero
+      title="Browse apps"
+      description="Every app, client and feed on the Atmosphere in one list. Narrow it down with the filters."
+    />
   );
 }
 
@@ -466,25 +604,29 @@ function ActiveFilterChips({
   }
 
   return (
-    <Flex align="center" gap="md" style={styles.chips}>
+    <div {...stylex.props(styles.chips)}>
       {chips.map(({ facet, value }) => {
         const label = getBrowseFilterValueLabel(facet, value, facets);
         return (
-          <Button
+          <button
             key={`${facet}:${value}`}
-            size="sm"
-            variant="secondary"
+            type="button"
             aria-label={`Remove filter: ${label}`}
-            onPress={() => onRemove(facet, value)}
+            onClick={() => onRemove(facet, value)}
+            {...stylex.props(styles.chip)}
           >
             {label}
-            <X />
-          </Button>
+            <X size={12} strokeWidth={2.4} aria-hidden />
+          </button>
         );
       })}
-      <Button size="sm" variant="tertiary" onPress={onClear}>
+      <button
+        type="button"
+        onClick={onClear}
+        {...stylex.props(styles.clearAll)}
+      >
         Clear all
-      </Button>
-    </Flex>
+      </button>
+    </div>
   );
 }

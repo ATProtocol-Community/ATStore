@@ -15,7 +15,6 @@ import { IconButton } from "../icon-button";
 import { Separator } from "../separator";
 import { primaryColor, uiColor } from "../theme/color.stylex";
 import { containerBreakpoints } from "../theme/media-queries.stylex";
-import { ui } from "../theme/semantic-color.stylex";
 import {
   gap,
   size as sizeSpace,
@@ -530,7 +529,7 @@ export const Navbar = ({
           <nav
             ref={navRef}
             data-navbar-open={isMobileMenuOpen || undefined}
-            {...stylex.props(styles.navbar, ui.bg, style)}
+            {...stylex.props(styles.navbar, style)}
           >
             {children}
             <Separator

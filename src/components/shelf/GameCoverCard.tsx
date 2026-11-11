@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { animationDuration } from "../../design-system/theme/animations.stylex";
 import { uiColor } from "../../design-system/theme/color.stylex";
+import { breakpoints } from "../../design-system/theme/media-queries.stylex";
 import { shadow } from "../../design-system/theme/shadow.stylex";
 import { fontWeight } from "../../design-system/theme/typography.stylex";
 import { getDirectoryListingSlug } from "../../lib/directory-listing-slugs";
@@ -62,6 +63,9 @@ const styles = stylex.create({
   text: {
     minWidth: 0,
   },
+  rowIcon: {
+    display: { default: "none", [breakpoints.sm]: "inline-grid" },
+  },
   name: {
     overflow: "hidden",
     color: uiColor.text2,
@@ -116,7 +120,12 @@ export function GameCoverCard({
         )}
       </div>
       <div {...stylex.props(styles.row)}>
-        <ListingIcon name={listing.name} src={listing.iconUrl} size={36} />
+        <ListingIcon
+          name={listing.name}
+          src={listing.iconUrl}
+          size={36}
+          style={styles.rowIcon}
+        />
         <div {...stylex.props(styles.text)}>
           <div {...stylex.props(styles.name)}>{listing.name}</div>
           <div {...stylex.props(styles.tagline)}>{listing.tagline}</div>

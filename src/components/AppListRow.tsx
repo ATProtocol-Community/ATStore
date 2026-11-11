@@ -5,7 +5,6 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import { ChevronRight, Heart } from "lucide-react";
 import { useId } from "react";
 
-import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 import type { BrowseListingCard } from "../lib/browse-listings";
 
 import { Avatar } from "../design-system/avatar";
@@ -32,9 +31,8 @@ import { getListingLabels } from "../lib/listing-labels";
 import { AppCardLabels, AppCardRating } from "./AppCard";
 
 /**
- * List rows for apps. Two variants share one look and one interaction:
- * - RankedAppRow: compact, numbered (home "Trending").
- * - DetailedAppRow: labels, rating, favorites, last update (Browse).
+ * DetailedAppRow: labels, rating, favorites, last update (games list). Browse
+ * and home use `shelf/ListingRow` instead.
  *
  * Like AppCard, the whole row is a single link that never moves; the surface
  * inside it tints on hover and draws the keyboard focus ring.
@@ -53,10 +51,6 @@ const styles = stylex.create({
   // Rows sit flush against each other. This padding is the visual gap between
   // rows but still belongs to the link, so the pointer never falls into a dead
   // zone (and flips back to an arrow) while moving down the list.
-  rankedLink: {
-    paddingBottom: verticalSpace.xs,
-    paddingTop: verticalSpace.xs,
-  },
   detailedLink: {
     paddingBottom: verticalSpace.sm,
     paddingTop: verticalSpace.sm,
@@ -90,24 +84,6 @@ const styles = stylex.create({
       [stylex.when.ancestor(":hover")]: shadow.lg,
     },
     contentVisibility: "auto",
-  },
-  rankedBody: {
-    gap: gap.xl,
-    alignItems: "center",
-    display: "flex",
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["2xl"],
-    paddingTop: verticalSpace["2xl"],
-  },
-  rank: {
-    minWidth: "1.25rem",
-  },
-  rankedText: {
-    flexBasis: "0%",
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 0,
   },
   detailedBody: {
     gridTemplateAreas: {
@@ -223,57 +199,6 @@ function AppRowLink({
 
 function RowChevron() {
   return <ChevronRight aria-hidden {...stylex.props(styles.chevron)} />;
-}
-
-/**
- * Compact numbered row. Render inside an `<ol>`: the list supplies the
- * position to screen readers, so the visible number is decorative.
- */
-export function RankedAppRow({
-  listing,
-  rank,
-}: {
-  listing: DirectoryListingCard;
-  rank: number;
-}) {
-  const nameId = useId();
-  const taglineId = useId();
-
-  return (
-    <AppRowLink
-      listing={listing}
-      labelledBy={nameId}
-      describedBy={taglineId}
-      style={styles.rankedLink}
-    >
-      <div {...stylex.props(styles.surface, styles.rankedBody)}>
-        <Text
-          aria-hidden
-          size="xl"
-          weight="semibold"
-          variant="secondary"
-          style={styles.rank}
-        >
-          {rank}
-        </Text>
-        <Avatar
-          alt=""
-          fallback={getInitials(listing.name)}
-          size="lg"
-          src={listing.iconUrl || undefined}
-        />
-        <Flex direction="column" gap="lg" style={styles.rankedText}>
-          <Text id={nameId} size="lg" weight="semibold">
-            {listing.name}
-          </Text>
-          <SmallBody id={taglineId} variant="secondary">
-            {listing.tagline}
-          </SmallBody>
-        </Flex>
-        <RowChevron />
-      </div>
-    </AppRowLink>
-  );
 }
 
 const relativeTimeFormat = new Intl.RelativeTimeFormat("en", {

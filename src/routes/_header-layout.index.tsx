@@ -1,34 +1,44 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
+  Link as RouterLink,
   createFileRoute,
   createLink,
   useNavigate,
 } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 
-import type { DirectoryListingCard } from "../integrations/tanstack-query/api-directory-listings.functions";
+import type {
+  DirectoryHomeDataProducer,
+  DirectoryHomeEcosystemBranch,
+  DirectoryHomePageData,
+} from "../integrations/tanstack-query/api-directory-listings.functions";
 
-import { AppCard } from "../components/AppCard";
-import { RankedAppRow } from "../components/AppListRow";
-import { AppTagCard } from "../components/AppTagCard";
+import { formatTimeAgo } from "../components/shelf/format";
+import { GameCoverCard } from "../components/shelf/GameCoverCard";
+import { IconStack } from "../components/shelf/IconStack";
+import { ListingCard } from "../components/shelf/ListingCard";
+import { ListingIcon } from "../components/shelf/ListingIcon";
+import { ListingRating } from "../components/shelf/ListingRating";
+import { ListingRow } from "../components/shelf/ListingRow";
+import {
+  MoreLink,
+  SectionHeader,
+  ShelfSection,
+} from "../components/shelf/Section";
 import { Alert } from "../design-system/alert";
 import { Button } from "../design-system/button";
-import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
-import { Link } from "../design-system/link";
-import { Page } from "../design-system/page";
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
+import { shadow } from "../design-system/theme/shadow.stylex";
 import {
-  gap,
-  horizontalSpace,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Heading1, Heading2, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
+import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 export const Route = createFileRoute("/_header-layout/")({
@@ -51,126 +61,376 @@ export const Route = createFileRoute("/_header-layout/")({
   component: HomePage,
 });
 
-const AppLink = createLink(Link);
+const ButtonLink = createLink(Button);
+
+const ACCENT = "light-dark(#1c4ef5, #7b97ff)";
 
 const styles = stylex.create({
-  sectionHeaderAction: {
-    flexShrink: 0,
-  },
-  headerDescription: {
-    maxWidth: "41rem",
+  root: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.sans,
   },
   claimBanner: {
-    width: "100%",
+    paddingTop: { default: 20, [breakpoints.md]: 32 },
   },
-  pageHeader: {
-    paddingBottom: {
-      default: verticalSpace["8xl"],
-      [breakpoints.sm]: verticalSpace["10xl"],
+  intro: {
+    alignItems: "end",
+    columnGap: 48,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.lg]: "1.3fr 1fr",
     },
-    paddingTop: {
-      default: verticalSpace["4xl"],
-      [breakpoints.sm]: verticalSpace["8xl"],
+    rowGap: 16,
+    paddingBottom: { default: 28, [breakpoints.md]: 56 },
+    paddingTop: { default: 36, [breakpoints.md]: 80 },
+  },
+  introTitle: {
+    margin: 0,
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: {
+      default: 48,
+      [breakpoints.md]: 68,
+      [breakpoints.xl]: 84,
+    },
+    fontWeight: 750,
+    letterSpacing: "-0.052em",
+    lineHeight: 0.94,
+    textWrap: "balance",
+  },
+  introAccent: {
+    color: ACCENT,
+  },
+  introLede: {
+    color: uiColor.text2,
+    fontSize: { default: 17, [breakpoints.md]: 19 },
+    lineHeight: 1.5,
+    textWrap: "pretty",
+    marginBottom: 6,
+    marginTop: 0,
+    maxWidth: "28em",
+  },
+  feature: {
+    alignItems: "center",
+    columnGap: 48,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.lg]: "1.45fr 1fr",
+    },
+    rowGap: 20,
+    paddingBottom: { default: 48, [breakpoints.md]: 80 },
+  },
+  featureFrame: {
+    borderRadius: { default: 16, [breakpoints.md]: 22 },
+    overflow: "hidden",
+    aspectRatio: "16 / 9",
+    backgroundColor: uiColor.component1,
+    boxShadow: shadow.md,
+    display: "block",
+    outlineColor: uiColor.text2,
+    outlineOffset: 3,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    position: "relative",
+    "::after": {
+      inset: 0,
+      borderRadius: "inherit",
+      boxShadow: `inset 0 0 0 1px ${uiColor.border1}`,
+      content: "''",
+      pointerEvents: "none",
+      position: "absolute",
     },
   },
-  pageSections: {
-    gap: {
-      default: 40,
-      [breakpoints.sm]: 64,
+  featureImage: {
+    display: "block",
+    objectFit: "cover",
+    transform: {
+      default: null,
+      [stylex.when.ancestor(":hover")]: "scale(1.015)",
     },
-  },
-  section: {
-    gap: gap["2xl"],
-    display: "flex",
-    flexDirection: "column",
+    transitionDuration: "0.5s",
+    transitionProperty: "transform",
+    transitionTimingFunction: "cubic-bezier(.2, .7, .2, 1)",
+    height: "100%",
     width: "100%",
   },
   eyebrow: {
-    letterSpacing: "0.16em",
+    color: uiColor.text1,
+    fontSize: 12,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: "0.12em",
     textTransform: "uppercase",
   },
-  sectionHeader: {
-    marginBottom: verticalSpace["3xl"],
-  },
-  sectionHeaderText: {
-    gap: gap["2xl"],
+  featureIdentity: {
+    alignItems: "center",
+    columnGap: 14,
     display: "flex",
-    flexDirection: "column",
+    rowGap: 14,
+    marginTop: { default: 16, [breakpoints.md]: 22 },
+  },
+  meta: {
+    alignItems: "center",
+    color: uiColor.text1,
+    columnGap: 10,
+    display: "flex",
+    flexWrap: "wrap",
+    fontSize: 14,
+    rowGap: 6,
     minWidth: 0,
   },
-  categoriesGrid: {
-    gap: gap["2xl"],
+  metaDot: {
+    borderRadius: "50%",
+    backgroundColor: "currentColor",
+    opacity: 0.5,
+    height: 3,
+    width: 3,
+  },
+  featureName: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: { default: 38, [breakpoints.md]: 54 },
+    fontWeight: 750,
+    letterSpacing: "-0.048em",
+    lineHeight: 1,
+    textWrap: "balance",
+    marginBottom: 10,
+    marginTop: { default: 14, [breakpoints.md]: 20 },
+  },
+  featureTagline: {
+    color: uiColor.text2,
+    fontSize: { default: 18, [breakpoints.md]: 21 },
+    letterSpacing: "-0.01em",
+    lineHeight: 1.35,
+    marginBottom: 14,
+    marginTop: 0,
+  },
+  featureDescription: {
+    overflow: "hidden",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 3,
+    color: uiColor.text1,
+    display: "-webkit-box",
+    fontSize: 15,
+    lineHeight: 1.55,
+    marginBottom: 28,
+    marginTop: 0,
+  },
+  featureActions: {
+    alignItems: "center",
+    columnGap: 10,
+    display: "flex",
+    flexWrap: "wrap",
+    rowGap: 10,
+  },
+  featureAction: {
+    flexBasis: { default: 0, [breakpoints.sm]: "auto" },
+    flexGrow: { default: 1, [breakpoints.sm]: 0 },
+  },
+  plainList: {
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+  },
+  twoColumns: {
+    columnGap: 48,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.md]: "repeat(2, minmax(0, 1fr))",
+    },
+  },
+  tags: {
+    alignItems: "baseline",
+    columnGap: { default: 16, [breakpoints.md]: 26 },
+    display: "flex",
+    flexWrap: "wrap",
+    fontFamily: fontFamily.title,
+    fontSize: { default: 28, [breakpoints.md]: 42 },
+    fontWeight: 650,
+    letterSpacing: "-0.042em",
+    lineHeight: 1.2,
+    rowGap: 2,
+  },
+  tagLink: {
+    textDecoration: "none",
+    color: {
+      default: uiColor.text2,
+      ":hover": ACCENT,
+    },
+    transitionDuration: animationDuration.default,
+    transitionProperty: "color",
+  },
+  tagCount: {
+    color: uiColor.text1,
+    fontFamily: fontFamily.sans,
+    fontSize: 13,
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: fontWeight.medium,
+    letterSpacing: 0,
+    verticalAlign: "super",
+    marginLeft: 4,
+  },
+  tagMore: {
+    textDecoration: "none",
+    alignItems: "center",
+    color: {
+      default: uiColor.text1,
+      ":hover": uiColor.text2,
+    },
+    columnGap: 4,
+    display: "inline-flex",
+    fontFamily: fontFamily.sans,
+    fontSize: 17,
+    fontWeight: fontWeight.medium,
+    letterSpacing: "-0.01em",
+    whiteSpace: "nowrap",
+  },
+  // The strip clips its cells' leading and top borders so only the hairlines
+  // *between* cells show, whatever the column count.
+  ecoStrip: {
+    overflow: "hidden",
+    borderTopColor: uiColor.text2,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+  },
+  ecoGrid: {
+    display: "grid",
+    gridTemplateColumns: {
+      default: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.md]: "repeat(3, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(6, minmax(0, 1fr))",
+    },
+    marginLeft: -17,
+    marginTop: -1,
+  },
+  ecoItem: {
+    display: "flex",
+    minWidth: 0,
+  },
+  ecoCell: {
+    paddingBlock: 20,
+    paddingInline: 16,
+    textDecoration: "none",
+    color: "inherit",
+    columnGap: 12,
+    display: "flex",
+    flexDirection: "column",
+    outlineColor: uiColor.text2,
+    outlineOffset: -4,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    rowGap: 12,
+    borderLeftColor: uiColor.border1,
+    borderLeftStyle: "solid",
+    borderLeftWidth: 1,
+    borderTopColor: uiColor.border1,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    minWidth: 0,
+  },
+  ecoName: {
+    color: {
+      default: uiColor.text2,
+      [stylex.when.ancestor(":hover")]: ACCENT,
+    },
+    fontFamily: fontFamily.title,
+    fontSize: 20,
+    fontWeight: fontWeight.bold,
+    letterSpacing: "-0.03em",
+    transitionDuration: animationDuration.default,
+    transitionProperty: "color",
+  },
+  ecoCount: {
+    color: uiColor.text1,
+    fontSize: 13,
+    fontVariantNumeric: "tabular-nums",
+    marginTop: -8,
+  },
+  cards: {
+    marginInline: { default: -20, [breakpoints.md]: 0 },
+    paddingInline: { default: 20, [breakpoints.md]: 0 },
+    scrollPaddingInline: 20,
+    scrollSnapType: { default: "x mandatory", [breakpoints.md]: "none" },
+    columnGap: 16,
+    display: { default: "flex", [breakpoints.md]: "grid" },
+    gridTemplateColumns: {
+      default: null,
+      [breakpoints.md]: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
+    },
+    rowGap: 16,
+    scrollbarWidth: "none",
+    overflowX: { default: "auto", [breakpoints.md]: "visible" },
+    paddingBottom: { default: 8, [breakpoints.md]: 0 },
+    paddingTop: { default: 2, [breakpoints.md]: 0 },
+  },
+  cardItem: {
+    display: "flex",
+    flexBasis: { default: "72%", [breakpoints.md]: "auto" },
+    flexShrink: 0,
+    scrollSnapAlign: "start",
+    minWidth: 0,
+  },
+  cardItemInner: {
+    flexGrow: 1,
+  },
+  games: {
+    columnGap: { default: 12, [breakpoints.md]: 16 },
     display: "grid",
     gridTemplateColumns: {
       default: "repeat(2, minmax(0, 1fr))",
       [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
     },
+    rowGap: { default: 18, [breakpoints.md]: 24 },
   },
-  popularGrid: {
-    gap: gap["3xl"],
+  dataRow: {
+    borderRadius: 10,
+    marginInline: -12,
+    paddingBlock: 14,
+    paddingInline: 12,
+    textDecoration: "none",
+    alignItems: "center",
+    backgroundColor: {
+      default: "transparent",
+      ":hover": uiColor.component1,
+    },
+    color: "inherit",
+    columnGap: 16,
     display: "grid",
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.lg]: "minmax(0, 1.2fr) minmax(18rem, 0.9fr)",
+    gridTemplateColumns: "minmax(0, 1fr) auto auto",
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    position: "relative",
+    transitionDuration: animationDuration.default,
+    transitionProperty: "background-color",
+    "::before": {
+      insetInline: 12,
+      backgroundColor: uiColor.border1,
+      content: "''",
+      position: "absolute",
+      height: 1,
+      top: 0,
     },
   },
-  popularGridSingle: {
-    gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.lg]: "1fr",
-    },
+  dataKey: {
+    overflow: "hidden",
+    color: uiColor.text2,
+    fontFamily: fontFamily.mono,
+    fontSize: 14,
+    fontWeight: fontWeight.medium,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
-  // Rows carry their own spacing (see RankedAppRow), so the vertical padding
-  // here is trimmed by that amount to keep the panel's inset unchanged.
-  popularList: {
-    margin: 0,
-    borderColor: uiColor.component2,
-    borderRadius: radius.xl,
-    borderStyle: "solid",
-    borderWidth: 1,
-    listStyle: "none",
-    backgroundColor: uiColor.bg,
-    paddingBottom: verticalSpace.lg,
-    paddingLeft: horizontalSpace["2xl"],
-    paddingRight: horizontalSpace["2xl"],
-    paddingTop: verticalSpace.lg,
-  },
-  // Phone: one column. Tablet: hero full width, spotlights as a row of three.
-  // Desktop: hero takes two columns, spotlights stack in the third.
-  heroGrid: {
-    gap: gap["2xl"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "minmax(0, 1fr)",
-      [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
-    },
-  },
-  heroItem: {
-    gridColumn: {
-      default: "auto",
-      [breakpoints.sm]: "1 / -1",
-      [breakpoints.xl]: "1 / span 2",
-    },
-    gridRow: {
-      default: "auto",
-      [breakpoints.xl]: "1 / span 3",
-    },
-    minWidth: 0,
-  },
-  spotlightItem: {
-    gridColumn: {
-      default: "auto",
-      [breakpoints.xl]: "3",
-    },
-    minWidth: 0,
-  },
-  newGrid: {
-    gap: gap["lg"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "minmax(0, 1fr)",
-      [breakpoints.sm]: "repeat(3, minmax(0, 1fr))",
-    },
+  dataCount: {
+    color: uiColor.text1,
+    fontSize: 14,
+    fontVariantNumeric: "tabular-nums",
+    textAlign: "right",
+    minWidth: 64,
   },
 });
 
@@ -182,20 +442,15 @@ function HomePage() {
   const { data: claimEligibility } = useSuspenseQuery(
     directoryListingApi.getProductClaimEligibilityQueryOptions(),
   );
-  const promoListing = data.promo;
-  const [hero, ...spotlights] = putHeroImageFirst([
-    data.featured,
-    ...data.spotlights,
-  ]);
 
   const showClaimBanner =
     claimEligibility.eligible && claimEligibility.listings.length > 0;
   const claimCount = claimEligibility.listings.length;
 
   return (
-    <Page.Root variant="large">
-      <Flex direction="column" gap="5xl" style={styles.claimBanner}>
-        {showClaimBanner ? (
+    <div {...stylex.props(styles.root)}>
+      {showClaimBanner ? (
+        <div {...stylex.props(styles.claimBanner)}>
           <Alert
             variant="info"
             title={
@@ -215,162 +470,330 @@ function HomePage() {
               ? `“${(claimEligibility.listings[0]?.name ?? "").trim() || "Listing"}” is still on the store repo. Claim it to manage updates from your PDS.`
               : `You have ${String(claimCount)} listings on the store repo. Claim them to manage updates from your PDS.`}
           </Alert>
-        ) : null}
+        </div>
+      ) : null}
 
-        <Flex direction="column" gap="6xl" style={styles.pageHeader}>
-          <Flex direction="column" gap="5xl">
-            <Text size="lg" weight="normal" style={styles.eyebrow}>
-              The AT Protocol app directory
-            </Text>
-            <Heading1>Apps on the Atmosphere</Heading1>
-          </Flex>
-          <Text
-            variant="secondary"
-            size={{ default: "xl", sm: "2xl" }}
-            leading="sm"
-            style={styles.headerDescription}
-          >
-            Discover the best apps the Atmosphere has to offer. With every
-            product you own your data and use the same identity across all apps.
-          </Text>
-        </Flex>
-      </Flex>
+      <header {...stylex.props(styles.intro)}>
+        <h1 {...stylex.props(styles.introTitle)}>
+          Apps on the{" "}
+          <span {...stylex.props(styles.introAccent)}>Atmosphere</span>
+        </h1>
+        <p {...stylex.props(styles.introLede)}>
+          {`${formatCount(data.stats.apps)} apps and ${formatCount(data.stats.games)} games`}{" "}
+          that share one identity and let you take your data with you.
+        </p>
+      </header>
 
-      <Flex direction="column" style={styles.pageSections}>
-        <section {...stylex.props(styles.section)}>
-          <div {...stylex.props(styles.heroGrid)}>
-            <div {...stylex.props(styles.heroItem)}>
-              <AppCard listing={hero} size="large" />
-            </div>
-            {spotlights.map((listing) => (
-              <div key={listing.id} {...stylex.props(styles.spotlightItem)}>
-                <AppCard listing={listing} size="small" />
+      <FeaturedListing listing={data.featured} />
+
+      <ShelfSection>
+        <SectionHeader
+          title="Popular right now"
+          action={<MoreLink to="/apps">All apps</MoreLink>}
+        />
+        <ol role="list" {...stylex.props(styles.plainList, styles.twoColumns)}>
+          {data.popular.map((listing, index) => (
+            <li key={listing.id}>
+              <ListingRow
+                listing={listing}
+                rank={index + 1}
+                variant="compact"
+              />
+            </li>
+          ))}
+        </ol>
+      </ShelfSection>
+
+      <ShelfSection>
+        <SectionHeader
+          title="Browse by interest"
+          action={<MoreLink to="/apps/tags">All tags</MoreLink>}
+        />
+        <TagCloud tags={data.tags} total={data.tagCount} />
+      </ShelfSection>
+
+      {data.blueskyEcosystem.branches.length > 0 ? (
+        <ShelfSection>
+          <SectionHeader
+            title="The Bluesky ecosystem"
+            description="Clients, analytics, schedulers and feeds built on top of Bluesky."
+            action={
+              <MoreLink to="/ecosystems/$app" params={{ app: "bluesky" }}>
+                {`All ${formatCount(data.blueskyEcosystem.total)} tools`}
+              </MoreLink>
+            }
+          />
+          <EcosystemStrip branches={data.blueskyEcosystem.branches} />
+        </ShelfSection>
+      ) : null}
+
+      <ShelfSection>
+        <SectionHeader
+          title="Just added"
+          action={
+            <MoreLink to="/apps" search={{ sort: "newest" }}>
+              Newest
+            </MoreLink>
+          }
+        />
+        <ul role="list" {...stylex.props(styles.plainList, styles.cards)}>
+          {data.fresh.map((listing) => (
+            <li key={listing.id} {...stylex.props(styles.cardItem)}>
+              <div {...stylex.props(styles.cardItemInner)}>
+                <ListingCard
+                  listing={listing}
+                  meta={`Added ${formatTimeAgo(listing.createdAt)}`}
+                />
               </div>
-            ))}
-          </div>
-        </section>
+            </li>
+          ))}
+        </ul>
+      </ShelfSection>
 
-        <section {...stylex.props(styles.section)}>
+      {data.games.length > 0 ? (
+        <ShelfSection>
           <SectionHeader
-            eyebrow="Browse Apps"
-            title="Find apps you'll love"
-            to="/apps/tags"
+            title="Games"
+            action={
+              <MoreLink to="/games">
+                {`All ${formatCount(data.stats.games)} games`}
+              </MoreLink>
+            }
           />
-          <Grid style={styles.categoriesGrid}>
-            {data.tags.map((tag, index) => (
-              <AppTagCard key={tag.tag} tag={tag} isFeatured={index === 0} />
+          <ul role="list" {...stylex.props(styles.plainList, styles.games)}>
+            {data.games.map((listing) => (
+              <li key={listing.id}>
+                <GameCoverCard listing={listing} />
+              </li>
             ))}
-          </Grid>
-        </section>
+          </ul>
+        </ShelfSection>
+      ) : null}
 
-        <section {...stylex.props(styles.section)}>
+      {data.dataProducers.length > 0 ? (
+        <ShelfSection>
           <SectionHeader
-            eyebrow="Popular Right Now"
-            title="Trending across the ecosystem"
-            to="/apps"
+            title="Works with your data"
+            description="Apps on the AT Protocol read and write the same records. Find apps that work with the data you already have."
+            action={<MoreLink to="/apps/lexicons">Shared data</MoreLink>}
           />
-          <Grid
-            style={[
-              styles.popularGrid,
-              promoListing ? null : styles.popularGridSingle,
-            ]}
+          <ul
+            role="list"
+            {...stylex.props(styles.plainList, styles.twoColumns)}
           >
-            <ol role="list" {...stylex.props(styles.popularList)}>
-              {data.popular.map((listing, index) => (
-                <li key={listing.id}>
-                  <RankedAppRow listing={listing} rank={index + 1} />
-                </li>
-              ))}
-            </ol>
-            {promoListing ? (
-              <AppCard listing={promoListing} size="medium" />
-            ) : null}
-          </Grid>
-        </section>
-
-        <section {...stylex.props(styles.section)}>
-          <SectionHeader
-            eyebrow="New & Noteworthy"
-            title="Fresh apps just added"
-            to="/apps"
-            search={{ sort: "newest" }}
-          />
-          <Grid style={styles.newGrid}>
-            {data.fresh.map((listing) => (
-              <AppCard key={listing.id} listing={listing} size="small" />
+            {data.dataProducers.map((producer) => (
+              <li key={producer.groupKey}>
+                <DataProducerRow producer={producer} />
+              </li>
             ))}
-          </Grid>
-        </section>
-      </Flex>
-    </Page.Root>
+          </ul>
+        </ShelfSection>
+      ) : null}
+    </div>
   );
 }
 
-type SectionHeaderProps =
-  | {
-      eyebrow: string;
-      title: string;
-      to: "/apps/tags";
-      search?: never;
-    }
-  | {
-      eyebrow: string;
-      title: string;
-      to: "/apps";
-      search?: {
-        sort?: "newest";
-      };
-    };
-
-function SectionHeader({ eyebrow, title, to, search }: SectionHeaderProps) {
-  let action: React.ReactNode;
-
-  switch (to) {
-    case "/apps": {
-      action = (
-        <AppLink to="/apps" search={search ?? {}}>
-          See All <ChevronRight />
-        </AppLink>
-      );
-      break;
-    }
-    case "/apps/tags": {
-      action = (
-        <AppLink to="/apps/tags">
-          See All <ChevronRight />
-        </AppLink>
-      );
-      break;
-    }
-  }
+function FeaturedListing({
+  listing,
+}: {
+  listing: DirectoryHomePageData["featured"];
+}) {
+  const productId = getDirectoryListingSlug(listing);
+  const tag = listing.appTags[0];
+  const handle = listing.productAccountHandle?.replace(/^@/, "");
+  const domain = getDomain(listing.externalUrl);
+  const description = firstParagraph(listing.description);
 
   return (
-    <Flex align="end" justify="between" gap="2xl" style={styles.sectionHeader}>
-      <div {...stylex.props(styles.sectionHeaderText)}>
-        <SmallBody style={styles.eyebrow} variant="secondary">
-          {eyebrow}
-        </SmallBody>
-        <Heading2>{title}</Heading2>
+    <section aria-label="Featured" {...stylex.props(styles.feature)}>
+      {listing.heroImageUrl ? (
+        <RouterLink
+          to="/products/$productId"
+          params={{ productId }}
+          aria-label={listing.name}
+          {...stylex.props(styles.featureFrame)}
+        >
+          <img
+            src={listing.heroImageUrl}
+            alt=""
+            decoding="async"
+            {...stylex.props(styles.featureImage)}
+          />
+        </RouterLink>
+      ) : null}
+      <div>
+        <div {...stylex.props(styles.eyebrow)}>
+          {tag ? `Featured · ${formatAppTagLabel(tag)}` : "Featured"}
+        </div>
+        <div {...stylex.props(styles.featureIdentity)}>
+          <ListingIcon name={listing.name} src={listing.iconUrl} size={56} />
+          <FeaturedMeta handle={handle} listing={listing} />
+        </div>
+        <h2 {...stylex.props(styles.featureName)}>{listing.name}</h2>
+        <p {...stylex.props(styles.featureTagline)}>{listing.tagline}</p>
+        {description && description !== listing.tagline ? (
+          <p {...stylex.props(styles.featureDescription)}>{description}</p>
+        ) : null}
+        <div {...stylex.props(styles.featureActions)}>
+          <ButtonLink
+            to="/products/$productId"
+            params={{ productId }}
+            size="lg"
+            style={styles.featureAction}
+          >
+            View app
+          </ButtonLink>
+          {listing.externalUrl && domain ? (
+            <Button
+              href={listing.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="secondary"
+              size="lg"
+              style={styles.featureAction}
+            >
+              {`Open ${domain}`}
+              <ArrowUpRight size={16} aria-hidden />
+            </Button>
+          ) : null}
+        </div>
       </div>
-      {action && (
-        <div {...stylex.props(styles.sectionHeaderAction)}>{action}</div>
-      )}
-    </Flex>
+    </section>
   );
 }
 
-/**
- * The hero slot is the big image card, so make sure it gets a listing that
- * has an image: swap the first spotlight with one if the featured app has
- * none. If no listing has an image the hero renders without one.
- */
-function putHeroImageFirst(listings: Array<DirectoryListingCard>) {
-  if (listings[0]?.heroImageUrl) return listings;
+function FeaturedMeta({
+  handle,
+  listing,
+}: {
+  handle: string | undefined;
+  listing: DirectoryHomePageData["featured"];
+}) {
+  const rating =
+    listing.reviewCount > 0 ? (
+      <ListingRating
+        rating={listing.rating}
+        reviewCount={listing.reviewCount}
+        showCount
+      />
+    ) : null;
+  if (!handle && !rating) return null;
+  return (
+    <div {...stylex.props(styles.meta)}>
+      {handle ? <span>@{handle}</span> : null}
+      {handle && rating ? (
+        <span aria-hidden {...stylex.props(styles.metaDot)} />
+      ) : null}
+      {rating}
+    </div>
+  );
+}
 
-  const withImage = listings.findIndex((listing) => listing.heroImageUrl);
-  if (withImage <= 0) return listings;
+function TagCloud({
+  tags,
+  total,
+}: {
+  tags: DirectoryHomePageData["tags"];
+  total: number;
+}) {
+  const remaining = total - tags.length;
+  return (
+    <div {...stylex.props(styles.tags)}>
+      {tags.map(({ tag, count }) => (
+        <RouterLink
+          key={tag}
+          to="/apps"
+          search={{ tag: getAppTagSlug(tag) }}
+          aria-label={`${formatAppTagLabel(tag)}, ${String(count)} apps`}
+          {...stylex.props(styles.tagLink)}
+        >
+          {formatAppTagLabel(tag)}
+          <span aria-hidden {...stylex.props(styles.tagCount)}>
+            {count}
+          </span>
+        </RouterLink>
+      ))}
+      {remaining > 0 ? (
+        <RouterLink to="/apps/tags" {...stylex.props(styles.tagMore)}>
+          {`+${String(remaining)} more`}
+          <ArrowRight size={15} aria-hidden />
+        </RouterLink>
+      ) : null}
+    </div>
+  );
+}
 
-  const arranged = [...listings];
-  [arranged[0], arranged[withImage]] = [arranged[withImage], arranged[0]];
-  return arranged;
+function EcosystemStrip({
+  branches,
+}: {
+  branches: Array<DirectoryHomeEcosystemBranch>;
+}) {
+  return (
+    <div {...stylex.props(styles.ecoStrip)}>
+      <ul role="list" {...stylex.props(styles.plainList, styles.ecoGrid)}>
+        {branches.map((branch) => (
+          <li key={branch.id} {...stylex.props(styles.ecoItem)}>
+            <RouterLink
+              to="/apps"
+              search={{ in: branch.id }}
+              {...stylex.props(styles.ecoCell, styles.cardItemInner)}
+            >
+              <IconStack listings={branch.icons} size={28} />
+              <span {...stylex.props(styles.ecoName)}>{branch.label}</span>
+              <span {...stylex.props(styles.ecoCount)}>
+                {formatApps(branch.count)}
+              </span>
+            </RouterLink>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function DataProducerRow({
+  producer,
+}: {
+  producer: DirectoryHomeDataProducer;
+}) {
+  return (
+    <RouterLink
+      to="/apps"
+      search={{ data: producer.groupKey }}
+      aria-label={`Apps that use ${producer.groupKey} data: ${formatApps(producer.count)}`}
+      {...stylex.props(styles.dataRow)}
+    >
+      <span {...stylex.props(styles.dataKey)}>{producer.groupKey}</span>
+      <IconStack listings={producer.icons} />
+      <span {...stylex.props(styles.dataCount)}>
+        {formatApps(producer.count)}
+      </span>
+    </RouterLink>
+  );
+}
+
+function formatCount(value: number) {
+  return value.toLocaleString("en-US");
+}
+
+function formatApps(value: number) {
+  return `${formatCount(value)} ${value === 1 ? "app" : "apps"}`;
+}
+
+function getDomain(url: string | null) {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+function firstParagraph(text: string) {
+  return (
+    text
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean) ?? ""
+  );
 }

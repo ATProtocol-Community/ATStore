@@ -33,11 +33,13 @@ import { useDialogStyles } from "../theme/useDialogStyles";
 import { NonModalDrawer } from "./NonModalDrawer";
 
 const styles = stylex.create({
+  // Above the sticky site header (z-index 30).
   overlay: {
-    zIndex: 0,
+    zIndex: 100,
   },
   drawerWrapper: {
     position: "fixed",
+    zIndex: 101,
     bottom: {
       ":is([data-direction=bottom])": 0,
       ":is([data-direction=left])": 0,
@@ -120,8 +122,13 @@ const styles = stylex.create({
       ":is([data-exiting])": animationTimingFunction.easeIn,
     },
   },
+  // Header and footer stay put; only the body scrolls.
   dialog: {
-    overflow: "auto",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    minHeight: 0,
     paddingBottom: verticalSpace["md"],
     paddingTop: verticalSpace["md"],
   },
@@ -144,6 +151,8 @@ const styles = stylex.create({
   },
   body: {
     flexGrow: 1,
+    minHeight: 0,
+    overflowY: "auto",
     paddingBottom: verticalSpace["3xl"],
     paddingLeft: horizontalSpace["3xl"],
     paddingRight: horizontalSpace["3xl"],
@@ -152,6 +161,7 @@ const styles = stylex.create({
   footer: {
     gap: gap["md"],
     display: "flex",
+    flexShrink: 0,
     justifyContent: "flex-end",
     paddingBottom: verticalSpace["md"],
     paddingLeft: horizontalSpace["3xl"],
