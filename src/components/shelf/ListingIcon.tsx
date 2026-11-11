@@ -37,7 +37,7 @@ const styles = stylex.create({
     color: "white",
     fontFamily: fontFamily.title,
     fontWeight: fontWeight.bold,
-    letterSpacing: "-0.02em",
+    letterSpacing: "-0.011em",
   },
   size: (size: number) => ({
     borderRadius: `${Math.round(size / 4.2)}px`,

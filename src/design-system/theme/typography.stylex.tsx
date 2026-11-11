@@ -4,13 +4,14 @@ import { breakpoints } from "./media-queries.stylex";
 import { verticalSpace } from "./semantic-spacing.stylex";
 
 export const fontFamily = stylex.defineVars({
-  // System stacks: SF Pro on Apple platforms, Segoe/Roboto elsewhere, Inter if
-  // it happens to be installed. Nothing is downloaded.
+  // Shelf type: Bricolage Grotesque headlines, Mona Sans text, Geist Mono for
+  // handles, NSIDs and code. Self-hosted in /public/fonts (SIL OFL), with
+  // system fallbacks while they load.
   title:
-    '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif',
-  sans: '"SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif',
+    '"Bricolage Grotesque", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif',
+  sans: '"Mona Sans", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif',
   serif: "Georgia, serif",
-  mono: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, monospace',
+  mono: '"Geist Mono", ui-monospace, "SF Mono", Menlo, Monaco, monospace',
 });
 
 export const fontWeight = stylex.defineVars({
@@ -54,10 +55,10 @@ export const lineHeight = stylex.defineVars({
 
 export const tracking = stylex.defineVars({
   /** Display headlines (Shelf). */
-  display: "-0.045em",
-  snug: "-0.03em",
-  tighter: "-0.05em",
-  tight: "-0.025em",
+  display: "-0.025em",
+  snug: "-0.017em",
+  tighter: "-0.028em",
+  tight: "-0.014em",
   normal: "0em",
   wide: "0.025em",
   wider: "0.05em",

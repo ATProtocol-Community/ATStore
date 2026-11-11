@@ -1,3 +1,29 @@
+/*
+ * Shelf fonts, self-hosted (SIL Open Font License; see public/fonts/README.md).
+ * Variable Latin subsets: one file per family covering the weights we use.
+ */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/fonts/bricolage-grotesque-500-800.woff2") format("woff2");
+  font-weight: 500 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mona Sans";
+  src: url("/fonts/mona-sans-400-700.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist-mono-400-600.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
   margin: 0;
   /* Shelf paper; matches uiColor.bgSubtle so overscroll never flashes white. */

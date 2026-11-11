@@ -256,7 +256,7 @@ const styles = stylex.create({
     color: uiColor.text2,
     fontSize: 15,
     fontWeight: fontWeight.semibold,
-    letterSpacing: "-0.01em",
+    letterSpacing: "-0.006em",
   },
   updateDescription: {
     overflow: "hidden",

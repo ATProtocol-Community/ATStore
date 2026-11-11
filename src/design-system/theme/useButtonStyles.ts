@@ -42,7 +42,7 @@ const styles = stylex.create({
     fontFamily: fontFamily["sans"],
     fontWeight: fontWeight["semibold"],
     justifyContent: "center",
-    letterSpacing: "-0.005em",
+    letterSpacing: "-0.003em",
     opacity: {
       ":disabled": 0.5,
     },

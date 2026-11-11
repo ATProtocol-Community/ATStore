@@ -73,7 +73,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.title,
     fontSize: 32,
     fontWeight: 750,
-    letterSpacing: "-0.045em",
+    letterSpacing: "-0.025em",
     lineHeight: 1.1,
     marginBottom: 8,
     marginTop: 0,

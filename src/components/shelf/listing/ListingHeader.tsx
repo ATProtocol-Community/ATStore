@@ -56,7 +56,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.title,
     fontSize: { default: 36, [breakpoints.md]: 60 },
     fontWeight: 750,
-    letterSpacing: "-0.052em",
+    letterSpacing: "-0.029em",
     lineHeight: 1,
     overflowWrap: "anywhere",
     textWrap: "balance",
@@ -64,7 +64,7 @@ const styles = stylex.create({
   tagline: {
     color: `color-mix(in srgb, ${uiColor.text2} 78%, transparent)`,
     fontSize: { default: 17, [breakpoints.md]: 21 },
-    letterSpacing: "-0.01em",
+    letterSpacing: "-0.006em",
     lineHeight: 1.3,
     textWrap: "pretty",
     marginBottom: { default: 8, [breakpoints.md]: 12 },

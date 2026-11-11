@@ -87,7 +87,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.title,
     fontSize: { default: 30, [breakpoints.md]: 40 },
     fontWeight: fontWeight.bold,
-    letterSpacing: "-0.045em",
+    letterSpacing: "-0.025em",
     lineHeight: 1.05,
     overflowWrap: "anywhere",
   },

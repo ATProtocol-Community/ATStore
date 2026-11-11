@@ -79,7 +79,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.title,
     fontSize: { default: 32, [breakpoints.md]: 44 },
     fontWeight: 750,
-    letterSpacing: "-0.045em",
+    letterSpacing: "-0.025em",
     lineHeight: 1,
     textWrap: "balance",
   },

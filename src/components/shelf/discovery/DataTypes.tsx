@@ -70,7 +70,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.mono,
     fontSize: { default: 24, [breakpoints.md]: 30 },
     fontWeight: fontWeight.bold,
-    letterSpacing: "-0.03em",
+    letterSpacing: "-0.017em",
     lineHeight: 1.15,
     overflowWrap: "anywhere",
     marginTop: 8,
@@ -174,7 +174,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.title,
     fontSize: 26,
     fontWeight: fontWeight.bold,
-    letterSpacing: "-0.035em",
+    letterSpacing: "-0.019em",
     marginBottom: 12,
   },
   list: {

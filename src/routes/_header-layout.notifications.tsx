@@ -245,7 +245,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.title,
     fontSize: 22,
     fontWeight: fontWeight.bold,
-    letterSpacing: "-0.03em",
+    letterSpacing: "-0.017em",
   },
   emptyBody: {
     marginInline: "auto",

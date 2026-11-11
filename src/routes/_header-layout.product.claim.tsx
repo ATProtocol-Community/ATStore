@@ -75,7 +75,7 @@ const styles = stylex.create({
     color: uiColor.text2,
     fontSize: 17,
     fontWeight: fontWeight.semibold,
-    letterSpacing: "-0.01em",
+    letterSpacing: "-0.006em",
   },
   listingTagline: {
     color: uiColor.text1,

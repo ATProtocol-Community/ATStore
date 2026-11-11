@@ -60,7 +60,7 @@ const styles = stylex.create({
     fontFamily: fontFamily.title,
     fontSize: { default: 23, [breakpoints.md]: 26 },
     fontWeight: fontWeight.bold,
-    letterSpacing: "-0.035em",
+    letterSpacing: "-0.019em",
     lineHeight: 1.15,
   },
   headingCount: {

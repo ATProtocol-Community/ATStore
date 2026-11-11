@@ -34,7 +34,7 @@ const styles = stylex.create({
     fontSize: { default: 48, [breakpoints.md]: 56 },
     fontVariantNumeric: "tabular-nums",
     fontWeight: 750,
-    letterSpacing: "-0.05em",
+    letterSpacing: "-0.028em",
     lineHeight: 1,
   },
   of: {

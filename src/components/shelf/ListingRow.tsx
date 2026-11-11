@@ -72,7 +72,7 @@ const styles = stylex.create({
     fontSize: 22,
     fontVariantNumeric: "tabular-nums",
     fontWeight: fontWeight.semibold,
-    letterSpacing: "-0.03em",
+    letterSpacing: "-0.017em",
   },
   body: {
     columnGap: 3,
@@ -93,7 +93,7 @@ const styles = stylex.create({
     color: uiColor.text2,
     fontSize: 16,
     fontWeight: fontWeight.semibold,
-    letterSpacing: "-0.01em",
+    letterSpacing: "-0.006em",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },

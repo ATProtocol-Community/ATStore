@@ -36,7 +36,7 @@ const styles = stylex.create({
     color: "white",
     fontFamily: fontFamily.title,
     fontWeight: fontWeight.bold,
-    letterSpacing: "-0.02em",
+    letterSpacing: "-0.011em",
   },
   size: (size: number) => ({
     fontSize: `${Math.round(size / 2.4)}px`,

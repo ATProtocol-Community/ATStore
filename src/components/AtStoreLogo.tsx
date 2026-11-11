@@ -19,7 +19,7 @@ const styles = stylex.create({
     display: "inline-flex",
     fontFamily: fontFamily.title,
     fontWeight: fontWeight.extrabold,
-    letterSpacing: "-0.045em",
+    letterSpacing: "-0.025em",
     lineHeight: 1,
     whiteSpace: "nowrap",
   },

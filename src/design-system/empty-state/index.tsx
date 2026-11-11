@@ -113,7 +113,7 @@ const styles = stylex.create({
     gridColumnStart: "title",
     gridRowEnd: "title",
     gridRowStart: "title",
-    letterSpacing: "-0.03em",
+    letterSpacing: "-0.017em",
     marginBottom: 0,
     marginLeft: 0,
     marginRight: 0,

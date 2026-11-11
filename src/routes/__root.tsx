@@ -199,6 +199,22 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         rel: "stylesheet",
         href: appCss,
       },
+      // Preload the two faces used above the fold so headings and text don't
+      // swap in visibly after first paint.
+      {
+        rel: "preload",
+        href: "/fonts/bricolage-grotesque-500-800.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous" as const,
+      },
+      {
+        rel: "preload",
+        href: "/fonts/mona-sans-400-700.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous" as const,
+      },
 
       {
         rel: "icon",
