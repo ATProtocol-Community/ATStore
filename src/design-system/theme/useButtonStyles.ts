@@ -49,16 +49,16 @@ const styles = stylex.create({
     pointerEvents: {
       ":disabled": "none",
     },
+    transform: {
+      default: null,
+      ":is([data-pressed])": "scale(0.98)",
+    },
     transitionDuration: animationDuration.fast,
     transitionProperty:
       "background-color, border-color, color, opacity, transform",
     transitionTimingFunction: "ease-in-out",
     userSelect: "none",
     whiteSpace: "nowrap",
-    transform: {
-      default: null,
-      ":is([data-pressed])": "scale(0.98)",
-    },
 
     ":is(*) svg": {
       flexShrink: 0,
@@ -115,21 +115,21 @@ const styles = stylex.create({
   // Shelf: primary is a solid ink pill; secondary is a surface pill with a
   // hairline that darkens to ink on hover.
   primarySolid: {
+    borderColor: primaryColor.solid1,
     backgroundColor: {
       default: primaryColor.solid1,
       ":is([data-hovered])": primaryColor.solid2,
       ":disabled": primaryColor.solid1,
     },
-    borderColor: primaryColor.solid1,
     color: primaryColor.textContrast,
   },
   secondary: {
-    backgroundColor: uiColor.bg,
     borderColor: {
       default: uiColor.border2,
       ":is([data-hovered])": uiColor.text2,
       ":is([data-pressed])": uiColor.text2,
     },
+    backgroundColor: uiColor.bg,
   },
   tertiary: {
     borderColor: {
