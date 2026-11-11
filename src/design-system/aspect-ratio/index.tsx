@@ -13,7 +13,6 @@ const styles = stylex.create({
     position: "relative",
   },
   rounded: {
-    cornerShape: "squircle",
     borderBottomLeftRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
     borderTopLeftRadius: radius.lg,

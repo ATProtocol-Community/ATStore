@@ -16,7 +16,6 @@ import {
   uiColor,
   warningColor,
 } from "./color.stylex";
-import { blue } from "./colors/blue.stylex";
 import { radius } from "./radius.stylex";
 import { ui } from "./semantic-color.stylex";
 import {
@@ -93,7 +92,6 @@ const styles = stylex.create({
     paddingRight: 0,
     paddingTop: 0,
 
-    cornerShape: "squircle",
     outline: "none",
     overflow: "hidden",
     boxSizing: "border-box",
@@ -124,7 +122,7 @@ const styles = stylex.create({
     borderColor: {
       default: uiColor.border1,
       ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))":
-        blue.border3,
+        uiColor.text2,
       ":is([data-hovered]:not(:has(:is([data-invalid]))))": uiColor.border2,
     },
     borderStyle: "solid",
@@ -192,7 +190,7 @@ const styles = stylex.create({
     borderColor: {
       default: uiColor.border1,
       ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))":
-        blue.border3,
+        uiColor.text2,
       ":is([data-hovered]:not(:has(:is([data-invalid]))))": uiColor.border2,
     },
     borderStyle: "solid",
@@ -250,7 +248,7 @@ const styles = stylex.create({
     borderColor: {
       default: "transparent",
       ":is([data-focus-visible],:has([data-focused][data-focus-always-visible]))":
-        blue.border3,
+        uiColor.text2,
       ":is([data-hovered]:not(:has(* [data-hovered])),:has(input[data-hovered])):not(:disabled)":
         uiColor.component2,
       ":is([data-pressed=true]):not(:disabled)": uiColor.component3,

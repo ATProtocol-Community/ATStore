@@ -53,7 +53,6 @@ const styles = stylex.create({
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     gap: gap["8xl"],
     overflow: "hidden",
     textDecoration: "none",

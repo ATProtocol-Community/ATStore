@@ -128,7 +128,6 @@ const styles = stylex.create({
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     listStyle: "none",
     backgroundColor: uiColor.bg,
     paddingBottom: verticalSpace.lg,

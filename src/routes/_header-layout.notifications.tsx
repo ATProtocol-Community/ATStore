@@ -52,7 +52,6 @@ const styles = stylex.create({
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     gap: gap["2xl"],
     alignItems: "flex-start",
     backgroundColor: uiColor.bg,

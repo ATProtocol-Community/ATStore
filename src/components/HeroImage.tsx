@@ -37,7 +37,6 @@ const styles = stylex.create({
   },
   frame: {
     borderRadius: radius["3xl"],
-    cornerShape: "squircle",
     overflow: "hidden",
     position: "relative",
     zIndex: 1,

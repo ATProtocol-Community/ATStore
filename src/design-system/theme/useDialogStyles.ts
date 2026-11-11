@@ -40,7 +40,6 @@ const styles = stylex.create({
   },
   modal: {
     borderRadius: radius.xl,
-    cornerShape: "squircle",
     outline: "none",
     overflow: "hidden",
     boxShadow: shadow["lg"],

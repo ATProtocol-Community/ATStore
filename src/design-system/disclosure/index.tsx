@@ -52,7 +52,6 @@ const styles = stylex.create({
       ":is([data-size=sm] *)": sizeSpace["sm"],
     },
 
-    cornerShape: "squircle",
     gap: gap["md"],
     alignItems: "center",
     backgroundColor: {

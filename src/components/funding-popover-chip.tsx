@@ -69,7 +69,6 @@ const styles = stylex.create({
     borderRadius: radius.md,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     alignItems: "center",
     backgroundColor: successColor.bgSubtle,
     color: successColor.text1,
@@ -144,7 +143,6 @@ const styles = stylex.create({
     borderRadius: radius.md,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     gap: gap["2xl"],
     paddingBlock: verticalSpace.sm,
     textDecoration: "none",
@@ -182,7 +180,6 @@ const styles = stylex.create({
   /** Each "Depends on" row — full row clickable, plain link semantics. */
   dependsRow: {
     borderRadius: radius.md,
-    cornerShape: "squircle",
     gap: gap.lg,
     paddingBlock: verticalSpace.sm,
     paddingInline: horizontalSpace.md,

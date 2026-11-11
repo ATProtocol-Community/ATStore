@@ -4,10 +4,13 @@ import { breakpoints } from "./media-queries.stylex";
 import { verticalSpace } from "./semantic-spacing.stylex";
 
 export const fontFamily = stylex.defineVars({
-  title: "'Inter', sans-serif",
-  sans: "'Inter', sans-serif",
+  // System stacks: SF Pro on Apple platforms, Segoe/Roboto elsewhere, Inter if
+  // it happens to be installed. Nothing is downloaded.
+  title:
+    '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif',
+  sans: '"SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif',
   serif: "Georgia, serif",
-  mono: "Monaco, monospace",
+  mono: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, monospace',
 });
 
 export const fontWeight = stylex.defineVars({
@@ -50,6 +53,9 @@ export const lineHeight = stylex.defineVars({
 });
 
 export const tracking = stylex.defineVars({
+  /** Display headlines (Shelf). */
+  display: "-0.045em",
+  snug: "-0.03em",
   tighter: "-0.05em",
   tight: "-0.025em",
   normal: "0em",
@@ -72,8 +78,8 @@ export const typeramp = stylex.create({
     marginBottom: 0,
     marginLeft: 0,
 
-    fontWeight: fontWeight["extrabold"],
-    letterSpacing: tracking["tight"],
+    fontWeight: fontWeight["bold"],
+    letterSpacing: tracking["display"],
     lineHeight: lineHeight.sm,
     scrollMarginBlockStart: verticalSpace["12xl"],
     marginRight: 0,
@@ -92,11 +98,10 @@ export const typeramp = stylex.create({
     marginBottom: 0,
     marginLeft: 0,
 
-    fontWeight: fontWeight.semibold,
-    letterSpacing: tracking["tight"],
+    fontWeight: fontWeight["bold"],
+    letterSpacing: tracking["display"],
     lineHeight: lineHeight.sm,
     scrollMarginBlockStart: verticalSpace["12xl"],
-    borderBottomWidth: 1,
     marginRight: 0,
     marginTop: 0,
   },
@@ -110,8 +115,8 @@ export const typeramp = stylex.create({
     marginBottom: 0,
     marginLeft: 0,
 
-    fontWeight: fontWeight["semibold"],
-    letterSpacing: tracking["tight"],
+    fontWeight: fontWeight["bold"],
+    letterSpacing: tracking["snug"],
     lineHeight: lineHeight.sm,
     scrollMarginBlockStart: verticalSpace["12xl"],
     marginRight: 0,

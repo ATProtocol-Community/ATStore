@@ -36,7 +36,6 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["xxs"],
     paddingTop: verticalSpace["xxs"],
 
-    cornerShape: "squircle",
     gap: gap["md"],
     alignItems: "center",
     backgroundColor: uiColor.component1,
@@ -62,7 +61,6 @@ const styles = stylex.create({
     textBoxTrim: "trim-both",
     borderWidth: 0,
 
-    cornerShape: "squircle",
     gap: gap["xs"],
     alignItems: "center",
     backgroundColor: "transparent",
@@ -97,7 +95,6 @@ const styles = stylex.create({
   selectionIndicator: {
     borderRadius: radius.md,
 
-    cornerShape: "squircle",
     backgroundColor: uiColor.bgSubtle,
     boxShadow: shadow.sm,
     position: "absolute",

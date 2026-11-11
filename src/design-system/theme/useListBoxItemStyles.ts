@@ -45,7 +45,6 @@ const styles = stylex.create({
   lg: { minHeight: sizeSpace["5xl"] },
   itemInner: {
     borderRadius: radius.md,
-    cornerShape: "squircle",
     gap: gap["xl"],
     alignItems: "center",
     backgroundColor: {

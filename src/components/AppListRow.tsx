@@ -63,7 +63,6 @@ const styles = stylex.create({
   },
   surface: {
     borderRadius: radius.md,
-    cornerShape: "squircle",
     backgroundColor: {
       default: uiColor.bg,
       [stylex.when.ancestor(":hover")]: uiColor.component1,

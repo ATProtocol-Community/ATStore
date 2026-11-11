@@ -18,7 +18,6 @@ const styles = stylex.create({
     borderStyle: "solid",
     borderWidth: "1px",
 
-    cornerShape: "squircle",
     backgroundColor: uiColor.component2,
     boxShadow: `0 2px 0 1px ${uiColor.border2}`,
     color: uiColor.text1,

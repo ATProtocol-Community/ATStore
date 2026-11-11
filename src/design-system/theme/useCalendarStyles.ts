@@ -29,7 +29,6 @@ export interface CalendarProps<T extends DateValue>
 const styles = stylex.create({
   cell: {
     borderRadius: radius.md,
-    cornerShape: "squircle",
     textDecoration: {
       ":is([data-unavailable])": "line-through",
     },

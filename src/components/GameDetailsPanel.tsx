@@ -104,7 +104,6 @@ const styles = stylex.create({
     borderRadius: radius.lg,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     gap: gap.md,
     display: "flex",
     flexDirection: "column",

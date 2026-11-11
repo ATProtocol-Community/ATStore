@@ -34,8 +34,6 @@ const styles = stylex.create({
     display: "flex",
     justifyContent: "center",
     position: "relative",
-
-    cornerShape: "squircle",
   },
   wrapperSm: {
     borderRadius: {

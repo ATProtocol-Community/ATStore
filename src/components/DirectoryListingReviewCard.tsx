@@ -162,7 +162,6 @@ const styles = stylex.create({
   repliesToggleRow: {
     borderRadius: radius.md,
     borderWidth: 0,
-    cornerShape: "squircle",
     gap: gap["2xl"],
     alignItems: "center",
     backgroundColor: "transparent",

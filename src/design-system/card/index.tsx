@@ -28,7 +28,6 @@ const styles = stylex.create({
     borderStyle: "solid",
     borderWidth: 1,
 
-    cornerShape: "squircle",
     overflow: "hidden",
     boxShadow: shadow["sm"],
     display: "flex",

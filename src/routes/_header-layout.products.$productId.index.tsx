@@ -212,7 +212,6 @@ const styles = stylex.create({
     borderRadius: radius["xl"],
     borderStyle: "dashed",
     borderWidth: 1,
-    cornerShape: "squircle",
     paddingBottom: verticalSpace["8xl"],
     paddingTop: verticalSpace["8xl"],
   },

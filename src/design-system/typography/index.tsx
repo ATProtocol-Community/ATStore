@@ -38,7 +38,6 @@ const styles = stylex.create({
     borderRadius: radius.lg,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     display: "flex",
     position: "relative",
     marginBottom: verticalSpace["7xl"],
@@ -104,7 +103,6 @@ const styles = stylex.create({
   },
   inlineCode: {
     borderRadius: radius.sm,
-    cornerShape: "squircle",
     fontSize: "0.95em",
     position: "relative",
     paddingBottom: verticalSpace["xs"],

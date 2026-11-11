@@ -95,7 +95,6 @@ const styles = stylex.create({
   savedHandleButton: {
     padding: sizeSpace.xxs,
     borderRadius: radius["lg"],
-    cornerShape: "squircle",
     gap: gapSpace.xl,
     textDecoration: "none",
     alignItems: "center",

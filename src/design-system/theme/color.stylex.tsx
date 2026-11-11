@@ -1,25 +1,26 @@
 import * as stylex from "@stylexjs/stylex";
 
 import { green } from "./colors/green.stylex";
-import { mauve, mauveInverted } from "./colors/mauve.stylex";
+import { mauveInverted } from "./colors/mauve.stylex";
+import { paper } from "./colors/paper.stylex";
 import { pink } from "./colors/pink.stylex";
 import { red } from "./colors/red.stylex";
 import { yellow } from "./colors/yellow.stylex";
 
 export const uiColor = stylex.defineVars({
-  overlayBackdrop: "light-dark(rgba(4, 1, 1, 0.5), rgba(0, 0, 0, 0.75))",
-  bg: mauve.bg,
-  bgSubtle: mauve.bgSubtle,
-  component1: mauve.component1,
-  component2: mauve.component2,
-  component3: mauve.component3,
-  border1: mauve.border1,
-  border2: mauve.border2,
-  border3: mauve.border3,
-  solid1: mauve.solid1,
-  solid2: mauve.solid2,
-  text1: mauve.text1,
-  text2: mauve.text2,
+  overlayBackdrop: "light-dark(rgba(25, 24, 22, 0.42), rgba(0, 0, 0, 0.7))",
+  bg: paper.bg,
+  bgSubtle: paper.bgSubtle,
+  component1: paper.component1,
+  component2: paper.component2,
+  component3: paper.component3,
+  border1: paper.border1,
+  border2: paper.border2,
+  border3: paper.border3,
+  solid1: paper.solid1,
+  solid2: paper.solid2,
+  text1: paper.text1,
+  text2: paper.text2,
   textContrast: "white",
 });
 

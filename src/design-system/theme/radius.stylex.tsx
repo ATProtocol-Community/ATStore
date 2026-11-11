@@ -1,39 +1,18 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { mediaQueries } from "./media-queries.stylex";
-
+/**
+ * Shelf radii: plain rounded corners (no squircle-specific bumps) so cards,
+ * images and inputs look the same in every browser. Buttons and chips use
+ * `full` for pills.
+ */
 export const radius = stylex.defineVars({
-  xs: {
-    default: "0.3rem",
-    [mediaQueries.supportsSquircle]: "0.5rem",
-  },
-  sm: {
-    default: "0.4rem",
-    [mediaQueries.supportsSquircle]: "0.75rem",
-  },
-  md: {
-    default: "0.5rem",
-    [mediaQueries.supportsSquircle]: "1rem",
-  },
-  lg: {
-    default: "0.75rem",
-    [mediaQueries.supportsSquircle]: "1.5rem",
-  },
-  xl: {
-    default: "1.35rem",
-    [mediaQueries.supportsSquircle]: "2.5rem",
-  },
-  "2xl": {
-    default: "1.5rem",
-    [mediaQueries.supportsSquircle]: "3rem",
-  },
-  "3xl": {
-    default: "1.9rem",
-    [mediaQueries.supportsSquircle]: "3.5rem",
-  },
-  "4xl": {
-    default: "2.1rem",
-    [mediaQueries.supportsSquircle]: "4rem",
-  },
+  xs: "0.375rem",
+  sm: "0.5rem",
+  md: "0.75rem",
+  lg: "1rem",
+  xl: "1.25rem",
+  "2xl": "1.5rem",
+  "3xl": "1.75rem",
+  "4xl": "2rem",
   full: "calc(infinity * 1px)",
 });

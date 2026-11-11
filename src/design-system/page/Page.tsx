@@ -166,7 +166,6 @@ const sharedStyles = stylex.create({
   icon: {
     borderRadius: radius.lg,
     // eslint-disable-next-line @stylexjs/sort-keys
-    cornerShape: "squircle",
     alignItems: "center",
     backgroundColor: primaryColor.solid1,
     boxShadow: shadow["lg"],

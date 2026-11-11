@@ -57,7 +57,6 @@ const styles = stylex.create({
     borderColor: uiColor.border1,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     overflow: "hidden",
     backgroundColor: "inherit",
     position: "relative",

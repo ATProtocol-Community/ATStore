@@ -62,7 +62,6 @@ const styles = stylex.create({
   },
   imageFrame: {
     borderRadius: radius["2xl"],
-    cornerShape: "squircle",
     overflow: "hidden",
     maxHeight: "240px",
     width: "100%",
@@ -85,7 +84,6 @@ const styles = stylex.create({
     borderRadius: radius["2xl"],
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",

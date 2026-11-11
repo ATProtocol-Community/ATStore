@@ -8,15 +8,16 @@ import type { ButtonVariant, Size } from "../theme/types";
 import { ButtonGroupContext } from "../button/context";
 import { SizeContext } from "../context";
 import { animationDuration } from "./animations.stylex";
-import { uiColor } from "./color.stylex";
+import { primaryColor, uiColor } from "./color.stylex";
 import { radius } from "./radius.stylex";
-import { critical, primary, ui } from "./semantic-color.stylex";
+import { critical, ui } from "./semantic-color.stylex";
 import {
   gap,
   horizontalSpace,
   size as sizeSpace,
 } from "./semantic-spacing.stylex";
 import { shadow } from "./shadow.stylex";
+import { spacing } from "./spacing.stylex";
 import { fontFamily, fontSize, fontWeight } from "./typography.stylex";
 
 const styles = stylex.create({
@@ -29,19 +30,19 @@ const styles = stylex.create({
     textBoxTrim: "trim-both",
     textDecoration: "none",
 
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     borderStyle: "solid",
     borderWidth: 1,
 
-    cornerShape: "squircle",
     gap: gap["xs"],
     alignItems: "center",
     boxSizing: "border-box",
     display: "inline-flex",
     flexShrink: 0,
     fontFamily: fontFamily["sans"],
-    fontWeight: fontWeight["medium"],
+    fontWeight: fontWeight["semibold"],
     justifyContent: "center",
+    letterSpacing: "-0.005em",
     opacity: {
       ":disabled": 0.5,
     },
@@ -49,10 +50,15 @@ const styles = stylex.create({
       ":disabled": "none",
     },
     transitionDuration: animationDuration.fast,
-    transitionProperty: "background-color, color",
+    transitionProperty:
+      "background-color, border-color, color, opacity, transform",
     transitionTimingFunction: "ease-in-out",
     userSelect: "none",
     whiteSpace: "nowrap",
+    transform: {
+      default: null,
+      ":is([data-pressed])": "scale(0.98)",
+    },
 
     ":is(*) svg": {
       flexShrink: 0,
@@ -62,8 +68,8 @@ const styles = stylex.create({
     },
   },
   small: {
-    fontSize: fontSize["xs"],
-    height: sizeSpace["2xl"],
+    fontSize: fontSize["sm"],
+    height: sizeSpace["3xl"],
     paddingLeft: {
       default: horizontalSpace["md"],
     },
@@ -79,7 +85,7 @@ const styles = stylex.create({
   medium: {
     gap: gap["sm"],
     fontSize: fontSize["sm"],
-    height: sizeSpace["3xl"],
+    height: spacing["9"],
     paddingLeft: {
       default: horizontalSpace["xl"],
       ":has(svg+*)": horizontalSpace["md"],
@@ -88,7 +94,7 @@ const styles = stylex.create({
   },
   large: {
     gap: gap["md"],
-    fontSize: fontSize["sm"],
+    fontSize: "0.9375rem",
     height: sizeSpace["4xl"],
     paddingLeft: {
       default: horizontalSpace["3xl"],
@@ -106,11 +112,23 @@ const styles = stylex.create({
     },
     paddingRight: horizontalSpace["4xl"],
   },
+  // Shelf: primary is a solid ink pill; secondary is a surface pill with a
+  // hairline that darkens to ink on hover.
+  primarySolid: {
+    backgroundColor: {
+      default: primaryColor.solid1,
+      ":is([data-hovered])": primaryColor.solid2,
+      ":disabled": primaryColor.solid1,
+    },
+    borderColor: primaryColor.solid1,
+    color: primaryColor.textContrast,
+  },
   secondary: {
+    backgroundColor: uiColor.bg,
     borderColor: {
-      default: uiColor.border1,
-      ":is([data-hovered])": uiColor.border2,
-      ":is([data-pressed])": uiColor.border3,
+      default: uiColor.border2,
+      ":is([data-hovered])": uiColor.text2,
+      ":is([data-pressed])": uiColor.text2,
     },
   },
   tertiary: {
@@ -166,14 +184,8 @@ export const useButtonStyles = ({
     group?.orientation === "vertical" &&
       group.variant === "grouped" &&
       styles.groupVertical,
-    variant === "primary" && [
-      primary.bgAction,
-      primary.borderInteractive,
-      primary.text,
-      styles.shadow,
-    ],
+    variant === "primary" && styles.primarySolid,
     variant === "secondary" && [
-      ui.bgUi,
       styles.secondary,
       ui.text,
       group?.orientation === "horizontal" &&

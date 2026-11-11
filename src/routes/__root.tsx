@@ -19,7 +19,7 @@ import { useLayoutEffect } from "react";
 import type { Locale } from "../lib/locale";
 
 import { primaryColor } from "../design-system/theme/color.stylex";
-import { blue } from "../design-system/theme/colors/blue.stylex";
+import { ink } from "../design-system/theme/colors/paper.stylex";
 import { initI18n } from "../i18n";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
@@ -53,20 +53,22 @@ const detectLocale = createServerFn({ method: "GET" }).handler(
  */
 const MIGRATED_TOP_LEVEL_PATHS: ReadonlySet<string> = new Set(["/about"]);
 
+// Shelf: the primary colour is ink (near-black, near-white in dark mode) —
+// solid primary buttons, selected states, stars and links all read as ink.
 const primaryColorTheme = stylex.createTheme(primaryColor, {
-  bg: blue.bg,
-  bgSubtle: blue.bgSubtle,
-  component1: blue.component1,
-  component2: blue.component2,
-  component3: blue.component3,
-  border1: blue.border1,
-  border2: blue.border2,
-  border3: blue.border3,
-  solid1: blue.solid1,
-  solid2: blue.solid2,
-  text1: blue.text1,
-  text2: blue.text2,
-  textContrast: "white",
+  bg: ink.bg,
+  bgSubtle: ink.bgSubtle,
+  component1: ink.component1,
+  component2: ink.component2,
+  component3: ink.component3,
+  border1: ink.border1,
+  border2: ink.border2,
+  border3: ink.border3,
+  solid1: ink.solid1,
+  solid2: ink.solid2,
+  text1: ink.text1,
+  text2: ink.text2,
+  textContrast: ink.textContrast,
 });
 
 if (import.meta.env.DEV) {
@@ -93,18 +95,13 @@ html[data-theme="system"] { color-scheme: light; }
 `.trim();
 
 /**
- * Inherited outline color for focused elements (matches `blue.border3`).
+ * Inherited outline color for focused elements: the Shelf accent blue.
  * Defined as global CSS so we do not use legacy contextual selectors under
  * `stylex.create()` (disallowed by @stylexjs/valid-styles).
  */
 const GLOBAL_FOCUS_OUTLINE_CSS = `
 :is(*) * {
-  outline-color: light-dark(#5eb1ef, #2870bd);
-}
-@media (color-gamut: p3) {
-  :is(*) * {
-    outline-color: light-dark(color(display-p3 0.451 0.688 0.917), color(display-p3 0.239 0.434 0.72));
-  }
+  outline-color: light-dark(#1c4ef5, #7b97ff);
 }
 `.trim();
 

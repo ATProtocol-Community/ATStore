@@ -63,7 +63,6 @@ const styles = stylex.create({
   },
   surface: {
     borderRadius: radius.lg,
-    cornerShape: "squircle",
     boxShadow: {
       default: shadow.sm,
       [stylex.when.ancestor(":hover")]: shadow.lg,
