@@ -50,7 +50,7 @@ const styles = stylex.create({
 
 export function usePopoverStyles() {
   return {
-    wrapper: [styles.popover, ui.bgSubtle, ui.text, ui.border],
+    wrapper: [styles.popover, ui.bg, ui.text, ui.border],
     animation: styles.animation,
   };
 }

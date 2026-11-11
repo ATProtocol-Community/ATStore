@@ -12,7 +12,6 @@ import {
   animationTimingFunction,
 } from "../theme/animations.stylex";
 import { uiColor } from "../theme/color.stylex";
-import { mediaQueries } from "../theme/media-queries.stylex";
 import { radius } from "../theme/radius.stylex";
 import { gap, size as sizeSpace } from "../theme/semantic-spacing.stylex";
 import {
@@ -36,34 +35,22 @@ const styles = stylex.create({
     position: "relative",
   },
   wrapperSm: {
-    borderRadius: {
-      default: radius.sm,
-      [mediaQueries.supportsSquircle]: radius["3xl"],
-    },
+    borderRadius: radius.sm,
     height: sizeSpace["xl"],
     width: sizeSpace["xl"],
   },
   wrapperMd: {
-    borderRadius: {
-      default: radius.md,
-      [mediaQueries.supportsSquircle]: radius["3xl"],
-    },
+    borderRadius: radius.md,
     height: sizeSpace["3xl"],
     width: sizeSpace["3xl"],
   },
   wrapperLg: {
-    borderRadius: {
-      default: radius.lg,
-      [mediaQueries.supportsSquircle]: radius["3xl"],
-    },
+    borderRadius: radius.lg,
     height: sizeSpace["4xl"],
     width: sizeSpace["4xl"],
   },
   wrapperXl: {
-    borderRadius: {
-      default: radius.xl,
-      [mediaQueries.supportsSquircle]: radius["3xl"],
-    },
+    borderRadius: radius.xl,
     height: sizeSpace["5xl"],
     width: sizeSpace["5xl"],
   },

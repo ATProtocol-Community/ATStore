@@ -211,7 +211,7 @@ const stickyBaseStyles = stylex.create({
   },
   stickyWrapperStuck: {
     backgroundColor: {
-      default: "light-dark(rgba(252, 252, 253, 0.8), rgba(17, 17, 19, 0.8))",
+      default: "light-dark(rgba(246, 244, 239, 0.82), rgba(18, 17, 15, 0.8))",
     },
     boxShadow: `${shadow.sm}, 0 0 32px 4px ${uiColor.bgSubtle}`,
     borderBottomColor: uiColor.border1,
@@ -285,7 +285,7 @@ const stickyFooterBaseStyles = stylex.create({
   },
   stickyWrapperStuck: {
     backgroundColor: {
-      default: "light-dark(rgba(252, 252, 253, 0.8), rgba(17, 17, 19, 0.8))",
+      default: "light-dark(rgba(246, 244, 239, 0.82), rgba(18, 17, 15, 0.8))",
     },
     boxShadow: `${shadow.sm}, 0 0 32px 4px ${uiColor.bgSubtle}`,
     borderTopColor: uiColor.border1,
@@ -448,9 +448,11 @@ export const PageTitle = ({ style, children, ...props }: PageTitleProps) => {
   return (
     <Text
       size={
-        isSmall ? { default: "xl", sm: "2xl" } : { default: "2xl", sm: "3xl" }
+        isSmall ? { default: "2xl", sm: "3xl" } : { default: "3xl", sm: "5xl" }
       }
-      weight="semibold"
+      weight="bold"
+      font="title"
+      tracking="tighter"
       {...props}
       style={[titleStyles, style]}
     >

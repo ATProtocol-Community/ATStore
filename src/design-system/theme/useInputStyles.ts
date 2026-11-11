@@ -195,11 +195,9 @@ const styles = stylex.create({
     },
     borderStyle: "solid",
     borderWidth: 1,
+    // Shelf: surface fill; the hairline border carries hover/focus.
     backgroundColor: {
-      default: uiColor.component1,
-      ":is([data-hovered]:not(:has(* [data-hovered])),:has(input[data-hovered])):not(:disabled)":
-        uiColor.component2,
-      ":is([data-pressed=true]):not(:disabled)": uiColor.component3,
+      default: uiColor.bg,
       ":disabled": uiColor.component1,
     },
     transitionDuration: animationDuration.fast,

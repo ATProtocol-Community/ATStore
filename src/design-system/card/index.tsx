@@ -22,14 +22,15 @@ import {
 } from "../theme/typography.stylex";
 
 const styles = stylex.create({
+  // Shelf: a near-white surface with a hairline border and no resting shadow.
   card: {
-    borderColor: uiColor.component2,
-    borderRadius: radius.lg,
+    borderColor: uiColor.border1,
+    borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
 
     overflow: "hidden",
-    boxShadow: shadow["sm"],
+    boxShadow: shadow["none"],
     display: "flex",
     flexDirection: "column",
     fontFamily: fontFamily["sans"],

@@ -43,7 +43,7 @@ const styles = stylex.create({
   },
   caret: {},
   arrow: {
-    backgroundColor: uiColor.bgSubtle,
+    backgroundColor: uiColor.bg,
     transform: {
       [":is([data-placement=bottom] *)"]: "rotate(180deg)",
       [":is([data-placement=left] *)"]: "rotate(90deg)",

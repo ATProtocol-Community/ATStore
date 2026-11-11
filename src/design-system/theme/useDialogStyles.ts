@@ -18,7 +18,8 @@ const styles = stylex.create({
     animationDuration: animationDuration.default,
     animationName: animations.fadeIn,
     animationTimingFunction: animationTimingFunction.easeIn,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backdropFilter: "blur(2px)",
+    backgroundColor: "light-dark(rgba(25, 24, 22, 0.4), rgba(0, 0, 0, 0.65))",
     opacity: {
       default: 1,
       ":is([data-exiting])": 0,
@@ -39,7 +40,7 @@ const styles = stylex.create({
     width: "100vw",
   },
   modal: {
-    borderRadius: radius.xl,
+    borderRadius: radius["2xl"],
     outline: "none",
     overflow: "hidden",
     boxShadow: shadow["lg"],

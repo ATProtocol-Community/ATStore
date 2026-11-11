@@ -31,7 +31,7 @@ const styles = stylex.create({
     color: primaryColor.solid2,
   },
   starEmpty: {
-    color: uiColor.component3,
+    color: uiColor.border2,
   },
   starButton: {
     borderColor: "transparent",

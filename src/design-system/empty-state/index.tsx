@@ -12,6 +12,8 @@ import {
   horizontalSpace,
   size as sizeSpace,
 } from "../theme/semantic-spacing.stylex";
+import { uiColor } from "../theme/color.stylex";
+import { radius } from "../theme/radius.stylex";
 import { fontFamily, fontSize, fontWeight } from "../theme/typography.stylex";
 
 const styles = stylex.create({
@@ -20,6 +22,17 @@ const styles = stylex.create({
       ":is([data-empty-state-size=lg])": sizeSpace["7xl"],
       ":is([data-empty-state-size=md])": sizeSpace["5xl"],
       ":is([data-empty-state-size=sm])": sizeSpace["4xl"],
+    },
+    // Shelf: md/lg empty states sit in a dashed box.
+    borderColor: uiColor.border2,
+    borderRadius: {
+      ":is([data-empty-state-size=md],[data-empty-state-size=lg])": radius.xl,
+    },
+    borderStyle: {
+      ":is([data-empty-state-size=md],[data-empty-state-size=lg])": "dashed",
+    },
+    borderWidth: {
+      ":is([data-empty-state-size=md],[data-empty-state-size=lg])": 1,
     },
     gridTemplateAreas: {
       ":is([data-empty-state-size=md],[data-empty-state-size=lg])": {
@@ -46,6 +59,12 @@ const styles = stylex.create({
           "image description actions"
         `,
       },
+    },
+    paddingBlock: {
+      ":is([data-empty-state-size=md],[data-empty-state-size=lg])": 56,
+    },
+    paddingInline: {
+      ":is([data-empty-state-size=md],[data-empty-state-size=lg])": 24,
     },
     alignItems: "center",
     columnGap: {
@@ -83,16 +102,18 @@ const styles = stylex.create({
     width: "var(--empty-state-image-size)",
   },
   title: {
+    fontFamily: fontFamily["title"],
     fontSize: {
       ":is([data-empty-state-size='lg'] *)": fontSize["2xl"],
       ":is([data-empty-state-size='md'] *)": fontSize["xl"],
       ":is([data-empty-state-size='sm'] *)": fontSize["lg"],
     },
-    fontWeight: fontWeight["semibold"],
+    fontWeight: fontWeight["bold"],
     gridColumnEnd: "title",
     gridColumnStart: "title",
     gridRowEnd: "title",
     gridRowStart: "title",
+    letterSpacing: "-0.03em",
     marginBottom: 0,
     marginLeft: 0,
     marginRight: 0,

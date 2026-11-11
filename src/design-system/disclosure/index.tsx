@@ -56,7 +56,7 @@ const styles = stylex.create({
     alignItems: "center",
     backgroundColor: {
       default: "transparent",
-      ":is([data-hovered=true])": uiColor.component2,
+      ":is([data-hovered=true])": uiColor.component1,
       ":is([data-pressed=true])": uiColor.component3,
     },
     color: uiColor.text1,
