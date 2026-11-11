@@ -86,7 +86,9 @@ export const IconButton = ({
       isOpen={tooltipOpen}
       onOpenChange={onTooltipOpenChange}
     >
+      {/* The tooltip only describes the button; the label also has to name it. */}
       <Button
+        aria-label={label}
         size={size}
         style={[styles.button as unknown as stylex.StyleXStyles, style]}
         {...props}

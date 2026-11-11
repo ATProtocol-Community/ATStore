@@ -63,8 +63,9 @@ export function ListingIcon({
   size: number;
   style?: stylex.StyleXStyles;
 }) {
-  const [failed, setFailed] = useState(false);
-  const showImage = Boolean(src) && !failed;
+  // Remember which URL failed, so a new `src` gets a fresh attempt.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const showImage = Boolean(src) && failedSrc !== src;
 
   return (
     <span
@@ -84,7 +85,7 @@ export function ListingIcon({
           height={size}
           loading="lazy"
           decoding="async"
-          onError={() => setFailed(true)}
+          onError={() => setFailedSrc(src ?? null)}
           {...stylex.props(styles.image)}
         />
       ) : (
