@@ -31,12 +31,12 @@ import {
 } from "#/lib/atproto/list-records";
 import { COLLECTION } from "#/lib/atproto/nsids";
 import { resolveAtprotoPdsBaseUrl } from "#/lib/atproto/resolve-atproto-pds";
-import { normalizeTapUrlForRailway } from "#/lib/atproto/tap-railway-url";
 import {
   tryParseGameFaveRecord,
   upsertGameFaveFromTap,
   upsertGameListingFromTap,
 } from "#/lib/atproto/tap-game-sync";
+import { normalizeTapUrlForRailway } from "#/lib/atproto/tap-railway-url";
 
 import type { Database } from "../src/db/index.server";
 
