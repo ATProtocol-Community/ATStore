@@ -5,7 +5,7 @@ import { user } from "#/integrations/tanstack-query/api-user.functions.ts";
 import { Bell } from "lucide-react";
 
 import { IconButton } from "../design-system/icon-button";
-import { criticalColor } from "../design-system/theme/color.stylex";
+import { criticalColor, uiColor } from "../design-system/theme/color.stylex";
 import { size } from "../design-system/theme/semantic-spacing.stylex";
 
 const IconButtonLink = createLink(IconButton);
@@ -15,7 +15,7 @@ const styles = stylex.create({
     position: "relative",
   },
   unreadDot: {
-    borderColor: "white",
+    borderColor: uiColor.bgSubtle,
     borderRadius: "999px",
     borderStyle: "solid",
     borderWidth: 2,

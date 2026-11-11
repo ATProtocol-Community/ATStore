@@ -16,6 +16,8 @@ const styles = stylex.create({
     alignItems: "center",
     columnGap: "0.3em",
     display: "inline-flex",
+    fontFamily: fontFamily.title,
+    letterSpacing: "-0.035em",
   },
   atNavbar: {
     color: blue.solid1,

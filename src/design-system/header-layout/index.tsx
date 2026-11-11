@@ -29,9 +29,15 @@ const styles = stylex.create({
   rootMaxWidth: (maxWidth: string | undefined) => ({
     "--page-content-max-width": maxWidth || "1280px",
   }),
+  // Shelf: a sticky, frosted paper header.
   header: {
-    backgroundColor: uiColor.bg,
+    backdropFilter: "saturate(1.6) blur(16px)",
+    backgroundColor:
+      "light-dark(rgba(246, 244, 239, 0.82), rgba(18, 17, 15, 0.8))",
     flexShrink: 0,
+    position: "sticky",
+    zIndex: 30,
+    top: 0,
   },
   page: {
     boxSizing: "border-box",
@@ -43,22 +49,22 @@ const styles = stylex.create({
     minHeight: 0,
     paddingBottom: {
       default: verticalSpace["8xl"],
-      [containerBreakpoints.sm]: verticalSpace["xl"],
+      [containerBreakpoints.sm]: verticalSpace["12xl"],
       ":has(> [data-sidebar-layout=true])": "0 !important",
     },
     paddingLeft: {
-      default: horizontalSpace["3xl"],
-      [containerBreakpoints.sm]: horizontalSpace["6xl"],
+      default: "20px",
+      [containerBreakpoints.sm]: "40px",
       ":has(> [data-sidebar-layout=true])": "0 !important",
     },
     paddingRight: {
-      default: horizontalSpace["3xl"],
-      [containerBreakpoints.sm]: horizontalSpace["6xl"],
+      default: "20px",
+      [containerBreakpoints.sm]: "40px",
       ":has(> [data-sidebar-layout=true])": "0 !important",
     },
+    // Shelf pages open with their own hero/breadcrumb spacing.
     paddingTop: {
-      default: verticalSpace["md"],
-      [containerBreakpoints.sm]: verticalSpace["4xl"],
+      default: 0,
       ":has(> [data-sidebar-layout=true])": "0 !important",
     },
     width: "100%",
