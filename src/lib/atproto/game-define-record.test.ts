@@ -100,7 +100,8 @@ describe("gameDefineToListingFields", () => {
     expect(fields.heroImageUrl).toBe(
       `https://cdn.bsky.app/img/feed_fullsize/plain/${HELD_BY}/bafkreibryarlfwsvkq2j6iettmxmhggvnrrpydb7p6ujvchdnznn5qfz6y@png`,
     );
-    expect(fields.iconUrl).toBeNull();
+    // No icon or logo in the record — the cover stands in.
+    expect(fields.iconUrl).toBe(fields.heroImageUrl);
     expect(fields.gameDetails.defineAtUri).toBe(
       `at://${HELD_BY}/games.atmosphere.define/tictactoe`,
     );

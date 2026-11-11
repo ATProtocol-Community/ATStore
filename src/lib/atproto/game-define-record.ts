@@ -300,8 +300,18 @@ export function gameDefineToListingFields(input: {
   record: GamesAtmosphereDefine;
 }) {
   const { did, rkey, record } = input;
-  const iconUrl = blobLikeToBskyCdnUrl(record.icon, did);
   const heroImageUrl = blobLikeToBskyCdnUrl(record.cover, did);
+  /**
+   * Few records ship `icon`, and every surface that shows a listing reads `icon_url`. Fall back to
+   * a logo / thumbnail from the gallery, then the cover — cropped, it beats an empty tile.
+   */
+  const mediaIcon = record.media.find(
+    (m) => m.type === "logo" || m.type === "thumbnail",
+  );
+  const iconUrl =
+    blobLikeToBskyCdnUrl(record.icon, did) ??
+    blobLikeToBskyCdnUrl(mediaIcon?.image, did) ??
+    heroImageUrl;
   const screenshotUrls = record.media
     .filter((m) => !m.type || m.type === "screenshot" || m.type === "artwork")
     .flatMap((m) => {

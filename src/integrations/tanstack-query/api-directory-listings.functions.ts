@@ -994,10 +994,7 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     slug: row.slug || buildDirectoryListingSlug({ name: row.name }),
     tagline,
     description: getListingDescription(row),
-    // Most atmosphere.games records only ship a 16:9 cover; it crops better than a letter tile.
-    iconUrl: httpsListingImageUrlOrNull(
-      row.iconUrl ?? (isGame ? row.heroImageUrl : null),
-    ),
+    iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
     heroImageUrl: httpsListingImageUrlOrNull(row.heroImageUrl),
     categorySlugs: slugs,
     categorySlug: primaryCategorySlug(slugs),
