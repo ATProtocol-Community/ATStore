@@ -8,25 +8,24 @@ import {
 } from "@tanstack/react-router";
 import { BlueskyIcon } from "#/components/bluesky-icon";
 import { useButtonStyles } from "#/design-system/theme/useButtonStyles";
+import { LayoutGrid } from "lucide-react";
 import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { GermNetworkBadge } from "../components/GermNetworkBadge";
-import { Avatar } from "../design-system/avatar";
+import { blueskyProfileExtrasQueryOptions } from "../components/shelf/account/bluesky-profile-extras";
+import { PersonAvatar } from "../components/shelf/account/PersonAvatar";
+import { ListingCard } from "../components/shelf/ListingCard";
+import { ListingRow } from "../components/shelf/ListingRow";
+import { SectionHeader, ShelfSection } from "../components/shelf/Section";
 import { Button } from "../design-system/button";
-import { Flex } from "../design-system/flex";
-import { Page } from "../design-system/page";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
-  gap,
-  horizontalSpace,
-  size,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body, Heading3 } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { resolveProfilePathActorToDid } from "../lib/bluesky-public-profile";
@@ -38,85 +37,141 @@ const FAVORITES_PREVIEW_LIMIT = 4;
 
 const styles = stylex.create({
   page: {
-    gap: gap["4xl"],
-    boxSizing: "border-box",
-    display: "flex",
-    flexDirection: "column",
-    marginLeft: "auto",
-    marginRight: "auto",
-    paddingBottom: verticalSpace["8xl"],
-    paddingTop: verticalSpace["4xl"],
+    fontFamily: fontFamily.sans,
+    paddingBottom: { default: 56, [breakpoints.md]: 88 },
+  },
+  banner: {
+    borderRadius: { default: 18, [breakpoints.md]: 24 },
+    overflow: "hidden",
+    backgroundColor: uiColor.component1,
+    backgroundImage: `linear-gradient(120deg, ${uiColor.border1}, ${uiColor.component1} 55%, ${uiColor.bg})`,
+    height: { default: 140, [breakpoints.md]: 220 },
+    marginTop: { default: 16, [breakpoints.md]: 24 },
+  },
+  bannerImage: {
+    display: "block",
+    objectFit: "cover",
+    height: "100%",
     width: "100%",
   },
-  hero: {
-    gap: gap["2xl"],
-    marginBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["xl"],
-    paddingRight: horizontalSpace["xl"],
+  head: {
+    paddingInline: { default: 8, [breakpoints.md]: 24 },
+    alignItems: "flex-end",
+    columnGap: { default: 16, [breakpoints.md]: 24 },
+    display: "flex",
+    flexWrap: { default: "wrap", [breakpoints.md]: "nowrap" },
+    rowGap: 12,
+    marginTop: { default: -44, [breakpoints.md]: -56 },
   },
-  titleBlock: {
-    gap: gap["xl"],
+  avatar: {
+    boxShadow: `0 0 0 5px ${uiColor.bgSubtle}`,
+    height: { default: 88, [breakpoints.md]: 112 },
+    width: { default: 88, [breakpoints.md]: 112 },
+  },
+  identity: {
+    flexBasis: { default: "100%", [breakpoints.md]: "auto" },
     flexGrow: 1,
-    flexShrink: 0,
     minWidth: 0,
+    paddingBottom: { default: 0, [breakpoints.md]: 6 },
+    paddingTop: { default: 0, [breakpoints.md]: 68 },
   },
-  reviews: {
-    paddingLeft: horizontalSpace["xl"],
-    paddingRight: horizontalSpace["xl"],
+  nameRow: {
+    alignItems: "center",
+    columnGap: 12,
+    display: "flex",
+    flexWrap: "wrap",
+    rowGap: 8,
   },
-  ownedSection: {
-    marginBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["xl"],
-    paddingRight: horizontalSpace["xl"],
+  name: {
+    margin: 0,
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: { default: 30, [breakpoints.md]: 40 },
+    fontWeight: fontWeight.bold,
+    letterSpacing: "-0.045em",
+    lineHeight: 1.05,
+    overflowWrap: "anywhere",
   },
-  ownedGrid: {
-    gap: gap.lg,
+  handle: {
+    color: uiColor.text1,
+    overflowWrap: "anywhere",
+    marginTop: 4,
+  },
+  actions: {
+    columnGap: 8,
+    display: "flex",
+    flexShrink: 0,
+    flexWrap: "wrap",
+    rowGap: 8,
+    paddingBottom: { default: 0, [breakpoints.md]: 8 },
+  },
+  body: {
+    paddingInline: { default: 8, [breakpoints.md]: 24 },
+  },
+  bio: {
+    color: uiColor.text2,
+    lineHeight: 1.55,
+    overflowWrap: "anywhere",
+    whiteSpace: "pre-line",
+    marginBottom: 0,
+    marginTop: 20,
+    maxWidth: "40em",
+  },
+  stats: {
+    color: uiColor.text1,
+    columnGap: 24,
+    display: "flex",
+    flexWrap: "wrap",
+    fontSize: 15,
+    rowGap: 8,
+    marginBottom: { default: 32, [breakpoints.md]: 40 },
+    marginTop: 16,
+  },
+  statValue: {
+    color: uiColor.text2,
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: fontWeight.semibold,
+  },
+  cards: {
+    columnGap: 16,
     display: "grid",
     gridTemplateColumns: {
-      default: "1fr",
-      "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))",
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
+    },
+    rowGap: 16,
+  },
+  rows: {
+    columnGap: 40,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.lg]: "repeat(2, minmax(0, 1fr))",
     },
   },
-  ownedCard: {
-    padding: horizontalSpace.lg,
-    borderColor: "var(--ds-ui-component-2, rgba(0,0,0,0.12))",
-    borderRadius: radius["lg"],
-    borderStyle: "solid",
-    borderWidth: 1,
-    gap: gap.lg,
-    textDecoration: "none",
-    alignItems: "center",
-    backgroundColor: {
-      default: uiColor.bg,
-      ":is([data-hovered])": uiColor.component2,
+  reviews: {
+    alignItems: "start",
+    columnGap: 16,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.lg]: "repeat(2, minmax(0, 1fr))",
     },
-    color: uiColor.text2,
-    display: "flex",
+    rowGap: 16,
+  },
+  reviewCard: {
     minWidth: 0,
   },
-  ownedIcon: {
-    borderRadius: "10px",
-    flexShrink: 0,
-    objectFit: "cover",
-    height: size["5xl"],
-    width: size["5xl"],
-  },
-  ownedTextColumn: {
-    minWidth: 0,
-  },
-  noReviews: {
+  empty: {
     borderColor: uiColor.border2,
-    borderRadius: radius["xl"],
+    borderRadius: 20,
     borderStyle: "dashed",
     borderWidth: 1,
-    paddingBottom: verticalSpace["6xl"],
-    paddingLeft: horizontalSpace["xl"],
-    paddingRight: horizontalSpace["xl"],
-    paddingTop: verticalSpace["6xl"],
-  },
-  iconButton: {
-    height: size["4xl"],
-    width: size["4xl"],
+    paddingBlock: 48,
+    paddingInline: 24,
+    color: uiColor.text1,
+    textAlign: "center",
   },
 });
 
@@ -192,6 +247,9 @@ function UserProfilePage() {
     directoryListingApi.getProfileFavoriteListingsQueryOptions(did),
   );
   const { data: session } = useQuery(user.getSessionQueryOptions);
+  const { data: extras } = useQuery(blueskyProfileExtrasQueryOptions(did));
+  const buttonStyles = useButtonStyles({ variant: "secondary", size: "md" });
+  const [showAllFavorites, setShowAllFavorites] = useState(false);
 
   if (page == null) {
     throw notFound();
@@ -206,161 +264,157 @@ function UserProfilePage() {
     (did.length > 28 ? `${did.slice(0, 18)}…` : did);
   const subtitle =
     page.displayName?.trim() && handleDisplay ? handleDisplay : null;
-  const buttonStyles = useButtonStyles({ variant: "secondary", size: "lg" });
   const blueskyProfileId = page.handle?.trim()
     ? page.handle.replace(/^@+/, "")
     : did;
   const blueskyProfileUrl = `https://bsky.app/profile/${blueskyProfileId}`;
-  const [showAllFavorites, setShowAllFavorites] = useState(false);
+  const isViewer = session?.user?.did === did;
+  const owned = ownedProducts ?? [];
   const hasMoreFavorites = favoriteProducts.length > FAVORITES_PREVIEW_LIMIT;
   const visibleFavoriteProducts =
     showAllFavorites || !hasMoreFavorites
       ? favoriteProducts
       : favoriteProducts.slice(0, FAVORITES_PREVIEW_LIMIT);
+  const reviewCount = page.reviews.length;
 
   return (
-    <Page.Root variant="small" style={styles.page}>
-      <Flex direction="column" style={styles.hero}>
-        <Flex gap="2xl" align="center">
-          <Avatar
-            alt={mainTitle}
-            fallback={mainTitle.charAt(0).toUpperCase()}
-            size="xl"
-            src={page.avatarUrl || undefined}
+    <div {...stylex.props(styles.page)}>
+      <div {...stylex.props(styles.banner)}>
+        {extras?.bannerUrl ? (
+          <img
+            src={extras.bannerUrl}
+            alt=""
+            decoding="async"
+            {...stylex.props(styles.bannerImage)}
           />
-          <Flex direction="column" style={styles.titleBlock}>
-            <Flex gap="lg" align="center" wrap>
-              <Heading3>{mainTitle}</Heading3>
-              {page.germDmHref ? (
-                <GermNetworkBadge href={page.germDmHref} />
-              ) : null}
-            </Flex>
-            {subtitle ? (
-              <Text size="sm" variant="secondary">
-                {subtitle}
-              </Text>
-            ) : null}
-          </Flex>
+        ) : null}
+      </div>
 
+      <div {...stylex.props(styles.head)}>
+        <PersonAvatar
+          name={mainTitle}
+          src={page.avatarUrl}
+          size={112}
+          style={styles.avatar}
+        />
+        <div {...stylex.props(styles.identity)}>
+          <div {...stylex.props(styles.nameRow)}>
+            <h1 {...stylex.props(styles.name)}>{mainTitle}</h1>
+            {page.germDmHref ? (
+              <GermNetworkBadge href={page.germDmHref} />
+            ) : null}
+          </div>
+          {subtitle ? (
+            <div {...stylex.props(styles.handle)}>{subtitle}</div>
+          ) : null}
+        </div>
+        <div {...stylex.props(styles.actions)}>
           <AriaLink
-            {...stylex.props(buttonStyles, styles.iconButton)}
+            {...stylex.props(buttonStyles)}
             href={blueskyProfileUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <BlueskyIcon />
+            <BlueskyIcon size={15} />
+            Bluesky
           </AriaLink>
-        </Flex>
-      </Flex>
+          {isViewer ? (
+            <RouterLink to="/products/manage" {...stylex.props(buttonStyles)}>
+              <LayoutGrid size={15} aria-hidden />
+              Manage listings
+            </RouterLink>
+          ) : null}
+        </div>
+      </div>
+
+      <div {...stylex.props(styles.body)}>
+        {extras?.description ? (
+          <p {...stylex.props(styles.bio)}>{extras.description}</p>
+        ) : null}
+        <div {...stylex.props(styles.stats)}>
+          <span>
+            <span {...stylex.props(styles.statValue)}>{reviewCount}</span>{" "}
+            {reviewCount === 1 ? "review" : "reviews"}
+          </span>
+          {favoriteProducts.length > 0 ? (
+            <span>
+              <span {...stylex.props(styles.statValue)}>
+                {favoriteProducts.length}
+              </span>{" "}
+              {favoriteProducts.length === 1 ? "favorite" : "favorites"}
+            </span>
+          ) : null}
+          {owned.length > 0 ? (
+            <span>
+              <span {...stylex.props(styles.statValue)}>{owned.length}</span>{" "}
+              {owned.length === 1 ? "product" : "products"}
+            </span>
+          ) : null}
+        </div>
+      </div>
 
       {favoriteProducts.length > 0 ? (
-        <Flex direction="column" gap="4xl" style={styles.ownedSection}>
-          <Flex justify="between" align="center" gap="lg">
-            <Heading3>Favorites</Heading3>
-            {hasMoreFavorites ? (
-              <Button
-                variant="secondary"
-                size="md"
-                onPress={() => {
-                  setShowAllFavorites((current) => !current);
-                }}
-              >
-                {showAllFavorites ? "Show less" : "Show more"}
-              </Button>
-            ) : null}
-          </Flex>
-          <div {...stylex.props(styles.ownedGrid)}>
+        <ShelfSection>
+          <SectionHeader
+            title="Favorites"
+            action={
+              hasMoreFavorites ? (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onPress={() => {
+                    setShowAllFavorites((current) => !current);
+                  }}
+                >
+                  {showAllFavorites ? "Show less" : "Show more"}
+                </Button>
+              ) : null
+            }
+          />
+          <div {...stylex.props(styles.cards)}>
             {visibleFavoriteProducts.map((favorite) => (
-              <RouterLink
+              <ListingCard
                 key={favorite.id}
-                to="/products/$productId"
-                params={{
-                  productId: getDirectoryListingSlug({
-                    slug: favorite.slug,
-                    name: favorite.name,
-                  }),
+                listing={{
+                  name: favorite.name,
+                  slug: favorite.slug,
+                  iconUrl: favorite.iconUrl,
+                  tagline: favorite.tagline ?? "",
+                  rating: null,
+                  reviewCount: 0,
                 }}
-                {...stylex.props(styles.ownedCard)}
-              >
-                {favorite.iconUrl ? (
-                  <img
-                    src={favorite.iconUrl}
-                    alt=""
-                    {...stylex.props(styles.ownedIcon)}
-                  />
-                ) : null}
-                <Flex
-                  direction="column"
-                  gap="xl"
-                  style={styles.ownedTextColumn}
-                >
-                  <Text size="lg" weight="bold">
-                    {favorite.name}
-                  </Text>
-                  {favorite.tagline ? (
-                    <Text size="sm" variant="secondary">
-                      {favorite.tagline}
-                    </Text>
-                  ) : null}
-                </Flex>
-              </RouterLink>
+              />
             ))}
           </div>
-        </Flex>
+        </ShelfSection>
       ) : null}
 
-      {ownedProducts && ownedProducts.length > 0 ? (
-        <Flex direction="column" gap="4xl" style={styles.ownedSection}>
-          <Heading3>Products</Heading3>
-          <div {...stylex.props(styles.ownedGrid)}>
-            {ownedProducts.map((p) => (
-              <RouterLink
-                key={p.id}
-                to="/products/$productId"
-                params={{ productId: getDirectoryListingSlug(p) }}
-                {...stylex.props(styles.ownedCard)}
-              >
-                {p.iconUrl ? (
-                  <img
-                    src={p.iconUrl}
-                    alt=""
-                    {...stylex.props(styles.ownedIcon)}
-                  />
-                ) : null}
-                <Flex
-                  direction="column"
-                  gap="xl"
-                  style={styles.ownedTextColumn}
-                >
-                  <Flex justify="between" align="center" gap="lg">
-                    <Text size="lg" weight="bold">
-                      {p.name}
-                    </Text>
-                    <Text size="sm" variant="secondary">
-                      {p.reviewCount === 0
-                        ? "No reviews"
-                        : `${p.reviewCount} review${p.reviewCount === 1 ? "" : "s"}`}
-                      {p.averageRating != null && p.reviewCount > 0
-                        ? ` · ${Number(p.averageRating).toFixed(1)} ★`
-                        : ""}
-                    </Text>
-                  </Flex>
-                  {p.tagline ? (
-                    <Text size="sm" variant="secondary">
-                      {p.tagline}
-                    </Text>
-                  ) : null}
-                </Flex>
-              </RouterLink>
+      {owned.length > 0 ? (
+        <ShelfSection>
+          <SectionHeader title="Products" />
+          <div {...stylex.props(styles.rows)}>
+            {owned.map((product) => (
+              <ListingRow
+                key={product.id}
+                variant="compact"
+                listing={{
+                  name: product.name,
+                  slug: product.slug,
+                  iconUrl: product.iconUrl,
+                  tagline: product.tagline ?? "",
+                  rating: product.averageRating,
+                  reviewCount: product.reviewCount,
+                }}
+              />
             ))}
           </div>
-        </Flex>
+        </ShelfSection>
       ) : null}
 
-      <Flex direction="column" gap="4xl" style={styles.reviews}>
-        <Heading3>Reviews</Heading3>
+      <ShelfSection>
+        <SectionHeader title="Reviews" />
         {page.reviews.length > 0 ? (
-          <Flex direction="column" gap="lg">
+          <div {...stylex.props(styles.reviews)}>
             {page.reviews.map((review) => (
               <DirectoryListingReviewCard
                 key={review.id}
@@ -370,6 +424,7 @@ function UserProfilePage() {
                 viewerDid={session?.user?.did ?? null}
                 anchorId={`listing-review-${review.id}`}
                 shareProductSlug={getDirectoryListingSlug(review.listing)}
+                style={styles.reviewCard}
                 onEditReview={() => {
                   void navigate({
                     to: "/products/$productId/reviews/$reviewId/edit",
@@ -381,19 +436,11 @@ function UserProfilePage() {
                 }}
               />
             ))}
-          </Flex>
+          </div>
         ) : (
-          <Flex
-            direction="column"
-            gap="2xl"
-            justify="center"
-            align="center"
-            style={styles.noReviews}
-          >
-            <Body variant="secondary">No reviews yet.</Body>
-          </Flex>
+          <div {...stylex.props(styles.empty)}>No reviews yet.</div>
         )}
-      </Flex>
-    </Page.Root>
+      </ShelfSection>
+    </div>
   );
 }

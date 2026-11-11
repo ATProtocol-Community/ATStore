@@ -7,38 +7,31 @@ import { auth } from "#/integrations/tanstack-query/api-auth.functions";
 import { buildRouteOgMeta } from "#/lib/og-meta";
 import { unauthMiddleware } from "#/middleware/auth";
 import { getSavedHandles, saveHandle } from "#/utils/saved-handles";
-import { ChevronRight, InfoIcon } from "lucide-react";
+import { ChevronRight, Minus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link as AriaLink } from "react-aria-components";
+import {
+  Button as AriaButton,
+  Disclosure as AriaDisclosure,
+  DisclosurePanel as AriaDisclosurePanel,
+  Link as AriaLink,
+} from "react-aria-components";
 import { z } from "zod";
 
 import { AtStoreLogo } from "../components/AtStoreLogo";
+import { SiteFooter } from "../components/SiteFooter";
+import { SiteHeader } from "../components/SiteHeader";
 import { UserHandleAutocomplete } from "../components/user-handle-autocomplete";
 import { Avatar } from "../design-system/avatar";
 import { Button } from "../design-system/button";
-import {
-  Dialog,
-  DialogBody,
-  DialogDescription,
-  DialogHeader,
-} from "../design-system/dialog";
-import { Flex } from "../design-system/flex";
 import { Form } from "../design-system/form";
-import { IconButton } from "../design-system/icon-button";
-import { Link } from "../design-system/link";
-import { LinkContext } from "../design-system/link/link-context";
-import { Separator } from "../design-system/separator";
-import { primaryColor, uiColor } from "../design-system/theme/color.stylex";
+import { HeaderLayout } from "../design-system/header-layout";
+import { animationDuration } from "../design-system/theme/animations.stylex";
+import { criticalColor, uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
-import { primary } from "../design-system/theme/semantic-color.stylex";
 import {
-  gap as gapSpace,
-  size as sizeSpace,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body, InlineCode } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -49,78 +42,201 @@ const searchSchema = z.object({
 });
 
 const styles = stylex.create({
-  dialogDescription: {
-    paddingBottom: verticalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
-  },
-  buttonContainer: {
-    width: "100%",
-  },
-  main: {
-    backgroundColor: primaryColor.bgSubtle,
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    minHeight: "100vh",
-  },
-  container: {
-    padding: sizeSpace["4xl"],
+  page: {
+    paddingBlock: { default: 32, [breakpoints.md]: 48 },
     alignItems: "center",
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
-    flexGrow: 1,
+    fontFamily: fontFamily.sans,
     justifyContent: "center",
-    height: "100%",
+    rowGap: 24,
+    minHeight: "calc(100vh - 160px)",
   },
-  content: {
-    padding: sizeSpace["3xl"],
-    gap: gapSpace["5xl"],
-    alignItems: "center",
+  logo: {
+    color: uiColor.text2,
+    fontSize: 26,
+  },
+  card: {
+    padding: { default: 20, [breakpoints.md]: 28 },
+    borderColor: uiColor.border1,
+    borderRadius: 20,
+    borderStyle: "solid",
+    borderWidth: 1,
+    backgroundColor: uiColor.bg,
+    boxSizing: "border-box",
+    display: "block",
+    width: "min(420px, 100%)",
+  },
+  title: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: 32,
+    fontWeight: 750,
+    letterSpacing: "-0.045em",
+    lineHeight: 1.1,
+    marginBottom: 8,
+    marginTop: 0,
+  },
+  intro: {
+    color: uiColor.text1,
+    lineHeight: 1.45,
+    marginBottom: 22,
+    marginTop: 0,
+  },
+  error: {
+    borderColor: criticalColor.border1,
+    borderRadius: 12,
+    borderStyle: "solid",
+    borderWidth: 1,
+    paddingBlock: 10,
+    paddingInline: 14,
+    backgroundColor: criticalColor.bgSubtle,
+    color: criticalColor.text2,
+    fontSize: 14,
+    marginBottom: 18,
+    marginTop: 0,
+  },
+  savedList: {
     display: "flex",
     flexDirection: "column",
+    rowGap: 8,
   },
-  form: {
-    width: {
-      default: "100%",
-      [breakpoints.sm]: "min(80vw, 420px)",
+  saved: {
+    padding: 12,
+    borderColor: {
+      default: uiColor.border2,
+      ":hover": uiColor.text2,
     },
-  },
-  savedHandlesContainer: {
-    width: {
-      default: "100%",
-      [breakpoints.sm]: "min(80vw, 420px)",
-    },
-  },
-  savedHandleButton: {
-    padding: sizeSpace.xxs,
-    borderRadius: radius["lg"],
-    gap: gapSpace.xl,
+    borderRadius: 14,
+    borderStyle: "solid",
+    borderWidth: 1,
     textDecoration: "none",
     alignItems: "center",
+    backgroundColor: uiColor.bgSubtle,
     boxSizing: "border-box",
-    cursor: "pointer",
+    color: uiColor.text2,
+    columnGap: 12,
     display: "flex",
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    textAlign: "left",
+    outlineOffset: 2,
+    transitionDuration: animationDuration.default,
+    transitionProperty: "border-color",
     width: "100%",
   },
-  savedHandleText: {
+  savedText: {
+    display: "flex",
+    flexDirection: "column",
     flexGrow: 1,
+    fontSize: 14,
     minWidth: 0,
   },
-  savedHandleIcon: {
+  savedHandle: {
+    overflow: "hidden",
+    fontWeight: fontWeight.semibold,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  savedHint: {
     color: uiColor.text1,
   },
-  loginButton: {
+  savedChevron: {
+    color: uiColor.text1,
+    flexShrink: 0,
+  },
+  or: {
+    marginBlock: 20,
+    alignItems: "center",
+    color: uiColor.text1,
+    columnGap: 12,
+    display: "flex",
+    fontSize: 13,
+    "::after": {
+      backgroundColor: uiColor.border1,
+      content: "''",
+      flexGrow: 1,
+      height: 1,
+    },
+    "::before": {
+      backgroundColor: uiColor.border1,
+      content: "''",
+      flexGrow: 1,
+      height: 1,
+    },
+  },
+  submit: {
+    marginTop: 18,
+    width: "100%",
+  },
+  guide: {
+    color: uiColor.text1,
+    fontSize: 13,
+    marginTop: 20,
+  },
+  guideTrigger: {
+    padding: 0,
+    borderRadius: 6,
+    borderWidth: 0,
+    alignItems: "center",
+    backgroundColor: "transparent",
+    color: {
+      default: uiColor.text1,
+      ":hover": uiColor.text2,
+    },
+    columnGap: 6,
     cursor: "pointer",
+    display: "inline-flex",
+    fontFamily: "inherit",
+    fontSize: 13,
+  },
+  guideList: {
+    color: uiColor.text1,
+    lineHeight: 1.6,
+    marginBottom: 0,
+    marginTop: 10,
+    paddingLeft: 18,
+  },
+  guideItem: {
+    marginBottom: 6,
+  },
+  guideStrong: {
+    color: uiColor.text2,
+    fontWeight: fontWeight.semibold,
+  },
+  code: {
+    fontFamily: fontFamily.mono,
+    fontSize: "0.92em",
+  },
+  inlineLink: {
+    textDecoration: "underline",
+    color: uiColor.text2,
+    textDecorationColor: {
+      default: uiColor.border2,
+      ":hover": "currentColor",
+    },
+    textUnderlineOffset: 3,
+  },
+  signup: {
+    margin: 0,
+    color: uiColor.text1,
+    textAlign: "center",
   },
   signupButton: {
+    padding: 0,
+    borderWidth: 0,
+    textDecoration: "underline",
+    backgroundColor: "transparent",
+    color: {
+      default: uiColor.text2,
+      ":disabled": uiColor.text1,
+    },
     cursor: "pointer",
-  },
-  logoContainer: {
-    paddingBottom: verticalSpace["lg"],
+    fontFamily: "inherit",
+    fontSize: "inherit",
+    textDecorationColor: {
+      default: uiColor.border2,
+      ":hover": "currentColor",
+    },
+    textUnderlineOffset: 3,
   },
 });
 
@@ -213,218 +329,181 @@ function AuthPage() {
     },
   });
 
-  const [view, setView] = useState<"saved-handles" | "login">(
-    savedHandles.length > 0 ? "saved-handles" : "login",
-  );
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const hasSavedHandles = savedHandles.length > 0;
 
   return (
-    <main {...stylex.props(styles.main)}>
-      <div {...stylex.props(styles.container)}>
-        <Form style={styles.content}>
-          <Flex direction="column" gap="5xl" style={styles.form}>
-            <Flex
-              align="center"
-              justify="center"
-              gap="2xl"
-              style={styles.logoContainer}
-            >
-              <AtStoreLogo variant="hero" />
-            </Flex>
+    <HeaderLayout.Root>
+      <HeaderLayout.Header>
+        <SiteHeader />
+      </HeaderLayout.Header>
+
+      <HeaderLayout.Page>
+        <div {...stylex.props(styles.page)}>
+          <span {...stylex.props(styles.logo)}>
+            <AtStoreLogo />
+          </span>
+
+          <Form style={styles.card}>
+            <h1 {...stylex.props(styles.title)}>Log in</h1>
+            <p {...stylex.props(styles.intro)}>
+              Use your Atmosphere account, the same one you use for Bluesky.
+            </p>
 
             {error === "oauth_failed" ? (
-              <Text size="sm" variant="critical">
+              <p role="alert" {...stylex.props(styles.error)}>
                 Sign-in failed. Try again.
-              </Text>
+              </p>
             ) : null}
 
-            {view === "saved-handles" && (
+            {hasSavedHandles ? (
               <>
-                <Flex
-                  direction="column"
-                  gap="md"
-                  style={styles.savedHandlesContainer}
-                >
+                <div {...stylex.props(styles.savedList)}>
                   {savedHandles.map((saved, index) => (
                     <AriaLink
                       key={saved.handle}
                       href={redirects[index]?.authorizationUrl ?? "#"}
-                      {...stylex.props(
-                        styles.savedHandleButton,
-                        primary.bgUi,
-                        primary.borderInteractive,
-                        primary.text,
-                      )}
+                      aria-label={`Log in as @${saved.handle}`}
+                      {...stylex.props(styles.saved)}
                     >
                       <Avatar
                         src={saved.avatar ?? undefined}
                         alt={saved.handle}
                         fallback={saved.handle[0]?.toUpperCase() ?? "?"}
                       />
-                      <Text size="base" style={styles.savedHandleText}>
-                        {saved.handle}
-                      </Text>
-                      <ChevronRight {...stylex.props(styles.savedHandleIcon)} />
+                      <span {...stylex.props(styles.savedText)}>
+                        <span {...stylex.props(styles.savedHandle)}>
+                          @{saved.handle}
+                        </span>
+                        <span {...stylex.props(styles.savedHint)}>
+                          Continue with this account
+                        </span>
+                      </span>
+                      <ChevronRight
+                        size={16}
+                        aria-hidden
+                        {...stylex.props(styles.savedChevron)}
+                      />
                     </AriaLink>
                   ))}
-                </Flex>
-
-                <Separator />
+                </div>
+                <div {...stylex.props(styles.or)}>
+                  <span>or another account</span>
+                </div>
               </>
-            )}
+            ) : null}
 
-            {view === "login" && (
-              <Flex direction="column" gap="md">
-                <UserHandleAutocomplete
-                  size="lg"
-                  placeholder="your.handle.com"
-                  label={
-                    <Flex
-                      direction="row"
-                      gap="md"
-                      align="center"
-                      justify="between"
+            <UserHandleAutocomplete
+              size="lg"
+              placeholder="your.handle.com"
+              label="Atmosphere account"
+              value={inputValue}
+              onValueChange={(value) => {
+                setInputValue(value);
+                setHandle(value);
+              }}
+              onSelect={(selectedHandle) => {
+                const trimmed = selectedHandle.trim().replace(/^@/, "");
+                if (trimmed === "") return;
+                setInputValue(trimmed);
+                setHandle(trimmed);
+                loginMutation.mutate(trimmed);
+              }}
+            />
+
+            <Button
+              size="lg"
+              type="button"
+              isDisabled={!handle.trim() || loginMutation.isPending}
+              isPending={loginMutation.isPending}
+              onPress={() => {
+                const trimmed = handle.trim().replace(/^@/, "");
+                if (trimmed === "") return;
+                loginMutation.mutate(trimmed);
+              }}
+              style={styles.submit}
+            >
+              Log in
+            </Button>
+
+            <AriaDisclosure
+              isExpanded={isGuideOpen}
+              onExpandedChange={setIsGuideOpen}
+              {...stylex.props(styles.guide)}
+            >
+              <AriaButton slot="trigger" {...stylex.props(styles.guideTrigger)}>
+                {isGuideOpen ? (
+                  <Minus size={14} aria-hidden />
+                ) : (
+                  <Plus size={14} aria-hidden />
+                )}
+                How login works
+              </AriaButton>
+              <AriaDisclosurePanel>
+                <ul {...stylex.props(styles.guideList)}>
+                  <li {...stylex.props(styles.guideItem)}>
+                    <strong {...stylex.props(styles.guideStrong)}>
+                      Handle.
+                    </strong>{" "}
+                    Your unique identifier on the Atmosphere network (e.g.{" "}
+                    <code {...stylex.props(styles.code)}>user.bsky.social</code>
+                    ). It is how others find and mention you.
+                  </li>
+                  <li {...stylex.props(styles.guideItem)}>
+                    <strong {...stylex.props(styles.guideStrong)}>
+                      Authentication.
+                    </strong>{" "}
+                    You sign in with your Personal Data Server (PDS). at-store
+                    does not store your password; authorization happens with
+                    your PDS host.
+                  </li>
+                  <li {...stylex.props(styles.guideItem)}>
+                    <strong {...stylex.props(styles.guideStrong)}>
+                      Privacy.
+                    </strong>{" "}
+                    Your handle can be saved in this browser for convenience.
+                    at-store does not have access to your account credentials
+                    beyond what you authorize via OAuth.
+                  </li>
+                  <li {...stylex.props(styles.guideItem)}>
+                    <strong {...stylex.props(styles.guideStrong)}>
+                      Need an account?
+                    </strong>{" "}
+                    Use &quot;Create an account&quot; below to sign up on a PDS
+                    host (e.g.{" "}
+                    <a
+                      href="https://selfhosted.social/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      {...stylex.props(styles.inlineLink)}
                     >
-                      <Text size="sm">Atmosphere Account</Text>
-                      <Dialog
-                        trigger={
-                          <IconButton
-                            label="Info about handles and auth"
-                            variant="tertiary"
-                            size="sm"
-                            onClick={(e) => e.preventDefault()}
-                          >
-                            <InfoIcon />
-                          </IconButton>
-                        }
-                        size="md"
-                      >
-                        <DialogHeader>How login works</DialogHeader>
-                        <DialogDescription style={styles.dialogDescription}>
-                          Sign in with your AT Protocol account.
-                        </DialogDescription>
-                        <DialogBody>
-                          <Flex direction="column" gap="6xl">
-                            <Flex direction="column" gap="2xl">
-                              <Text size="sm" weight="semibold">
-                                What is a handle?
-                              </Text>
-                              <Body variant="secondary">
-                                A handle is your unique identifier on the
-                                ATmosphere network (e.g.{" "}
-                                <InlineCode>user.bsky.social</InlineCode>
-                                ). It is how others find and mention you.
-                              </Body>
-                            </Flex>
+                      selfhosted.social
+                    </a>
+                    ).
+                  </li>
+                </ul>
+              </AriaDisclosurePanel>
+            </AriaDisclosure>
+          </Form>
 
-                            <Flex direction="column" gap="2xl">
-                              <Text size="sm" weight="semibold">
-                                Authentication
-                              </Text>
-                              <Body variant="secondary">
-                                You sign in with your Personal Data Server
-                                (PDS). at-store does not store your
-                                password—authorization happens with your PDS
-                                host.
-                              </Body>
-                            </Flex>
+          <p {...stylex.props(styles.signup)}>
+            New to the Atmosphere?{" "}
+            <AriaButton
+              onPress={() => handleSignup.mutate()}
+              isDisabled={handleSignup.isPending || loginMutation.isPending}
+              {...stylex.props(styles.signupButton)}
+            >
+              {handleSignup.isPending
+                ? "Opening sign-up…"
+                : "Create an account"}
+            </AriaButton>
+          </p>
+        </div>
+      </HeaderLayout.Page>
 
-                            <Flex direction="column" gap="2xl">
-                              <Text size="sm" weight="semibold">
-                                Privacy
-                              </Text>
-                              <Body variant="secondary">
-                                Your handle can be saved in this browser for
-                                convenience. at-store does not have access to
-                                your account credentials beyond what you
-                                authorize via OAuth.
-                              </Body>
-                            </Flex>
-
-                            <Flex direction="column" gap="2xl">
-                              <Text size="sm" weight="semibold">
-                                Need an account?
-                              </Text>
-                              <Body variant="secondary">
-                                Use &quot;Create Account&quot; to sign up on a
-                                PDS host (e.g.{" "}
-                                <LinkContext value={{}}>
-                                  <Link
-                                    href="https://selfhosted.social/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    selfhosted.social
-                                  </Link>
-                                </LinkContext>
-                                ).
-                              </Body>
-                            </Flex>
-                          </Flex>
-                        </DialogBody>
-                      </Dialog>
-                    </Flex>
-                  }
-                  value={inputValue}
-                  onValueChange={(value) => {
-                    setInputValue(value);
-                    setHandle(value);
-                  }}
-                  onSelect={(selectedHandle) => {
-                    const trimmed = selectedHandle.trim().replace(/^@/, "");
-                    if (trimmed === "") return;
-                    setInputValue(trimmed);
-                    setHandle(trimmed);
-                    loginMutation.mutate(trimmed);
-                  }}
-                />
-              </Flex>
-            )}
-
-            <Flex direction="column" gap="md" style={styles.buttonContainer}>
-              {view === "saved-handles" && (
-                <Button
-                  size="lg"
-                  type="button"
-                  variant="outline"
-                  onPress={() => setView("login")}
-                  isPending={handleSignup.isPending}
-                  isDisabled={loginMutation.isPending}
-                  style={styles.signupButton}
-                >
-                  Switch account
-                </Button>
-              )}
-              {view === "login" && (
-                <Button
-                  size="lg"
-                  type="button"
-                  isDisabled={!handle.trim() || loginMutation.isPending}
-                  isPending={loginMutation.isPending}
-                  onPress={() => {
-                    const trimmed = handle.trim().replace(/^@/, "");
-                    if (trimmed === "") return;
-                    loginMutation.mutate(trimmed);
-                  }}
-                  style={styles.loginButton}
-                >
-                  Log in
-                </Button>
-              )}
-              <Button
-                size="lg"
-                type="button"
-                variant="outline"
-                onPress={() => handleSignup.mutate()}
-                isPending={handleSignup.isPending}
-                isDisabled={loginMutation.isPending}
-                style={styles.signupButton}
-              >
-                Create account
-              </Button>
-            </Flex>
-          </Flex>
-        </Form>
-      </div>
-    </main>
+      <HeaderLayout.Footer>
+        <SiteFooter />
+      </HeaderLayout.Footer>
+    </HeaderLayout.Root>
   );
 }

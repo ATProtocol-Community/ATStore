@@ -49,13 +49,16 @@ function ThemeMenuItems({ onSelect }: { onSelect: (next: ThemeMode) => void }) {
  */
 export function ThemeSubMenu() {
   const { mode, setMode } = useTheme();
-  const currentLabel =
-    THEME_OPTIONS.find((option) => option.id === mode)?.label ?? "System";
+  const current =
+    THEME_OPTIONS.find((option) => option.id === mode) ?? THEME_OPTIONS[2];
+  const currentLabel = current.label;
+  const CurrentIcon = current.icon;
 
   return (
     <SubMenu
       trigger={
         <MenuItem
+          prefix={<CurrentIcon size={16} />}
           suffix={
             <span {...stylex.props(styles.currentMode)}>{currentLabel}</span>
           }

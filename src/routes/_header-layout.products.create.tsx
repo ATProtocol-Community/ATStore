@@ -4,6 +4,7 @@ import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { ProductListingForm } from "#/components/product-listing-form";
+import { FormFooter } from "#/components/shelf/forms/FormFooter";
 import { useState } from "react";
 
 import { Alert } from "../design-system/alert";
@@ -14,33 +15,66 @@ import {
   AlertDialogFooter,
 } from "../design-system/alert-dialog";
 import { Button } from "../design-system/button";
-import { Flex } from "../design-system/flex";
-import { Page } from "../design-system/page";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
-  horizontalSpace,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Blockquote, Heading1 } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { blobToBase64 } from "../lib/blob-to-base64";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 const styles = stylex.create({
-  page: {
-    boxSizing: "border-box",
-    marginLeft: "auto",
-    marginRight: "auto",
-    paddingBottom: verticalSpace["8xl"],
-    paddingTop: verticalSpace["4xl"],
-    width: "100%",
+  gate: {
+    marginInline: "auto",
+    fontFamily: fontFamily.sans,
+    maxWidth: 740,
+    paddingTop: { default: 28, [breakpoints.md]: 40 },
   },
-  section: {
-    paddingBottom: verticalSpace["5xl"],
-    paddingLeft: horizontalSpace.xl,
-    paddingRight: horizontalSpace.xl,
-    paddingTop: verticalSpace["5xl"],
+  title: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: { default: 34, [breakpoints.md]: 44 },
+    fontWeight: 750,
+    letterSpacing: "-0.045em",
+    lineHeight: 1.05,
+    textWrap: "balance",
+    marginBottom: 18,
+    marginTop: 28,
+  },
+  prose: {
+    color: uiColor.text2,
+    fontSize: { default: 16, [breakpoints.md]: 18 },
+    lineHeight: 1.65,
+  },
+  paragraph: {
+    marginBottom: 14,
+    marginTop: 0,
+  },
+  quote: {
+    marginInline: 0,
+    paddingBlock: 4,
+    color: uiColor.text2,
+    fontSize: { default: 16, [breakpoints.md]: 17 },
+    lineHeight: 1.55,
+    borderLeftColor: uiColor.text2,
+    borderLeftStyle: "solid",
+    borderLeftWidth: 3,
+    marginBottom: 24,
+    marginTop: 24,
+    paddingLeft: 20,
+  },
+  strong: {
+    fontWeight: fontWeight.semibold,
+  },
+  actions: {
+    columnGap: 10,
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    rowGap: 10,
   },
 });
 
@@ -131,44 +165,43 @@ function CreateProductListingPage() {
 
   if (!hasAcknowledgedOwnership) {
     return (
-      <Page.Root variant="small" style={styles.page}>
-        <Flex direction="column" gap="7xl" style={styles.section}>
-          <Alert
-            variant="warning"
-            title="Listings submitted by non-owners will be disregarded."
-          >
-            We review submissions and remove any listing that wasn&rsquo;t
-            created by the product&rsquo;s owner.
-          </Alert>
-          <Heading1>Are you the owner of this product?</Heading1>
-          <Flex direction="column" gap="2xl">
-            <Text size="lg" leading="base" variant="secondary">
-              The at-store directory is built for the people who actually make
-              the products it lists. Before you continue, please confirm that
-              you represent this product — as a founder, team member, or someone
-              officially authorized to speak for it.
-            </Text>
-            <Text size="base" leading="base" variant="secondary">
-              If you&rsquo;re a fan, user, or third party: thank you for wanting
-              to help, but please don&rsquo;t submit a listing on someone
-              else&rsquo;s behalf. Ask the product&rsquo;s owner to submit it
-              themselves.
-            </Text>
-            <Text size="base" leading="base" variant="secondary">
-              To make this process easier create the listing with the same
-              handle as the product. Example: if the product is "ATStore" create
-              the listing with the handle "@atstore.fyi".
-            </Text>
-            <Blockquote>
-              <Text size="base" leading="base" variant="secondary">
-                If your product is already listed, you can claim it by clicking
-                the "Claim" button on the listing page.
-              </Text>
-            </Blockquote>
-          </Flex>
-        </Flex>
-        <Page.StickyFooter>
-          <Flex gap="md" justify="end" wrap>
+      <div {...stylex.props(styles.gate)}>
+        <Alert
+          variant="warning"
+          title="Listings submitted by non-owners will be disregarded."
+        >
+          We review submissions and remove any listing that wasn&rsquo;t created
+          by the product&rsquo;s owner.
+        </Alert>
+        <h1 {...stylex.props(styles.title)}>
+          Are you the owner of this product?
+        </h1>
+        <div {...stylex.props(styles.prose)}>
+          <p {...stylex.props(styles.paragraph)}>
+            The at-store directory is built for the people who actually make the
+            products it lists. Before you continue, please confirm that you
+            represent this product — as a founder, team member, or someone
+            officially authorized to speak for it.
+          </p>
+          <p {...stylex.props(styles.paragraph)}>
+            If you&rsquo;re a fan, user, or third party: thank you for wanting
+            to help, but please don&rsquo;t submit a listing on someone
+            else&rsquo;s behalf. Ask the product&rsquo;s owner to submit it
+            themselves.
+          </p>
+          <p {...stylex.props(styles.paragraph)}>
+            To make this easier, create the listing while signed in as the
+            product&rsquo;s own account. If the product is
+            &ldquo;ATStore&rdquo;, sign in as{" "}
+            <b {...stylex.props(styles.strong)}>@atstore.fyi</b>.
+          </p>
+        </div>
+        <blockquote {...stylex.props(styles.quote)}>
+          If your product is already listed, you can claim it with the
+          &ldquo;Claim&rdquo; button on its listing page.
+        </blockquote>
+        <FormFooter>
+          <div {...stylex.props(styles.actions)}>
             <Button
               variant="secondary"
               size="lg"
@@ -187,17 +220,19 @@ function CreateProductListingPage() {
             >
               I own this product — continue
             </Button>
-          </Flex>
-        </Page.StickyFooter>
-      </Page.Root>
+          </div>
+        </FormFooter>
+      </div>
     );
   }
 
   return (
     <>
       <ProductListingForm
+        eyebrow="Submit an app"
         title="Create listing"
         description="Submit a new listing to the at-store directory. We'll review it and add it to the directory if it's a good fit!"
+        footerNote="We'll review it before it appears in the directory."
         submitLabel="Publish"
         isSubmitting={publishMutation.isPending}
         initialValues={{

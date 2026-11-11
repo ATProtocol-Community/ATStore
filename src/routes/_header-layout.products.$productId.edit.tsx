@@ -12,6 +12,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { ProductListingForm } from "#/components/product-listing-form";
+import { BackLink } from "#/components/shelf/Section";
 import { z } from "zod";
 
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
@@ -139,14 +140,14 @@ function EditProductListingPage() {
   const fromManage = from === "manage";
   const verificationStatus = listing.verificationStatus;
 
+  const backDestination = afterEditDestination({
+    fromManage,
+    verificationStatus,
+    productSlug: getDirectoryListingSlug(listing),
+  });
+
   const navigateAway = () => {
-    void navigate(
-      afterEditDestination({
-        fromManage,
-        verificationStatus,
-        productSlug: getDirectoryListingSlug(listing),
-      }),
-    );
+    void navigate(backDestination);
   };
 
   const saveMutation = useMutation({
@@ -254,8 +255,21 @@ function EditProductListingPage() {
 
   return (
     <ProductListingForm
-      title="Edit listing"
+      back={
+        <BackLink {...backDestination}>
+          {backDestination.to === "/products/manage"
+            ? "Your listings"
+            : listing.name}
+        </BackLink>
+      }
+      eyebrow="Edit listing"
+      title={listing.name}
       description="Changes are written to your PDS and mirrored in the directory."
+      footerNote="Saved to your repo as an fyi.atstore.listing.detail record."
+      previewStats={{
+        rating: listing.rating,
+        reviewCount: listing.reviewCount,
+      }}
       submitLabel="Save"
       isSubmitting={saveMutation.isPending}
       initialValues={{
