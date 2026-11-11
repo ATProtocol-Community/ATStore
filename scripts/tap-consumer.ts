@@ -7,16 +7,18 @@
  * `site.standard.publication` into `product_site_publications`,
  * `site.standard.document` into `product_site_documents`,
  * `com.germnetwork.declaration` into `product_germ_declarations`,
- * and the five `fund.at.*` collections into the matching `fund_*` tables (read-only mirror
- * of at.fund records — see `lib/atproto/tap-fund-*-sync.ts`).
+ * the five `fund.at.*` collections into the matching `fund_*` tables (read-only mirror
+ * of at.fund records — see `lib/atproto/tap-fund-*-sync.ts`),
+ * `games.atmosphere.define` into `store_listings` (`listing_type = 'game'`) and
+ * `games.atmosphere.fave` into `store_listing_favorites` (atmosphere.games — see `tap-game-sync.ts`).
  * Logs identity events; other record collections are skipped except `fyi.atstore.profile` (quiet).
  * Which repos and records appear is configured on the Tap *server* (indigo `cmd/tap`): set
  * `TAP_COLLECTION_FILTERS` to include `fyi.atstore.listing.detail`, `fyi.atstore.listing.review`,
  * `fyi.atstore.listing.reviewReply`, `fyi.atstore.listing.favorite`,
  * `site.standard.publication`, `site.standard.document`, `com.germnetwork.declaration`,
  * `fund.at.actor.declaration`, `fund.at.funding.contribute`, `fund.at.funding.channel`,
- * `fund.at.funding.plan`, `fund.at.graph.dependency`
- * (or `fyi.atstore.*` plus standard.site, `com.germnetwork.*`, and `fund.at.*` collections).
+ * `fund.at.funding.plan`, `fund.at.graph.dependency`, `games.atmosphere.define`, `games.atmosphere.fave`
+ * (or `fyi.atstore.*` plus standard.site, `com.germnetwork.*`, `fund.at.*`, and `games.atmosphere.*`).
  * If the server only filters `listing.detail`,
  * review / reply / favorite creates never reach
  * this WebSocket — you will see no `[record]` lines for those records. This client has no per-DID allowlist.
@@ -34,6 +36,7 @@ import type { IdentityEvent, RecordEvent } from "@atproto/tap";
 import type { z } from "zod";
 
 import { SimpleIndexer, Tap } from "@atproto/tap";
+import { tryParseGameDefineRecord } from "#/lib/atproto/game-define-record";
 import {
   deleteListingFavoriteFromTap,
   tryParseListingFavoriteRecord,
@@ -64,6 +67,13 @@ import {
   tryParseFundGraphDependencyRecord,
   upsertFundGraphDependencyFromTap,
 } from "#/lib/atproto/tap-fund-graph-dependency-sync";
+import {
+  deleteGameFaveFromTap,
+  removeGameListingFromTap,
+  tryParseGameFaveRecord,
+  upsertGameFaveFromTap,
+  upsertGameListingFromTap,
+} from "#/lib/atproto/tap-game-sync";
 import {
   deleteGermDeclarationFromTap,
   tryParseGermDeclarationRecord,
@@ -265,6 +275,8 @@ async function main() {
     COLLECTION.fundFundingChannel,
     COLLECTION.fundFundingPlan,
     COLLECTION.fundGraphDependency,
+    COLLECTION.gameDefine,
+    COLLECTION.gameFave,
   ]);
   let firstListingDetailEvent = true;
   let firstListingReviewEvent = true;
@@ -785,6 +797,69 @@ async function main() {
         fundHandlerForCollection,
         fundFirstEventSeen,
       );
+      return;
+    }
+
+    if (evt.collection === COLLECTION.gameDefine) {
+      if (evt.action === "delete") {
+        await removeGameListingFromTap({ db, did: evt.did, rkey: evt.rkey });
+        return;
+      }
+      const body =
+        evt.record === undefined ? undefined : cloneRecordForIngest(evt.record);
+      const parseResult = tryParseGameDefineRecord(body);
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip game.define rkey=${evt.rkey} did=${evt.did} stage=${parseResult.stage}: ${parseResult.reason}`,
+        );
+        return;
+      }
+      try {
+        await upsertGameListingFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parseResult.record,
+          trustedPublisher: trusted.has(evt.did),
+        });
+      } catch (error) {
+        console.error(
+          `[tap] game.define upsert failed rkey=${evt.rkey} did=${evt.did}`,
+          error,
+        );
+        throw error;
+      }
+      return;
+    }
+
+    if (evt.collection === COLLECTION.gameFave) {
+      if (evt.action === "delete") {
+        await deleteGameFaveFromTap({ db, did: evt.did, rkey: evt.rkey });
+        return;
+      }
+      const body =
+        evt.record === undefined ? undefined : cloneRecordForIngest(evt.record);
+      const parseResult = tryParseGameFaveRecord(body);
+      if (!parseResult.ok) {
+        console.warn(
+          `[tap] skip game.fave rkey=${evt.rkey} did=${evt.did}: ${parseResult.reason}`,
+        );
+        return;
+      }
+      try {
+        await upsertGameFaveFromTap({
+          db,
+          did: evt.did,
+          rkey: evt.rkey,
+          record: parseResult.record,
+        });
+      } catch (error) {
+        console.error(
+          `[tap] game.fave upsert failed rkey=${evt.rkey} did=${evt.did}`,
+          error,
+        );
+        throw error;
+      }
       return;
     }
 

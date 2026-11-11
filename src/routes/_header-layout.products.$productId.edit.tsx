@@ -18,6 +18,7 @@ import { directoryListingApi } from "../integrations/tanstack-query/api-director
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { blobToBase64 } from "../lib/blob-to-base64";
 import { getDirectoryListingSlug } from "../lib/directory-listing-slugs";
+import { isGameOnlyListing } from "../lib/game-listing";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
 const editListingSearchSchema = z.object({
@@ -91,7 +92,8 @@ export const Route = createFileRoute(
       directoryListingApi.getProductListingEditAccessQueryOptions(listing.id),
     );
 
-    if (!access.canEdit) {
+    // Game-only listings mirror the developer's atmosphere.games record and are edited there.
+    if (!access.canEdit || isGameOnlyListing(listing)) {
       throw redirect({
         to: "/products/$productId",
         params: { productId: productSlug },

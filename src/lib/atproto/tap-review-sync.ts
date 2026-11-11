@@ -1,10 +1,11 @@
 import type { Database } from "#/db/index.server";
 
 import * as schema from "#/db/schema";
+import { storeListingMatchesSubject } from "#/lib/atproto/listing-subject";
 import { COLLECTION, NSID } from "#/lib/atproto/nsids";
 import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { recomputeListingTrending } from "#/lib/trending/recompute-listing-trending";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const reviewBodySchema = z.object({
@@ -145,12 +146,7 @@ export async function upsertListingReviewFromTap(input: {
   const [listing] = await db
     .select({ id: schema.storeListings.id })
     .from(schema.storeListings)
-    .where(
-      or(
-        eq(schema.storeListings.atUri, subject),
-        eq(schema.storeListings.migratedFromAtUri, subject),
-      ),
-    )
+    .where(storeListingMatchesSubject(subject))
     .limit(1);
 
   if (!listing) {

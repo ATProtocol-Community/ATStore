@@ -5,7 +5,8 @@ import { db } from "#/db/index.server";
 import * as schema from "#/db/schema";
 import { directoryListingXrpcHelpers } from "#/integrations/tanstack-query/api-directory-listings.functions";
 import { parseAtUriParts } from "#/lib/atproto/at-uri";
-import { ATSTORE_XRPC_METHOD, NSID } from "#/lib/atproto/nsids";
+import { storeListingMatchesSubject } from "#/lib/atproto/listing-subject";
+import { ATSTORE_XRPC_METHOD, GAMES_NSID, NSID } from "#/lib/atproto/nsids";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
 import {
   filterAndSortBrowseListings,
@@ -75,7 +76,9 @@ function listingDetailUriOrNull(uriRaw: string): string | null {
   }
   try {
     const { collection } = parseAtUriParts(trimmed);
-    return collection === NSID.listingDetail ? trimmed : null;
+    return collection === NSID.listingDetail || collection === GAMES_NSID.define
+      ? trimmed
+      : null;
   } catch {
     return null;
   }
@@ -274,7 +277,7 @@ async function fetchVerifiedListingDetailRowByUri(uriRaw: string) {
   const table = schema.storeListings;
   const { listingXrpcPublicWhere } = directoryListingXrpcHelpers;
 
-  const filter = eq(table.atUri, canonical);
+  const filter = storeListingMatchesSubject(canonical);
 
   const [row] = await db
     .select(verifiedListingDetailSelect(table))
@@ -391,7 +394,7 @@ async function handleListReviews(url: URL, request: Request) {
       productAccountDid: table.productAccountDid,
     })
     .from(table)
-    .where(listingXrpcPublicWhere(table, eq(table.atUri, canonical)))
+    .where(listingXrpcPublicWhere(table, storeListingMatchesSubject(canonical)))
     .limit(1);
 
   if (!listing) {

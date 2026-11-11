@@ -8,4 +8,7 @@ export const scope = [
   // reject with "Unsupported scope". `include:<nsid>` is the canonical
   // positional form the atproto reference implementation normalizes to.
   "include:fyi.atstore.authBasic",
+  // Favorites on game listings are atmosphere.games' own record, so they show up there too.
+  // Permission sets can only cover their own NSID authority, hence a separate repo scope.
+  "repo:games.atmosphere.fave?action=create&action=delete",
 ];

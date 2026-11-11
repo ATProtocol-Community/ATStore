@@ -40,7 +40,7 @@ import { Text } from "../design-system/typography/text";
 import {
   formatAppTagCount,
   formatAppTagLabel,
-  getAppTagSlug,
+  getAppTagLinkOptions,
 } from "../lib/app-tag-metadata";
 import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
 
@@ -317,8 +317,7 @@ export function AppTagCard({ tag, isFeatured }: AppTagCardProps) {
 
   return (
     <RouterLink
-      to="/apps"
-      search={{ tag: getAppTagSlug(tag.tag) }}
+      {...getAppTagLinkOptions(tag.tag)}
       {...stylex.props(
         styles.cardLink,
         styles.cardShadow,

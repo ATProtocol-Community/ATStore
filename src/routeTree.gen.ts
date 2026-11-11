@@ -23,6 +23,7 @@ import { Route as HeaderLayoutSearchRouteImport } from './routes/_header-layout.
 import { Route as HeaderLayoutNotificationsRouteImport } from './routes/_header-layout.notifications'
 import { Route as HeaderLayoutAdminLayoutRouteImport } from './routes/_header-layout._admin-layout'
 import { Route as LocaleAboutRouteImport } from './routes/$locale.about'
+import { Route as HeaderLayoutGamesIndexRouteImport } from './routes/_header-layout.games.index'
 import { Route as HeaderLayoutAppsIndexRouteImport } from './routes/_header-layout.apps.index'
 import { Route as HeaderLayoutProfileActorRouteImport } from './routes/_header-layout.profile.$actor'
 import { Route as HeaderLayoutProductsManageRouteImport } from './routes/_header-layout.products.manage'
@@ -130,6 +131,11 @@ const LocaleAboutRoute = LocaleAboutRouteImport.update({
   id: '/about',
   path: '/about',
   getParentRoute: () => LocaleRoute,
+} as any)
+const HeaderLayoutGamesIndexRoute = HeaderLayoutGamesIndexRouteImport.update({
+  id: '/games/',
+  path: '/games/',
+  getParentRoute: () => HeaderLayoutRoute,
 } as any)
 const HeaderLayoutAppsIndexRoute = HeaderLayoutAppsIndexRouteImport.update({
   id: '/apps/',
@@ -378,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/apps/': typeof HeaderLayoutAppsIndexRoute
+  '/games/': typeof HeaderLayoutGamesIndexRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
@@ -430,6 +437,7 @@ export interface FileRoutesByTo {
   '/products/manage': typeof HeaderLayoutProductsManageRoute
   '/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/apps': typeof HeaderLayoutAppsIndexRoute
+  '/games': typeof HeaderLayoutGamesIndexRoute
   '/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
@@ -484,6 +492,7 @@ export interface FileRoutesById {
   '/_header-layout/products/manage': typeof HeaderLayoutProductsManageRoute
   '/_header-layout/profile/$actor': typeof HeaderLayoutProfileActorRoute
   '/_header-layout/apps/': typeof HeaderLayoutAppsIndexRoute
+  '/_header-layout/games/': typeof HeaderLayoutGamesIndexRoute
   '/_header-layout/_admin-layout/admin/add-listing': typeof HeaderLayoutAdminLayoutAdminAddListingRoute
   '/_header-layout/_admin-layout/admin/admins': typeof HeaderLayoutAdminLayoutAdminAdminsRoute
   '/_header-layout/_admin-layout/admin/home-page-hero': typeof HeaderLayoutAdminLayoutAdminHomePageHeroRoute
@@ -538,6 +547,7 @@ export interface FileRouteTypes {
     | '/products/manage'
     | '/profile/$actor'
     | '/apps/'
+    | '/games/'
     | '/admin/add-listing'
     | '/admin/admins'
     | '/admin/home-page-hero'
@@ -590,6 +600,7 @@ export interface FileRouteTypes {
     | '/products/manage'
     | '/profile/$actor'
     | '/apps'
+    | '/games'
     | '/admin/add-listing'
     | '/admin/admins'
     | '/admin/home-page-hero'
@@ -643,6 +654,7 @@ export interface FileRouteTypes {
     | '/_header-layout/products/manage'
     | '/_header-layout/profile/$actor'
     | '/_header-layout/apps/'
+    | '/_header-layout/games/'
     | '/_header-layout/_admin-layout/admin/add-listing'
     | '/_header-layout/_admin-layout/admin/admins'
     | '/_header-layout/_admin-layout/admin/home-page-hero'
@@ -786,6 +798,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/$locale/about'
       preLoaderRoute: typeof LocaleAboutRouteImport
       parentRoute: typeof LocaleRoute
+    }
+    '/_header-layout/games/': {
+      id: '/_header-layout/games/'
+      path: '/games'
+      fullPath: '/games/'
+      preLoaderRoute: typeof HeaderLayoutGamesIndexRouteImport
+      parentRoute: typeof HeaderLayoutRoute
     }
     '/_header-layout/apps/': {
       id: '/_header-layout/apps/'
@@ -1148,6 +1167,7 @@ interface HeaderLayoutRouteChildren {
   HeaderLayoutProductsManageRoute: typeof HeaderLayoutProductsManageRoute
   HeaderLayoutProfileActorRoute: typeof HeaderLayoutProfileActorRoute
   HeaderLayoutAppsIndexRoute: typeof HeaderLayoutAppsIndexRoute
+  HeaderLayoutGamesIndexRoute: typeof HeaderLayoutGamesIndexRoute
   HeaderLayoutEcosystemsAppAllRoute: typeof HeaderLayoutEcosystemsAppAllRoute
   HeaderLayoutProductsProductIdEditRoute: typeof HeaderLayoutProductsProductIdEditRoute
   HeaderLayoutProductsProductIdLexiconCompatibleRoute: typeof HeaderLayoutProductsProductIdLexiconCompatibleRoute
@@ -1175,6 +1195,7 @@ const HeaderLayoutRouteChildren: HeaderLayoutRouteChildren = {
   HeaderLayoutProductsManageRoute: HeaderLayoutProductsManageRoute,
   HeaderLayoutProfileActorRoute: HeaderLayoutProfileActorRoute,
   HeaderLayoutAppsIndexRoute: HeaderLayoutAppsIndexRoute,
+  HeaderLayoutGamesIndexRoute: HeaderLayoutGamesIndexRoute,
   HeaderLayoutEcosystemsAppAllRoute: HeaderLayoutEcosystemsAppAllRoute,
   HeaderLayoutProductsProductIdEditRoute:
     HeaderLayoutProductsProductIdEditRoute,

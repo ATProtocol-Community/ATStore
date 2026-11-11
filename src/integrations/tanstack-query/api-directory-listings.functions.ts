@@ -1,5 +1,9 @@
 import type { Database } from "#/db/index.server";
 import type { StoreListing } from "#/db/schema";
+import type {
+  GameDetails,
+  ListingType,
+} from "#/lib/atproto/game-define-record";
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { FundingDetail } from "#/lib/atproto/load-funding-summaries";
 import type { StoreListingPageSnapshotPayload } from "#/lib/listing-page-snapshot.types";
@@ -22,7 +26,7 @@ import {
   normalizeListingLinks,
 } from "#/lib/atproto/listing-record";
 import { loadFundingDetailForDid } from "#/lib/atproto/load-funding-summaries";
-import { COLLECTION, NSID } from "#/lib/atproto/nsids";
+import { COLLECTION, GAMES_NSID, NSID } from "#/lib/atproto/nsids";
 import {
   createAtstorePublishClient,
   getAtstoreRepoDid,
@@ -30,6 +34,7 @@ import {
   publishOwnedListingDetail,
 } from "#/lib/atproto/publish-directory-listing";
 import {
+  createGameFaveRecord,
   createListingDetailRecord,
   createListingReviewRecord,
   createListingReviewReplyRecord,
@@ -43,6 +48,10 @@ import {
 import { resolveUrlToImageBytes } from "#/lib/atproto/resolve-image-bytes";
 import { canonicalStandardSitePostUrl } from "#/lib/atproto/standard-site-canonical-url";
 import { scheduleStandardSiteBackfillForProductDid } from "#/lib/atproto/standard-site-verify-backfill";
+import {
+  deleteGameFaveFromTap,
+  upsertGameFaveFromTap,
+} from "#/lib/atproto/tap-game-sync";
 import { scheduleGermDeclarationBackfillForProductDid } from "#/lib/atproto/tap-germ-declaration-sync";
 import {
   sqlReplyAuthorAllowedPredicate,
@@ -255,6 +264,8 @@ type DirectoryListingRow = {
   reviewCount: number;
   averageRating: number | null;
   productAccountHandle: string | null;
+  /** Present when selected via {@link getListingSelect}; absent rows are apps. */
+  listingType?: string;
 };
 
 type CategoryAccent = DirectoryCategoryAccent;
@@ -281,6 +292,8 @@ export interface DirectoryListingCard {
   productAccountHandle: string | null;
   /** Editorial app tags (e.g. developer tool, social). */
   appTags: Array<string>;
+  /** `game` for atmosphere.games-backed listings. Optional: cached snapshot cards predate it. */
+  listingType?: ListingType;
 }
 
 /** Listing card shape for directory XRPC responses (`uri` only — no store UUID/slug). */
@@ -341,6 +354,10 @@ export interface DirectoryListingDetail extends DirectoryListingCard {
    * mirrored.
    */
   fundingDetail: FundingDetail | null;
+  /** `game` when backed by (or merged with) a `games.atmosphere.define` record. */
+  listingType: ListingType;
+  /** atmosphere.games data (status, developer, records it uses); null for plain apps. */
+  game: GameDetails | null;
 }
 
 /** Public-safe snapshot from `store_listing_oauth_probes` (+ optional human-readable scopes from report). */
@@ -954,10 +971,13 @@ function getListingDescription(row: DirectoryListingRow) {
 
 function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
   const category = getCategoryLabel(row);
+  const isGame = row.listingType === "game";
   const tagline =
     sanitizeListingTagline(row.tagline) ||
     sanitizeListingTagline(row.fullDescription) ||
-    "Discover a polished Bluesky tool.";
+    (isGame
+      ? "A game on the Atmosphere."
+      : "Discover a polished Bluesky tool.");
   const slugs = row.categorySlugs ?? [];
   const reviewCount = row.reviewCount ?? 0;
   const averageRating = row.averageRating;
@@ -974,7 +994,10 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     slug: row.slug || buildDirectoryListingSlug({ name: row.name }),
     tagline,
     description: getListingDescription(row),
-    iconUrl: httpsListingImageUrlOrNull(row.iconUrl),
+    // Most atmosphere.games records only ship a 16:9 cover; it crops better than a letter tile.
+    iconUrl: httpsListingImageUrlOrNull(
+      row.iconUrl ?? (isGame ? row.heroImageUrl : null),
+    ),
     heroImageUrl: httpsListingImageUrlOrNull(row.heroImageUrl),
     categorySlugs: slugs,
     categorySlug: primaryCategorySlug(slugs),
@@ -985,6 +1008,7 @@ function toListingCard(row: DirectoryListingRow): DirectoryListingCard {
     priceLabel: "GET",
     productAccountHandle: row.productAccountHandle ?? null,
     appTags: normalizeAppTags(row.appTags ?? []),
+    listingType: row.listingType === "game" ? "game" : "app",
   };
 }
 
@@ -1010,6 +1034,8 @@ type DirectoryListingDetailRow = DirectoryListingRow & {
   classificationReason: string | null;
   appTags: Array<string>;
   links: ListingLink[] | null;
+  listingType: string;
+  gameDetails: GameDetails | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -1330,6 +1356,8 @@ function toListingDetail(
     oauthProbe: options.oauthProbe,
     germDmHref: options.germDmHref,
     fundingDetail,
+    listingType: row.listingType === "game" ? "game" : "app",
+    game: row.listingType === "game" ? (row.gameDetails ?? null) : null,
   };
 }
 
@@ -1542,6 +1570,7 @@ function getListingSelect(table: typeof dbSchema.storeListings) {
     reviewCount: table.reviewCount,
     averageRating: table.averageRating,
     productAccountHandle: table.productAccountHandle,
+    listingType: table.listingType,
   };
 }
 
@@ -2258,6 +2287,58 @@ const getAppsByTagQueryOptions = queryOptions({
   queryFn: async () => getAppsByTag(),
 });
 
+/** A game listing card for `/games` — the shared card plus atmosphere.games fields. */
+export type DirectoryGameCard = DirectoryListingCard & {
+  favoriteCount: number;
+  gameStatus: string | null;
+  gameCategory: string | null;
+  gameTags: Array<string>;
+  developerName: string | null;
+  externalUrl: string | null;
+  createdAt: string;
+};
+
+/**
+ * Every public game listing (`listing_type = 'game'`) for the `/games` section — game-only rows
+ * from atmosphere.games and AT Store listings merged with a define record. Small enough to return
+ * whole; status / search filtering happens client-side.
+ */
+const getGamesDirectory = createServerFn({ method: "GET" })
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const table = context.schema.storeListings;
+    const rows = await context.db
+      .select({
+        ...getListingSelect(table),
+        favoriteCount: table.favoriteCount,
+        gameDetails: table.gameDetails,
+        externalUrl: table.externalUrl,
+        createdAt: table.createdAt,
+      })
+      .from(table)
+      .where(listingPublicWhere(table, eq(table.listingType, "game")))
+      .orderBy(...orderByPopularListingSort(table))
+      .limit(1000);
+
+    return rows.map(
+      (row): DirectoryGameCard => ({
+        ...toListingCard(row),
+        favoriteCount: row.favoriteCount,
+        gameStatus: row.gameDetails?.status ?? null,
+        gameCategory: row.gameDetails?.category ?? null,
+        gameTags: row.gameDetails?.tags ?? [],
+        developerName: row.gameDetails?.developer?.name ?? null,
+        externalUrl: row.externalUrl,
+        createdAt: row.createdAt.toISOString(),
+      }),
+    );
+  });
+
+const getGamesDirectoryQueryOptions = queryOptions({
+  queryKey: ["storeListings", "games"],
+  queryFn: async () => getGamesDirectory(),
+});
+
 /**
  * Distinct app tags currently assigned to top-level `apps/<slug>` listings,
  * sorted by popularity then alphabetically. Powers the tag picker in the
@@ -2777,6 +2858,8 @@ const getDirectoryListingDetail = createServerFn({ method: "GET" })
         ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
         links: table.links,
+        listingType: table.listingType,
+        gameDetails: table.gameDetails,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
       })
@@ -2832,6 +2915,8 @@ const getDirectoryListingDetailBySlug = createServerFn({ method: "GET" })
         ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
         links: table.links,
+        listingType: table.listingType,
+        gameDetails: table.gameDetails,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
       })
@@ -3027,6 +3112,8 @@ async function selectDirectoryListingDetailRow(db: Database, whereClause: SQL) {
       ...storeListingLegacyDetailColumns,
       appTags: table.appTags,
       links: table.links,
+      listingType: table.listingType,
+      gameDetails: table.gameDetails,
       createdAt: table.createdAt,
       updatedAt: table.updatedAt,
     })
@@ -3194,6 +3281,8 @@ const getDirectoryListingDetailForOwnerEdit = createServerFn({
         ...storeListingLegacyDetailColumns,
         appTags: table.appTags,
         links: table.links,
+        listingType: table.listingType,
+        gameDetails: table.gameDetails,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
       })
@@ -3571,12 +3660,59 @@ const favoriteDirectoryListing = createServerFn({ method: "POST" })
       .select({
         id: t.id,
         atUri: t.atUri,
+        listingType: t.listingType,
+        gameDefineAtUri: t.gameDefineAtUri,
       })
       .from(t)
       .where(listingPublicWhere(t, eq(t.id, data.listingId)))
       .limit(1);
     if (!listing) {
       throw new Error("Listing not found.");
+    }
+
+    /**
+     * Games are favorited with atmosphere.games' own `games.atmosphere.fave`, so the favorite
+     * shows up there too. Mirrored right away: unfavorite needs the TID rkey from Postgres.
+     */
+    const game = listing.gameDefineAtUri?.trim();
+    if (listing.listingType === "game" && game) {
+      const fav = context.schema.storeListingFavorites;
+      const [existing] = await context.db
+        .select({ id: fav.id })
+        .from(fav)
+        .where(
+          and(
+            eq(fav.storeListingId, listing.id),
+            eq(fav.authorDid, session.did),
+          ),
+        )
+        .limit(1);
+      if (existing) return { ok: true as const };
+
+      const createdAt = new Date().toISOString();
+      let rkey: string;
+      try {
+        ({ rkey } = await createGameFaveRecord(session.client, session.did, {
+          game,
+          createdAt,
+        }));
+      } catch (error) {
+        // Sessions from before the `games.atmosphere.fave` scope was added can't write it.
+        console.warn(
+          `[favorite] games.atmosphere.fave create failed did=${session.did}`,
+          error,
+        );
+        throw new Error(
+          "Couldn't save this game to your favorites. Sign out and back in to allow AT Store to save game favorites, then try again.",
+        );
+      }
+      await upsertGameFaveFromTap({
+        db: context.db,
+        did: session.did,
+        rkey,
+        record: { $type: GAMES_NSID.fave, game, createdAt },
+      });
+      return { ok: true as const };
     }
 
     const subject = listing.atUri?.trim();
@@ -3610,12 +3746,38 @@ const unfavoriteDirectoryListing = createServerFn({ method: "POST" })
 
     const t = context.schema.storeListings;
     const [listing] = await context.db
-      .select({ id: t.id })
+      .select({ id: t.id, listingType: t.listingType })
       .from(t)
       .where(listingPublicWhere(t, eq(t.id, data.listingId)))
       .limit(1);
     if (!listing) {
       throw new Error("Listing not found.");
+    }
+
+    if (listing.listingType === "game") {
+      /** Remove every favorite this user has on the game — `games.atmosphere.fave` and legacy ones. */
+      const fav = context.schema.storeListingFavorites;
+      const rows = await context.db
+        .select({ atUri: fav.atUri })
+        .from(fav)
+        .where(
+          and(
+            eq(fav.storeListingId, listing.id),
+            eq(fav.authorDid, session.did),
+          ),
+        );
+      for (const row of rows) {
+        const { collection, rkey } = parseAtUriParts(row.atUri);
+        await deleteRecord(session.client, session.did, collection, rkey);
+        if (collection === COLLECTION.gameFave) {
+          await deleteGameFaveFromTap({
+            db: context.db,
+            did: session.did,
+            rkey,
+          });
+        }
+      }
+      if (rows.length > 0) return { ok: true as const };
     }
 
     await deleteRecord(
@@ -5815,6 +5977,10 @@ const createOwnedProductListing = createServerFn({ method: "POST" })
       productAccountHandleIgnoredAt: null,
       migratedFromAtUri: null,
       claimPendingForDid: null,
+      listingType: "app",
+      gameDefineAtUri: null,
+      gameDefinePriorAtUris: [],
+      gameDetails: null,
       reviewCount: 0,
       averageRating: null,
       favoriteCount: 0,
@@ -7126,6 +7292,10 @@ const createStoreManagedListing = createServerFn({ method: "POST" })
       productAccountHandleIgnoredAt: null,
       migratedFromAtUri: null,
       claimPendingForDid: null,
+      listingType: "app",
+      gameDefineAtUri: null,
+      gameDefinePriorAtUris: [],
+      gameDetails: null,
       reviewCount: 0,
       averageRating: null,
       favoriteCount: 0,
@@ -7832,6 +8002,7 @@ export const directoryListingApi = {
   getDirectoryCategoryPageQueryOptions,
   getAppsByTag,
   getAppsByTagQueryOptions,
+  getGamesDirectoryQueryOptions,
   getAllDirectoryListingAppTags,
   getAllDirectoryListingAppTagsQueryOptions,
   getAppsOAuthLexiconSummaries,

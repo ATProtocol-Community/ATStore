@@ -1,9 +1,10 @@
 import type { Database } from "#/db/index.server";
 
 import * as schema from "#/db/schema";
+import { storeListingMatchesSubject } from "#/lib/atproto/listing-subject";
 import { COLLECTION, NSID } from "#/lib/atproto/nsids";
 import { recomputeListingTrending } from "#/lib/trending/recompute-listing-trending";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 const favoriteBodySchema = z.object({
@@ -98,12 +99,7 @@ export async function upsertListingFavoriteFromTap(input: {
   const [listing] = await db
     .select({ id: schema.storeListings.id })
     .from(schema.storeListings)
-    .where(
-      or(
-        eq(schema.storeListings.atUri, record.subject),
-        eq(schema.storeListings.migratedFromAtUri, record.subject),
-      ),
-    )
+    .where(storeListingMatchesSubject(record.subject))
     .limit(1);
 
   if (!listing) {

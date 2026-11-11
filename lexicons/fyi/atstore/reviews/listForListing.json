@@ -59,7 +59,7 @@
             "type": "string",
             "format": "at-uri",
             "maxLength": 2560,
-            "description": "AT URI of the fyi.atstore.listing.detail record."
+            "description": "AT URI of the listing record: fyi.atstore.listing.detail for apps, games.atmosphere.define for games. Use as the subject of fyi.atstore.listing.review."
           },
           "limit": {
             "type": "integer",

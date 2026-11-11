@@ -88,7 +88,8 @@ export const lexicons = [
             type: "string",
             format: "at-uri",
             maxLength: 2560,
-            description: "AT URI of the fyi.atstore.listing.detail record.",
+            description:
+              "AT URI of the listing record: fyi.atstore.listing.detail for apps, games.atmosphere.define for games. Use as the subject of fyi.atstore.listing.review.",
           },
           name: {
             type: "string",
@@ -144,6 +145,13 @@ export const lexicons = [
           productAccountHandle: {
             type: "string",
             maxLength: 512,
+          },
+          listingType: {
+            type: "string",
+            maxLength: 32,
+            knownValues: ["app", "game"],
+            description:
+              "app for AT Store listings; game when the listing is (or is linked to) a games.atmosphere.define record from atmosphere.games.",
           },
           appTags: {
             type: "array",
@@ -259,7 +267,8 @@ export const lexicons = [
               type: "string",
               format: "at-uri",
               maxLength: 2560,
-              description: "AT URI of the fyi.atstore.listing.detail record.",
+              description:
+                "AT URI of the listing record: fyi.atstore.listing.detail for apps, games.atmosphere.define for games. Use as the subject of fyi.atstore.listing.review.",
             },
             externalUrl: {
               type: "string",
@@ -325,7 +334,8 @@ export const lexicons = [
             type: "string",
             format: "at-uri",
             maxLength: 2560,
-            description: "AT URI of the fyi.atstore.listing.detail record.",
+            description:
+              "AT URI of the listing record: fyi.atstore.listing.detail for apps, games.atmosphere.define for games. Use as the subject of fyi.atstore.listing.review.",
           },
           name: {
             type: "string",
@@ -381,6 +391,13 @@ export const lexicons = [
           productAccountHandle: {
             type: "string",
             maxLength: 512,
+          },
+          listingType: {
+            type: "string",
+            maxLength: 32,
+            knownValues: ["app", "game"],
+            description:
+              "app for AT Store listings; game when the listing is (or is linked to) a games.atmosphere.define record from atmosphere.games.",
           },
           appTags: {
             type: "array",
@@ -633,6 +650,13 @@ export const lexicons = [
               description:
                 "When this listing.detail record supersedes a prior record in another repo (e.g. moved from the AT Store publisher to a product owner PDS), the at:// URI of that prior fyi.atstore.listing.detail record.",
             },
+            game: {
+              type: "string",
+              format: "at-uri",
+              maxLength: 8192,
+              description:
+                "AT URI of a games.atmosphere.define record (atmosphere.games) describing this listing as a game. Merges the game's data, reviews, and favorites onto this listing.",
+            },
             links: {
               type: "array",
               maxLength: 12,
@@ -694,7 +718,7 @@ export const lexicons = [
       main: {
         type: "record",
         description:
-          "A user favorite for an AT Store listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
+          "A user favorite for an AT Store app listing. Subject is the at:// URI of a fyi.atstore.listing.detail record. Games are favorited with games.atmosphere.fave instead, so the favorite is shared with atmosphere.games; AT Store counts both.",
         key: "any",
         record: {
           type: "object",
@@ -704,7 +728,7 @@ export const lexicons = [
               type: "string",
               format: "at-uri",
               description:
-                "AT URI of the fyi.atstore.listing.detail record being favorited.",
+                "AT URI of the fyi.atstore.listing.detail record being favorited (a games.atmosphere.define URI is also accepted for older game favorites).",
             },
             createdAt: {
               type: "string",
@@ -722,7 +746,7 @@ export const lexicons = [
       main: {
         type: "record",
         description:
-          "A user review of an AT Store directory listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
+          "A user review of an AT Store directory listing. Subject is the at:// URI of the listing's record: a fyi.atstore.listing.detail for apps, or a games.atmosphere.define for games listed from atmosphere.games.",
         key: "tid",
         record: {
           type: "object",
@@ -732,7 +756,7 @@ export const lexicons = [
               type: "string",
               format: "at-uri",
               description:
-                "AT URI of the fyi.atstore.listing.detail record being reviewed.",
+                "AT URI of the listing being reviewed: a fyi.atstore.listing.detail or games.atmosphere.define record.",
             },
             rating: {
               type: "integer",
@@ -901,7 +925,8 @@ export const lexicons = [
               type: "string",
               format: "at-uri",
               maxLength: 2560,
-              description: "AT URI of the fyi.atstore.listing.detail record.",
+              description:
+                "AT URI of the listing record: fyi.atstore.listing.detail for apps, games.atmosphere.define for games. Use as the subject of fyi.atstore.listing.review.",
             },
             limit: {
               type: "integer",

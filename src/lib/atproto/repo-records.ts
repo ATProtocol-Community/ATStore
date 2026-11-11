@@ -11,7 +11,7 @@ import type { FyiAtstoreListingDetail } from "#/lib/atproto/listing-record";
 import { ComAtprotoRepoCreateRecord } from "@atcute/atproto";
 import { ok } from "@atcute/client";
 import * as TID from "@atcute/tid";
-import { COLLECTION, NSID } from "#/lib/atproto/nsids";
+import { COLLECTION, GAMES_NSID, NSID } from "#/lib/atproto/nsids";
 
 type RepoCreateRecordInput = InferInput<
   (typeof ComAtprotoRepoCreateRecord.mainSchema.input)["schema"]
@@ -339,6 +339,30 @@ export async function putListingFavoriteRecord(
     rkey,
     record: record as Record<string, unknown>,
   });
+}
+
+/** Create a `games.atmosphere.fave` (TID key) — how favorites on game listings are stored. */
+export async function createGameFaveRecord(
+  client: Client,
+  repo: string,
+  input: { game: string; createdAt: string },
+): Promise<{ uri: string; rkey: string }> {
+  const rkey = TID.now();
+  const res = await ok(
+    client.call(ComAtprotoRepoCreateRecord, {
+      input: lexCreateRecordInput({
+        repo,
+        collection: COLLECTION.gameFave,
+        rkey,
+        record: {
+          $type: GAMES_NSID.fave,
+          game: input.game,
+          createdAt: input.createdAt,
+        },
+      }),
+    }),
+  );
+  return { uri: res.uri, rkey };
 }
 
 export async function hasListingFavoriteRecord(

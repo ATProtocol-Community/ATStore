@@ -1,4 +1,7 @@
+import { linkOptions } from "@tanstack/react-router";
+
 import { normalizeAppTag } from "./app-tags";
+import { GAMES_APP_TAG_SLUG } from "./game-listing";
 
 const APP_TAG_DESCRIPTIONS: Record<string, string> = {
   analytics:
@@ -50,5 +53,14 @@ export function getAppTagSlug(tag: string) {
 }
 
 export function getAppTagHref(tag: string) {
-  return `/apps/${getAppTagSlug(tag)}`;
+  const slug = getAppTagSlug(tag);
+  return slug === GAMES_APP_TAG_SLUG ? "/games" : `/apps/${slug}`;
+}
+
+/** Router link target for a tag chip: `/apps?tag=<slug>`, except games, which have `/games`. */
+export function getAppTagLinkOptions(tag: string) {
+  const slug = getAppTagSlug(tag);
+  return slug === GAMES_APP_TAG_SLUG
+    ? linkOptions({ to: "/games" })
+    : linkOptions({ to: "/apps", search: { tag: slug } });
 }

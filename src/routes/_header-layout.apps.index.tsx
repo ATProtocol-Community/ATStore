@@ -1,6 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { SearchX, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -57,6 +57,7 @@ import {
   validateBrowseSearch,
 } from "../lib/browse-listings";
 import { getDirectoryCategoryOption } from "../lib/directory-categories";
+import { GAMES_APP_TAG_SLUG } from "../lib/game-listing";
 import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 
 const QUERY_DEBOUNCE_MS = 250;
@@ -98,8 +99,23 @@ function getSingleCategoryPreset(search: BrowseSearch) {
   return getDirectoryCategoryOption(id);
 }
 
+/** `/apps?tag=games` on its own is the games section, which lives at `/games`. */
+function isGamesTagOnly(search: BrowseSearch) {
+  const filters = getBrowseFilters(search);
+  return (
+    !filters.query &&
+    countActiveBrowseFilters(filters) === 1 &&
+    filters.tags[0] === GAMES_APP_TAG_SLUG
+  );
+}
+
 export const Route = createFileRoute("/_header-layout/apps/")({
   validateSearch: validateBrowseSearch,
+  beforeLoad: ({ search }) => {
+    if (isGamesTagOnly(search)) {
+      throw redirect({ to: "/games", statusCode: 301 });
+    }
+  },
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     const { facets } = await context.queryClient.ensureQueryData(

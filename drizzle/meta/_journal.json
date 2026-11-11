@@ -302,6 +302,13 @@
       "when": 1779400000000,
       "tag": "0043_store_listing_bluesky_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1779500000000,
+      "tag": "0044_store_listing_games",
+      "breakpoints": true
     }
   ]
 }

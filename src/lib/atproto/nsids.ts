@@ -46,6 +46,18 @@ export const FUND_NSID = {
   graphDependency: "fund.at.graph.dependency",
 } as const;
 
+/**
+ * atmosphere.games NSIDs — lexicons owned by https://atmosphere.games
+ * (source: tangled.org/atmosphere.games/lexicons). Game definitions are mirrored into
+ * `store_listings` as `listing_type = 'game'`; favorites on game listings are written as
+ * `games.atmosphere.fave` so they show up on atmosphere.games too. We never publish these
+ * lexicons ourselves, so they're absent from `atproto:publish-lexicons`.
+ */
+export const GAMES_NSID = {
+  define: "games.atmosphere.define",
+  fave: "games.atmosphere.fave",
+} as const;
+
 export const COLLECTION = {
   authBasic: NSID.authBasic,
   profile: NSID.profile,
@@ -62,4 +74,6 @@ export const COLLECTION = {
   fundFundingChannel: FUND_NSID.fundingChannel,
   fundFundingPlan: FUND_NSID.fundingPlan,
   fundGraphDependency: FUND_NSID.graphDependency,
+  gameDefine: GAMES_NSID.define,
+  gameFave: GAMES_NSID.fave,
 } as const;

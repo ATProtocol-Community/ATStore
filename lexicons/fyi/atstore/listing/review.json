@@ -4,7 +4,7 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "A user review of an AT Store directory listing. Subject must be the at:// URI of a fyi.atstore.listing.detail record.",
+      "description": "A user review of an AT Store directory listing. Subject is the at:// URI of the listing's record: a fyi.atstore.listing.detail for apps, or a games.atmosphere.define for games listed from atmosphere.games.",
       "key": "tid",
       "record": {
         "type": "object",
@@ -13,7 +13,7 @@
           "subject": {
             "type": "string",
             "format": "at-uri",
-            "description": "AT URI of the fyi.atstore.listing.detail record being reviewed."
+            "description": "AT URI of the listing being reviewed: a fyi.atstore.listing.detail or games.atmosphere.define record."
           },
           "rating": {
             "type": "integer",

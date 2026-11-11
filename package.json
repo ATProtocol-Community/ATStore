@@ -39,6 +39,7 @@
     "lex:status": "node scripts/goat-lex.mjs lex status",
     "atproto:publish-lexicons": "node scripts/goat-lex.mjs lex publish",
     "tap:consumer": "tsx -r dotenv/config scripts/tap-consumer.ts",
+    "games:backfill-atmosphere": "tsx -r dotenv/config scripts/games-atmosphere-backfill.ts",
     "standard-site:backfill-product": "tsx -r dotenv/config scripts/standard-site-backfill-product.ts",
     "standard-site:backfill-all-products": "tsx -r dotenv/config scripts/standard-site-backfill-all-product-dids.ts",
     "jetstream:consumer": "tsx -r dotenv/config scripts/jetstream-consumer.ts",

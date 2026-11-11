@@ -173,9 +173,16 @@ function ListingReviewCard({
                 />
               ) : null}
               <Flex direction="column" gap="xl">
-                <Text size="2xl" weight="bold">
-                  {row.name}
-                </Text>
+                <Flex align="center" gap="md" wrap>
+                  <Text size="2xl" weight="bold">
+                    {row.name}
+                  </Text>
+                  {row.listingType === "game" ? (
+                    <Badge size="sm" variant="primary">
+                      Game · atmosphere.games
+                    </Badge>
+                  ) : null}
+                </Flex>
                 {row.tagline ? (
                   <Text size="base" variant="secondary">
                     {row.tagline}

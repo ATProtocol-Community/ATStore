@@ -67,6 +67,18 @@ function mergeListingRow(
 }
 
 /**
+ * Game-only rows mirror a `games.atmosphere.define` record (their `at_uri`); there is no
+ * `fyi.atstore.listing.detail` to republish. Edits belong in the developer's define record.
+ */
+function assertNotGameOnlyListing(row: StoreListing) {
+  if (row.gameDefineAtUri && row.atUri === row.gameDefineAtUri) {
+    throw new Error(
+      "This game is published from its games.atmosphere.define record (atmosphere.games). Edit it there.",
+    );
+  }
+}
+
+/**
  * Publish `fyi.atstore.listing.detail` to the store repo. Postgres is updated by Tap ingest, not here.
  *
  * Returns the new record `uri` plus the CDN URLs for the resulting `icon` / `heroImage` blobs so
@@ -81,6 +93,7 @@ export async function publishDirectoryListingDetail(
   iconUrl: string | null;
   heroImageUrl: string | null;
 }> {
+  assertNotGameOnlyListing(row);
   const { client, repoDid } = await createAtstorePublishClient();
   const merged = mergeListingRow(row, patch);
   const { record } = await buildListingDetailRecordWithBlobs(
@@ -114,6 +127,7 @@ export async function publishOwnedListingDetail(
   patch?: Partial<StoreListing>,
   blobOverrides?: ListingDetailBlobOverrides,
 ): Promise<{ uri: string; dbUrls: ListingDetailDbUrls }> {
+  assertNotGameOnlyListing(row);
   const repo = row.repoDid?.trim();
   if (repo !== ownerRepoDid) {
     throw new Error("You can only update listings stored in your repository.");

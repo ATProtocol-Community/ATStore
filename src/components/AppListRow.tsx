@@ -291,18 +291,35 @@ function formatUpdatedAgo(iso: string) {
 }
 
 /** Full-detail row for Browse: every label, rating, favorites, last update. */
-export function DetailedAppRow({ listing }: { listing: BrowseListingCard }) {
+export function DetailedAppRow({
+  listing,
+  badge,
+  byline,
+}: {
+  /** Rows without `updatedAt` (e.g. games) skip the "Updated …" line. */
+  listing: Omit<BrowseListingCard, "slug" | "updatedAt"> & {
+    slug?: string | null;
+    updatedAt?: string;
+  };
+  /** Small status badge shown beside the name (e.g. a game's "Beta"). */
+  badge?: ReactNode;
+  /** Replaces the `@handle` beside the name (e.g. a game's developer). */
+  byline?: string | null;
+}) {
   const nameId = useId();
   const taglineId = useId();
   const labelsId = useId();
   const ratingId = useId();
+  const badgeId = useId();
   const handle = listing.productAccountHandle?.replace(/^@/, "");
+  const nameAside = byline ?? (handle ? `@${handle}` : null);
 
   return (
     <AppRowLink
       listing={listing}
       labelledBy={nameId}
       describedBy={[
+        badge ? badgeId : null,
         taglineId,
         getListingLabels(listing).length > 0 ? labelsId : null,
         ratingId,
@@ -327,8 +344,9 @@ export function DetailedAppRow({ listing }: { listing: BrowseListingCard }) {
               <Text id={nameId} size="lg" weight="semibold">
                 {listing.name}
               </Text>
-              {handle ? (
-                <SmallBody variant="secondary">@{handle}</SmallBody>
+              {badge ? <span id={badgeId}>{badge}</span> : null}
+              {nameAside ? (
+                <SmallBody variant="secondary">{nameAside}</SmallBody>
               ) : null}
             </Flex>
             <Body id={taglineId} variant="secondary">
@@ -347,9 +365,11 @@ export function DetailedAppRow({ listing }: { listing: BrowseListingCard }) {
               <Heart size={12} aria-hidden />
               {`${listing.favoriteCount} ${listing.favoriteCount === 1 ? "favorite" : "favorites"}`}
             </SmallBody>
-            <SmallBody variant="secondary">
-              Updated {formatUpdatedAgo(listing.updatedAt)}
-            </SmallBody>
+            {listing.updatedAt ? (
+              <SmallBody variant="secondary">
+                Updated {formatUpdatedAgo(listing.updatedAt)}
+              </SmallBody>
+            ) : null}
           </div>
 
           <div {...stylex.props(styles.chevronArea)}>

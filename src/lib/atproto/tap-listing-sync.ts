@@ -19,7 +19,8 @@ import {
   LISTING_LINK_URL_MAX_LENGTH,
   normalizeListingLinks,
 } from "#/lib/atproto/listing-record";
-import { COLLECTION } from "#/lib/atproto/nsids";
+import { COLLECTION, GAMES_NSID } from "#/lib/atproto/nsids";
+import { linkListingToGameDefine } from "#/lib/atproto/tap-game-sync";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
 import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
 import { and, eq } from "drizzle-orm";
@@ -145,6 +146,15 @@ const listingBodySchema = z.object({
       message: "migratedFromAtUri must be an at:// URI",
     }),
   links: z.array(listingLinkLexicon).max(LISTING_LINK_MAX_COUNT).optional(),
+  game: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((s) => {
+      const t = s?.trim();
+      return t?.startsWith(`at://`) && t.includes(`/${GAMES_NSID.define}/`)
+        ? t
+        : undefined;
+    }),
 });
 
 export type ListingDetailParseResult =
@@ -254,6 +264,7 @@ export function tryParseListingDetailRecord(
   if (d.productAccountDid) rec.productAccountDid = d.productAccountDid;
   const migrated = d.migratedFromAtUri?.trim();
   if (migrated) rec.migratedFromAtUri = migrated;
+  if (d.game) rec.game = d.game;
   if (d.links?.length) {
     const normalized = normalizeListingLinks(
       d.links.map(
@@ -383,10 +394,29 @@ export async function upsertDirectoryListingFromTap(input: {
       repoDid: schema.storeListings.repoDid,
       rkey: schema.storeListings.rkey,
       verificationStatus: schema.storeListings.verificationStatus,
+      atUri: schema.storeListings.atUri,
+      gameDefineAtUri: schema.storeListings.gameDefineAtUri,
     })
     .from(schema.storeListings)
     .where(eq(schema.storeListings.slug, record.slug))
     .limit(1);
+
+  /**
+   * Game-only rows (backed by `games.atmosphere.define`) share the slug namespace. A listing.detail
+   * may only take one over when it is from a trusted publisher or explicitly declares that game —
+   * otherwise any record reusing the slug would hijack the game's page, reviews, and favorites.
+   */
+  if (
+    existingRow?.gameDefineAtUri &&
+    existingRow.atUri === existingRow.gameDefineAtUri &&
+    !trustedPublisher &&
+    record.game !== existingRow.gameDefineAtUri
+  ) {
+    console.warn(
+      `[tap-ingest] skip listing ${atUri} slug=${record.slug} — slug belongs to game ${existingRow.gameDefineAtUri}`,
+    );
+    return;
+  }
   const existingClaimPendingForDid =
     existingRow?.claimPendingForDid?.trim() ?? null;
   const existingPriorAtUri = existingRow?.migratedFromAtUri?.trim() ?? null;
@@ -534,6 +564,21 @@ export async function upsertDirectoryListingFromTap(input: {
     .from(schema.storeListings)
     .where(eq(schema.storeListings.slug, record.slug))
     .limit(1);
+
+  if (saved?.id && record.game && verificationStatus === "verified") {
+    try {
+      await linkListingToGameDefine({
+        db,
+        listingId: saved.id,
+        defineAtUri: record.game,
+      });
+    } catch (linkError) {
+      console.warn(
+        `[tap-ingest] game link failed slug=${record.slug} game=${record.game}`,
+        linkError,
+      );
+    }
+  }
 
   if (saved?.id) {
     try {

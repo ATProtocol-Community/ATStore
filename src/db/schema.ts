@@ -1,3 +1,7 @@
+import type {
+  GameDetails,
+  ListingType,
+} from "#/lib/atproto/game-define-record";
 import type { ListingLink } from "#/lib/atproto/listing-record";
 import type { StoreListingPageSnapshotPayload } from "#/lib/listing-page-snapshot.types";
 import type { DirectoryOAuthLexiconHubData } from "#/lib/oauth-lexicon-hub.types";
@@ -245,6 +249,29 @@ export const storeListings = pgTable(
      * rollback.
      */
     claimPendingForDid: text("claim_pending_for_did"),
+    /**
+     * `app` for `fyi.atstore.listing.detail` listings; `game` when the row is (or is linked to) a
+     * `games.atmosphere.define` record. Game-only rows use the define record as `at_uri`.
+     */
+    listingType: text("listing_type")
+      .$type<ListingType>()
+      .notNull()
+      .default("app"),
+    /**
+     * `games.atmosphere.define` AT URI backing the game data. Equals `at_uri` for game-only rows;
+     * differs when a define record was merged onto an existing AT Store listing.
+     */
+    gameDefineAtUri: text("game_define_at_uri"),
+    /**
+     * Earlier define URIs for this game (held copy replaced by the developer's own record).
+     * Reviews / favorites whose subject is one of these still resolve to this row.
+     */
+    gameDefinePriorAtUris: text("game_define_prior_at_uris")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** Mirror of game-only fields from `games.atmosphere.define` (status, developer, records…). */
+    gameDetails: jsonb("game_details").$type<GameDetails>(),
     /** Denormalized from `store_listing_reviews` (Tap ingest). */
     reviewCount: integer("review_count").notNull().default(0),
     /** Null when `reviewCount` is 0; else mean of star ratings (1–5). */
@@ -290,6 +317,15 @@ export const storeListings = pgTable(
     trendingScoreIdx: index("store_listings_trending_score_idx").on(
       table.trendingScore,
     ),
+    listingTypeIdx: index("store_listings_listing_type_idx").on(
+      table.listingType,
+    ),
+    gameDefineAtUriIdx: uniqueIndex("store_listings_game_define_at_uri_idx").on(
+      table.gameDefineAtUri,
+    ),
+    gameDefinePriorAtUrisIdx: index(
+      "store_listings_game_define_prior_at_uris_idx",
+    ).using("gin", table.gameDefinePriorAtUris),
   }),
 );
 

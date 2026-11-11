@@ -88,6 +88,8 @@ export type FyiAtstoreListingDetail = {
   migratedFromAtUri?: string;
   /** Trust / compliance / support / project links (`knownValues` + free-form `other`). */
   links?: Array<ListingLink>;
+  /** `games.atmosphere.define` record describing this listing as a game (atmosphere.games). */
+  game?: string;
 };
 
 /** Max length checks mirror `detail.json`: `links` ≤ 12 entries, label ≤ 100 chars. */
@@ -420,6 +422,10 @@ export async function buildListingDetailRecordWithBlobs(
 
   const links = normalizeListingLinks(row.links ?? null);
   if (links.length > 0) record.links = links;
+
+  /** Only for merged listings — a game-only row's `at_uri` *is* the define record. */
+  const game = row.gameDefineAtUri?.trim();
+  if (game && game !== row.atUri) record.game = game;
 
   return {
     record,

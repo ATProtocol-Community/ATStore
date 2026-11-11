@@ -33,7 +33,7 @@
           "type": "string",
           "format": "at-uri",
           "maxLength": 2560,
-          "description": "AT URI of the fyi.atstore.listing.detail record."
+          "description": "AT URI of the listing record: fyi.atstore.listing.detail for apps, games.atmosphere.define for games. Use as the subject of fyi.atstore.listing.review."
         },
         "name": { "type": "string", "maxLength": 640 },
         "tagline": { "type": "string", "maxLength": 2000 },
@@ -66,6 +66,12 @@
         "productAccountHandle": {
           "type": "string",
           "maxLength": 512
+        },
+        "listingType": {
+          "type": "string",
+          "maxLength": 32,
+          "knownValues": ["app", "game"],
+          "description": "app for AT Store listings; game when the listing is (or is linked to) a games.atmosphere.define record from atmosphere.games."
         },
         "appTags": {
           "type": "array",
@@ -154,7 +160,7 @@
             "type": "string",
             "format": "at-uri",
             "maxLength": 2560,
-            "description": "AT URI of the fyi.atstore.listing.detail record."
+            "description": "AT URI of the listing record: fyi.atstore.listing.detail for apps, games.atmosphere.define for games. Use as the subject of fyi.atstore.listing.review."
           },
           "externalUrl": {
             "type": "string",

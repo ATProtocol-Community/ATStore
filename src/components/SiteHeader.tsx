@@ -107,6 +107,9 @@ export function SiteHeader() {
         <NavbarLinkLink to="/apps/lexicons" activeProps={{ isActive: true }}>
           {t("siteHeader.nav.sharedData")}
         </NavbarLinkLink>
+        <NavbarLinkLink to="/games" activeProps={{ isActive: true }}>
+          {t("siteHeader.nav.games")}
+        </NavbarLinkLink>
       </NavbarNavigation>
 
       <NavbarAction alwaysVisible={true}>

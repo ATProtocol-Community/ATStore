@@ -54,6 +54,7 @@ import type { StoreListingPageSnapshotPayload } from "../lib/listing-page-snapsh
 import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
 import { DirectoryListingReviewCard } from "../components/DirectoryListingReviewCard";
 import { EcosystemCategoryCard } from "../components/EcosystemCategoryCard";
+import { GameDetailsPanel } from "../components/GameDetailsPanel";
 import { GermNetworkBadge } from "../components/GermNetworkBadge";
 import { HeroImage } from "../components/HeroImage";
 import { ListingOAuthScopesPopoverChip } from "../components/ListingOAuthScopesPopoverChip";
@@ -86,7 +87,10 @@ import { Body, SmallBody } from "../design-system/typography";
 import { Text } from "../design-system/typography/text";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
-import { formatAppTagLabel, getAppTagSlug } from "../lib/app-tag-metadata";
+import {
+  formatAppTagLabel,
+  getAppTagLinkOptions,
+} from "../lib/app-tag-metadata";
 import {
   getAppSegmentFromEcosystemRootCategoryId,
   getDirectoryCategoryOption,
@@ -95,6 +99,12 @@ import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
+import {
+  ATMOSPHERE_GAMES_URL,
+  getGamePlayLabel,
+  getGameStatus,
+  isGameOnlyListing,
+} from "../lib/game-listing";
 import { getInitials } from "../lib/get-initials";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
@@ -680,6 +690,13 @@ function ProductPage() {
           paragraphStyle={styles.descriptionText}
         />
         <ProductListingLinksRow listing={listing} productSlug={productSlug} />
+        {listing.listingType === "game" && listing.game ? (
+          <GameDetailsPanel
+            game={listing.game}
+            gameName={listing.name}
+            isGameOnly={isGameOnlyListing(listing)}
+          />
+        ) : null}
         {/* screenshots */}
         {listing.screenshots.length > 0 ? (
           <Flex direction="column" gap="3xl" style={styles.screenshotsSection}>
@@ -767,6 +784,11 @@ function HeroSection({
   productId: string;
 }) {
   const primaryLink = listing.externalUrl || undefined;
+  const gameStatus =
+    listing.listingType === "game" && listing.game
+      ? getGameStatus(listing.game.status)
+      : null;
+  const isGameOnly = isGameOnlyListing(listing);
   const buttonStyles = useButtonStyles({ variant: "secondary", size: "lg" });
   const { data: session } = useQuery(user.getSessionQueryOptions);
   const { data: favoriteStatus } = useQuery(
@@ -851,7 +873,13 @@ function HeroSection({
       </Pressable>
     </Tooltip>
   ) : (
-    <Tooltip text="This listing is managed by the owner of the product.">
+    <Tooltip
+      text={
+        isGameOnly
+          ? "This listing comes from the developer's record on atmosphere.games."
+          : "This listing is managed by the owner of the product."
+      }
+    >
       <Pressable>
         <Badge size="sm" variant="success" aria-label="Claimed by owner">
           <BadgeCheck aria-hidden />
@@ -879,8 +907,7 @@ function HeroSection({
       {listing.appTags.map((tag) => (
         <RouterLink
           key={tag}
-          to="/apps"
-          search={{ tag: getAppTagSlug(tag) }}
+          {...getAppTagLinkOptions(tag)}
           {...stylex.props(styles.tagLink)}
         >
           <Badge size="sm" variant="primary">
@@ -924,10 +951,16 @@ function HeroSection({
         <ButtonLink
           to={primaryLink}
           size="lg"
+          variant={
+            gameStatus === "coming" || gameStatus === "archived"
+              ? "secondary"
+              : undefined
+          }
           target="_blank"
           rel="noopener noreferrer"
         >
-          Explore <ExternalLink />
+          {gameStatus ? getGamePlayLabel(gameStatus) : "Explore"}{" "}
+          <ExternalLink />
         </ButtonLink>
       ) : null}
     </Flex>
@@ -1023,7 +1056,11 @@ function ProductClaimBanner({
     directoryListingApi.getProductListingEditAccessQueryOptions(productId),
   );
 
-  if (!listing.isStoreManaged || editAccess?.canEdit) {
+  if (
+    !listing.isStoreManaged ||
+    editAccess?.canEdit ||
+    isGameOnlyListing(listing)
+  ) {
     return null;
   }
 
@@ -1090,6 +1127,10 @@ function ProductPageEditActions({
     removeHeroMutation.mutate();
   }
 
+  /** Game-only listings mirror the developer's atmosphere.games record; edits happen there. */
+  const isGameOnly = isGameOnlyListing(listing);
+  const canEditHere = Boolean(editAccess?.canEdit) && !isGameOnly;
+
   if (!canRemoveHero && !editAccess?.canEdit) {
     return null;
   }
@@ -1107,13 +1148,25 @@ function ProductPageEditActions({
           Remove hero
         </Button>
       ) : null}
-      {editAccess?.canEdit ? (
+      {canEditHere ? (
         <AppLink
           to="/products/$productId/edit"
           params={{ productId: productSlug }}
         >
           Edit listing
         </AppLink>
+      ) : null}
+      {editAccess?.canEdit && isGameOnly ? (
+        <SmallBody variant="secondary">
+          Edit this game on{" "}
+          <Link
+            href={ATMOSPHERE_GAMES_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            atmosphere.games
+          </Link>
+        </SmallBody>
       ) : null}
     </Flex>
   );

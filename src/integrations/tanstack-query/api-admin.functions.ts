@@ -185,6 +185,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
           screenshotUrls: listings.screenshotUrls,
           productAccountHandle: listings.productAccountHandle,
           verificationStatus: listings.verificationStatus,
+          listingType: listings.listingType,
           atUri: listings.atUri,
           updatedAt: listings.updatedAt,
         })
@@ -224,6 +225,7 @@ const getAdminDashboard = createServerFn({ method: "GET" })
           screenshotUrls: listings.screenshotUrls,
           productAccountHandle: listings.productAccountHandle,
           verificationStatus: listings.verificationStatus,
+          listingType: listings.listingType,
           atUri: listings.atUri,
           updatedAt: listings.updatedAt,
           lastRejectionReason: latestRejectionPerListing.reason,
