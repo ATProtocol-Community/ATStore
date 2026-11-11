@@ -143,6 +143,10 @@ function ListingReviewCard({
   refresh,
   priorRejection,
 }: ListingReviewCardProps) {
+  /** Set when Reject is pressed without a reason, so the field explains what's missing. */
+  const [missingReason, setMissingReason] = useState(false);
+  const reason = rejectDraft[row.id]?.trim() ?? "";
+
   return (
     <Card style={styles.card} size="lg">
       {row.heroImageUrl ? (
@@ -256,12 +260,15 @@ function ListingReviewCard({
               placeholder="Explain why — required to reject."
               rows={3}
               value={rejectDraft[row.id] ?? ""}
-              onChange={(value) =>
+              onChange={(value) => {
+                setMissingReason(false);
                 setRejectDraft((prev) => ({
                   ...prev,
                   [row.id]: value,
-                }))
-              }
+                }));
+              }}
+              validationState={missingReason ? "invalid" : undefined}
+              errorMessage="Add a reason to reject this listing."
             />
           </Flex>
           <Flex gap="md">
@@ -286,19 +293,19 @@ function ListingReviewCard({
             </Button>
             <Button
               variant="secondary"
-              isDisabled={
-                busy === row.id ||
-                (rejectDraft[row.id]?.trim() ?? "").length === 0
-              }
+              isDisabled={busy === row.id}
               onPress={async () => {
+                if (reason.length === 0) {
+                  setMissingReason(true);
+                  return;
+                }
                 setBusy(row.id);
                 try {
-                  const notes = rejectDraft[row.id]?.trim();
                   await adminApi.setListingVerification({
                     data: {
                       listingId: row.id,
                       status: "rejected",
-                      notes,
+                      notes: reason,
                     },
                   });
                   await refresh();
