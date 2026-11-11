@@ -217,6 +217,7 @@ function verifiedListingDetailSelect(table: typeof schema.storeListings) {
     ...LEGACY_DETAIL_SQL,
     appTags: table.appTags,
     links: table.links,
+    listingType: table.listingType,
     createdAt: table.createdAt,
     updatedAt: table.updatedAt,
   };
