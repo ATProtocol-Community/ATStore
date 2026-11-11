@@ -24,6 +24,7 @@ import {
   animationTimingFunction,
   animations,
 } from "../theme/animations.stylex";
+import { breakpoints } from "../theme/media-queries.stylex";
 import { ui } from "../theme/semantic-color.stylex";
 import {
   gap,
@@ -58,6 +59,10 @@ const styles = stylex.create({
     transitionTimingFunction: "ease-in-out",
     zIndex: 200,
   },
+  // Images read best on near-black, in both themes.
+  dim: {
+    backgroundColor: "rgba(12, 11, 10, 0.92)",
+  },
   backdrop: {
     inset: 0,
     position: "absolute",
@@ -72,9 +77,10 @@ const styles = stylex.create({
     zIndex: 1,
     height: "fit-content",
     maxHeight: "90vh",
-    maxWidth: "90vw",
-    // Shrink to fit content so backdrop remains clickable around the edges
-    width: "fit-content",
+    maxWidth: { default: "100vw", [breakpoints.md]: "90vw" },
+    // Phones: use the full width. Wider screens shrink to fit so the
+    // backdrop stays clickable around the edges.
+    width: { default: "100vw", [breakpoints.md]: "fit-content" },
   },
   dialog: {
     outline: "none",
@@ -100,9 +106,9 @@ const styles = stylex.create({
   image: {
     objectFit: "contain",
     height: "auto",
-    maxHeight: "90vh",
+    maxHeight: "80vh",
     maxWidth: "100%",
-    width: "auto",
+    width: { default: "100%", [breakpoints.md]: "auto" },
   },
   imageLayer: {
     inset: 0,
@@ -129,15 +135,28 @@ const styles = stylex.create({
     display: "none",
   },
   contentRow: {
-    gap: gap["2xl"],
+    gap: { default: 0, [breakpoints.md]: gap["2xl"] },
     alignItems: "center",
     display: "flex",
     flexGrow: 1,
     justifyContent: "center",
+    position: "relative",
     minHeight: 0,
+    width: { default: "100%", [breakpoints.md]: "auto" },
   },
+  // On phones the arrows float over the image's edges instead of taking width.
   navButton: {
     flexShrink: 0,
+    position: { default: "absolute", [breakpoints.md]: "static" },
+    transform: { default: "translateY(-50%)", [breakpoints.md]: "none" },
+    zIndex: 3,
+    top: "50%",
+  },
+  navPrev: {
+    left: 8,
+  },
+  navNext: {
+    right: 8,
   },
 });
 
@@ -314,7 +333,7 @@ export function Lightbox({
       {trigger || <span {...stylex.props(styles.hiddenTrigger)} />}
       <ModalOverlay
         isDismissable
-        {...stylex.props(styles.overlay, ui.overlay, style)}
+        {...stylex.props(styles.overlay, styles.dim, style)}
       >
         <div
           {...stylex.props(styles.backdrop)}
@@ -326,7 +345,7 @@ export function Lightbox({
           {...stylex.props(styles.closeButton)}
           onClick={(e) => e.stopPropagation()}
         >
-          <IconButton variant="tertiary" size="lg" label="Close" slot="close">
+          <IconButton variant="secondary" size="lg" label="Close" slot="close">
             <X size={24} />
           </IconButton>
         </div>
@@ -337,7 +356,13 @@ export function Lightbox({
           <AriaDialog {...stylex.props(styles.dialog)} aria-label={alt}>
             {hasMultiple ? (
               <div {...stylex.props(styles.contentRow)}>
-                <div {...stylex.props(styles.navButton, ui.textContrast)}>
+                <div
+                  {...stylex.props(
+                    styles.navButton,
+                    styles.navPrev,
+                    ui.textContrast,
+                  )}
+                >
                   <IconButton
                     variant="secondary"
                     size="lg"
@@ -399,7 +424,13 @@ export function Lightbox({
                   )}
                 </div>
 
-                <div {...stylex.props(styles.navButton, ui.textContrast)}>
+                <div
+                  {...stylex.props(
+                    styles.navButton,
+                    styles.navNext,
+                    ui.textContrast,
+                  )}
+                >
                   <IconButton
                     variant="secondary"
                     size="lg"

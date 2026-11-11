@@ -104,6 +104,12 @@ const styles = stylex.create({
     lineHeight: 1.5,
     marginBottom: 24,
   },
+  // Long domains (store.steampowered.com) truncate instead of wrapping the pill.
+  playLabel: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    minWidth: 0,
+  },
   play: {
     borderRadius: 999,
     paddingBlock: 10,
@@ -111,6 +117,7 @@ const styles = stylex.create({
     textDecoration: "none",
     alignItems: "center",
     backgroundColor: { default: "#f5f3ee", ":hover": "#ffffff" },
+    boxSizing: "border-box",
     color: "#111",
     columnGap: 8,
     display: "inline-flex",
@@ -120,10 +127,10 @@ const styles = stylex.create({
     outlineOffset: 3,
     outlineStyle: { default: "none", ":focus-visible": "solid" },
     outlineWidth: 2,
-    overflowWrap: "anywhere",
     position: "relative",
     transitionDuration: animationDuration.default,
     transitionProperty: "background-color",
+    whiteSpace: "nowrap",
     zIndex: 1,
     maxWidth: "100%",
     minHeight: 44,
@@ -193,7 +200,7 @@ export function GameFeature({ game }: { game: DirectoryGameCard }) {
             rel="noopener noreferrer"
             {...stylex.props(styles.play)}
           >
-            Play on {domain}
+            <span {...stylex.props(styles.playLabel)}>Play on {domain}</span>
             <ArrowUpRight size={16} aria-hidden />
           </a>
         ) : (

@@ -144,7 +144,7 @@ const styles = stylex.create({
   detail: {
     color: uiColor.text1,
     fontFamily: fontFamily.mono,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: fontWeight.normal,
     marginLeft: 6,
   },

@@ -69,12 +69,18 @@ const styles = stylex.create({
   strong: {
     fontWeight: fontWeight.semibold,
   },
+  // wrap-reverse: when the buttons stack on narrow phones, the primary
+  // action ends up on top.
   actions: {
     columnGap: 10,
     display: "flex",
-    flexWrap: "wrap",
+    flexWrap: "wrap-reverse",
     justifyContent: "flex-end",
     rowGap: 10,
+  },
+  // Phones: the two buttons share the row (or stack) at full width.
+  grow: {
+    flexGrow: { default: 1, [breakpoints.sm]: 0 },
   },
 });
 
@@ -205,6 +211,7 @@ function CreateProductListingPage() {
             <Button
               variant="secondary"
               size="lg"
+              style={styles.grow}
               onPress={() => {
                 void navigate({ to: "/home" });
               }}
@@ -214,6 +221,7 @@ function CreateProductListingPage() {
             <Button
               variant="primary"
               size="lg"
+              style={styles.grow}
               onPress={() => {
                 setHasAcknowledgedOwnership(true);
               }}

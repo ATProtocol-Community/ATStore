@@ -210,12 +210,16 @@ const styles = stylex.create({
     lineHeight: 1.6,
     marginTop: 2,
   },
+  // Short names ("Use", "Now") still get a comfortable touch target.
   rowType: {
+    paddingBlock: 6,
     textDecoration: "none",
     color: "inherit",
+    display: "inline-block",
     textDecorationColor: { default: uiColor.border2, ":hover": uiColor.text1 },
     textDecorationLine: "underline",
     textUnderlineOffset: 3,
+    minWidth: 24,
   },
   rowCount: {
     textDecoration: "none",

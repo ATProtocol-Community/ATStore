@@ -512,10 +512,11 @@ const styles = stylex.create({
     outlineStyle: { default: "none", ":is([data-focus-visible])": "solid" },
     outlineWidth: 2,
     position: "absolute",
-    height: 24,
+    // Bigger on touch screens so it's easy to hit with a finger.
+    height: { default: 24, "@media (pointer: coarse)": 32 },
     right: 6,
     top: 6,
-    width: 24,
+    width: { default: 24, "@media (pointer: coarse)": 32 },
   },
   shotAdd: {
     borderRadius: 12,
