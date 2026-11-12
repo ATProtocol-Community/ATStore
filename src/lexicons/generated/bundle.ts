@@ -301,6 +301,83 @@ export const lexicons = [
   },
   {
     lexicon: 1,
+    id: "fyi.atstore.directory.getListingAuth",
+    defs: {
+      main: {
+        type: "query",
+        description:
+          "How a public verified listing's app signs users in: its atproto OAuth client metadata URL (client_id) when known, and the scope that metadata publishes. Lets a PDS or client find the permissions an app asks for, e.g. to make a scoped app password, without probing the app's site itself.",
+        parameters: {
+          type: "params",
+          required: ["uri"],
+          properties: {
+            uri: {
+              type: "string",
+              format: "at-uri",
+              maxLength: 2560,
+              description: "AT URI of the fyi.atstore.listing.detail record.",
+            },
+          },
+        },
+        output: {
+          encoding: "application/json",
+          schema: {
+            type: "object",
+            required: ["uri", "authMethod"],
+            nullable: ["clientMetadataUrl", "scope", "checkedAt"],
+            properties: {
+              uri: {
+                type: "string",
+                format: "at-uri",
+                maxLength: 2560,
+              },
+              authMethod: {
+                type: "string",
+                maxLength: 32,
+                knownValues: [
+                  "oauth",
+                  "app_password",
+                  "unsupported_mobile",
+                  "unknown",
+                ],
+                description:
+                  "oauth: signs in with atproto OAuth (see clientMetadataUrl). app_password: web sign-in with an app password. unsupported_mobile: native/mobile app only. unknown: not classified yet.",
+              },
+              clientMetadataUrl: {
+                type: "string",
+                format: "uri",
+                maxLength: 2048,
+                description:
+                  "The app's OAuth client metadata URL (its client_id). Fetch it for the authoritative scope.",
+              },
+              scope: {
+                type: "string",
+                maxLength: 10000,
+                description:
+                  "The scope line from the app's client metadata as last probed. May be stale; clientMetadataUrl is authoritative.",
+              },
+              checkedAt: {
+                type: "string",
+                format: "datetime",
+                maxLength: 64,
+                description: "When this listing's sign-in was last probed.",
+              },
+            },
+          },
+        },
+        errors: [
+          {
+            name: "InvalidParams",
+          },
+          {
+            name: "ListingNotFound",
+          },
+        ],
+      },
+    },
+  },
+  {
+    lexicon: 1,
     id: "fyi.atstore.directory.searchListings",
     defs: {
       listingCardSearch: {

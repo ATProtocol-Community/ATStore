@@ -52,6 +52,12 @@ const METHOD_ROWS: ReadonlyArray<{
     ),
   },
   {
+    nsid: ATSTORE_XRPC_METHOD.directoryGetListingAuth,
+    method: "GET",
+    summary:
+      "How a listing's app signs in (`uri` listing.detail AT URI): `authMethod`, its OAuth `clientMetadataUrl` (client_id) when known, and the last probed `scope`.",
+  },
+  {
     nsid: ATSTORE_XRPC_METHOD.reviewsListForListing,
     method: "GET",
     summary: (
