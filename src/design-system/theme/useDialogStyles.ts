@@ -24,7 +24,10 @@ const styles = stylex.create({
       default: 1,
       ":is([data-exiting])": 0,
     },
-    position: "absolute",
+    // Fixed to the viewport: backdropFilter makes this the containing block
+    // for the fixed-position modal inside it, so a page-sized overlay would
+    // center the modal on the top of the page, offscreen once scrolled.
+    position: "fixed",
     transitionDuration: {
       ":is([data-exiting])": animationDuration.fast,
     },
@@ -34,7 +37,7 @@ const styles = stylex.create({
       ":is([data-exiting])": animationTimingFunction.easeIn,
     },
     zIndex: 100,
-    height: "var(--page-height)",
+    height: "var(--visual-viewport-height)",
     left: 0,
     top: 0,
     width: "100vw",
