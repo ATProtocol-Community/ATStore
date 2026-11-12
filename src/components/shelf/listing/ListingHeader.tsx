@@ -19,6 +19,7 @@ import { ToggleButton } from "../../../design-system/toggle-button";
 import { directoryListingApi } from "../../../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../../../integrations/tanstack-query/api-user.functions";
 import { getGamePlayLabel, getGameStatus } from "../../../lib/game-listing";
+import { listingIconTransitionName } from "../../../lib/view-transitions";
 import { BlueskyIcon } from "../../bluesky-icon";
 import { MIN_REVIEWS_FOR_AVERAGE, formatReviewCount } from "../format";
 import { ListingIcon } from "../ListingIcon";
@@ -205,6 +206,7 @@ export function ListingHeader({
         src={listing.iconUrl}
         size={112}
         style={styles.icon}
+        transitionName={listingIconTransitionName(productSlug)}
       />
       <div {...stylex.props(styles.text)}>
         <h1 {...stylex.props(styles.name)}>{listing.name}</h1>

@@ -105,7 +105,10 @@ export function GameCoverCard({
       params={{ productId: getDirectoryListingSlug(listing) }}
       {...stylex.props(styles.card)}
     >
-      <div {...stylex.props(styles.cover, !hasCover && styles.noCover)}>
+      <div
+        data-listing-hero={hasCover ? "" : undefined}
+        {...stylex.props(styles.cover, !hasCover && styles.noCover)}
+      >
         {hasCover ? (
           <img
             alt=""

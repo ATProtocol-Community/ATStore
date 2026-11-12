@@ -611,6 +611,7 @@ function FeaturedListing({
           to="/products/$productId"
           params={{ productId }}
           aria-label={listing.name}
+          data-listing-hero=""
           {...stylex.props(styles.featureFrame)}
         >
           <img

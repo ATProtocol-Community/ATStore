@@ -51,3 +51,81 @@ body {
     sans-serif;
   color: light-dark(#191816, #f2efe8);
 }
+
+/*
+ * Page transitions (View Transitions API; the router starts them, see
+ * src/lib/view-transitions.ts). Subtle on purpose: a quick fade out, a short
+ * lift-and-fade in, a fixed header, a sliding nav underline, and listing
+ * icons/covers that morph into the listing page header.
+ */
+[data-site-header] {
+  view-transition-name: site-header;
+}
+[data-nav-underline] {
+  view-transition-name: nav-underline;
+}
+html[data-vt-hero] [data-hero-target] {
+  view-transition-name: var(--listing-hero-vt);
+}
+
+::view-transition-old(root) {
+  animation: vt-fade-out 120ms ease-in both;
+}
+::view-transition-new(root) {
+  animation: vt-lift-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+/* Opening a listing: the page rises a little more, behind the morphing icon. */
+html:active-view-transition-type(to-listing)::view-transition-new(root) {
+  animation: vt-lift-in-more 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* The header is identical across pages; never animate it. */
+::view-transition-group(site-header),
+::view-transition-old(site-header),
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+::view-transition-group(nav-underline) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Listing icon / cover morphs (names are listing-icon-* / listing-hero-*). */
+::view-transition-group(*) {
+  animation-duration: 340ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* Covers change aspect ratio (16:9 card → 16:7 hero); crop instead of stretch. */
+::view-transition-old(*),
+::view-transition-new(*) {
+  height: 100%;
+  object-fit: cover;
+  overflow: clip;
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-lift-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes vt-lift-in-more {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

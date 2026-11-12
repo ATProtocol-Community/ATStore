@@ -49,10 +49,26 @@ export function HeroImage({
   alt,
   layout = "wide",
   style,
-}: HeroImageProps) {
+  transitionName,
+}: HeroImageProps & { transitionName?: string }) {
+  const sx = stylex.props(
+    styles.frame,
+    layout === "fill" && styles.fill,
+    style,
+  );
   return (
     <div
-      {...stylex.props(styles.frame, layout === "fill" && styles.fill, style)}
+      {...sx}
+      // Named only during a cover → hero morph (html[data-vt-hero], styles.css).
+      data-hero-target={transitionName ? "" : undefined}
+      style={
+        transitionName
+          ? ({
+              ...sx.style,
+              "--listing-hero-vt": transitionName,
+            } as React.CSSProperties)
+          : sx.style
+      }
     >
       <img alt={alt} src={src} {...stylex.props(styles.image)} />
     </div>

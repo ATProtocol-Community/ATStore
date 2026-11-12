@@ -1,9 +1,10 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
 import { HeaderLayout } from "../design-system/header-layout";
+import { installListingMorphTagging } from "../lib/view-transitions";
 
 export const Route = createFileRoute("/_header-layout")({
   component: HeaderLayoutRoute,
@@ -17,9 +18,11 @@ function HeaderLayoutOutletFallback() {
 }
 
 function HeaderLayoutRoute() {
+  useEffect(() => installListingMorphTagging(), []);
+
   return (
     <HeaderLayout.Root>
-      <HeaderLayout.Header>
+      <HeaderLayout.Header data-site-header="">
         <SiteHeader />
       </HeaderLayout.Header>
 

@@ -57,25 +57,37 @@ export function ListingIcon({
   src,
   size,
   style,
+  transitionName,
 }: {
   name: string;
   src: string | null | undefined;
   size: number;
   style?: stylex.StyleXStyles;
+  /** Static view-transition-name, for the listing header this icon morphs into. */
+  transitionName?: string;
 }) {
   // Remember which URL failed, so a new `src` gets a fresh attempt.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const showImage = Boolean(src) && failedSrc !== src;
 
+  const sx = stylex.props(
+    styles.root,
+    styles.size(size),
+    !showImage && styles.fallback,
+    style,
+  );
+
   return (
     <span
       aria-hidden
-      {...stylex.props(
-        styles.root,
-        styles.size(size),
-        !showImage && styles.fallback,
-        style,
-      )}
+      // Marks morph sources; see lib/view-transitions.ts.
+      data-listing-icon=""
+      {...sx}
+      style={
+        transitionName
+          ? { ...sx.style, viewTransitionName: transitionName }
+          : sx.style
+      }
     >
       {showImage ? (
         <img

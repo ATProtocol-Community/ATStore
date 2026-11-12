@@ -10,6 +10,7 @@ import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { fontFamily } from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
+import { listingIconTransitionName } from "./view-transitions";
 
 const styles = stylex.create({
   page: {
@@ -85,6 +86,7 @@ export function ProductReviewsPageChrome({
           src={listing.iconUrl}
           size={64}
           style={styles.icon}
+          transitionName={listingIconTransitionName(productSlug)}
         />
         <div {...stylex.props(styles.text)}>
           <h1 {...stylex.props(styles.name)}>{listing.name}</h1>

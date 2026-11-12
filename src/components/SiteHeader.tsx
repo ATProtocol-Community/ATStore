@@ -87,17 +87,17 @@ const styles = stylex.create({
   navLinkActive: {
     color: uiColor.text2,
     fontWeight: 550,
-    // Underline sits on the header's bottom rule.
-    "::after": {
-      borderRadius: 2,
-      backgroundColor: uiColor.text2,
-      content: "''",
-      position: "absolute",
-      bottom: -1,
-      height: 2,
-      left: 0,
-      right: 0,
-    },
+  },
+  // Sits on the header's bottom rule; slides between sections on navigation
+  // (view-transition-name in styles.css).
+  underline: {
+    borderRadius: 2,
+    backgroundColor: uiColor.text2,
+    position: "absolute",
+    bottom: -1,
+    height: 2,
+    left: 0,
+    right: 0,
   },
   actions: {
     alignItems: "center",
@@ -245,6 +245,9 @@ function NavLinks({ section }: { section: NavSection | null }) {
       )}
     >
       {item.label}
+      {section === item.key ? (
+        <span data-nav-underline="" {...stylex.props(styles.underline)} />
+      ) : null}
     </RouterLink>
   ));
 }
