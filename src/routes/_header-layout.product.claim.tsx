@@ -359,8 +359,14 @@ function ProductClaimPage() {
     session?.user?.did &&
     focusListing.productAccountDid === session.user.did,
   );
+  const focusListingIsEligible = Boolean(
+    focusListing &&
+    eligibility.listings.some((listing) => listing.id === focusListing.id),
+  );
   const showFocusListingCta =
-    focusListing != null && !focusListingMatchesSession;
+    focusListing != null &&
+    !focusListingMatchesSession &&
+    !focusListingIsEligible;
 
   let description: React.ReactNode = null;
   let content: React.ReactNode = null;
@@ -373,13 +379,18 @@ function ProductClaimPage() {
       />
     );
   } else if (hasEligible) {
-    description =
-      "We found listing(s) whose official product account matches you. Accept to publish the record to your PDS.";
+    description = eligibility.listings.every(
+      (listing) => listing.kind === "transfer",
+    )
+      ? "These listings were offered to you by their current owner. Accept to move the record to your PDS."
+      : "We found listing(s) that belong to this account. Accept to publish the record to your PDS.";
     content = (
       <div {...stylex.props(styles.stack)}>
         {eligibility.listings.map((listing) => (
           <article key={listing.id} {...stylex.props(styles.claimCard)}>
-            <Eyebrow>Instant match</Eyebrow>
+            <Eyebrow>
+              {listing.kind === "transfer" ? "Transfer offer" : "Instant match"}
+            </Eyebrow>
             <ListingSummary
               name={listing.name}
               tagline={listing.tagline}

@@ -12,6 +12,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import {
+  ArrowRightLeft,
   BadgeCheck,
   ExternalLink,
   MoreHorizontal,
@@ -31,6 +32,7 @@ import {
   SectionHeader,
   ShelfSection,
 } from "../components/shelf/Section";
+import { TransferListingDialog } from "../components/TransferListingDialog";
 import {
   AlertDialog,
   AlertDialogActionButton,
@@ -207,6 +209,11 @@ const styles = stylex.create({
     fontVariantNumeric: "tabular-nums",
     marginRight: 8,
   },
+  transferNote: {
+    color: uiColor.text1,
+    fontSize: 13,
+    marginTop: 4,
+  },
   mobileStatus: {
     display: { default: "block", [breakpoints.md]: "none" },
     marginTop: 6,
@@ -339,6 +346,12 @@ function ManageListingsPage() {
   const [listingPendingDelete, setListingPendingDelete] = useState<
     (typeof listings)[number] | null
   >(null);
+  /** Id, not the row: the dialog should reflect the refetched row after an offer. */
+  const [transferListingId, setTransferListingId] = useState<string | null>(
+    null,
+  );
+  const transferListing =
+    listings.find((listing) => listing.id === transferListingId) ?? null;
 
   const deleteMutation = useMutation({
     mutationFn: async (listingId: string) => {
@@ -401,6 +414,18 @@ function ManageListingsPage() {
         >
           Edit
         </MenuItem>
+        {listing.canTransfer ? (
+          <MenuItem
+            prefix={<ArrowRightLeft size={16} aria-hidden />}
+            onPress={() => {
+              setTransferListingId(listing.id);
+            }}
+          >
+            {listing.pendingTransfer
+              ? "Pending transfer"
+              : "Transfer ownership"}
+          </MenuItem>
+        ) : null}
         <MenuSeparator />
         <MenuItem
           variant="destructive"
@@ -412,6 +437,17 @@ function ManageListingsPage() {
           Delete
         </MenuItem>
       </Menu>
+    );
+  }
+
+  function renderTransferNote(listing: MyListingRow) {
+    const pending = listing.pendingTransfer;
+    if (!pending) return null;
+    return (
+      <div {...stylex.props(styles.transferNote)}>
+        Transfer to {pending.handle ? `@${pending.handle}` : pending.did}{" "}
+        pending
+      </div>
     );
   }
 
@@ -445,6 +481,7 @@ function ManageListingsPage() {
           {listing.tagline ? (
             <div {...stylex.props(styles.tagline)}>{listing.tagline}</div>
           ) : null}
+          {renderTransferNote(listing)}
           <div {...stylex.props(styles.mobileStatusLive)}>
             <StatusPill status={listing.verificationStatus} />
           </div>
@@ -495,6 +532,7 @@ function ManageListingsPage() {
         <ListingIcon name={listing.name} src={listing.iconUrl} size={48} />
         <div {...stylex.props(styles.nameCell)}>
           <div {...stylex.props(styles.nameText)}>{listing.name}</div>
+          {renderTransferNote(listing)}
           <div {...stylex.props(styles.mobileStatus)}>
             <StatusPill status={listing.verificationStatus} />
           </div>
@@ -612,7 +650,8 @@ function ManageListingsPage() {
               </div>
               <p {...stylex.props(styles.calloutText)}>
                 If we added your app before you did, claim it to move the record
-                into your own repo.
+                into your own repo. To move a listing you already own to another
+                account, use &ldquo;Transfer ownership&rdquo; in its menu.
               </p>
             </div>
             <ButtonLink to="/product/claim" variant="secondary" size="md">
@@ -621,6 +660,15 @@ function ManageListingsPage() {
           </div>
         </ShelfSection>
       </div>
+
+      <TransferListingDialog
+        listing={transferListing}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTransferListingId(null);
+          }
+        }}
+      />
 
       <AlertDialog
         isOpen={listingPendingDelete != null}

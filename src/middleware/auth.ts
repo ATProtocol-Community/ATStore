@@ -90,6 +90,21 @@ export async function getAtprotoSessionForRequest(
   return { did, atprotoSession, client, session: { user: userRow } };
 }
 
+/**
+ * ATProto `Client` for a user's stored OAuth session, without a request from them. Only for
+ * follow-up writes the user already authorized — e.g. removing their old listing record once a
+ * transfer they offered is accepted. `undefined` when the session can't be restored.
+ */
+export async function getStoredAtprotoClientForDid(
+  did: string,
+): Promise<Client | undefined> {
+  if (!isDid(did)) return;
+  const { restoreAtprotoSession } = await import("#/integrations/auth/atproto");
+  const atprotoSession = await restoreAtprotoSession(did);
+  if (!atprotoSession) return;
+  return new Client({ handler: atprotoSession });
+}
+
 async function getSessionContext(request: Request) {
   return getAtprotoSessionForRequest(request);
 }

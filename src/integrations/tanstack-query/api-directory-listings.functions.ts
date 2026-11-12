@@ -91,6 +91,7 @@ import { trendingScoreSortEnabled } from "#/lib/trending/config";
 import {
   adminFnMiddleware,
   getAtprotoSessionForRequest,
+  getStoredAtprotoClientForDid,
 } from "#/middleware/auth";
 import {
   and,
@@ -6131,6 +6132,10 @@ const createOwnedProductListing = createServerFn({ method: "POST" })
       productAccountHandleIgnoredAt: null,
       migratedFromAtUri: null,
       claimPendingForDid: null,
+      priorAtUris: [],
+      transferOfferedToDid: null,
+      transferOfferedToHandle: null,
+      transferOfferedAt: null,
       listingType: "app",
       gameDefineAtUri: null,
       gameDefinePriorAtUris: [],
@@ -6556,6 +6561,13 @@ const updateOwnedProductListingScreenshots = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+/**
+ * Move a listing record onto the signed-in user's PDS. Two cases share the same handshake:
+ * - **Claim** — the listing is still on the store repo and its product account is the user.
+ * - **Transfer** — the current owner offered the listing to the user (`offerProductListingTransfer`).
+ *   The product account follows the record when it pointed at the previous owner, and the previous
+ *   owner's copy is removed afterwards (best effort; Tap skips it as superseded either way).
+ */
 const claimProductListingToPds = createServerFn({ method: "POST" })
   .middleware([dbMiddleware])
   .inputValidator(claimProductListingToPdsInput)
@@ -6567,12 +6579,25 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
 
     const full = await getFullDirectoryListing(context, data.listingId);
     const atstoreDid = await getAtstoreRepoDid();
+    const previousRepoDid = full.repoDid?.trim() ?? "";
 
-    if (full.productAccountDid?.trim() !== session.did) {
-      throw new Error("This listing is not associated with your account.");
-    }
-    if (full.repoDid?.trim() !== atstoreDid) {
-      throw new Error("This listing is not published on the store account.");
+    const isTransfer =
+      full.transferOfferedToDid?.trim() === session.did &&
+      previousRepoDid !== session.did;
+    if (isTransfer) {
+      if (!previousRepoDid) {
+        throw new Error("This listing has no current owner to transfer from.");
+      }
+      if (full.verificationStatus === "rejected") {
+        throw new Error("Rejected listings can't be transferred.");
+      }
+    } else {
+      if (full.productAccountDid?.trim() !== session.did) {
+        throw new Error("This listing is not associated with your account.");
+      }
+      if (previousRepoDid !== atstoreDid) {
+        throw new Error("This listing is not published on the store account.");
+      }
     }
 
     if (isBrowseableProtocolRow({ categorySlugs: full.categorySlugs ?? [] })) {
@@ -6589,9 +6614,9 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
 
     /**
      * Must match `atUriFor()` in tap-listing-sync so `markListingRemovedFromTap` can correlate
-     * delete events when Tap processes the store-repo tombstone before the claim finishes.
+     * delete events when Tap processes the old record's tombstone before the claim finishes.
      */
-    const canonicalOldAtUri = `at://${atstoreDid}/${COLLECTION.listingDetail}/${oldRkey}`;
+    const canonicalOldAtUri = `at://${previousRepoDid}/${COLLECTION.listingDetail}/${oldRkey}`;
 
     const { client } = session;
     const t = context.schema.storeListings;
@@ -6599,12 +6624,12 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
 
     /**
      * Set lineage + pending claimant DID *before* PDS writes:
-     * - lineage so a racing Tap delete for the store-repo tombstone hits the
+     * - lineage so a racing Tap delete for the old record's tombstone hits the
      *   `migratedFromAtUri` skip in `markListingRemovedFromTap`.
      * - `claimPendingForDid` so any Tap ingest of the new owner-PDS record
      *   passes the combined-lineage+DID handshake in `tap-listing-sync.ts`
      *   even if the firehose event arrives before our handler-side
-     *   `verified` update below lands.
+     *   update below lands.
      */
     await context.db
       .update(t)
@@ -6617,24 +6642,45 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
 
     try {
       /**
-       * Slug for directory URLs must stay aligned with the listing that lived on the store
-       * account. Prefer the authoritative `fyi.atstore.listing.detail` on the store PDS so the
-       * claimed record (and mirror row) cannot drift from the migrated-from listing if Postgres
-       * was ever out of sync.
+       * Slug for directory URLs must stay aligned with the listing being moved. Prefer the
+       * authoritative `fyi.atstore.listing.detail` on the old repo so the new record (and mirror
+       * row) cannot drift from the migrated-from listing if Postgres was ever out of sync.
        */
-      const priorOnStore = await fetchListingDetailRecord(
+      const priorRecord = await fetchListingDetailRecord(
         client,
-        atstoreDid,
+        previousRepoDid,
         oldRkey,
       );
       const inheritedSlug =
-        priorOnStore?.value.slug?.trim() || full.slug?.trim() || "";
+        priorRecord?.value.slug?.trim() || full.slug?.trim() || "";
       if (!inheritedSlug) {
         throw new Error(
           "This listing has no stable slug; cannot complete the claim.",
         );
       }
-      const rowForClaim: StoreListing = { ...full, slug: inheritedSlug };
+
+      /**
+       * A listing created without a product handle defaults its product account to the signer, so
+       * after a transfer the Updates feed and Bluesky link would keep pointing at the old owner.
+       * Follow the record in that case; an explicitly chosen product account stays put.
+       */
+      const productAccountFollowsOwner =
+        isTransfer &&
+        (!full.productAccountDid?.trim() ||
+          full.productAccountDid.trim() === previousRepoDid);
+      const productAccountDid = productAccountFollowsOwner
+        ? session.did
+        : full.productAccountDid;
+      const productAccountHandle = productAccountFollowsOwner
+        ? await mirrorProductAccountHandleFromDid(session.did)
+        : full.productAccountHandle;
+
+      const rowForClaim: StoreListing = {
+        ...full,
+        slug: inheritedSlug,
+        productAccountDid,
+        productAccountHandle,
+      };
 
       const { record } = await buildListingDetailRecordWithBlobs(
         client,
@@ -6660,37 +6706,159 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
           slug: inheritedSlug,
           atUri: newUri,
           repoDid: session.did,
+          sourceAccountDid: session.did,
           rkey: newRkey,
           migratedFromAtUri: canonicalOldAtUri,
-          verificationStatus: "verified",
+          priorAtUris: sql`array_append(array_remove(${t.priorAtUris}, ${canonicalOldAtUri}), ${canonicalOldAtUri})`,
+          productAccountDid,
+          productAccountHandle,
+          /** A transfer moves the record; review status stays as it was. */
+          verificationStatus: isTransfer ? full.verificationStatus : "verified",
           /** Handshake satisfied — clear so the marker cannot gate a future re-publish. */
           claimPendingForDid: null,
+          transferOfferedToDid: null,
+          transferOfferedToHandle: null,
+          transferOfferedAt: null,
           /**
            * Mirrors admin approval (`setClaimStatus`): stable claim timestamp for admin
            * views and sorts. Tap ingest does not overwrite these columns.
            */
-          claimedAt: now,
-          claimedByDid: session.did,
+          ...(isTransfer ? {} : { claimedAt: now, claimedByDid: session.did }),
           updatedAt: now,
         })
         .where(eq(t.id, full.id));
 
-      scheduleStandardSiteBackfillForProductDid(context.db, session.did);
-      scheduleGermDeclarationBackfillForProductDid(context.db, session.did);
-      scheduleFundBackfillForProductDid(context.db, session.did);
+      if (productAccountDid === session.did) {
+        scheduleStandardSiteBackfillForProductDid(context.db, session.did);
+        scheduleGermDeclarationBackfillForProductDid(context.db, session.did);
+        scheduleFundBackfillForProductDid(context.db, session.did);
+      }
+
+      if (isTransfer) {
+        await deletePreviousOwnerListingRecord(previousRepoDid, oldRkey);
+      }
 
       return { slug: inheritedSlug };
     } catch (error) {
       await context.db
         .update(t)
         .set({
-          migratedFromAtUri: null,
-          claimPendingForDid: null,
+          migratedFromAtUri: full.migratedFromAtUri,
+          claimPendingForDid: full.claimPendingForDid,
           updatedAt: new Date(),
         })
         .where(eq(t.id, full.id));
       throw error;
     }
+  });
+
+/**
+ * After a transfer, remove the listing record from the previous owner's repo using their stored
+ * OAuth session — offering the transfer is their consent to move it. Best effort: if the session
+ * has lapsed the stale copy stays, and Tap ingest ignores it because its URI is in `priorAtUris`.
+ */
+async function deletePreviousOwnerListingRecord(repoDid: string, rkey: string) {
+  try {
+    const client = await getStoredAtprotoClientForDid(repoDid);
+    if (!client) return;
+    await deleteRecord(client, repoDid, COLLECTION.listingDetail, rkey);
+  } catch (error) {
+    console.warn(
+      `[listing-transfer] could not delete previous record at://${repoDid}/${COLLECTION.listingDetail}/${rkey}:`,
+      error,
+    );
+  }
+}
+
+const offerProductListingTransferInput = z.object({
+  listingId: z.string().uuid(),
+  handle: z.string().trim().min(1).max(253),
+});
+
+/** Owner offers their listing to another account, which accepts on `/product/claim`. */
+const offerProductListingTransfer = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware])
+  .inputValidator(offerProductListingTransferInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest());
+    if (!session?.did) {
+      throw new Error("Sign in to transfer your listing.");
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId);
+    if (full.repoDid?.trim() !== session.did) {
+      throw new Error(
+        "Only the account that hosts the listing record can transfer it.",
+      );
+    }
+    if (full.gameDefineAtUri && full.atUri === full.gameDefineAtUri) {
+      throw new Error(
+        "Game listings mirror an atmosphere.games record; transfer that record instead.",
+      );
+    }
+    if (isBrowseableProtocolRow({ categorySlugs: full.categorySlugs ?? [] })) {
+      throw new Error("Protocol directory listings can't be transferred.");
+    }
+    if (full.verificationStatus === "rejected") {
+      throw new Error("Rejected listings can't be transferred.");
+    }
+
+    const handle = normalizeManualProductAccountHandle(data.handle);
+    const did = await resolveBlueskyHandleToDid(handle);
+    if (!did) {
+      throw new Error("Could not resolve that handle to a DID.");
+    }
+    if (did === session.did) {
+      throw new Error("That's the account you're signed in with.");
+    }
+
+    const now = new Date();
+    const t = context.schema.storeListings;
+    await context.db
+      .update(t)
+      .set({
+        transferOfferedToDid: did,
+        transferOfferedToHandle: handle,
+        transferOfferedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(t.id, full.id));
+
+    return { did, handle };
+  });
+
+const cancelProductListingTransferInput = z.object({
+  listingId: z.string().uuid(),
+});
+
+const cancelProductListingTransfer = createServerFn({ method: "POST" })
+  .middleware([dbMiddleware])
+  .inputValidator(cancelProductListingTransferInput)
+  .handler(async ({ data, context }) => {
+    const session = await getAtprotoSessionForRequest(getRequest());
+    if (!session?.did) {
+      throw new Error("Sign in to manage your listing.");
+    }
+
+    const full = await getFullDirectoryListing(context, data.listingId);
+    if (full.repoDid?.trim() !== session.did) {
+      throw new Error(
+        "Only the account that hosts the listing record can cancel a transfer.",
+      );
+    }
+
+    const t = context.schema.storeListings;
+    await context.db
+      .update(t)
+      .set({
+        transferOfferedToDid: null,
+        transferOfferedToHandle: null,
+        transferOfferedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(t.id, full.id));
+
+    return { ok: true as const };
   });
 
 const getProfileOwnedProductListings = createServerFn({ method: "GET" })
@@ -6756,6 +6924,11 @@ const getMyProductListings = createServerFn({ method: "GET" })
         averageRating: t.averageRating,
         verificationStatus: t.verificationStatus,
         updatedAt: t.updatedAt,
+        listingType: t.listingType,
+        atUri: t.atUri,
+        gameDefineAtUri: t.gameDefineAtUri,
+        transferOfferedToDid: t.transferOfferedToDid,
+        transferOfferedToHandle: t.transferOfferedToHandle,
       })
       .from(t)
       .where(eq(t.repoDid, did))
@@ -6800,6 +6973,16 @@ const getMyProductListings = createServerFn({ method: "GET" })
           : Math.round(row.averageRating * 10) / 10,
       verificationStatus: row.verificationStatus,
       updatedAt: row.updatedAt.toISOString(),
+      /** Game-only rows mirror an atmosphere.games record and can't be transferred here. */
+      canTransfer:
+        !(row.gameDefineAtUri && row.atUri === row.gameDefineAtUri) &&
+        row.verificationStatus !== "rejected",
+      pendingTransfer: row.transferOfferedToDid
+        ? {
+            did: row.transferOfferedToDid,
+            handle: row.transferOfferedToHandle?.trim() || null,
+          }
+        : null,
       rejectionHistory:
         byListing.get(row.id)?.map((h) => ({
           createdAt: h.createdAt.toISOString(),
@@ -7455,6 +7638,10 @@ const createStoreManagedListing = createServerFn({ method: "POST" })
       productAccountHandleIgnoredAt: null,
       migratedFromAtUri: null,
       claimPendingForDid: null,
+      priorAtUris: [],
+      transferOfferedToDid: null,
+      transferOfferedToHandle: null,
+      transferOfferedAt: null,
       listingType: "app",
       gameDefineAtUri: null,
       gameDefinePriorAtUris: [],
@@ -8258,6 +8445,8 @@ export const directoryListingApi = {
   removeOwnedProductListingHeroImage,
   updateOwnedProductListingScreenshots,
   claimProductListingToPds,
+  offerProductListingTransfer,
+  cancelProductListingTransfer,
   getProfileOwnedProductListings,
   getProfileOwnedProductListingsQueryOptions,
   getMyProductListings,

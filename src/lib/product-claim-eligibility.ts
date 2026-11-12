@@ -28,8 +28,9 @@ export function cookieHeaderSkipsProductClaim(
 }
 
 /**
- * Listings still on the AT Store repo whose product account DID matches `productAccountDid`
- * (user can claim them onto their PDS).
+ * Listings the user can move onto their PDS: ones still on the AT Store repo whose product account
+ * DID matches `productAccountDid` (`kind: "claim"`), and ones another owner has offered to transfer to
+ * them (`kind: "transfer"`).
  *
  * When the store publisher DID equals the product owner DID (typical in local dev), a completed
  * claim still satisfies `repo_did = atstore_did` because both match the user's DID. Those rows
@@ -47,6 +48,7 @@ export async function findEligibleProductClaimsForDid(
     tagline: string | null;
     iconUrl: string | null;
     heroImageUrl: string | null;
+    kind: "claim" | "transfer";
   }>
 > {
   const atstoreDid = await getAtstoreRepoDid();
@@ -59,21 +61,33 @@ export async function findEligibleProductClaimsForDid(
       tagline: t.tagline,
       iconUrl: t.iconUrl,
       heroImageUrl: t.heroImageUrl,
+      kind: sql<
+        "claim" | "transfer"
+      >`case when ${t.transferOfferedToDid} = ${productAccountDid} then 'transfer' else 'claim' end`,
     })
     .from(t)
     .where(
       and(
-        eq(t.verificationStatus, "verified"),
-        eq(t.productAccountDid, productAccountDid),
-        eq(t.repoDid, atstoreDid),
-        or(
-          isNull(t.migratedFromAtUri),
-          ne(t.repoDid, t.productAccountDid),
-          isNotNull(t.claimPendingForDid),
-        ),
         isNotNull(t.atUri),
         isNotNull(t.rkey),
         not(sqlCategorySlugsHasProtocolBrowseableSegment(t.categorySlugs)),
+        or(
+          and(
+            eq(t.transferOfferedToDid, productAccountDid),
+            ne(t.repoDid, productAccountDid),
+            ne(t.verificationStatus, "rejected"),
+          ),
+          and(
+            eq(t.verificationStatus, "verified"),
+            eq(t.productAccountDid, productAccountDid),
+            eq(t.repoDid, atstoreDid),
+            or(
+              isNull(t.migratedFromAtUri),
+              ne(t.repoDid, t.productAccountDid),
+              isNotNull(t.claimPendingForDid),
+            ),
+          ),
+        ),
       ),
     )
     .orderBy(asc(t.name));

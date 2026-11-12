@@ -24,7 +24,7 @@ import { resolveAtprotoPdsBaseUrl } from "#/lib/atproto/resolve-atproto-pds";
 import { linkListingToGameDefine } from "#/lib/atproto/tap-game-sync";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
 import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 /**
@@ -297,11 +297,13 @@ function atUriFor(did: string, rkey: string) {
  * (handler-side claim has already updated the row to this exact `repoDid`+`rkey`); or the incoming
  * record satisfies the combined claim handshake — `claimPendingForDid` set on the existing row matches
  * the ingest repo DID **and** `migratedFromAtUri` points at the row's prior `at://<atstoreDid>/...rkey`.
+ * An owner-to-owner transfer passes the same handshake with lineage pointing at the previous owner's
+ * record; it keeps the row's current status instead of verifying it.
  *
  * Lineage alone is intentionally insufficient: anyone can write `migratedFromAtUri` referencing a
  * known store record. The DID handshake bounds verification to the user who initiated the claim.
  */
-function resolveListingVerificationStatus(input: {
+export function resolveListingVerificationStatus(input: {
   trustedPublisher: boolean;
   record: FyiAtstoreListingDetail;
   ingestRepoDid: string;
@@ -353,10 +355,9 @@ function resolveListingVerificationStatus(input: {
     return "unverified";
   }
   if (prior.collection !== COLLECTION.listingDetail) return "unverified";
-  if (prior.repo.trim() !== input.atstoreDid.trim()) return "unverified";
 
   /**
-   * Lineage must point at *this row's* prior store record (when we know it), not just any store
+   * Lineage must point at *this row's* prior record (when we know it), not just any store
    * record under the atstore DID. Without this, an attacker who knew any store rkey could forge a
    * lineage URI; the DID-pending check would still gate them, but pinning the rkey is cheap defense
    * in depth.
@@ -368,7 +369,17 @@ function resolveListingVerificationStatus(input: {
     return "unverified";
   }
 
-  return "verified";
+  if (prior.repo.trim() === input.atstoreDid.trim()) return "verified";
+
+  /**
+   * Owner-to-owner transfer (`claimProductListingToPds` transfer path): the server pins the previous
+   * owner's record in `migratedFromAtUri` before writing, so it must be present here. Moving the
+   * record doesn't change its review status — an unverified listing stays in the review queue.
+   */
+  if (!input.existingPriorAtUri) return "unverified";
+  return input.existingVerificationStatus === "verified"
+    ? "verified"
+    : "unverified";
 }
 
 /**
@@ -482,6 +493,7 @@ export async function upsertDirectoryListingFromTap(input: {
     .select({
       claimPendingForDid: schema.storeListings.claimPendingForDid,
       migratedFromAtUri: schema.storeListings.migratedFromAtUri,
+      priorAtUris: schema.storeListings.priorAtUris,
       repoDid: schema.storeListings.repoDid,
       rkey: schema.storeListings.rkey,
       verificationStatus: schema.storeListings.verificationStatus,
@@ -491,6 +503,23 @@ export async function upsertDirectoryListingFromTap(input: {
     .from(schema.storeListings)
     .where(eq(schema.storeListings.slug, record.slug))
     .limit(1);
+
+  /**
+   * A claim or transfer moved this listing to another repo, but the record it moved from can still
+   * exist (the store copy after a claim; a previous owner's copy if cleanup failed). A replay of it
+   * would otherwise match by slug and hand the row back to the old repo.
+   */
+  if (
+    existingRow &&
+    existingRow.repoDid !== did &&
+    (existingRow.migratedFromAtUri === atUri ||
+      existingRow.priorAtUris.includes(atUri))
+  ) {
+    console.log(
+      `[tap-ingest] skip superseded listing ${atUri} slug=${record.slug} — row now lives at ${existingRow.atUri ?? "(unknown)"}`,
+    );
+    return;
+  }
 
   /**
    * Game-only rows (backed by `games.atmosphere.define`) share the slug namespace. A listing.detail
@@ -726,7 +755,12 @@ export async function markListingRemovedFromTap(input: {
   const [superseded] = await db
     .select({ id: schema.storeListings.id })
     .from(schema.storeListings)
-    .where(eq(schema.storeListings.migratedFromAtUri, deletedAtUri))
+    .where(
+      or(
+        eq(schema.storeListings.migratedFromAtUri, deletedAtUri),
+        sql`${deletedAtUri} = ANY(${schema.storeListings.priorAtUris})`,
+      ),
+    )
     .limit(1);
 
   if (superseded) {

@@ -764,6 +764,8 @@ type ProductListingFormProps = {
    * hidden there to avoid capturing input that would be silently ignored.
    */
   allowSlugEdit?: boolean;
+  /** Extra help under "Product handle", e.g. what an empty field falls back to. */
+  productHandleHelp?: ReactNode;
 };
 
 export function ProductListingForm({
@@ -784,6 +786,7 @@ export function ProductListingForm({
   allowRemoveHero = false,
   requireHero = true,
   allowSlugEdit = false,
+  productHandleHelp,
 }: ProductListingFormProps) {
   const { data: categoryTree } = useSuspenseQuery(
     directoryListingApi.getDirectoryCategoryTreeQueryOptions,
@@ -1263,7 +1266,11 @@ export function ProductListingForm({
               placeholder="your.handle.com"
               size="lg"
             />
-            <FieldHelp>The product&rsquo;s own Bluesky account.</FieldHelp>
+            <FieldHelp>
+              The product&rsquo;s own Bluesky account. The listing&rsquo;s
+              updates and Bluesky link come from it.
+              {productHandleHelp ? <> {productHandleHelp}</> : null}
+            </FieldHelp>
           </FormField>
           {allowSlugEdit ? (
             <FormField>

@@ -467,8 +467,10 @@ function HomePage() {
             }
           >
             {claimCount === 1
-              ? `“${(claimEligibility.listings[0]?.name ?? "").trim() || "Listing"}” is still on the store repo. Claim it to manage updates from your PDS.`
-              : `You have ${String(claimCount)} listings on the store repo. Claim them to manage updates from your PDS.`}
+              ? claimEligibility.listings[0]?.kind === "transfer"
+                ? `“${(claimEligibility.listings[0]?.name ?? "").trim() || "Listing"}” was offered to you. Accept it to manage updates from your PDS.`
+                : `“${(claimEligibility.listings[0]?.name ?? "").trim() || "Listing"}” is still on the store repo. Claim it to manage updates from your PDS.`
+              : `You have ${String(claimCount)} listings waiting to move to your PDS. Claim them to manage updates from there.`}
           </Alert>
         </div>
       ) : null}

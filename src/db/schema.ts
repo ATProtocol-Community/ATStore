@@ -250,6 +250,26 @@ export const storeListings = pgTable(
      */
     claimPendingForDid: text("claim_pending_for_did"),
     /**
+     * Every listing detail AT URI this row has superseded (store claim, owner-to-owner transfers).
+     * `migratedFromAtUri` only holds the latest hop; this keeps the full chain so reviews and
+     * favorites written against an older record still resolve, and so replays of a superseded
+     * record cannot take the row back. DB-only — Tap ingest never writes it.
+     */
+    priorAtUris: text("prior_at_uris")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /**
+     * Pending ownership transfer offered by the current owner (`repoDid`). The offered account
+     * accepts on `/product/claim`, which moves the record into its repo. Cleared on accept, cancel,
+     * or any other change of `repoDid`.
+     */
+    transferOfferedToDid: text("transfer_offered_to_did"),
+    transferOfferedToHandle: text("transfer_offered_to_handle"),
+    transferOfferedAt: timestamp("transfer_offered_at", {
+      withTimezone: true,
+    }),
+    /**
      * `app` for `fyi.atstore.listing.detail` listings; `game` when the row is (or is linked to) a
      * `games.atmosphere.define` record. Game-only rows use the define record as `at_uri`.
      */
@@ -323,6 +343,13 @@ export const storeListings = pgTable(
     gameDefineAtUriIdx: uniqueIndex("store_listings_game_define_at_uri_idx").on(
       table.gameDefineAtUri,
     ),
+    priorAtUrisIdx: index("store_listings_prior_at_uris_idx").using(
+      "gin",
+      table.priorAtUris,
+    ),
+    transferOfferedToDidIdx: index(
+      "store_listings_transfer_offered_to_did_idx",
+    ).on(table.transferOfferedToDid),
     gameDefinePriorAtUrisIdx: index(
       "store_listings_game_define_prior_at_uris_idx",
     ).using("gin", table.gameDefinePriorAtUris),

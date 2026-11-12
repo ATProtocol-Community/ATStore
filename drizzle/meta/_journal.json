@@ -309,6 +309,13 @@
       "when": 1779500000000,
       "tag": "0044_store_listing_games",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1779600000000,
+      "tag": "0045_store_listing_transfers",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,13 @@
 import type { ProductListingFormSubmitValues } from "#/components/product-listing-form";
 
 import * as stylex from "@stylexjs/stylex";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import { ProductListingForm } from "#/components/product-listing-form";
 import { FormFooter } from "#/components/shelf/forms/FormFooter";
 import { useState } from "react";
@@ -69,6 +74,10 @@ const styles = stylex.create({
   strong: {
     fontWeight: fontWeight.semibold,
   },
+  inlineLink: {
+    textDecoration: "underline",
+    color: "inherit",
+  },
   // wrap-reverse: when the buttons stack on narrow phones, the primary
   // action ends up on top.
   actions: {
@@ -111,6 +120,28 @@ function CreateProductListingPage() {
   const [isSubmittedDialogOpen, setIsSubmittedDialogOpen] = useState(false);
   const [hasAcknowledgedOwnership, setHasAcknowledgedOwnership] =
     useState(false);
+  const { data: session } = useQuery(user.getSessionQueryOptions);
+  const { data: userProfile } = useQuery({
+    ...user.getUserProfileQueryOptions,
+    enabled: session?.user != null,
+  });
+  const signedInHandle =
+    userProfile?.blueskyHandle?.replace(/^@+/, "").trim() || null;
+  const signedInActor = signedInHandle
+    ? `@${signedInHandle}`
+    : (session?.user?.did ?? "this account");
+
+  const switchAccountMutation = useMutation({
+    mutationFn: async () => {
+      await user.signOut();
+      queryClient.setQueryData(user.getSessionQueryOptions.queryKey, null);
+      await queryClient.resetQueries();
+      await navigate({
+        to: "/login",
+        search: { redirect: "/products/create" },
+      });
+    },
+  });
 
   const publishMutation = useMutation({
     mutationFn: async (values: ProductListingFormSubmitValues) => {
@@ -195,16 +226,35 @@ function CreateProductListingPage() {
             else&rsquo;s behalf. Ask the product&rsquo;s owner to submit it
             themselves.
           </p>
-          <p {...stylex.props(styles.paragraph)}>
-            To make this easier, create the listing while signed in as the
-            product&rsquo;s own account. If the product is
-            &ldquo;ATStore&rdquo;, sign in as{" "}
-            <b {...stylex.props(styles.strong)}>@atstore.fyi</b>.
-          </p>
         </div>
+        <Alert
+          variant="info"
+          title={`You're signed in as ${signedInActor}`}
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              isPending={switchAccountMutation.isPending}
+              onPress={() => switchAccountMutation.mutate()}
+            >
+              Switch account
+            </Button>
+          }
+        >
+          The listing is published from this account, and it owns the listing
+          from then on. If your product has its own Bluesky account (for
+          at-store that&rsquo;s{" "}
+          <b {...stylex.props(styles.strong)}>@atstore.fyi</b>), switch to it
+          before you continue.
+        </Alert>
         <blockquote {...stylex.props(styles.quote)}>
           If your product is already listed, you can claim it with the
-          &ldquo;Claim&rdquo; button on its listing page.
+          &ldquo;Claim&rdquo; button on its listing page. Already submitted it
+          from the wrong account? Use &ldquo;Transfer ownership&rdquo; on{" "}
+          <Link to="/products/manage" {...stylex.props(styles.inlineLink)}>
+            your listings
+          </Link>
+          .
         </blockquote>
         <FormFooter>
           <div {...stylex.props(styles.actions)}>
@@ -242,6 +292,7 @@ function CreateProductListingPage() {
         description="Submit a new listing to the at-store directory. We'll review it and add it to the directory if it's a good fit!"
         footerNote="We'll review it before it appears in the directory."
         submitLabel="Publish"
+        productHandleHelp={`Leave it blank to use ${signedInActor}, the account you're signed in as.`}
         isSubmitting={publishMutation.isPending}
         initialValues={{
           name: "",
