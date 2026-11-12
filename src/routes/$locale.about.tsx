@@ -145,7 +145,7 @@ const styles = stylex.create({
       default: "repeat(2, minmax(0, 1fr))",
       [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
     },
-    borderTopColor: uiColor.text2,
+    borderTopColor: uiColor.border2,
     borderTopStyle: "solid",
     borderTopWidth: 1,
     marginBottom: 0,

@@ -214,7 +214,7 @@ const styles = stylex.create({
     fontWeight: fontWeight.semibold,
     textAlign: "left",
     whiteSpace: "nowrap",
-    borderBottomColor: uiColor.text2,
+    borderBottomColor: uiColor.border2,
     borderBottomStyle: "solid",
     borderBottomWidth: 1,
     paddingLeft: 0,

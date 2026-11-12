@@ -94,7 +94,7 @@ const styles = stylex.create({
     rowGap: 12,
     borderTopColor: {
       default: uiColor.border1,
-      ":first-child": uiColor.text2,
+      ":first-child": uiColor.border2,
     },
     borderTopStyle: "solid",
     borderTopWidth: 1,

@@ -291,7 +291,7 @@ const styles = stylex.create({
   // *between* cells show, whatever the column count.
   ecoStrip: {
     overflow: "hidden",
-    borderTopColor: uiColor.text2,
+    borderTopColor: uiColor.border2,
     borderTopStyle: "solid",
     borderTopWidth: 1,
   },
