@@ -1,5 +1,7 @@
 import type { AnyRouter } from "@tanstack/react-router";
 
+import { prefersReducedMotion } from "./motion";
+
 type ViewTransitionOptions = Extract<
   NonNullable<AnyRouter["options"]["defaultViewTransition"]>,
   object
@@ -13,6 +15,9 @@ type ViewTransitionOptions = Extract<
  * hero settle into place where they are (see styles.css) rather than flying
  * in from the card that was clicked. Search-param-only changes (filters,
  * sort, typing in search) don't transition, so results stay instant.
+ *
+ * With reduced motion on, no view transition is started at all: navigation
+ * swaps the page instantly, exactly as it would without the API.
  */
 
 /** Names for the listing page's icon and hero (one of each per page). */
@@ -23,7 +28,7 @@ const LISTING_PATH = /^\/products\/[^/]+\/?$/;
 
 export const viewTransitionOptions: ViewTransitionOptions = {
   types: ({ pathChanged, toLocation }) => {
-    if (!pathChanged) return false;
+    if (!pathChanged || prefersReducedMotion()) return false;
     return LISTING_PATH.test(toLocation.pathname) ? ["to-listing"] : ["page"];
   },
 };

@@ -130,9 +130,28 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* The router doesn't start view transitions under reduced motion
+     (src/lib/view-transitions.ts); this covers any started elsewhere. */
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+
+  /*
+   * Site-wide safety net: hover lifts, chevron nudges, dialog zooms, drawer
+   * slides, popover scales, loading shimmers and smooth scrolling all become
+   * instant. Durations are 1ms rather than 0 so code waiting for
+   * animationend/transitionend (e.g. react-aria exit animations) still runs.
+   */
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0s !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0s !important;
+    transition-duration: 1ms !important;
   }
 }

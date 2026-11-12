@@ -33,6 +33,7 @@ import { fontFamily } from "../design-system/theme/typography.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
+import { scrollBehavior } from "../lib/motion";
 import { buildListingReviewOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 import { Route as ProductReviewsRoute } from "./_header-layout.products.$productId.reviews";
 
@@ -241,7 +242,7 @@ function ProductReviewsListPage() {
       requestAnimationFrame(() => {
         document
           .querySelector(`#listing-review-reply-${replySearchId}`)
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          ?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
       });
       return;
     }
@@ -251,7 +252,7 @@ function ProductReviewsListPage() {
     }
 
     const el = document.querySelector(`#listing-review-${reviewSearchId}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
   }, [reviewSearchId, replySearchId]);
 
   if (!listing) {
