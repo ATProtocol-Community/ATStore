@@ -22,11 +22,14 @@ import { Flex } from "../flex";
 import { IconButton } from "../icon-button";
 import { Description, FieldErrorMessage, Label } from "../label";
 import { SuffixIcon } from "../suffix-icon";
+import { radius } from "../theme/radius.stylex";
 import { horizontalSpace } from "../theme/semantic-spacing.stylex";
 import { useInputStyles } from "../theme/useInputStyles";
 
 const styles = stylex.create({
+  // Shelf: search fields are pills.
   wrapper: {
+    borderRadius: radius.full,
     position: "relative",
   },
   clearButton: {

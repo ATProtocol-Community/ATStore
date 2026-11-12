@@ -36,11 +36,10 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["xxs"],
     paddingTop: verticalSpace["xxs"],
 
-    cornerShape: "squircle",
     gap: gap["md"],
     alignItems: "center",
     backgroundColor: uiColor.component1,
-    boxShadow: "inset 0 0 8px 0 rgba(0, 0, 0, 0.1)",
+    boxShadow: "none",
     boxSizing: "border-box",
     display: "flex",
     height: {
@@ -50,10 +49,10 @@ const styles = stylex.create({
     },
   },
   small: {
-    borderRadius: radius.md,
+    borderRadius: radius.full,
   },
   large: {
-    borderRadius: radius.md,
+    borderRadius: radius.full,
   },
   /* eslint-disable @stylexjs/sort-keys -- toggle item layout order */
   item: {
@@ -62,7 +61,6 @@ const styles = stylex.create({
     textBoxTrim: "trim-both",
     borderWidth: 0,
 
-    cornerShape: "squircle",
     gap: gap["xs"],
     alignItems: "center",
     backgroundColor: "transparent",
@@ -95,11 +93,10 @@ const styles = stylex.create({
   },
   /* eslint-enable @stylexjs/sort-keys */
   selectionIndicator: {
-    borderRadius: radius.md,
+    borderRadius: radius.full,
 
-    cornerShape: "squircle",
-    backgroundColor: uiColor.bgSubtle,
-    boxShadow: shadow.sm,
+    backgroundColor: uiColor.bg,
+    boxShadow: `${shadow.xs}, 0 0 0 1px ${uiColor.border1}`,
     position: "absolute",
     transitionDuration: animationDuration.slow,
     transitionProperty: {

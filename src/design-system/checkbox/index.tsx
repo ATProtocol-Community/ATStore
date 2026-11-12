@@ -45,7 +45,6 @@ const styles = stylex.create({
     borderRadius: radius.sm,
     borderWidth: 2,
 
-    cornerShape: "squircle",
     height: sizeSpace["md"],
     width: sizeSpace["md"],
   },

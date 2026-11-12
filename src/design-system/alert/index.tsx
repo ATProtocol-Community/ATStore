@@ -43,7 +43,6 @@ const styles = stylex.create({
     borderRadius: radius.lg,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     gap: gap["lg"],
     gridTemplateAreas: {
       default: "'icon content'",

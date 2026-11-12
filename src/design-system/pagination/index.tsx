@@ -142,7 +142,7 @@ export function Pagination({
               {visiblePages.map((visiblePage) => (
                 <li key={visiblePage} {...stylex.props(styles.listItem)}>
                   <Button
-                    variant={page === visiblePage ? "outline" : "tertiary"}
+                    variant={page === visiblePage ? "primary" : "tertiary"}
                     aria-current={page === visiblePage ? "page" : undefined}
                     size={size}
                     onClick={() => setPage(visiblePage)}

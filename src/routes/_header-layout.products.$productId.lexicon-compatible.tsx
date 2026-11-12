@@ -3,28 +3,20 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   Link as RouterLink,
   createFileRoute,
-  createLink,
   notFound,
   redirect,
   useRouter,
 } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
 
-import { AppCard } from "../components/AppCard";
-import { AppTagHero } from "../components/AppTagHero";
-import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
-import { Badge } from "../design-system/badge";
-import { Flex } from "../design-system/flex";
-import { Link } from "../design-system/link";
-import { Page } from "../design-system/page";
-import { Select, SelectItem } from "../design-system/select";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
+import { ListingCard } from "../components/shelf/ListingCard";
+import { BackLink, PageHero } from "../components/shelf/Section";
 import {
-  gap,
-  size,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body } from "../design-system/typography";
+  SegmentedControl,
+  SegmentedControlItem,
+} from "../design-system/segmented-control";
+import { animationDuration } from "../design-system/theme/animations.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   getDirectoryListingSlug,
@@ -42,76 +34,73 @@ const LEXICON_COMPATIBLE_PAGE_CAP = 250;
 const sortOptions = [
   { id: "popular", label: "Popular" },
   { id: "newest", label: "Newest" },
-  { id: "alphabetical", label: "Alphabetical" },
+  { id: "alphabetical", label: "A–Z" },
 ] as const;
 
-const LinkLink = createLink(Link);
-
 const styles = stylex.create({
-  pageContent: {
-    gap: {
-      default: gap["6xl"],
-      [breakpoints.xl]: gap["7xl"],
-    },
-  },
   page: {
-    paddingBottom: verticalSpace["10xl"],
-    paddingTop: verticalSpace["6xl"],
+    paddingBottom: { default: 56, [breakpoints.md]: 88 },
   },
-  navLinks: {
-    flexWrap: "wrap",
-  },
-  sortSelect: {
-    flexGrow: {
-      default: 1,
-      [breakpoints.sm]: 0,
-    },
-    minWidth: "12rem",
-  },
-  emptyState: {
-    gap: gap["lg"],
-    maxWidth: "40rem",
-  },
-  lexiconBadgeGrow: {
-    alignItems: "center",
-    height: "auto",
-    minHeight: size.lg,
-    paddingBottom: verticalSpace.xs,
-    paddingTop: verticalSpace.xs,
-  },
-  badgeRow: {
-    gap: gap.md,
-    alignItems: "center",
+  keyRow: {
+    columnGap: 8,
     display: "flex",
     flexWrap: "wrap",
-    rowGap: gap.md,
+    rowGap: 8,
   },
-  badgeLink: {
+  keyPill: {
+    borderColor: {
+      default: uiColor.border1,
+      ":hover": uiColor.border2,
+    },
+    borderRadius: 999,
+    borderStyle: "solid",
+    borderWidth: 1,
+    paddingInline: 12,
     textDecoration: "none",
-    color: "inherit",
-    display: "block",
+    alignItems: "center",
+    backgroundColor: uiColor.bg,
+    color: uiColor.text2,
+    columnGap: 8,
+    display: "inline-flex",
+    fontSize: 13,
+    outlineColor: uiColor.text2,
+    outlineOffset: 2,
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineWidth: 2,
+    transitionDuration: animationDuration.default,
+    transitionProperty: "border-color",
+    height: 32,
     maxWidth: "100%",
   },
-  badgeInner: {
-    gap: gap.sm,
-    alignItems: "center",
-    display: "flex",
-    maxWidth: {
-      default: "24rem",
-      [breakpoints.sm]: "36rem",
-    },
+  keyLabel: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
     minWidth: 0,
   },
-  badgeLabel: {
-    display: "block",
-    flexShrink: 1,
-    whiteSpace: "normal",
-    wordBreak: "break-word",
-    minWidth: 0,
-  },
-  badgeCount: {
-    flexShrink: 0,
+  keyCount: {
+    color: uiColor.text1,
     fontVariantNumeric: "tabular-nums",
+  },
+  cards: {
+    gap: { default: 12, [breakpoints.md]: 16 },
+    display: "grid",
+    gridTemplateColumns: {
+      default: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
+    },
+    marginTop: 32,
+  },
+  empty: {
+    borderColor: uiColor.border2,
+    borderRadius: 20,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    paddingBlock: 56,
+    paddingInline: 24,
+    color: uiColor.text1,
+    textAlign: "center",
+    marginTop: 32,
   },
 });
 
@@ -209,95 +198,79 @@ function LexiconCompatibleAppsPage() {
   }
 
   return (
-    <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" style={styles.pageContent}>
-        <Flex direction="column" gap="4xl">
-          <Flex gap="xl" style={styles.navLinks}>
-            <LinkLink
-              to="/products/$productId"
-              params={{ productId: productSlug }}
-            >
-              <ChevronLeft />
-              {listingName}
-            </LinkLink>
-          </Flex>
+    <div {...stylex.props(styles.page)}>
+      <PageHero
+        back={
+          <BackLink
+            to="/products/$productId"
+            params={{ productId: productSlug }}
+          >
+            Back to {listingName}
+          </BackLink>
+        }
+        eyebrow="Shared data"
+        title={`Apps compatible with ${listingName}`}
+        description="These apps use the same data, so what you make in one shows up in the others."
+        aside={
+          <SegmentedControl
+            aria-label="Sort lexicon-compatible apps"
+            size="md"
+            selectedKeys={[search.sort]}
+            onSelectionChange={(keys) => {
+              const [sortKey] = keys;
+              if (
+                sortKey !== "popular" &&
+                sortKey !== "newest" &&
+                sortKey !== "alphabetical"
+              ) {
+                return;
+              }
 
-          <AppTagHero
-            eyebrow="Shared data"
-            title={`Apps compatible with ${listingName}`}
-            description={
-              <Flex direction="column" gap="2xl">
-                <Body variant="secondary">
-                  These apps use the same data sources and permissions, so they
-                  can interoperate with each other.
-                </Body>
-                {data.matchLexiconEntries.length > 0 ? (
-                  <Flex style={styles.badgeRow}>
-                    {data.matchLexiconEntries.map(({ key, otherAppCount }) => (
-                      <LexiconMatchBadge
-                        key={key}
-                        lexiconKey={key}
-                        otherAppCount={otherAppCount}
-                      />
-                    ))}
-                  </Flex>
-                ) : null}
-              </Flex>
-            }
-            action={
-              <Select
-                aria-label="Sort lexicon-compatible apps"
-                items={sortOptions}
-                placeholder="Sort apps"
-                size="lg"
-                style={styles.sortSelect}
-                value={search.sort}
-                variant="secondary"
-                onChange={(sortKey) => {
-                  if (
-                    sortKey !== "popular" &&
-                    sortKey !== "newest" &&
-                    sortKey !== "alphabetical"
-                  ) {
-                    return;
-                  }
+              void router.navigate({
+                to: "/products/$productId/lexicon-compatible",
+                params: { productId: productSlug },
+                search: { sort: sortKey },
+              });
+            }}
+          >
+            {sortOptions.map((option) => (
+              <SegmentedControlItem key={option.id} id={option.id}>
+                {option.label}
+              </SegmentedControlItem>
+            ))}
+          </SegmentedControl>
+        }
+      />
 
-                  void router.navigate({
-                    to: "/products/$productId/lexicon-compatible",
-                    params: { productId: productSlug },
-                    search: { sort: sortKey },
-                  });
-                }}
-              >
-                {(item) => <SelectItem>{item.label}</SelectItem>}
-              </Select>
-            }
-          />
-        </Flex>
+      {data.matchLexiconEntries.length > 0 ? (
+        <div {...stylex.props(styles.keyRow)}>
+          {data.matchLexiconEntries.map(({ key, otherAppCount }) => (
+            <LexiconMatchPill
+              key={key}
+              lexiconKey={key}
+              otherAppCount={otherAppCount}
+            />
+          ))}
+        </div>
+      ) : null}
 
-        {data.listings.length > 0 ? (
-          <FeaturedListingGrid
-            items={data.listings}
-            getKey={(listing) => listing.id}
-            canFeature={(listing) => Boolean(listing.heroImageUrl)}
-            renderItem={(listing, { featured }) => (
-              <AppCard listing={listing} size={featured ? "large" : "small"} />
-            )}
-          />
-        ) : (
-          <Flex direction="column" style={styles.emptyState}>
-            <Body variant="secondary">
-              No other verified apps overlap these lexicon identifiers yet, or
-              probes are still incomplete.
-            </Body>
-          </Flex>
-        )}
-      </Flex>
-    </Page.Root>
+      {data.listings.length > 0 ? (
+        <div {...stylex.props(styles.cards)}>
+          {data.listings.map((listing) => (
+            <ListingCard key={listing.id} listing={listing} />
+          ))}
+        </div>
+      ) : (
+        <p {...stylex.props(styles.empty)}>
+          No other verified apps overlap these lexicon identifiers yet, or
+          probes are still incomplete.
+        </p>
+      )}
+    </div>
   );
 }
 
-function LexiconMatchBadge({
+function LexiconMatchPill({
   lexiconKey,
   otherAppCount,
 }: {
@@ -315,14 +288,10 @@ function LexiconMatchBadge({
       search={{ key: lexiconKey, sort: "popular" }}
       title={title}
       aria-label={title}
-      {...stylex.props(styles.badgeLink)}
+      {...stylex.props(styles.keyPill)}
     >
-      <Badge size="sm" variant="default" style={styles.lexiconBadgeGrow}>
-        <span {...stylex.props(styles.badgeInner)}>
-          <span {...stylex.props(styles.badgeLabel)}>{headline}</span>
-          <span {...stylex.props(styles.badgeCount)}>{otherAppCount}</span>
-        </span>
-      </Badge>
+      <span {...stylex.props(styles.keyLabel)}>{headline}</span>
+      <span {...stylex.props(styles.keyCount)}>{otherAppCount}</span>
     </RouterLink>
   );
 }

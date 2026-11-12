@@ -1,69 +1,32 @@
-import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
-  createLink,
   notFound,
   redirect,
   useRouter,
 } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
+import { SearchX } from "lucide-react";
 
-import { AppCard } from "../components/AppCard";
-import { AppTagHero } from "../components/AppTagHero";
-import { FeaturedListingGrid } from "../components/FeaturedListingGrid";
-import { Flex } from "../design-system/flex";
-import { Link } from "../design-system/link";
-import { Page } from "../design-system/page";
-import { Select, SelectItem } from "../design-system/select";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
-  gap,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body } from "../design-system/typography";
+  formatDataTypeEyebrow,
+  getDataKeyNsid,
+} from "../components/shelf/discovery/data-hub";
+import { DataTypeHeader } from "../components/shelf/discovery/DataTypeHeader";
+import { ListingCardGrid } from "../components/shelf/discovery/ListingCardGrid";
+import {
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateImage,
+  EmptyStateTitle,
+} from "../design-system/empty-state";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   formatOAuthLexiconKeyClusterStyleHeadline,
+  formatOAuthLexiconKeyHeadline,
   oauthLexiconKeyKindLabel,
   parseOAuthLexiconKey,
 } from "../lib/oauth-scope-lexicon-keys";
 import { buildRouteOgMeta } from "../lib/og-meta";
-
-const sortOptions = [
-  { id: "popular", label: "Popular" },
-  { id: "newest", label: "Newest" },
-  { id: "alphabetical", label: "Alphabetical" },
-] as const;
-
-const LinkLink = createLink(Link);
-
-const styles = stylex.create({
-  pageContent: {
-    gap: {
-      default: gap["6xl"],
-      [breakpoints.xl]: gap["7xl"],
-    },
-  },
-  page: {
-    paddingBottom: verticalSpace["10xl"],
-    paddingTop: verticalSpace["6xl"],
-  },
-  navLinks: {
-    flexWrap: "wrap",
-  },
-  sortSelect: {
-    flexGrow: {
-      default: 1,
-      [breakpoints.sm]: 0,
-    },
-    minWidth: "12rem",
-  },
-  emptyState: {
-    gap: gap["lg"],
-    maxWidth: "40rem",
-  },
-});
 
 export const Route = createFileRoute("/_header-layout/apps/lexicon")({
   validateSearch: (
@@ -145,72 +108,52 @@ function AppsLexiconPage() {
   const heroDescription =
     lexiconRecordDescription != null && lexiconRecordDescription.trim() !== ""
       ? lexiconRecordDescription.trim()
-      : `These verified apps include ${headline} in their published OAuth scope vocabulary, so they may interoperate with the same AT Protocol permissions layer.`;
+      : parsed?.kind === "repo"
+        ? `${data.count === 1 ? "1 app reads or writes" : `${String(data.count)} apps read or write`} ${headline} records, so data you create in one of them is available to the others.`
+        : `These verified apps include ${headline} in their published OAuth scope vocabulary, so they may interoperate with the same AT Protocol permissions layer.`;
 
   return (
-    <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" style={styles.pageContent}>
-        <Flex direction="column" gap="4xl">
-          <Flex gap="xl" style={styles.navLinks}>
-            <LinkLink to="/apps/lexicons">
-              <ChevronLeft />
-              All lexicon collections
-            </LinkLink>
-          </Flex>
+    <>
+      <DataTypeHeader
+        eyebrow={formatDataTypeEyebrow(kindLabel, [key])}
+        title={
+          parsed?.kind === "repo"
+            ? formatOAuthLexiconKeyHeadline(key)
+            : headline
+        }
+        description={heroDescription}
+        sort={search.sort}
+        sortLabel="Sort apps in lexicon collection"
+        onSortChange={(sortKey) => {
+          void router.navigate({
+            to: "/apps/lexicon",
+            search: { key, sort: sortKey },
+          });
+        }}
+        keys={[
+          {
+            key,
+            nsid: getDataKeyNsid(key),
+            name: headline,
+            linked: false,
+          },
+        ]}
+      />
 
-          <AppTagHero
-            eyebrow={kindLabel}
-            title={headline}
-            description={heroDescription}
-            action={
-              <Select
-                aria-label="Sort apps in lexicon collection"
-                items={sortOptions}
-                placeholder="Sort apps"
-                size="lg"
-                style={styles.sortSelect}
-                value={search.sort}
-                variant="secondary"
-                onChange={(sortKey) => {
-                  if (
-                    sortKey !== "popular" &&
-                    sortKey !== "newest" &&
-                    sortKey !== "alphabetical"
-                  ) {
-                    return;
-                  }
-
-                  void router.navigate({
-                    to: "/apps/lexicon",
-                    search: { key, sort: sortKey },
-                  });
-                }}
-              >
-                {(item) => <SelectItem>{item.label}</SelectItem>}
-              </Select>
-            }
-          />
-        </Flex>
-
-        {data.listings.length > 0 ? (
-          <FeaturedListingGrid
-            items={data.listings}
-            getKey={(listing) => `${key}-${listing.id}`}
-            canFeature={(listing) => Boolean(listing.heroImageUrl)}
-            renderItem={(listing, { featured }) => (
-              <AppCard listing={listing} size={featured ? "large" : "small"} />
-            )}
-          />
-        ) : (
-          <Flex direction="column" style={styles.emptyState}>
-            <Body variant="secondary">
-              No verified app listings reference this lexicon key yet. Lexicon
-              keys are populated from storefront OAuth probes — try again after
-              the next sync, or pick another collection from the hub.
-            </Body>
-          </Flex>
-        )}
-      </Flex>
-    </Page.Root>
+      {data.listings.length > 0 ? (
+        <ListingCardGrid listings={data.listings} />
+      ) : (
+        <EmptyState size="lg">
+          <EmptyStateImage>
+            <SearchX size={48} strokeWidth={1.75} />
+          </EmptyStateImage>
+          <EmptyStateTitle>No apps use this data yet</EmptyStateTitle>
+          <EmptyStateDescription>
+            None of the listed apps read or write this kind of data right now.
+            Check back later, or browse other shared data types.
+          </EmptyStateDescription>
+        </EmptyState>
+      )}
+    </>
   );
 }

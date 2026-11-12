@@ -1,9 +1,9 @@
 {
   "siteHeader": {
     "searchListingsLabel": "Search listings",
-    "searchPlaceholder": "Search apps…",
+    "searchPlaceholder": "Search apps and games",
     "nav": {
-      "browse": "Browse",
+      "browse": "Apps",
       "tags": "Tags",
       "games": "Games",
       "sharedData": "Shared data"

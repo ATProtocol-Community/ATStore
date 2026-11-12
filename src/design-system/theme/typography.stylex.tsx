@@ -4,10 +4,14 @@ import { breakpoints } from "./media-queries.stylex";
 import { verticalSpace } from "./semantic-spacing.stylex";
 
 export const fontFamily = stylex.defineVars({
-  title: "'Inter', sans-serif",
-  sans: "'Inter', sans-serif",
+  // Shelf type: Bricolage Grotesque headlines, Mona Sans text, Geist Mono for
+  // handles, NSIDs and code. Self-hosted in /public/fonts (SIL OFL), with
+  // system fallbacks while they load.
+  title:
+    '"Bricolage Grotesque", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif',
+  sans: '"Mona Sans", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif',
   serif: "Georgia, serif",
-  mono: "Monaco, monospace",
+  mono: '"Geist Mono", ui-monospace, "SF Mono", Menlo, Monaco, monospace',
 });
 
 export const fontWeight = stylex.defineVars({
@@ -50,8 +54,11 @@ export const lineHeight = stylex.defineVars({
 });
 
 export const tracking = stylex.defineVars({
-  tighter: "-0.05em",
-  tight: "-0.025em",
+  /** Display headlines (Shelf). */
+  display: "-0.025em",
+  snug: "-0.017em",
+  tighter: "-0.028em",
+  tight: "-0.014em",
   normal: "0em",
   wide: "0.025em",
   wider: "0.05em",
@@ -72,8 +79,8 @@ export const typeramp = stylex.create({
     marginBottom: 0,
     marginLeft: 0,
 
-    fontWeight: fontWeight["extrabold"],
-    letterSpacing: tracking["tight"],
+    fontWeight: fontWeight["bold"],
+    letterSpacing: tracking["display"],
     lineHeight: lineHeight.sm,
     scrollMarginBlockStart: verticalSpace["12xl"],
     marginRight: 0,
@@ -92,11 +99,10 @@ export const typeramp = stylex.create({
     marginBottom: 0,
     marginLeft: 0,
 
-    fontWeight: fontWeight.semibold,
-    letterSpacing: tracking["tight"],
+    fontWeight: fontWeight["bold"],
+    letterSpacing: tracking["display"],
     lineHeight: lineHeight.sm,
     scrollMarginBlockStart: verticalSpace["12xl"],
-    borderBottomWidth: 1,
     marginRight: 0,
     marginTop: 0,
   },
@@ -110,8 +116,8 @@ export const typeramp = stylex.create({
     marginBottom: 0,
     marginLeft: 0,
 
-    fontWeight: fontWeight["semibold"],
-    letterSpacing: tracking["tight"],
+    fontWeight: fontWeight["bold"],
+    letterSpacing: tracking["snug"],
     lineHeight: lineHeight.sm,
     scrollMarginBlockStart: verticalSpace["12xl"],
     marginRight: 0,

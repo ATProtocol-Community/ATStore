@@ -1,16 +1,17 @@
+import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { BlueskyMentionCard } from "../components/BlueskyMentionCard";
-import { Flex } from "../design-system/flex";
-import { Body } from "../design-system/typography";
+import { BackLink, PageHero } from "../components/shelf/Section";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import {
   getDirectoryListingSlug,
   getLegacyDirectoryListingId,
 } from "../lib/directory-listing-slugs";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { ProductReviewsPageChrome } from "../lib/product-reviews-route";
 
 const LISTING_MENTIONS_FULL_PAGE_LIMIT = 50;
 
@@ -53,6 +54,7 @@ export const Route = createFileRoute(
     return {
       productId: listing.id,
       productSlug,
+      listingName: listing.name,
       ogTitle: `${listing.name} — Bluesky mentions | at-store`,
       ogDescription:
         listing.tagline ||
@@ -71,8 +73,24 @@ export const Route = createFileRoute(
   component: ListingMentionsPage,
 });
 
+const styles = stylex.create({
+  page: {
+    marginInline: "auto",
+    maxWidth: 820,
+    paddingBottom: { default: 56, [breakpoints.md]: 88 },
+  },
+  list: {
+    borderBottomColor: uiColor.border1,
+    borderBottomStyle: "solid",
+    borderBottomWidth: 1,
+  },
+  empty: {
+    color: uiColor.text1,
+  },
+});
+
 function ListingMentionsPage() {
-  const { productId, productSlug } = Route.useLoaderData();
+  const { productId, productSlug, listingName } = Route.useLoaderData();
   const { data } = useSuspenseQuery(
     directoryListingApi.getDirectoryListingMentionsQueryOptions(
       productId,
@@ -81,18 +99,31 @@ function ListingMentionsPage() {
   );
 
   return (
-    <ProductReviewsPageChrome productId={productId} productSlug={productSlug}>
-      <Flex direction="column" gap="4xl">
-        <Body variant="secondary">
-          Posts that mention this listing (matched by product handle, link, or
-          name). Showing up to {LISTING_MENTIONS_FULL_PAGE_LIMIT} most recent.
-        </Body>
-        <Flex direction="column">
+    <div {...stylex.props(styles.page)}>
+      <PageHero
+        back={
+          <BackLink
+            to="/products/$productId"
+            params={{ productId: productSlug }}
+          >
+            Back to {listingName}
+          </BackLink>
+        }
+        eyebrow="Mentions"
+        title={`${listingName} on Bluesky`}
+        description={`Posts that mention this listing (matched by product handle, link, or name). Showing up to ${String(LISTING_MENTIONS_FULL_PAGE_LIMIT)} most recent.`}
+      />
+      {data.mentions.length > 0 ? (
+        <div {...stylex.props(styles.list)}>
           {data.mentions.map((mention) => (
             <BlueskyMentionCard key={mention.id} mention={mention} />
           ))}
-        </Flex>
-      </Flex>
-    </ProductReviewsPageChrome>
+        </div>
+      ) : (
+        <p {...stylex.props(styles.empty)}>
+          No one has mentioned {listingName} on Bluesky yet.
+        </p>
+      )}
+    </div>
   );
 }

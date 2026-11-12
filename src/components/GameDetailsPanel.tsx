@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
+
 import * as stylex from "@stylexjs/stylex";
-import { ExternalLink } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 import type {
   GameDetails,
@@ -7,32 +9,28 @@ import type {
   GameTrailer,
 } from "../lib/atproto/game-define-record";
 
-import { AspectRatio } from "../design-system/aspect-ratio";
-import { Badge } from "../design-system/badge";
-import { Flex } from "../design-system/flex";
-import { Link } from "../design-system/link";
 import { uiColor } from "../design-system/theme/color.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
 import {
-  gap,
-  horizontalSpace,
-  size,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body, SmallBody } from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
 import {
   ATMOSPHERE_GAMES_URL,
   GAME_STATUS_LABELS,
   getGameCategoryLabel,
   getGameStatus,
-  getGameStatusBadgeVariant,
 } from "../lib/game-listing";
+import {
+  BlockHeading,
+  DetailExternalLink,
+  DetailRow,
+} from "./shelf/listing/ListingParts";
 
 /**
- * atmosphere.games data on a game's product page: status, developer and release facts,
- * trailers, and the AT Protocol records the game reads or requires.
+ * atmosphere.games data on a game's product page. `GameFactRows` adds status, developer and
+ * release facts to the sidebar list; `GameDetailsPanel` shows trailers and the AT Protocol
+ * records the game reads or requires in the main column.
  *
  * Everything here comes from the developer's `games.atmosphere.define` record, so every URL is
  * checked before it becomes a link or an embed.
@@ -40,86 +38,133 @@ import {
 
 const styles = stylex.create({
   section: {
-    paddingTop: verticalSpace["5xl"],
+    marginTop: { default: 44, [breakpoints.md]: 56 },
   },
-  header: {
+  statusDot: {
+    borderRadius: "50%",
+    display: "inline-block",
+    height: 7,
+    marginRight: 2,
+    width: 7,
+  },
+  statusLive: { backgroundColor: "light-dark(#2f9e62, #4cc384)" },
+  statusBeta: { backgroundColor: "light-dark(#2f6fe0, #7b9bff)" },
+  statusComing: { backgroundColor: "light-dark(#d08a12, #f0b44a)" },
+  statusArchived: { backgroundColor: uiColor.solid1 },
+  tag: {
+    borderColor: uiColor.border1,
+    borderRadius: 999,
+    borderStyle: "solid",
+    borderWidth: 1,
+    paddingInline: 10,
     alignItems: "center",
-    display: "flex",
-    height: size["3xl"],
-  },
-  facts: {
-    margin: 0,
-    columnGap: gap["4xl"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "minmax(0, 1fr)",
-      [breakpoints.sm]: "max-content minmax(0, 1fr)",
-    },
-    rowGap: {
-      default: gap.md,
-      [breakpoints.sm]: gap["2xl"],
-    },
-  },
-  factTerm: {
+    backgroundColor: uiColor.bg,
     color: uiColor.text1,
-    paddingTop: {
-      default: verticalSpace.md,
-      [breakpoints.sm]: 0,
-    },
-  },
-  factValue: {
-    margin: 0,
-    alignItems: "center",
-    columnGap: gap.md,
-    display: "flex",
-    flexWrap: "wrap",
-    rowGap: gap.md,
-    minWidth: 0,
+    display: "inline-flex",
+    fontSize: 13,
+    height: 26,
   },
   trailerGrid: {
-    gap: gap["2xl"],
+    columnGap: 16,
     display: "grid",
     gridTemplateColumns: {
       default: "minmax(0, 1fr)",
       [breakpoints.md]: "repeat(2, minmax(0, 1fr))",
     },
+    rowGap: 16,
+  },
+  trailer: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 8,
   },
   trailerFrame: {
+    borderRadius: 14,
     borderWidth: 0,
+    aspectRatio: "16 / 9",
     backgroundColor: uiColor.component1,
     display: "block",
-    height: "100%",
     width: "100%",
+  },
+  caption: {
+    color: uiColor.text1,
+    fontSize: 13,
+  },
+  lede: {
+    color: uiColor.text1,
+    fontSize: 15,
+    lineHeight: 1.5,
+    marginBottom: 18,
+    marginTop: -6,
+  },
+  groupTitle: {
+    color: uiColor.text2,
+    fontSize: 14,
+    fontWeight: fontWeight.semibold,
+    marginBottom: 4,
+    marginTop: 18,
   },
   recordList: {
     margin: 0,
     padding: 0,
-    gap: gap.xl,
     listStyle: "none",
-    display: "flex",
-    flexDirection: "column",
   },
-  recordItem: {
-    borderColor: uiColor.border1,
-    borderRadius: radius.lg,
-    borderStyle: "solid",
-    borderWidth: 1,
-    cornerShape: "squircle",
-    gap: gap.md,
+  record: {
+    paddingBlock: 14,
     display: "flex",
     flexDirection: "column",
+    rowGap: 4,
+    borderTopColor: uiColor.border1,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
     minWidth: 0,
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["2xl"],
   },
-  recordHeader: {
+  recordHead: {
+    alignItems: "baseline",
+    columnGap: 8,
+    display: "flex",
     flexWrap: "wrap",
-    rowGap: gap.sm,
+    rowGap: 4,
   },
   nsid: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.mono,
+    fontSize: 13,
     overflowWrap: "anywhere",
+  },
+  kind: {
+    color: uiColor.text1,
+    fontSize: 12,
+  },
+  recordLabel: {
+    color: uiColor.text2,
+    fontSize: 15,
+  },
+  recordPurpose: {
+    color: uiColor.text1,
+    fontSize: 14,
+    lineHeight: 1.5,
+  },
+  link: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    color: uiColor.text2,
+    columnGap: 2,
+    display: "inline-flex",
+    fontSize: 14,
+    textDecorationColor: {
+      default: uiColor.border2,
+      ":hover": uiColor.text2,
+    },
+    textDecorationLine: "underline",
+    textUnderlineOffset: 3,
+  },
+  note: {
+    color: uiColor.text1,
+    fontSize: 13,
+    lineHeight: 1.5,
+    marginBottom: 0,
+    marginTop: { default: 32, [breakpoints.md]: 40 },
   },
 });
 
@@ -167,133 +212,6 @@ function formatReleasedAt(releasedAt: string): string {
       });
 }
 
-export function GameDetailsPanel({
-  game,
-  gameName,
-  isGameOnly,
-}: {
-  game: GameDetails;
-  gameName: string;
-  /** Game-only listings are managed on atmosphere.games, not here. */
-  isGameOnly: boolean;
-}) {
-  return (
-    <Flex direction="column" gap="4xl">
-      <GameFactsSection game={game} />
-      <GameTrailersSection trailers={game.trailers} gameName={gameName} />
-      <GameRecordsSection requires={game.requires} uses={game.uses} />
-      <SmallBody variant="secondary">
-        Listed from{" "}
-        <Link
-          href={ATMOSPHERE_GAMES_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          atmosphere.games
-        </Link>
-        {isGameOnly
-          ? ". The developer manages this listing there."
-          : ", alongside this app's AT Store listing."}
-      </SmallBody>
-    </Flex>
-  );
-}
-
-function GameFactsSection({ game }: { game: GameDetails }) {
-  const status = getGameStatus(game.status);
-  const developerHref = getDeveloperHref(game.developer);
-
-  return (
-    <Flex direction="column" gap="3xl" style={styles.section}>
-      <Text size="2xl" weight="semibold" style={styles.header}>
-        Game
-      </Text>
-      <dl {...stylex.props(styles.facts)}>
-        <Fact term="Status">
-          <Badge size="sm" variant={getGameStatusBadgeVariant(status)}>
-            {GAME_STATUS_LABELS[status]}
-          </Badge>
-        </Fact>
-        {game.category ? (
-          <Fact term="Category">
-            <Body>{getGameCategoryLabel(game.category)}</Body>
-          </Fact>
-        ) : null}
-        {game.developer ? (
-          <Fact term="Developer">
-            {developerHref ? (
-              <Link
-                href={developerHref}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {game.developer.name}
-              </Link>
-            ) : (
-              <Body>{game.developer.name}</Body>
-            )}
-          </Fact>
-        ) : null}
-        {game.releasedAt ? (
-          <Fact term="Released">
-            <Body>{formatReleasedAt(game.releasedAt)}</Body>
-          </Fact>
-        ) : null}
-        {game.tags.length > 0 ? (
-          <Fact term="Tags">
-            {game.tags.map((tag) => (
-              <Badge key={tag} size="sm">
-                {tag}
-              </Badge>
-            ))}
-          </Fact>
-        ) : null}
-      </dl>
-    </Flex>
-  );
-}
-
-function Fact({ term, children }: { term: string; children: React.ReactNode }) {
-  return (
-    <>
-      <dt {...stylex.props(styles.factTerm)}>
-        <Body variant="secondary">{term}</Body>
-      </dt>
-      <dd {...stylex.props(styles.factValue)}>{children}</dd>
-    </>
-  );
-}
-
-function GameTrailersSection({
-  trailers,
-  gameName,
-}: {
-  trailers: Array<GameTrailer>;
-  gameName: string;
-}) {
-  const playable = trailers.filter(
-    (trailer) => getTrailerEmbedSrc(trailer) || getTrailerLink(trailer),
-  );
-  if (playable.length === 0) return null;
-
-  return (
-    <Flex direction="column" gap="3xl" style={styles.section}>
-      <Text size="2xl" weight="semibold" style={styles.header}>
-        {playable.length === 1 ? "Trailer" : "Trailers"}
-      </Text>
-      <div {...stylex.props(styles.trailerGrid)}>
-        {playable.map((trailer, index) => (
-          <TrailerPlayer
-            key={`${trailer.platform ?? "video"}-${trailer.videoId ?? trailer.url ?? ""}-${String(index)}`}
-            trailer={trailer}
-            gameName={gameName}
-          />
-        ))}
-      </div>
-    </Flex>
-  );
-}
-
 /** Privacy-friendly embed URL for YouTube / Vimeo trailers; null for anything else. */
 function getTrailerEmbedSrc(trailer: GameTrailer): string | null {
   const id = trailer.videoId?.trim();
@@ -332,6 +250,128 @@ function getTrailerLink(trailer: GameTrailer): string | null {
   }
 }
 
+const STATUS_DOT_STYLES = {
+  live: styles.statusLive,
+  beta: styles.statusBeta,
+  coming: styles.statusComing,
+  archived: styles.statusArchived,
+} as const;
+
+/** Game facts as sidebar definition-list rows. */
+export function GameFactRows({ game }: { game: GameDetails }) {
+  const status = getGameStatus(game.status);
+  const developerHref = getDeveloperHref(game.developer);
+
+  return (
+    <>
+      <DetailRow term="Status">
+        <span
+          aria-hidden
+          {...stylex.props(styles.statusDot, STATUS_DOT_STYLES[status])}
+        />
+        {GAME_STATUS_LABELS[status]}
+      </DetailRow>
+      {game.category ? (
+        <DetailRow term="Platform">
+          {getGameCategoryLabel(game.category)}
+        </DetailRow>
+      ) : null}
+      {game.developer ? (
+        <DetailRow term="Developer">
+          {developerHref ? (
+            <DetailExternalLink href={developerHref}>
+              {game.developer.name}
+            </DetailExternalLink>
+          ) : (
+            game.developer.name
+          )}
+        </DetailRow>
+      ) : null}
+      {game.releasedAt ? (
+        <DetailRow term="Released">
+          {formatReleasedAt(game.releasedAt)}
+        </DetailRow>
+      ) : null}
+      {game.tags.length > 0 ? (
+        <DetailRow term="Genre">
+          {game.tags.map((tag) => (
+            <span key={tag} {...stylex.props(styles.tag)}>
+              {tag}
+            </span>
+          ))}
+        </DetailRow>
+      ) : null}
+    </>
+  );
+}
+
+/** Trailers, AT Protocol records and provenance note for the main column. */
+export function GameDetailsPanel({
+  game,
+  gameName,
+  isGameOnly,
+}: {
+  game: GameDetails;
+  gameName: string;
+  /** Game-only listings are managed on atmosphere.games, not here. */
+  isGameOnly: boolean;
+}) {
+  return (
+    <>
+      <GameTrailersSection trailers={game.trailers} gameName={gameName} />
+      <GameRecordsSection requires={game.requires} uses={game.uses} />
+      <p {...stylex.props(styles.note)}>
+        Listed from{" "}
+        <a
+          href={ATMOSPHERE_GAMES_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          {...stylex.props(styles.link)}
+        >
+          atmosphere.games
+        </a>
+        {isGameOnly
+          ? ". The developer manages this listing there."
+          : ", alongside this app's AT Store listing."}
+      </p>
+    </>
+  );
+}
+
+function Section({ children }: { children: ReactNode }) {
+  return <section {...stylex.props(styles.section)}>{children}</section>;
+}
+
+function GameTrailersSection({
+  trailers,
+  gameName,
+}: {
+  trailers: Array<GameTrailer>;
+  gameName: string;
+}) {
+  const playable = trailers.filter(
+    (trailer) => getTrailerEmbedSrc(trailer) || getTrailerLink(trailer),
+  );
+  if (playable.length === 0) return null;
+
+  return (
+    <Section>
+      <BlockHeading>
+        {playable.length === 1 ? "Trailer" : "Trailers"}
+      </BlockHeading>
+      <div {...stylex.props(styles.trailerGrid)}>
+        {playable.map((trailer, index) => (
+          <TrailerPlayer
+            key={`${trailer.platform ?? "video"}-${trailer.videoId ?? trailer.url ?? ""}-${String(index)}`}
+            trailer={trailer}
+            gameName={gameName}
+          />
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 function TrailerPlayer({
   trailer,
   gameName,
@@ -345,49 +385,50 @@ function TrailerPlayer({
 
   if (embedSrc) {
     return (
-      <Flex direction="column" gap="lg">
-        <AspectRatio aspectRatio={16 / 9}>
-          <iframe
-            src={embedSrc}
-            title={title}
-            loading="lazy"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            {...stylex.props(styles.trailerFrame)}
-          />
-        </AspectRatio>
-        <SmallBody variant="secondary">{trailer.title}</SmallBody>
-      </Flex>
+      <div {...stylex.props(styles.trailer)}>
+        <iframe
+          src={embedSrc}
+          title={title}
+          loading="lazy"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          {...stylex.props(styles.trailerFrame)}
+        />
+        <span {...stylex.props(styles.caption)}>{trailer.title}</span>
+      </div>
     );
   }
 
   if (trailer.platform === "direct" && link) {
     return (
-      <Flex direction="column" gap="lg">
-        <AspectRatio aspectRatio={16 / 9}>
-          {/* Trailer records carry no caption tracks to attach. */}
-          {/* oxlint-disable-next-line jsx-a11y/media-has-caption */}
-          <video
-            controls
-            preload="none"
-            src={link}
-            poster={safeHttpUrl(trailer.thumbnailUrl) ?? undefined}
-            title={title}
-            {...stylex.props(styles.trailerFrame)}
-          />
-        </AspectRatio>
-        <SmallBody variant="secondary">{trailer.title}</SmallBody>
-      </Flex>
+      <div {...stylex.props(styles.trailer)}>
+        {/* Trailer records carry no caption tracks to attach. */}
+        {/* oxlint-disable-next-line jsx-a11y/media-has-caption */}
+        <video
+          controls
+          preload="none"
+          src={link}
+          poster={safeHttpUrl(trailer.thumbnailUrl) ?? undefined}
+          title={title}
+          {...stylex.props(styles.trailerFrame)}
+        />
+        <span {...stylex.props(styles.caption)}>{trailer.title}</span>
+      </div>
     );
   }
 
   // Twitch (needs the embedding host's domain) and unknown platforms open in a new tab.
   return link ? (
-    <Link href={link} target="_blank" rel="noopener noreferrer">
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+      {...stylex.props(styles.link)}
+    >
       {trailer.title}
-      <ExternalLink />
-    </Link>
+      <ArrowUpRight size={14} aria-hidden />
+    </a>
   ) : null;
 }
 
@@ -401,20 +442,16 @@ function GameRecordsSection({
   if (requires.length === 0 && uses.length === 0) return null;
 
   return (
-    <Flex direction="column" gap="3xl" style={styles.section}>
-      <Flex direction="column" gap="lg">
-        <Text size="2xl" weight="semibold" style={styles.header}>
-          AT Protocol records
-        </Text>
-        <Body variant="secondary">
-          Data this game reads from or writes to your account.
-        </Body>
-      </Flex>
+    <Section>
+      <BlockHeading>AT Protocol records</BlockHeading>
+      <p {...stylex.props(styles.lede)}>
+        Data this game reads from or writes to your account.
+      </p>
       {requires.length > 0 ? (
         <GameRecordList title="Required to play" records={requires} />
       ) : null}
       {uses.length > 0 ? <GameRecordList title="Uses" records={uses} /> : null}
-    </Flex>
+    </Section>
   );
 }
 
@@ -426,46 +463,51 @@ function GameRecordList({
   records: Array<GameRecordRef>;
 }) {
   return (
-    <Flex direction="column" gap="xl">
-      <Text size="lg" weight="semibold">
-        {title}
-      </Text>
+    <div>
+      <h3 {...stylex.props(styles.groupTitle)}>{title}</h3>
       <ul role="list" {...stylex.props(styles.recordList)}>
         {records.map((record, index) => {
           const acquireHref = safeHttpUrl(record.acquire);
           return (
             <li
               key={`${record.nsid ?? record.kind}-${String(index)}`}
-              {...stylex.props(styles.recordItem)}
+              {...stylex.props(styles.record)}
             >
-              <Flex align="center" gap="md" style={styles.recordHeader}>
+              <div {...stylex.props(styles.recordHead)}>
                 {record.nsid ? (
-                  <Text font="mono" size="sm" style={styles.nsid}>
-                    {record.nsid}
-                  </Text>
+                  <span {...stylex.props(styles.nsid)}>{record.nsid}</span>
                 ) : null}
-                <Badge size="sm">{record.kind}</Badge>
-              </Flex>
-              {record.label ? <Body>{record.label}</Body> : null}
+                <span {...stylex.props(styles.kind)}>{record.kind}</span>
+              </div>
+              {record.label ? (
+                <span {...stylex.props(styles.recordLabel)}>
+                  {record.label}
+                </span>
+              ) : null}
               {record.purpose ? (
-                <Body variant="secondary">{record.purpose}</Body>
+                <span {...stylex.props(styles.recordPurpose)}>
+                  {record.purpose}
+                </span>
               ) : null}
               {acquireHref ? (
-                <Link
+                <a
                   href={acquireHref}
                   target="_blank"
                   rel="noopener noreferrer"
+                  {...stylex.props(styles.link)}
                 >
                   How to get this
-                  <ExternalLink />
-                </Link>
+                  <ArrowUpRight size={14} aria-hidden />
+                </a>
               ) : record.acquire ? (
-                <SmallBody variant="secondary">{record.acquire}</SmallBody>
+                <span {...stylex.props(styles.recordPurpose)}>
+                  {record.acquire}
+                </span>
               ) : null}
             </li>
           );
         })}
       </ul>
-    </Flex>
+    </div>
   );
 }

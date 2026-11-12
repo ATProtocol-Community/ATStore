@@ -52,12 +52,11 @@ const styles = stylex.create({
       ":is([data-size=sm] *)": sizeSpace["sm"],
     },
 
-    cornerShape: "squircle",
     gap: gap["md"],
     alignItems: "center",
     backgroundColor: {
       default: "transparent",
-      ":is([data-hovered=true])": uiColor.component2,
+      ":is([data-hovered=true])": uiColor.component1,
       ":is([data-pressed=true])": uiColor.component3,
     },
     color: uiColor.text1,

@@ -85,7 +85,6 @@ const styles = stylex.create({
     borderRadius: radius.lg,
     borderWidth: 0,
 
-    cornerShape: "squircle",
     textDecoration: "none",
     alignItems: "center",
     backgroundColor: {

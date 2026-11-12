@@ -57,7 +57,6 @@ const styles = stylex.create({
   },
   rectangle: {
     borderRadius: radius.xl,
-    cornerShape: "squircle",
   },
   sizeSm: {
     height: sizeSpace["3xl"],

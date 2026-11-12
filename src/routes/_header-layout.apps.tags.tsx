@@ -1,24 +1,12 @@
 import * as stylex from "@stylexjs/stylex";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, createLink } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { AppTagCard } from "../components/AppTagCard";
-import { AppTagHero } from "../components/AppTagHero";
-import { Flex } from "../design-system/flex";
-import { Grid } from "../design-system/grid";
-import { Link } from "../design-system/link";
-import { Page } from "../design-system/page";
-import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import {
-  gap,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { Body } from "../design-system/typography";
+import { TagIndex } from "../components/shelf/discovery/TagIndex";
+import { MoreLink, PageHero } from "../components/shelf/Section";
+import { uiColor } from "../design-system/theme/color.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { buildRouteOgMeta } from "../lib/og-meta";
-
-const LinkLink = createLink(Link);
 
 export const Route = createFileRoute("/_header-layout/apps/tags")({
   loader: ({ context }) =>
@@ -35,30 +23,13 @@ export const Route = createFileRoute("/_header-layout/apps/tags")({
 });
 
 const styles = stylex.create({
-  page: {
-    paddingBottom: verticalSpace["10xl"],
-    paddingTop: verticalSpace["6xl"],
-  },
-  navLinks: {
-    flexWrap: "wrap",
-  },
-  categoriesGrid: {
-    gap: gap["2xl"],
-    display: "grid",
-    gridTemplateColumns: {
-      default: "repeat(2, minmax(0, 1fr))",
-      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
-    },
-  },
-  emptyState: {
-    gap: gap["lg"],
-    maxWidth: "40rem",
-  },
-  gap: {
-    gap: {
-      default: 40,
-      [breakpoints.sm]: 64,
-    },
+  empty: {
+    margin: 0,
+    color: uiColor.text1,
+    borderTopColor: uiColor.text2,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    paddingTop: 24,
   },
 });
 
@@ -68,39 +39,21 @@ function AppsAllPage() {
   );
 
   return (
-    <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" style={styles.gap}>
-        <Flex direction="column" gap="4xl">
-          <Flex gap="xl" justify="between" style={styles.navLinks}>
-            <LinkLink to="/home">
-              <ChevronLeft />
-              Home
-            </LinkLink>
+    <>
+      <PageHero
+        eyebrow="Collections"
+        title="Find your new favorite app"
+        description="Explore cross-cutting app tags like analytics, moderation, and automation. Listings can appear in more than one group when they fit multiple workflows."
+        aside={<MoreLink to="/apps">All apps</MoreLink>}
+      />
 
-            <LinkLink to="/apps">All apps</LinkLink>
-          </Flex>
-
-          <AppTagHero
-            eyebrow="Collections"
-            title="Find your new favorite app"
-            description="Explore cross-cutting app tags like analytics, moderation, and automation. Listings can appear in more than one group when they fit multiple workflows."
-          />
-        </Flex>
-
-        {groups.length > 0 ? (
-          <Grid style={styles.categoriesGrid}>
-            {groups.map((group) => (
-              <AppTagCard key={group.tag} tag={group} />
-            ))}
-          </Grid>
-        ) : (
-          <Flex direction="column" style={styles.emptyState}>
-            <Body variant="secondary">
-              No tagged app listings are available yet.
-            </Body>
-          </Flex>
-        )}
-      </Flex>
-    </Page.Root>
+      {groups.length > 0 ? (
+        <TagIndex groups={groups} />
+      ) : (
+        <p {...stylex.props(styles.empty)}>
+          No tagged app listings are available yet.
+        </p>
+      )}
+    </>
   );
 }

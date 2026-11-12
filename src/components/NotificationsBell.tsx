@@ -5,8 +5,7 @@ import { user } from "#/integrations/tanstack-query/api-user.functions.ts";
 import { Bell } from "lucide-react";
 
 import { IconButton } from "../design-system/icon-button";
-import { criticalColor } from "../design-system/theme/color.stylex";
-import { size } from "../design-system/theme/semantic-spacing.stylex";
+import { criticalColor, uiColor } from "../design-system/theme/color.stylex";
 
 const IconButtonLink = createLink(IconButton);
 
@@ -14,18 +13,18 @@ const styles = stylex.create({
   unreadDotWrapper: {
     position: "relative",
   },
+  // Shelf: a small dot tucked into the bell's top-right, ringed in the
+  // header surface so it reads as a cut-out rather than a sticker.
   unreadDot: {
-    borderColor: "white",
     borderRadius: "999px",
-    borderStyle: "solid",
-    borderWidth: 2,
     backgroundColor: criticalColor.solid1,
+    boxShadow: `0 0 0 2px ${uiColor.bg}`,
     pointerEvents: "none",
     position: "absolute",
-    height: size.xs,
-    right: "-2px",
-    top: "-2px",
-    width: size.xs,
+    height: 8,
+    right: 9,
+    top: 9,
+    width: 8,
   },
 });
 
@@ -44,13 +43,15 @@ export function NotificationsBell({ unreadCount }: NotificationsBellProps) {
     <div {...stylex.props(styles.unreadDotWrapper)}>
       <IconButtonLink
         to="/notifications"
-        size="lg"
+        size="md"
         label="Notifications"
-        variant="tertiary"
+        variant="secondary"
       >
         <Bell />
       </IconButtonLink>
-      {unreadCount > 0 && <span {...stylex.props(styles.unreadDot)} />}
+      {unreadCount > 0 && (
+        <span aria-hidden {...stylex.props(styles.unreadDot)} />
+      )}
     </div>
   );
 }

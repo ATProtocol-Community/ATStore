@@ -4,16 +4,33 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import {
+  Link as RouterLink,
+  createFileRoute,
+  createLink,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
+import {
+  BadgeCheck,
   ExternalLink,
-  MoreVertical,
+  MoreHorizontal,
   PencilLine,
   Plus,
   Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link as AriaLink } from "react-aria-components";
 
+import { StatusPill } from "../components/shelf/account/StatusPill";
+import { formatTimeAgo } from "../components/shelf/format";
+import { ListingIcon } from "../components/shelf/ListingIcon";
+import { ListingRating } from "../components/shelf/ListingRating";
+import {
+  PageHero,
+  SectionHeader,
+  ShelfSection,
+} from "../components/shelf/Section";
 import {
   AlertDialog,
   AlertDialogActionButton,
@@ -22,74 +39,228 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
 } from "../design-system/alert-dialog";
-import { Badge } from "../design-system/badge";
 import { Button } from "../design-system/button";
-import { Card, CardBody } from "../design-system/card";
-import { Flex } from "../design-system/flex";
 import { IconButton } from "../design-system/icon-button";
-import { Menu, MenuItem } from "../design-system/menu";
-import { Page } from "../design-system/page";
+import { Menu, MenuItem, MenuSeparator } from "../design-system/menu";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
-  gap,
-  horizontalSpace,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import {
-  Body,
-  Heading1,
-  ListItem,
-  UnorderedList,
-} from "../design-system/typography";
-import { Text } from "../design-system/typography/text";
+  fontFamily,
+  fontWeight,
+} from "../design-system/theme/typography.stylex";
+import { useButtonStyles } from "../design-system/theme/useButtonStyles";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
 import { user } from "../integrations/tanstack-query/api-user.functions";
 import { buildRouteOgMeta } from "../lib/og-meta";
 
+const ButtonLink = createLink(Button);
+const AriaRouterLink = createLink(AriaLink);
+
 const styles = stylex.create({
-  header: {
-    paddingBottom: verticalSpace["lg"],
+  page: {
+    fontFamily: fontFamily.sans,
+    paddingBottom: { default: 56, [breakpoints.md]: 88 },
   },
-  grow: {
+  sectionCount: {
+    color: uiColor.text1,
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: fontWeight.medium,
+    marginLeft: 8,
+  },
+  table: {
+    borderTopColor: uiColor.text2,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+  },
+  row: {
+    paddingBlock: 16,
+    alignItems: "center",
+    columnGap: { default: 14, [breakpoints.md]: 20 },
+    display: "grid",
+    gridTemplateColumns: {
+      default: "auto minmax(0, 1fr) auto",
+      [breakpoints.md]: "auto minmax(0, 1fr) 120px auto",
+      [breakpoints.lg]: "auto minmax(0, 1fr) 140px 110px 80px auto",
+    },
+    rowGap: 12,
+    borderBottomColor: uiColor.border1,
+    borderBottomStyle: "solid",
+    borderBottomWidth: 1,
+  },
+  pendingRow: {
+    gridTemplateColumns: {
+      default: "auto minmax(0, 1fr) auto",
+      [breakpoints.md]: "auto minmax(0, 1fr) 110px 150px auto",
+    },
+  },
+  nameCell: {
+    minWidth: 0,
+  },
+  name: {
+    overflow: "hidden",
+    textDecoration: {
+      default: "none",
+      ":hover": "underline",
+    },
+    color: uiColor.text2,
+    display: "block",
+    fontSize: 16,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: "-0.006em",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  nameText: {
+    overflow: "hidden",
+    color: uiColor.text2,
+    fontSize: 16,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: "-0.006em",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  tagline: {
+    overflow: "hidden",
+    color: uiColor.text1,
+    fontSize: 14,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    marginTop: 2,
+  },
+  stat: {
+    columnGap: 2,
+    display: "flex",
+    flexDirection: "column",
+    fontSize: 14,
+    rowGap: 2,
+    minWidth: 0,
+  },
+  statReviews: {
+    display: { default: "none", [breakpoints.md]: "flex" },
+  },
+  statUpdated: {
+    display: { default: "none", [breakpoints.lg]: "flex" },
+  },
+  statUpdatedPending: {
+    display: { default: "none", [breakpoints.md]: "flex" },
+  },
+  statLabel: {
+    color: uiColor.text1,
+    fontSize: 11,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+  },
+  statValue: {
+    color: uiColor.text2,
+    whiteSpace: "nowrap",
+  },
+  muted: {
+    color: uiColor.text1,
+  },
+  statusCell: {
+    display: { default: "none", [breakpoints.lg]: "block" },
+  },
+  pendingStatusCell: {
+    display: { default: "none", [breakpoints.md]: "block" },
+  },
+  actions: {
+    alignItems: "center",
+    columnGap: 6,
+    display: "flex",
+    justifyContent: "flex-end",
+    rowGap: 6,
+  },
+  wideOnly: {
+    display: { default: "none", [breakpoints.sm]: "inline-flex" },
+  },
+  history: {
+    borderRadius: 14,
+    paddingBlock: 12,
+    paddingInline: 16,
+    backgroundColor: uiColor.component1,
+    fontSize: 14,
+    gridColumnEnd: "-1",
+    gridColumnStart: "1",
+  },
+  historyTitle: {
+    color: uiColor.text2,
+    fontWeight: fontWeight.semibold,
+    marginBottom: 6,
+  },
+  historyList: {
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+    columnGap: 4,
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 4,
+  },
+  historyItem: {
+    color: uiColor.text1,
+    lineHeight: 1.5,
+    overflowWrap: "anywhere",
+  },
+  historyDate: {
+    color: uiColor.text2,
+    fontVariantNumeric: "tabular-nums",
+    marginRight: 8,
+  },
+  mobileStatus: {
+    display: { default: "block", [breakpoints.md]: "none" },
+    marginTop: 6,
+  },
+  mobileStatusLive: {
+    display: { default: "block", [breakpoints.lg]: "none" },
+    marginTop: 6,
+  },
+  empty: {
+    padding: 28,
+    borderColor: uiColor.border2,
+    borderRadius: 18,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    alignItems: { default: "flex-start", [breakpoints.sm]: "center" },
+    color: uiColor.text1,
+    columnGap: 16,
+    display: "flex",
+    flexDirection: { default: "column", [breakpoints.sm]: "row" },
+    justifyContent: "space-between",
+    rowGap: 16,
+  },
+  callout: {
+    borderColor: uiColor.border1,
+    borderRadius: 20,
+    borderStyle: "solid",
+    borderWidth: 1,
+    paddingBlock: 20,
+    paddingInline: { default: 20, [breakpoints.md]: 24 },
+    alignItems: { default: "flex-start", [breakpoints.sm]: "center" },
+    backgroundColor: uiColor.bg,
+    columnGap: 16,
+    display: "flex",
+    flexDirection: { default: "column", [breakpoints.sm]: "row" },
+    rowGap: 16,
+  },
+  calloutIcon: {
+    color: uiColor.text2,
+    flexShrink: 0,
+  },
+  calloutBody: {
     flexGrow: 1,
     minWidth: 0,
   },
-  page: {
-    boxSizing: "border-box",
-    marginLeft: "auto",
-    marginRight: "auto",
-    paddingBottom: verticalSpace["8xl"],
-    paddingTop: verticalSpace["4xl"],
-    width: "100%",
+  calloutTitle: {
+    color: uiColor.text2,
+    fontWeight: fontWeight.semibold,
   },
-  section: {
-    boxSizing: "border-box",
-    maxWidth: "48rem",
-    paddingBottom: verticalSpace["5xl"],
-    paddingLeft: horizontalSpace.xl,
-    paddingRight: horizontalSpace.xl,
-    paddingTop: verticalSpace["5xl"],
-    width: "100%",
-  },
-  listStack: {
-    gap: gap.xl,
-  },
-  rowTop: {
-    gap: gap.xl,
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  historyList: {
-    gap: gap.sm,
-    listStyleType: "disc",
-    paddingLeft: horizontalSpace["2xl"],
-  },
-  icon: {
-    borderRadius: "10px",
-    flexShrink: 0,
-    objectFit: "cover",
-    height: "48px",
-    width: "48px",
+  calloutText: {
+    color: uiColor.text1,
+    fontSize: 14,
+    lineHeight: 1.5,
+    marginBottom: 0,
+    marginTop: 2,
   },
   /** Inert trigger so `AlertDialog` can be opened only via `isOpen` (e.g. from the menu). */
   dialogTriggerPlaceholder: {
@@ -105,27 +276,10 @@ const styles = stylex.create({
   },
 });
 
-function statusBadgeVariant(status: string): "warning" | "critical" {
-  if (status === "rejected") return "critical";
-  return "warning";
-}
-
-function verificationLabel(status: string) {
-  switch (status) {
-    case "verified": {
-      return "Live";
-    }
-    case "unverified": {
-      return "Pending review";
-    }
-    case "rejected": {
-      return "Rejected";
-    }
-    default: {
-      return status;
-    }
-  }
-}
+const historyDateFormat = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
 
 function splitListingsByVerification<T extends { verificationStatus: string }>(
   rows: Array<T>,
@@ -172,6 +326,7 @@ function ManageListingsPage() {
   const { data: listings } = useSuspenseQuery(
     directoryListingApi.getMyProductListingsQueryOptions(),
   );
+  const secondaryButton = useButtonStyles({ variant: "secondary", size: "sm" });
 
   const { live: liveListings, pendingOrRejected: pendingListings } = useMemo(
     () => splitListingsByVerification(listings),
@@ -206,20 +361,18 @@ function ManageListingsPage() {
 
   type MyListingRow = (typeof listings)[number];
 
-  function renderListingCard(listing: MyListingRow) {
-    const history = listing.rejectionHistory;
+  function renderActionsMenu(listing: MyListingRow) {
     const isLive = listing.verificationStatus === "verified";
-
-    const actions = (
+    return (
       <Menu
         placement="bottom end"
         trigger={
           <IconButton
             variant="secondary"
-            size="lg"
+            size="sm"
             aria-label={`Listing actions for ${listing.name}`}
           >
-            <MoreVertical size={22} aria-hidden />
+            <MoreHorizontal size={16} aria-hidden />
           </IconButton>
         }
       >
@@ -248,6 +401,7 @@ function ManageListingsPage() {
         >
           Edit
         </MenuItem>
+        <MenuSeparator />
         <MenuItem
           variant="destructive"
           prefix={<Trash2 size={16} aria-hidden />}
@@ -259,161 +413,214 @@ function ManageListingsPage() {
         </MenuItem>
       </Menu>
     );
+  }
 
-    if (isLive) {
-      return (
-        <Card key={listing.id} size="lg">
-          <CardBody>
-            <Flex direction="row" gap="xl" align="center" justify="between">
-              <Flex direction="row" gap="xl" align="center">
-                {listing.iconUrl ? (
-                  <img
-                    src={listing.iconUrl}
-                    alt=""
-                    {...stylex.props(styles.icon)}
-                  />
-                ) : null}
-                <Text size="2xl" weight="semibold">
-                  {listing.name}
-                </Text>
-              </Flex>
-              {actions}
-            </Flex>
-          </CardBody>
-        </Card>
-      );
-    }
-
+  function renderEditButton(listing: MyListingRow) {
     return (
-      <Card key={listing.id} size="lg">
-        <CardBody>
-          <Flex direction="column" gap="6xl">
-            <Flex style={styles.rowTop} gap="xl" align="start">
-              <Flex gap="xl" align="center" style={styles.grow}>
-                {listing.iconUrl ? (
-                  <img
-                    src={listing.iconUrl}
-                    alt=""
-                    {...stylex.props(styles.icon)}
-                  />
-                ) : null}
-                <Flex
-                  direction="row"
-                  gap="xl"
-                  align="center"
-                  justify="between"
-                  style={styles.grow}
-                >
-                  <Flex direction="column" gap="xl" style={styles.grow}>
-                    <Text size="2xl" weight="semibold" style={styles.grow}>
-                      {listing.name}
-                    </Text>
-                  </Flex>
-                  <Badge
-                    variant={statusBadgeVariant(listing.verificationStatus)}
-                  >
-                    {verificationLabel(listing.verificationStatus)}
-                  </Badge>
-                </Flex>
-              </Flex>
-              {actions}
-            </Flex>
+      <AriaRouterLink
+        to="/products/$productId/edit"
+        params={{ productId: listing.slug }}
+        search={{ from: "manage" }}
+        aria-label={`Edit ${listing.name}`}
+        {...stylex.props(secondaryButton, styles.wideOnly)}
+      >
+        <PencilLine size={14} aria-hidden />
+        Edit
+      </AriaRouterLink>
+    );
+  }
 
-            {history.length > 0 ? (
-              <Flex direction="column" gap="xl">
-                <Text size="sm" weight="bold">
-                  Rejection history
-                </Text>
-                <UnorderedList style={styles.historyList}>
-                  {history.map((entry, hi) => (
-                    <ListItem
-                      key={`${listing.id}-rej-${hi}-${entry.createdAt}`}
-                    >
-                      <Text size="sm" variant="secondary">
-                        {Intl.DateTimeFormat("en-US", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        }).format(new Date(entry.createdAt))}
-                        {" — "}
-                        {entry.reason}
-                      </Text>
-                    </ListItem>
-                  ))}
-                </UnorderedList>
-              </Flex>
-            ) : null}
-          </Flex>
-        </CardBody>
-      </Card>
+  function renderLiveRow(listing: MyListingRow) {
+    return (
+      <div key={listing.id} {...stylex.props(styles.row)}>
+        <ListingIcon name={listing.name} src={listing.iconUrl} size={48} />
+        <div {...stylex.props(styles.nameCell)}>
+          <RouterLink
+            to="/products/$productId"
+            params={{ productId: listing.slug }}
+            {...stylex.props(styles.name)}
+          >
+            {listing.name}
+          </RouterLink>
+          {listing.tagline ? (
+            <div {...stylex.props(styles.tagline)}>{listing.tagline}</div>
+          ) : null}
+          <div {...stylex.props(styles.mobileStatusLive)}>
+            <StatusPill status={listing.verificationStatus} />
+          </div>
+        </div>
+        <div {...stylex.props(styles.stat, styles.statReviews)}>
+          <span {...stylex.props(styles.statLabel)}>Reviews</span>
+          <span {...stylex.props(styles.statValue)}>
+            {listing.reviewCount > 0 ? (
+              <ListingRating
+                rating={listing.averageRating}
+                reviewCount={listing.reviewCount}
+                showCount
+              />
+            ) : (
+              <span {...stylex.props(styles.muted)}>None yet</span>
+            )}
+          </span>
+        </div>
+        <div {...stylex.props(styles.stat, styles.statUpdated)}>
+          <span {...stylex.props(styles.statLabel)}>Updated</span>
+          <span {...stylex.props(styles.statValue)}>
+            {formatTimeAgo(listing.updatedAt)}
+          </span>
+        </div>
+        <div {...stylex.props(styles.statusCell)}>
+          <StatusPill status={listing.verificationStatus} />
+        </div>
+        <div {...stylex.props(styles.actions)}>
+          {renderEditButton(listing)}
+          <AriaRouterLink
+            to="/products/$productId"
+            params={{ productId: listing.slug }}
+            aria-label={`View ${listing.name}`}
+            {...stylex.props(secondaryButton, styles.wideOnly)}
+          >
+            View
+          </AriaRouterLink>
+          {renderActionsMenu(listing)}
+        </div>
+      </div>
+    );
+  }
+
+  function renderPendingRow(listing: MyListingRow) {
+    const history = listing.rejectionHistory;
+    return (
+      <div key={listing.id} {...stylex.props(styles.row, styles.pendingRow)}>
+        <ListingIcon name={listing.name} src={listing.iconUrl} size={48} />
+        <div {...stylex.props(styles.nameCell)}>
+          <div {...stylex.props(styles.nameText)}>{listing.name}</div>
+          <div {...stylex.props(styles.mobileStatus)}>
+            <StatusPill status={listing.verificationStatus} />
+          </div>
+        </div>
+        <div {...stylex.props(styles.stat, styles.statUpdatedPending)}>
+          <span {...stylex.props(styles.statLabel)}>Updated</span>
+          <span {...stylex.props(styles.statValue)}>
+            {formatTimeAgo(listing.updatedAt)}
+          </span>
+        </div>
+        <div {...stylex.props(styles.pendingStatusCell)}>
+          <StatusPill status={listing.verificationStatus} />
+        </div>
+        <div {...stylex.props(styles.actions)}>
+          {renderEditButton(listing)}
+          {renderActionsMenu(listing)}
+        </div>
+        {history.length > 0 ? (
+          <div {...stylex.props(styles.history)}>
+            <div {...stylex.props(styles.historyTitle)}>Rejection history</div>
+            <ul {...stylex.props(styles.historyList)}>
+              {history.map((entry, hi) => (
+                <li
+                  key={`${listing.id}-rej-${hi}-${entry.createdAt}`}
+                  {...stylex.props(styles.historyItem)}
+                >
+                  <span {...stylex.props(styles.historyDate)}>
+                    {historyDateFormat.format(new Date(entry.createdAt))}
+                  </span>
+                  {entry.reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
     );
   }
 
   return (
     <>
-      <Page.Root variant="small" style={styles.page}>
-        <Flex direction="column" gap="7xl" style={styles.section}>
-          <Flex direction="column" gap="6xl" style={styles.header}>
-            <Flex direction="row" gap="2xl" align="center" justify="between">
-              <Heading1>Your listings</Heading1>
-              <Button
-                variant="primary"
-                size="lg"
-                onPress={() => {
-                  void navigate({ to: "/products/create" });
-                }}
-              >
-                <Flex align="center" gap="sm">
-                  <Plus size={18} aria-hidden />
-                  Create
-                </Flex>
-              </Button>
-            </Flex>
-            <Text size="lg" variant="secondary" leading="base">
-              Create listings, track review status, and see feedback from
-              moderation.
-            </Text>
-          </Flex>
+      <div {...stylex.props(styles.page)}>
+        <PageHero
+          title="Your listings"
+          description="Create listings, track review status, and see feedback from moderation."
+          aside={
+            <ButtonLink to="/products/create" variant="primary" size="lg">
+              <Plus size={16} aria-hidden />
+              Submit an app
+            </ButtonLink>
+          }
+        />
 
-          {listings.length === 0 ? (
-            <Body variant="secondary">
-              Nothing is published from your repository yet. Create a listing to
-              get started.
-            </Body>
-          ) : (
-            <Flex direction="column" gap="6xl">
+        {listings.length === 0 ? (
+          <ShelfSection flush>
+            <div {...stylex.props(styles.empty)}>
+              <span>
+                Nothing is published from your repository yet. Create a listing
+                to get started.
+              </span>
+              <ButtonLink to="/products/create" variant="secondary" size="md">
+                <Plus size={15} aria-hidden />
+                Submit an app
+              </ButtonLink>
+            </div>
+          </ShelfSection>
+        ) : (
+          <>
+            <ShelfSection flush>
+              <SectionHeader
+                title="Pending review"
+                description="Not shown in the public directory until approved. Rejection notes are kept so you can revise and resubmit."
+              />
               {pendingListings.length > 0 ? (
-                <Flex direction="column" gap="4xl">
-                  <Flex direction="column" gap="4xl">
-                    <Text size="xl" weight="semibold">
-                      Pending
-                    </Text>
-                    <Text variant="secondary" leading="sm">
-                      Not shown in the public directory until approved.
-                      Rejection notes are kept so you can revise and resubmit.
-                    </Text>
-                  </Flex>
-                  <Flex direction="column" style={styles.listStack}>
-                    {pendingListings.map((listing) =>
-                      renderListingCard(listing),
-                    )}
-                  </Flex>
-                </Flex>
-              ) : null}
+                <div {...stylex.props(styles.table)}>
+                  {pendingListings.map((listing) => renderPendingRow(listing))}
+                </div>
+              ) : (
+                <div {...stylex.props(styles.empty)}>
+                  Nothing waiting for review.
+                </div>
+              )}
+            </ShelfSection>
 
-              {liveListings.length > 0 ? (
-                <Flex direction="column" gap="4xl">
-                  <Text size="xl" weight="semibold">
-                    Approved
-                  </Text>
-                  <Flex direction="column" style={styles.listStack}>
-                    {liveListings.map((listing) => renderListingCard(listing))}
-                  </Flex>
-                </Flex>
-              ) : null}
-            </Flex>
-          )}
-        </Flex>
-      </Page.Root>
+            {liveListings.length > 0 ? (
+              <ShelfSection>
+                <SectionHeader
+                  title={
+                    <>
+                      Live
+                      <span {...stylex.props(styles.sectionCount)}>
+                        {liveListings.length}
+                      </span>
+                    </>
+                  }
+                />
+                <div {...stylex.props(styles.table)}>
+                  {liveListings.map((listing) => renderLiveRow(listing))}
+                </div>
+              </ShelfSection>
+            ) : null}
+          </>
+        )}
+
+        <ShelfSection>
+          <div {...stylex.props(styles.callout)}>
+            <BadgeCheck
+              size={22}
+              aria-hidden
+              {...stylex.props(styles.calloutIcon)}
+            />
+            <div {...stylex.props(styles.calloutBody)}>
+              <div {...stylex.props(styles.calloutTitle)}>
+                Already listed by at-store?
+              </div>
+              <p {...stylex.props(styles.calloutText)}>
+                If we added your app before you did, claim it to move the record
+                into your own repo.
+              </p>
+            </div>
+            <ButtonLink to="/product/claim" variant="secondary" size="md">
+              Claim a listing
+            </ButtonLink>
+          </div>
+        </ShelfSection>
+      </div>
 
       <AlertDialog
         isOpen={listingPendingDelete != null}

@@ -211,7 +211,6 @@ const styles = stylex.create({
   },
   focusRing: {
     borderRadius: radius.md,
-    cornerShape: "squircle",
     outline: {
       default: "none",
       ":is([data-focus-visible] *)": `2px solid ${uiColor.solid1}`,

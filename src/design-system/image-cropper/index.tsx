@@ -18,7 +18,6 @@ const styles = stylex.create({
     borderRadius: radius.md,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     outline: {
       default: "none",
       ":focus-visible": `2px solid ${uiColor.solid1}`,

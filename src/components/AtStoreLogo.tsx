@@ -1,66 +1,51 @@
 /**
- * AT Store wordmark. © Atproto Community Collective — see README (design vs
- * Apache-licensed source code).
+ * at-store wordmark (Shelf): "at·store" in the heavy display face with an
+ * accent-blue interpunct. © Atproto Community Collective — see README
+ * (design vs Apache-licensed source code).
  */
 import * as stylex from "@stylexjs/stylex";
 
-import { blue } from "../design-system/theme/colors/blue.stylex";
+import { uiColor } from "../design-system/theme/color.stylex";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import {
   fontFamily,
-  fontSize,
   fontWeight,
 } from "../design-system/theme/typography.stylex";
 
 const styles = stylex.create({
   root: {
     alignItems: "center",
-    columnGap: "0.3em",
+    color: uiColor.text2,
     display: "inline-flex",
+    fontFamily: fontFamily.title,
+    fontWeight: fontWeight.extrabold,
+    letterSpacing: "-0.025em",
+    lineHeight: 1,
+    whiteSpace: "nowrap",
   },
-  atNavbar: {
-    color: blue.solid1,
-    fontWeight: "bold",
+  navbar: {
+    fontSize: { default: 20, [breakpoints.md]: 21 },
   },
-  atHero: {
-    color: blue.solid1,
+  footer: {
+    fontSize: 19,
   },
   hero: {
-    flexDirection: "column",
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize["6xl"],
-    fontWeight: fontWeight.black,
+    fontSize: 28,
   },
-  mark: {
-    blockSize: "1.2em",
-    flexShrink: 0,
-    inlineSize: "1.2em",
+  dot: {
+    marginInline: 1,
+    color: "light-dark(#1c4ef5, #7b97ff)",
   },
 });
 
 type AtStoreLogoProps = {
-  variant?: "navbar" | "hero";
+  variant?: "navbar" | "footer" | "hero";
 };
 
 export function AtStoreLogo({ variant = "navbar" }: AtStoreLogoProps) {
-  if (variant === "hero") {
-    return (
-      <span {...stylex.props(styles.root, styles.hero)}>
-        <img src="/logo.svg" alt="" {...stylex.props(styles.mark)} />
-        <span>
-          <span {...stylex.props(styles.atHero)}>AT</span>
-          Store
-        </span>
-      </span>
-    );
-  }
-
   return (
-    <span {...stylex.props(styles.root)}>
-      <img src="/logo.svg" alt="" {...stylex.props(styles.mark)} />
-      <span>
-        <span {...stylex.props(styles.atNavbar)}>AT</span>
-        Store
-      </span>
+    <span {...stylex.props(styles.root, styles[variant])}>
+      at<span {...stylex.props(styles.dot)}>·</span>store
     </span>
   );
 }

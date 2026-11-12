@@ -1,3 +1,157 @@
+/*
+ * Shelf fonts, self-hosted (SIL Open Font License; see public/fonts/README.md).
+ * Variable Latin subsets: one file per family covering the weights we use.
+ */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/fonts/bricolage-grotesque-500-800.woff2") format("woff2");
+  font-weight: 500 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mona Sans";
+  src: url("/fonts/mona-sans-400-700.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist-mono-400-600.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
   margin: 0;
+  /* Shelf paper; matches uiColor.bgSubtle so overscroll never flashes white. */
+  background-color: light-dark(#f6f4ef, #12110f);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: light-dark(#1c4ef5, #7b97ff);
+  color: light-dark(#fff, #12110f);
+}
+
+/* Base font for anything that doesn't set its own (matches fontFamily.sans). */
+body {
+  font-family:
+    "SF Pro Text",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Inter",
+    "Segoe UI",
+    Roboto,
+    system-ui,
+    sans-serif;
+  color: light-dark(#191816, #f2efe8);
+}
+
+/*
+ * Page transitions (View Transitions API; the router starts them, see
+ * src/lib/view-transitions.ts). Subtle on purpose: a quick fade out, a short
+ * lift-and-fade in, a fixed header, a sliding nav underline, and a listing's
+ * icon and hero that settle into place where they are (nothing travels
+ * across the page).
+ */
+[data-site-header] {
+  view-transition-name: site-header;
+}
+[data-nav-underline] {
+  view-transition-name: nav-underline;
+}
+
+::view-transition-old(root) {
+  animation: vt-fade-out 120ms ease-in both;
+}
+::view-transition-new(root) {
+  animation: vt-lift-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* The header is identical across pages; never animate it. */
+::view-transition-group(site-header),
+::view-transition-old(site-header),
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+::view-transition-group(nav-underline) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/*
+ * Listing icon and hero. Arriving on a listing they settle in place, a beat
+ * after the page; leaving, they fade with it. Between two listings (or a
+ * listing and itself) the pair just crossfades in place.
+ */
+::view-transition-new(listing-icon):only-child {
+  animation: vt-settle 380ms cubic-bezier(0.2, 0.7, 0.2, 1) 40ms both;
+}
+::view-transition-new(listing-hero):only-child {
+  animation: vt-settle-soft 420ms cubic-bezier(0.2, 0.7, 0.2, 1) 80ms both;
+}
+::view-transition-old(listing-icon):only-child,
+::view-transition-old(listing-hero):only-child {
+  animation: vt-fade-out 120ms ease-in both;
+}
+::view-transition-group(listing-icon),
+::view-transition-group(listing-hero) {
+  animation-duration: 260ms;
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-lift-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes vt-settle {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+}
+@keyframes vt-settle-soft {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The router doesn't start view transitions under reduced motion
+     (src/lib/view-transitions.ts); this covers any started elsewhere. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  /*
+   * Site-wide safety net: hover lifts, chevron nudges, dialog zooms, drawer
+   * slides, popover scales, loading shimmers and smooth scrolling all become
+   * instant. Durations are 1ms rather than 0 so code waiting for
+   * animationend/transitionend (e.g. react-aria exit animations) still runs.
+   */
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0s !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0s !important;
+    transition-duration: 1ms !important;
+  }
 }

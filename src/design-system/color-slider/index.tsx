@@ -56,7 +56,6 @@ const styles = stylex.create({
   },
   track: {
     borderRadius: radius.full,
-    cornerShape: "squircle",
     gridColumnEnd: "track",
     gridColumnStart: "track",
     gridRowEnd: "track",

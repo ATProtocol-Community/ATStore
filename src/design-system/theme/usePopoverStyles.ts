@@ -12,7 +12,6 @@ import { shadow } from "./shadow.stylex";
 const styles = stylex.create({
   popover: {
     borderRadius: radius.lg,
-    cornerShape: "squircle",
     outline: "none",
     overflow: "auto",
     boxShadow: shadow["md"],
@@ -51,7 +50,7 @@ const styles = stylex.create({
 
 export function usePopoverStyles() {
   return {
-    wrapper: [styles.popover, ui.bgSubtle, ui.text, ui.border],
+    wrapper: [styles.popover, ui.bg, ui.text, ui.border],
     animation: styles.animation,
   };
 }

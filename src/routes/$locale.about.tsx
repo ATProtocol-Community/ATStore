@@ -1,50 +1,25 @@
 import type { DirectoryListingCard } from "#/integrations/tanstack-query/api-directory-listings.functions";
+import type { ReactNode } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { createFileRoute, createLink } from "@tanstack/react-router";
+import { Link as RouterLink, createFileRoute } from "@tanstack/react-router";
 import { SiteFooter } from "#/components/SiteFooter";
 import { SiteHeader } from "#/components/SiteHeader";
-import { Flex } from "#/design-system/flex";
 import { HeaderLayout } from "#/design-system/header-layout";
-import { Link } from "#/design-system/link";
-import { Text } from "#/design-system/typography/text.tsx";
 import { directoryListingApi } from "#/integrations/tanstack-query/api-directory-listings.functions";
 import { buildRouteOgMeta } from "#/lib/og-meta";
-import {
-  Database,
-  Globe,
-  Layers3,
-  ShieldCheck,
-  Sparkles,
-  Tags,
-  TrendingUp,
-  UserCheck,
-  UserRound,
-} from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
 
-import { Page } from "../design-system/page";
+import { Eyebrow } from "../components/shelf/info/InfoBlocks";
+import { SectionHeader, ShelfSection } from "../components/shelf/Section";
+import { animationDuration } from "../design-system/theme/animations.stylex";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { blue, blueA } from "../design-system/theme/colors/blue.stylex";
 import { breakpoints } from "../design-system/theme/media-queries.stylex";
-import { radius } from "../design-system/theme/radius.stylex";
-import {
-  gap,
-  horizontalSpace,
-  size,
-  verticalSpace,
-} from "../design-system/theme/semantic-spacing.stylex";
-import { shadow } from "../design-system/theme/shadow.stylex";
 import {
   fontFamily,
-  fontSize,
   fontWeight,
-  lineHeight,
-  tracking,
 } from "../design-system/theme/typography.stylex";
 import { i18next } from "../i18n";
-
-const LinkLink = createLink(Link);
 
 const BLUESKY_ECOSYSTEM_CATEGORY_ID = "apps/bluesky";
 
@@ -84,580 +59,393 @@ export const Route = createFileRoute("/$locale/about")({
 });
 
 const INTRO_FEATURES = [
-  { id: "openNetwork", icon: Globe },
-  { id: "sharedFoundation", icon: Layers3 },
-  { id: "oneAccount", icon: UserRound },
-  { id: "alwaysYours", icon: ShieldCheck },
+  "openNetwork",
+  "sharedFoundation",
+  "oneAccount",
+  "alwaysYours",
 ] as const;
 
 const HOW_ATSTORE_WORKS = [
-  { id: "listings", icon: Database },
-  { id: "claiming", icon: UserCheck },
-  { id: "reviews", icon: TrendingUp },
-  { id: "categories", icon: Tags },
+  "listings",
+  "claiming",
+  "reviews",
+  "categories",
 ] as const;
 
+const COMMUNITY_URL = "https://discourse.atprotocol.community";
+
 const styles = stylex.create({
-  grow: {
-    flexBasis: 0,
-    flexGrow: 1,
-    flexShrink: 0,
-    minWidth: 0,
-  },
-  fit: {
-    minWidth: "fit-content",
-  },
-  shell: {
+  page: {
     fontFamily: fontFamily.sans,
   },
   hero: {
-    gap: gap["4xl"],
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    textAlign: "center",
-    marginBottom: {
-      default: verticalSpace["2xl"],
-      [breakpoints.md]: verticalSpace["4xl"],
-    },
-    marginTop: {
-      default: verticalSpace["8xl"],
-      [breakpoints.md]: verticalSpace["11xl"],
-    },
-    paddingLeft: horizontalSpace["2xl"],
-    paddingRight: horizontalSpace["2xl"],
+    paddingBottom: { default: 40, [breakpoints.md]: 72 },
+    paddingTop: { default: 48, [breakpoints.md]: 96 },
   },
-  eyebrow: {
-    borderColor: blue.border1,
-    borderRadius: radius.full,
-    borderStyle: "solid",
-    borderWidth: 1,
-    gap: gap.sm,
-    alignItems: "center",
-    backgroundColor: blue.bgSubtle,
-    color: blue.text1,
-    display: "flex",
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.medium,
-    paddingBottom: verticalSpace["2xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["2xl"],
-  },
-  h1: {
-    margin: 0,
+  heroTitle: {
     color: uiColor.text2,
     fontFamily: fontFamily.title,
-    fontSize: {
-      default: fontSize["5xl"],
-      [breakpoints.md]: fontSize["6xl"],
-      [breakpoints.lg]: fontSize["7xl"],
-    },
-    fontWeight: fontWeight.bold,
-    letterSpacing: tracking.tight,
-    lineHeight: lineHeight.sm,
+    fontSize: { default: 48, [breakpoints.md]: 72, [breakpoints.lg]: 88 },
+    fontWeight: 750,
+    letterSpacing: "-0.03em",
+    lineHeight: 0.95,
+    textWrap: "balance",
+    marginBottom: 20,
+    marginTop: 16,
+    maxWidth: "11em",
   },
   heroBody: {
     margin: 0,
     color: uiColor.text1,
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize["2xl"],
-    lineHeight: lineHeight.base,
-  },
-  sectionGray: {
-    borderRadius: radius.lg,
-    backgroundColor: uiColor.bgSubtle,
-    marginBottom: verticalSpace["6xl"],
-    paddingBottom: {
-      default: verticalSpace["2xl"],
-      [breakpoints.md]: verticalSpace["11xl"],
-    },
-    paddingLeft: {
-      default: horizontalSpace["6xl"],
-      [breakpoints.md]: horizontalSpace["10xl"],
-    },
-    paddingRight: {
-      default: horizontalSpace["6xl"],
-      [breakpoints.md]: horizontalSpace["10xl"],
-    },
-    paddingTop: {
-      default: verticalSpace["2xl"],
-      [breakpoints.md]: verticalSpace["11xl"],
-    },
-  },
-  sectionWhite: {
-    backgroundColor: uiColor.bg,
-    marginBottom: verticalSpace["6xl"],
-    paddingBottom: {
-      default: verticalSpace["8xl"],
-      [breakpoints.md]: verticalSpace["11xl"],
-    },
-    paddingLeft: {
-      default: horizontalSpace["6xl"],
-      [breakpoints.md]: horizontalSpace["10xl"],
-    },
-    paddingRight: {
-      default: horizontalSpace["6xl"],
-      [breakpoints.md]: horizontalSpace["10xl"],
-    },
-    paddingTop: {
-      default: verticalSpace["8xl"],
-      [breakpoints.md]: verticalSpace["11xl"],
-    },
-  },
-  sectionEyebrow: {
-    color: blue.text1,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    letterSpacing: tracking.widest,
-    textTransform: "uppercase",
-    marginBottom: verticalSpace.lg,
-  },
-  sectionHeading: {
-    color: uiColor.text2,
-    fontFamily: fontFamily.title,
-    fontSize: {
-      default: fontSize["4xl"],
-      [breakpoints.md]: fontSize["5xl"],
-      [breakpoints.lg]: fontSize["6xl"],
-    },
-    fontWeight: fontWeight.bold,
-    letterSpacing: tracking.tight,
-    lineHeight: lineHeight.sm,
-    marginBottom: 0,
-    marginLeft: 0,
-    marginRight: 0,
-    marginTop: 0,
-  },
-  sectionBody: {
-    margin: 0,
-    color: uiColor.text1,
-    fontFamily: fontFamily.sans,
-    fontSize: {
-      default: fontSize.lg,
-      [breakpoints.md]: fontSize.xl,
-    },
-    lineHeight: lineHeight.base,
-  },
-  proseLink: {
-    textDecoration: "underline",
-    color: blue.text1,
-    fontWeight: fontWeight.medium,
-    textUnderlineOffset: 3,
+    fontSize: { default: 18, [breakpoints.md]: 21 },
+    lineHeight: 1.45,
   },
   twoCol: {
-    marginLeft: "auto",
-    marginRight: "auto",
-    maxWidth: "var(--page-content-max-width)",
-  },
-  cardGrid2: {
-    gap: gap.lg,
+    gap: { default: 16, [breakpoints.md]: 64 },
     display: "grid",
     gridTemplateColumns: {
-      default: "1fr",
-      [breakpoints.md]: "1fr 1fr",
+      default: "minmax(0, 1fr)",
+      [breakpoints.md]: "minmax(0, 1fr) minmax(0, 1.4fr)",
     },
-    minWidth: "min(80vw, 500px)",
   },
-  featureCard: {
-    borderColor: uiColor.border1,
-    borderRadius: radius.md,
-    borderStyle: "solid",
-    borderWidth: 1,
-    gap: {
-      default: gap["4xl"],
-      [breakpoints.md]: gap["2xl"],
-    },
-    alignItems: {
-      default: "center",
-      [breakpoints.md]: "flex-start",
-    },
-    backgroundColor: uiColor.bg,
-    boxShadow: shadow.lg,
-    boxSizing: "border-box",
-    display: "flex",
-    flexBasis: 0,
-    flexDirection: {
-      default: "row",
-      [breakpoints.md]: "column",
-    },
-    flexGrow: 1,
-    flexShrink: 0,
-    minHeight: verticalSpace["12xl"],
-    minWidth: 280,
-    paddingBottom: verticalSpace["4xl"],
-    paddingLeft: horizontalSpace["4xl"],
-    paddingRight: horizontalSpace["4xl"],
-    paddingTop: verticalSpace["4xl"],
-  },
-  featureTitle: {
-    margin: 0,
+  h2: {
     color: uiColor.text2,
     fontFamily: fontFamily.title,
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
-    lineHeight: lineHeight.sm,
+    fontSize: { default: 30, [breakpoints.md]: 40 },
+    fontWeight: fontWeight.bold,
+    letterSpacing: "-0.025em",
+    lineHeight: 1.05,
+    textWrap: "balance",
+    marginBottom: 12,
+    marginTop: 12,
   },
-  featureTitleRow: {
-    gap: gap.md,
-    alignItems: "center",
-    display: "flex",
-  },
-  featureIcon: {
-    borderColor: uiColor.border1,
-    borderRadius: radius.sm,
-    borderStyle: "solid",
-    borderWidth: 1,
-    alignItems: "center",
-    backgroundColor: uiColor.bgSubtle,
-    color: blue.text1,
-    display: "inline-flex",
-    flexShrink: 0,
-    justifyContent: "center",
-    height: size["4xl"],
-    width: size["4xl"],
-  },
-  featureBody: {
+  sideNote: {
+    margin: 0,
     color: uiColor.text1,
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize.base,
-    lineHeight: lineHeight.base,
-    marginBottom: 0,
-    marginLeft: 0,
-    marginRight: 0,
+    lineHeight: 1.5,
+  },
+  prose: {
+    color: uiColor.text1,
+    fontSize: { default: 16, [breakpoints.md]: 18 },
+    lineHeight: 1.65,
+  },
+  proseP: {
+    textWrap: "pretty",
+    marginBottom: 14,
     marginTop: 0,
   },
-  accountCardHero: {
-    backgroundColor: uiColor.bg,
-    paddingBottom: verticalSpace["11xl"],
+  atmosphereSection: {
+    paddingBottom: { default: 0, [breakpoints.md]: 0 },
   },
-  sectionBodyGrid: {
-    gap: {
-      default: verticalSpace["6xl"],
-      [breakpoints.md]: verticalSpace["8xl"],
+  feat4: {
+    padding: 0,
+    listStyle: "none",
+    display: "grid",
+    gridTemplateColumns: {
+      default: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
     },
+    borderTopColor: uiColor.text2,
+    borderTopStyle: "solid",
+    borderTopWidth: 1,
+    marginBottom: 0,
+    marginTop: { default: 40, [breakpoints.md]: 72 },
   },
-  sectionBodyContainer: {
-    minWidth: 320,
+  feat: {
+    borderLeftColor: uiColor.border1,
+    borderLeftStyle: {
+      default: "solid",
+      ":nth-child(odd)": "none",
+      [breakpoints.lg]: {
+        default: "solid",
+        ":first-child": "none",
+      },
+    },
+    borderLeftWidth: 1,
+    borderTopColor: uiColor.border1,
+    borderTopStyle: {
+      default: "none",
+      ":nth-child(n+3)": "solid",
+      [breakpoints.lg]: "none",
+    },
+    borderTopWidth: 1,
+    paddingBottom: 28,
+    paddingLeft: {
+      default: 20,
+      ":nth-child(odd)": 0,
+      [breakpoints.lg]: {
+        default: 24,
+        ":first-child": 0,
+      },
+    },
+    paddingRight: 20,
+    paddingTop: 24,
   },
-  appBrowserHeader: {
-    textAlign: "center",
+  featNum: {
+    color: uiColor.text1,
+    fontSize: 13,
+    fontVariantNumeric: "tabular-nums",
   },
-  appBrowserEyebrow: {
-    borderColor: blue.border1,
-    borderRadius: radius.full,
+  featTitle: {
+    color: uiColor.text2,
+    fontFamily: fontFamily.title,
+    fontSize: { default: 19, [breakpoints.md]: 22 },
+    fontWeight: fontWeight.bold,
+    letterSpacing: "-0.017em",
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  featBody: {
+    margin: 0,
+    color: uiColor.text1,
+    lineHeight: 1.5,
+  },
+  howGrid: {
+    columnGap: 40,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+    },
+    rowGap: 32,
+  },
+  howTitle: {
+    margin: 0,
+    color: uiColor.text2,
+    fontSize: 17,
+    fontWeight: fontWeight.semibold,
+  },
+  howBody: {
+    color: uiColor.text1,
+    lineHeight: 1.55,
+    overflowWrap: "anywhere",
+    marginBottom: 0,
+    marginTop: 8,
+  },
+  link: {
+    textDecoration: "underline",
+    color: uiColor.text2,
+    textDecorationColor: {
+      default: uiColor.border2,
+      ":hover": "currentColor",
+    },
+    textUnderlineOffset: 3,
+    transitionDuration: animationDuration.default,
+    transitionProperty: "text-decoration-color",
+  },
+  contactGrid: {
+    columnGap: 16,
+    display: "grid",
+    gridTemplateColumns: {
+      default: "minmax(0, 1fr)",
+      [breakpoints.sm]: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(4, minmax(0, 1fr))",
+    },
+    rowGap: 16,
+  },
+  contactCard: {
+    padding: 22,
+    borderColor: uiColor.border1,
+    borderRadius: 18,
     borderStyle: "solid",
     borderWidth: 1,
-    backgroundColor: blueA.component1,
-    color: blue.text2,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    letterSpacing: tracking.widest,
-    textTransform: "uppercase",
-    marginBottom: verticalSpace.lg,
-    marginLeft: "auto",
-    marginRight: "auto",
-    paddingBottom: verticalSpace.sm,
-    paddingLeft: horizontalSpace.xl,
-    paddingRight: horizontalSpace.xl,
-    paddingTop: verticalSpace.sm,
-    width: "fit-content",
+    backgroundColor: uiColor.bg,
+    display: "flex",
+    flexDirection: "column",
+    rowGap: 8,
   },
-  appBrowserDescription: {
+  contactTitle: {
+    margin: 0,
+    color: uiColor.text2,
+    fontSize: 16,
+    fontWeight: fontWeight.semibold,
+  },
+  contactBody: {
     margin: 0,
     color: uiColor.text1,
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize.lg,
-    lineHeight: lineHeight.base,
-    marginLeft: "auto",
-    marginRight: "auto",
-    maxWidth: "56ch",
-  },
-  callout: {
-    borderRadius: radius.lg,
-    gap: gap["6xl"],
-    backgroundColor: uiColor.bgSubtle,
-    display: "flex",
-    flexDirection: "column",
-    marginBottom: verticalSpace["6xl"],
-    marginLeft: "auto",
-    marginRight: "auto",
-    maxWidth: "var(--page-content-max-width)",
-    paddingBottom: verticalSpace["3xl"],
-    paddingLeft: horizontalSpace["3xl"],
-    paddingRight: horizontalSpace["3xl"],
-    paddingTop: verticalSpace["3xl"],
-    width: "100%",
-  },
-  calloutStack: {
-    gap: verticalSpace["6xl"],
-    display: "flex",
-    flexDirection: "column",
-  },
-  calloutBody: {
-    margin: 0,
-    gap: gap["2xl"],
-    color: uiColor.text1,
-    display: "flex",
-    flexDirection: "column",
-    fontFamily: fontFamily.sans,
-    fontSize: fontSize.base,
-    justifyContent: "space-between",
-    lineHeight: lineHeight.base,
+    fontSize: 14,
+    lineHeight: 1.55,
   },
 });
 
+/** External link; Trans injects the translated text as children. */
+function ExternalLink({
+  href,
+  children,
+}: {
+  href: string;
+  children?: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      {...stylex.props(styles.link)}
+    >
+      {children}
+    </a>
+  );
+}
+
+function ManageLink({ children }: { children?: ReactNode }) {
+  return (
+    <RouterLink to="/products/manage" {...stylex.props(styles.link)}>
+      {children}
+    </RouterLink>
+  );
+}
+
 function AboutPage() {
   const { t } = useTranslation("about");
+
+  const contacts = [
+    {
+      id: "manage",
+      components: { manageLink: <ManageLink /> },
+    },
+    {
+      id: "bluesky",
+      components: {
+        blueskyLink: (
+          <ExternalLink href="https://bsky.app/profile/atstore.fyi" />
+        ),
+      },
+    },
+    {
+      id: "openSource",
+      components: {
+        githubLink: (
+          <ExternalLink href="https://github.com/ATProtocol-Community/ATStore" />
+        ),
+      },
+    },
+    {
+      id: "community",
+      components: { communityLink: <ExternalLink href={COMMUNITY_URL} /> },
+    },
+  ] as const;
+
   return (
-    <HeaderLayout.Root style={styles.shell}>
+    <HeaderLayout.Root style={styles.page}>
       <HeaderLayout.Header>
         <SiteHeader />
       </HeaderLayout.Header>
 
-      <Page.Hero style={styles.accountCardHero}>
-        <Flex direction="column" gap="6xl" align="center" justify="center">
-          <div {...stylex.props(styles.hero)}>
-            <span {...stylex.props(styles.eyebrow)}>
-              <Sparkles size={20} />
-              ATStore
-            </span>
-            <h1 {...stylex.props(styles.h1)}>{t("heroTitle")}</h1>
-            <p {...stylex.props(styles.heroBody)}>{t("heroBody")}</p>
-          </div>
-        </Flex>
-      </Page.Hero>
+      <HeaderLayout.Page>
+        <header {...stylex.props(styles.hero)}>
+          <Eyebrow>at-store</Eyebrow>
+          <h1 {...stylex.props(styles.heroTitle)}>{t("heroTitle")}</h1>
+          <p {...stylex.props(styles.heroBody)}>{t("heroBody")}</p>
+        </header>
 
-      <Page.Hero style={styles.sectionGray}>
-        <Flex direction="column" gap="2xl" style={styles.twoCol}>
-          <Flex direction="column" gap="2xl">
-            <Flex direction="column" gap="md">
-              <div {...stylex.props(styles.sectionEyebrow)}>
-                {t("atmosphereSection.eyebrow")}
-              </div>
-              <h2 {...stylex.props(styles.sectionHeading)}>
+        <ShelfSection style={styles.atmosphereSection}>
+          <div {...stylex.props(styles.twoCol)}>
+            <div>
+              <Eyebrow>{t("atmosphereSection.eyebrow")}</Eyebrow>
+              <h2 {...stylex.props(styles.h2)}>
                 {t("atmosphereSection.title")}
               </h2>
-            </Flex>
-          </Flex>
-          <Flex wrap style={styles.sectionBodyGrid}>
-            <Flex
-              direction="column"
-              gap="2xl"
-              style={[styles.grow, styles.sectionBodyContainer]}
-            >
-              <p {...stylex.props(styles.sectionBody)}>
+            </div>
+            <div {...stylex.props(styles.prose)}>
+              <p {...stylex.props(styles.proseP)}>
                 {t("atmosphereSection.para1")}
               </p>
-              <p {...stylex.props(styles.sectionBody)}>
+              <p {...stylex.props(styles.proseP)}>
                 {t("atmosphereSection.para2")}
-              </p>
-            </Flex>
-            <div {...stylex.props(styles.grow, styles.fit)}>
-              <div {...stylex.props(styles.cardGrid2, styles.grow)}>
-                {INTRO_FEATURES.map((item) => (
-                  <article key={item.id} {...stylex.props(styles.featureCard)}>
-                    <span {...stylex.props(styles.featureIcon)}>
-                      <item.icon size={20} />
-                    </span>
-                    <Flex direction="column" gap="2xl">
-                      <div {...stylex.props(styles.featureTitleRow)}>
-                        <Text
-                          weight="semibold"
-                          size="lg"
-                          style={styles.featureTitle}
-                        >
-                          {t(`introFeatures.${item.id}.title`)}
-                        </Text>
-                      </div>
-                      <Text size="base" style={styles.featureBody}>
-                        {t(`introFeatures.${item.id}.subtitle`)}
-                      </Text>
-                    </Flex>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </Flex>
-        </Flex>
-      </Page.Hero>
-
-      <Page.Hero style={styles.sectionWhite}>
-        <Flex direction="column" gap="6xl" style={styles.twoCol}>
-          <Flex direction="column" gap="4xl" style={styles.appBrowserHeader}>
-            <div {...stylex.props(styles.appBrowserEyebrow)}>
-              {t("howSection.eyebrow")}
-            </div>
-            <h2 {...stylex.props(styles.sectionHeading)}>
-              {t("howSection.title")}
-            </h2>
-            <p {...stylex.props(styles.appBrowserDescription)}>
-              {t("howSection.description")}
-            </p>
-          </Flex>
-          <Flex gap="lg" wrap>
-            {HOW_ATSTORE_WORKS.map((item) => (
-              <article key={item.id} {...stylex.props(styles.featureCard)}>
-                <span {...stylex.props(styles.featureIcon)}>
-                  <item.icon size={20} />
-                </span>
-                <Flex direction="column" gap="md">
-                  <div {...stylex.props(styles.featureTitleRow)}>
-                    <h3 {...stylex.props(styles.featureTitle)}>
-                      {t(`howSection.items.${item.id}.title`)}
-                    </h3>
-                  </div>
-                  <p {...stylex.props(styles.featureBody)}>
-                    {t(`howSection.items.${item.id}.body`)}
-                  </p>
-                </Flex>
-              </article>
-            ))}
-          </Flex>
-        </Flex>
-      </Page.Hero>
-
-      <Page.Hero style={styles.sectionGray}>
-        <Flex direction="column" gap="6xl">
-          <Flex direction="column" gap="4xl" style={styles.twoCol}>
-            <Flex direction="column" gap="md">
-              <div {...stylex.props(styles.sectionEyebrow)}>
-                {t("peopleSection.eyebrow")}
-              </div>
-              <h2 {...stylex.props(styles.sectionHeading)}>
-                {t("peopleSection.title")}
-              </h2>
-            </Flex>
-            <p {...stylex.props(styles.sectionBody)}>
-              <Trans
-                ns="about"
-                i18nKey="peopleSection.builtBy"
-                components={{
-                  builderLink: (
-                    <Link
-                      href="https://github.com/hipstersmoothie"
-                      target="_blank"
-                      rel="noreferrer"
-                      style={styles.proseLink}
-                    >
-                      {""}
-                    </Link>
-                  ),
-                }}
-              />
-            </p>
-            <p {...stylex.props(styles.sectionBody)}>
-              <Trans
-                ns="about"
-                i18nKey="peopleSection.maintained"
-                components={{
-                  communityLink: (
-                    <Link
-                      href="https://discourse.atprotocol.community"
-                      target="_blank"
-                      rel="noreferrer"
-                      style={styles.proseLink}
-                    >
-                      {""}
-                    </Link>
-                  ),
-                }}
-              />
-            </p>
-          </Flex>
-
-          <div {...stylex.props(styles.callout)}>
-            <Text size="3xl" weight="bold">
-              {t("getInTouch.heading")}
-            </Text>
-            <div {...stylex.props(styles.calloutStack)}>
-              <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">{t("getInTouch.manage.label")}</Text>
-                <Text size="base">
-                  <Trans
-                    ns="about"
-                    i18nKey="getInTouch.manage.body"
-                    components={{
-                      manageLink: (
-                        <LinkLink
-                          to="/products/manage"
-                          style={styles.proseLink}
-                        >
-                          {""}
-                        </LinkLink>
-                      ),
-                    }}
-                  />
-                </Text>
-              </p>
-              <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">{t("getInTouch.bluesky.label")}</Text>
-                <Text size="base">
-                  <Trans
-                    ns="about"
-                    i18nKey="getInTouch.bluesky.body"
-                    components={{
-                      blueskyLink: (
-                        <Link
-                          href="https://bsky.app/profile/atstore.fyi"
-                          target="_blank"
-                          rel="noreferrer"
-                          style={styles.proseLink}
-                        >
-                          {""}
-                        </Link>
-                      ),
-                    }}
-                  />
-                </Text>
-              </p>
-              <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">{t("getInTouch.openSource.label")}</Text>
-                <Text size="base">
-                  <Trans
-                    ns="about"
-                    i18nKey="getInTouch.openSource.body"
-                    components={{
-                      githubLink: (
-                        <Link
-                          href="https://github.com/ATProtocol-Community/ATStore"
-                          target="_blank"
-                          rel="noreferrer"
-                          style={styles.proseLink}
-                        >
-                          {""}
-                        </Link>
-                      ),
-                    }}
-                  />
-                </Text>
-              </p>
-              <p {...stylex.props(styles.calloutBody)}>
-                <Text weight="bold">{t("getInTouch.community.label")}</Text>
-                <Text size="base">
-                  <Trans
-                    ns="about"
-                    i18nKey="getInTouch.community.body"
-                    components={{
-                      communityLink: (
-                        <Link
-                          href="https://discourse.atprotocol.community"
-                          target="_blank"
-                          rel="noreferrer"
-                          style={styles.proseLink}
-                        >
-                          {""}
-                        </Link>
-                      ),
-                    }}
-                  />
-                </Text>
               </p>
             </div>
           </div>
-        </Flex>
-      </Page.Hero>
+          <ul {...stylex.props(styles.feat4)}>
+            {INTRO_FEATURES.map((id, index) => (
+              <li key={id} {...stylex.props(styles.feat)}>
+                <span {...stylex.props(styles.featNum)}>0{index + 1}</span>
+                <h3 {...stylex.props(styles.featTitle)}>
+                  {t(`introFeatures.${id}.title`)}
+                </h3>
+                <p {...stylex.props(styles.featBody)}>
+                  {t(`introFeatures.${id}.subtitle`)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </ShelfSection>
+
+        <ShelfSection>
+          <div {...stylex.props(styles.twoCol)}>
+            <div>
+              <Eyebrow>{t("howSection.eyebrow")}</Eyebrow>
+              <h2 {...stylex.props(styles.h2)}>{t("howSection.title")}</h2>
+              <p {...stylex.props(styles.sideNote)}>
+                {t("howSection.description")}
+              </p>
+            </div>
+            <div {...stylex.props(styles.howGrid)}>
+              {HOW_ATSTORE_WORKS.map((id) => (
+                <article key={id}>
+                  <h3 {...stylex.props(styles.howTitle)}>
+                    {t(`howSection.items.${id}.title`)}
+                  </h3>
+                  <p {...stylex.props(styles.howBody)}>
+                    {t(`howSection.items.${id}.body`)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </ShelfSection>
+
+        <ShelfSection>
+          <div {...stylex.props(styles.twoCol)}>
+            <div>
+              <Eyebrow>{t("peopleSection.eyebrow")}</Eyebrow>
+              <h2 {...stylex.props(styles.h2)}>{t("peopleSection.title")}</h2>
+            </div>
+            <div {...stylex.props(styles.prose)}>
+              <p {...stylex.props(styles.proseP)}>
+                <Trans
+                  ns="about"
+                  i18nKey="peopleSection.builtBy"
+                  components={{
+                    builderLink: (
+                      <ExternalLink href="https://github.com/hipstersmoothie" />
+                    ),
+                  }}
+                />
+              </p>
+              <p {...stylex.props(styles.proseP)}>
+                <Trans
+                  ns="about"
+                  i18nKey="peopleSection.maintained"
+                  components={{
+                    communityLink: <ExternalLink href={COMMUNITY_URL} />,
+                  }}
+                />
+              </p>
+            </div>
+          </div>
+        </ShelfSection>
+
+        <ShelfSection>
+          <SectionHeader title={t("getInTouch.heading")} />
+          <div {...stylex.props(styles.contactGrid)}>
+            {contacts.map((contact) => (
+              <article key={contact.id} {...stylex.props(styles.contactCard)}>
+                <h3 {...stylex.props(styles.contactTitle)}>
+                  {t(`getInTouch.${contact.id}.label`)}
+                </h3>
+                <p {...stylex.props(styles.contactBody)}>
+                  <Trans
+                    ns="about"
+                    i18nKey={`getInTouch.${contact.id}.body`}
+                    components={contact.components}
+                  />
+                </p>
+              </article>
+            ))}
+          </div>
+        </ShelfSection>
+      </HeaderLayout.Page>
 
       <HeaderLayout.Footer>
         <SiteFooter />

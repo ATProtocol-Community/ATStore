@@ -47,7 +47,6 @@ import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
 const styles = stylex.create({
   cardLink: {
     borderRadius: radius["2xl"],
-    cornerShape: "squircle",
     textDecoration: "none",
     boxShadow: shadow.md,
     display: "flex",
@@ -64,7 +63,6 @@ const styles = stylex.create({
     borderRadius: radius.xl,
     borderStyle: "solid",
     borderWidth: 1,
-    cornerShape: "squircle",
     gap: gap["8xl"],
     color: "white",
     display: "flex",
@@ -98,7 +96,6 @@ const styles = stylex.create({
     "::before": {
       inset: 0,
       borderRadius: radius.xl,
-      cornerShape: "squircle",
       boxShadow: shadow["xl"],
       content: "''",
       opacity: 0,

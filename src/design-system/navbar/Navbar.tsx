@@ -15,10 +15,8 @@ import { IconButton } from "../icon-button";
 import { Separator } from "../separator";
 import { primaryColor, uiColor } from "../theme/color.stylex";
 import { containerBreakpoints } from "../theme/media-queries.stylex";
-import { ui } from "../theme/semantic-color.stylex";
 import {
   gap,
-  horizontalSpace,
   size as sizeSpace,
   verticalSpace,
 } from "../theme/semantic-spacing.stylex";
@@ -116,12 +114,12 @@ const styles = stylex.create({
       ":is([data-navbar-open]):has([data-navbar-action])": verticalSpace["2xl"],
     },
     paddingLeft: {
-      default: horizontalSpace["3xl"],
-      [containerBreakpoints.sm]: horizontalSpace["6xl"],
+      default: "20px",
+      [containerBreakpoints.sm]: "40px",
     },
     paddingRight: {
-      default: horizontalSpace["3xl"],
-      [containerBreakpoints.sm]: horizontalSpace["6xl"],
+      default: "20px",
+      [containerBreakpoints.sm]: "40px",
     },
     paddingTop: verticalSpace["xl"],
     width: "100%",
@@ -245,14 +243,16 @@ const styles = stylex.create({
       ":is([aria-expanded=true])": 1,
       ":is([data-active])": 1,
       ":is([data-breadcrumb] *)": 0,
-      ":is([data-hovered])": 1,
       ":is([data-status=active])": 1,
     },
     gap: gap["md"],
     textDecoration: "none",
     alignItems: "center",
+    // Shelf: quiet links that turn ink on hover / when current.
     color: {
-      default: primaryColor.text2,
+      default: uiColor.text1,
+      ":is([aria-current=page],[data-status=active],[data-hovered])":
+        uiColor.text2,
       ":is([data-breadcrumb] *)": uiColor.text1,
       ":is([data-breadcrumb][data-current] *)": uiColor.text2,
     },
@@ -262,8 +262,14 @@ const styles = stylex.create({
       [containerBreakpoints.sm]: "inline-flex",
     },
     fontFamily: fontFamily["sans"],
-    fontWeight: fontWeight["normal"],
+    fontSize: "0.9375rem",
+    fontWeight: {
+      default: fontWeight["normal"],
+      ":is([aria-current=page],[data-status=active])": 550,
+    },
     position: "relative",
+    transitionDuration: "150ms",
+    transitionProperty: "color",
     width: {
       default: "100%",
       [containerBreakpoints.sm]: "auto",
@@ -284,7 +290,7 @@ const styles = stylex.create({
       opacity: "var(--underline-opacity)",
       pointerEvents: "none",
       position: "absolute",
-      bottom: `calc(${verticalSpace["xxs"]} * -1)`,
+      bottom: `calc(${verticalSpace["xl"]} * -1 - 1px)`,
       height: "2px",
       left: 0,
       right: 0,
@@ -523,7 +529,7 @@ export const Navbar = ({
           <nav
             ref={navRef}
             data-navbar-open={isMobileMenuOpen || undefined}
-            {...stylex.props(styles.navbar, ui.bg, style)}
+            {...stylex.props(styles.navbar, style)}
           >
             {children}
             <Separator

@@ -106,7 +106,6 @@ const styles = stylex.create({
   },
   dragButton: {
     borderRadius: radius.sm,
-    cornerShape: "squircle",
     alignItems: "center",
     display: "flex",
     justifyContent: "center",

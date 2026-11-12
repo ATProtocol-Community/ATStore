@@ -111,7 +111,6 @@ const styles = stylex.create({
     paddingRight: horizontalSpace["2xl"],
     paddingTop: verticalSpace["2xl"],
 
-    cornerShape: "squircle",
     overflow: "hidden",
     backgroundColor: {
       default: uiColor.bgSubtle,

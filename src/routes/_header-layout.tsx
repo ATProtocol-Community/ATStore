@@ -19,7 +19,7 @@ function HeaderLayoutOutletFallback() {
 function HeaderLayoutRoute() {
   return (
     <HeaderLayout.Root>
-      <HeaderLayout.Header>
+      <HeaderLayout.Header data-site-header="">
         <SiteHeader />
       </HeaderLayout.Header>
 

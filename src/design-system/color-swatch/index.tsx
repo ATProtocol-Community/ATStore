@@ -18,8 +18,6 @@ const styles = stylex.create({
     borderStyle: "solid",
     borderWidth: 1,
     boxSizing: "border-box",
-
-    cornerShape: "squircle",
   },
   swatchSm: {
     borderRadius: radius.xs,

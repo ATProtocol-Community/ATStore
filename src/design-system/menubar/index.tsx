@@ -50,7 +50,6 @@ const styles = stylex.create({
     borderStyle: "solid",
     borderWidth: 1,
 
-    cornerShape: "squircle",
     gap: gap["xs"],
     alignItems: "center",
     backgroundColor: {

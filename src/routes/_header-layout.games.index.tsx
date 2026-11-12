@@ -8,9 +8,8 @@ import { z } from "zod";
 import type { DirectoryGameCard } from "../integrations/tanstack-query/api-directory-listings.functions";
 import type { GameStatus } from "../lib/atproto/game-define-record";
 
-import { DetailedAppRow } from "../components/AppListRow";
-import { AppTagHero } from "../components/AppTagHero";
-import { Badge } from "../design-system/badge";
+import { GameFeature, GameTile } from "../components/shelf/discovery/Games";
+import { PageHero } from "../components/shelf/Section";
 import { Button } from "../design-system/button";
 import {
   EmptyState,
@@ -19,27 +18,20 @@ import {
   EmptyStateImage,
   EmptyStateTitle,
 } from "../design-system/empty-state";
-import { Flex } from "../design-system/flex";
-import { Link } from "../design-system/link";
-import { Page } from "../design-system/page";
 import { SearchField } from "../design-system/search-field";
 import {
   SegmentedControl,
   SegmentedControlItem,
 } from "../design-system/segmented-control";
-import { Select, SelectItem } from "../design-system/select";
 import { uiColor } from "../design-system/theme/color.stylex";
-import { verticalSpace } from "../design-system/theme/semantic-spacing.stylex";
-import { SmallBody } from "../design-system/typography";
+import { breakpoints } from "../design-system/theme/media-queries.stylex";
 import { directoryListingApi } from "../integrations/tanstack-query/api-directory-listings.functions";
-import { getAppTagAccent, getAppTagEmoji } from "../lib/app-tag-visuals";
 import {
   ATMOSPHERE_GAMES_URL,
   GAMES_APP_TAG_SLUG,
   GAME_STATUS_LABELS,
   GAME_STATUS_ORDER,
   getGameStatus,
-  getGameStatusBadgeVariant,
 } from "../lib/game-listing";
 import { buildAppTagOgImageUrl, buildRouteOgMeta } from "../lib/og-meta";
 
@@ -101,39 +93,53 @@ export const Route = createFileRoute("/_header-layout/games/")({
 });
 
 const styles = stylex.create({
-  page: {
-    paddingBottom: verticalSpace["10xl"],
-    paddingTop: verticalSpace["6xl"],
+  credit: {
+    textDecoration: "underline",
+    color: "inherit",
+    textDecorationColor: { default: uiColor.border2, ":hover": uiColor.text1 },
+    textUnderlineOffset: 3,
   },
   toolbar: {
-    flexWrap: "wrap",
+    alignItems: "center",
+    columnGap: 10,
+    display: "flex",
+    flexWrap: { default: "wrap", [breakpoints.md]: "nowrap" },
+    rowGap: 10,
+    marginTop: 40,
+  },
+  toolbarFirst: {
+    marginTop: 0,
   },
   searchField: {
-    flexBasis: "16rem",
+    flexBasis: { default: "100%", [breakpoints.md]: "auto" },
     flexGrow: 1,
   },
-  sortSelect: {
-    minWidth: "12rem",
-  },
-  statusFilter: {
+  filters: {
     maxWidth: "100%",
     overflowX: "auto",
   },
-  resultCount: {
-    color: uiColor.text1,
+  statusRow: {
+    marginTop: 10,
   },
-  // Rows carry the spacing between them (see DetailedAppRow); pull the list
-  // out by that amount so the first and last rows line up with the toolbar.
-  results: {
+  count: {
+    color: uiColor.text1,
+    fontSize: 13,
+    fontVariantNumeric: "tabular-nums",
+    marginBottom: 12,
+    marginTop: 20,
+  },
+  grid: {
+    margin: 0,
     padding: 0,
     listStyle: "none",
-    marginBottom: `calc(${verticalSpace.sm} * -1)`,
-    marginLeft: 0,
-    marginRight: 0,
-    marginTop: `calc(${verticalSpace.sm} * -1)`,
-  },
-  emptyState: {
-    padding: verticalSpace["10xl"],
+    columnGap: { default: 12, [breakpoints.md]: 16 },
+    display: "grid",
+    gridTemplateColumns: {
+      default: "repeat(2, minmax(0, 1fr))",
+      [breakpoints.lg]: "repeat(3, minmax(0, 1fr))",
+      [breakpoints.xl]: "repeat(4, minmax(0, 1fr))",
+    },
+    rowGap: { default: 24, [breakpoints.md]: 32 },
   },
 });
 
@@ -210,142 +216,128 @@ function GamesPage() {
     });
   };
 
+  // Lead with the most popular game that has cover art, but only on the unfiltered default view.
+  const featured =
+    sort === "popular" && !query && !search.status
+      ? results.find((game) => game.heroImageUrl)
+      : undefined;
+
   return (
-    <Page.Root variant="large" style={styles.page}>
-      <Flex direction="column" gap="7xl">
-        <Flex direction="column" gap="2xl">
-          <AppTagHero
-            eyebrow="Games"
-            title="Games on the Atmosphere"
-            description="Games built on the AT Protocol — play with your Atmosphere account and keep your progress in your own repo."
-            accent={getAppTagAccent(GAMES_APP_TAG_SLUG)}
-            emojis={[getAppTagEmoji(GAMES_APP_TAG_SLUG)]}
-          />
-          <SmallBody variant="secondary">
-            Listed from{" "}
-            <Link
+    <>
+      <PageHero
+        eyebrow="Games"
+        title="Games on the Atmosphere"
+        description={
+          <>
+            Games built on the AT Protocol: play with your Atmosphere account
+            and keep your progress in your own repo. Listed from{" "}
+            <a
               href={ATMOSPHERE_GAMES_URL}
               target="_blank"
               rel="noopener noreferrer"
+              {...stylex.props(styles.credit)}
             >
               atmosphere.games
-            </Link>
+            </a>
             , the AT Protocol games directory.
-          </SmallBody>
-        </Flex>
+          </>
+        }
+      />
 
-        <Flex direction="column" gap="2xl">
-          <Flex align="center" gap="xl" style={styles.toolbar}>
-            <div {...stylex.props(styles.searchField)}>
-              <GamesQueryField query={search.q ?? ""} />
-            </div>
-            <Select
-              aria-label="Sort games"
-              items={sortOptions}
-              size="lg"
-              style={styles.sortSelect}
-              value={sort}
-              variant="secondary"
-              onChange={(key) => {
-                const next = GAME_SORTS.find((id) => id === key);
-                if (!next) return;
-                updateSearch({ sort: next === "popular" ? undefined : next });
-              }}
-            >
-              {(item) => <SelectItem>{item.label}</SelectItem>}
-            </Select>
-          </Flex>
+      {featured ? <GameFeature game={featured} /> : null}
 
-          {statusFilters.length > 1 ? (
-            <SegmentedControl
-              aria-label="Filter by status"
-              selectedKeys={[search.status ?? "all"]}
-              style={styles.statusFilter}
-              onSelectionChange={(keys) => {
-                const [key] = keys;
-                const next = GAME_STATUS_ORDER.find((id) => id === key);
-                updateSearch({ status: next });
-              }}
-            >
-              <SegmentedControlItem id="all">
-                {`All (${games.length})`}
+      <div {...stylex.props(styles.toolbar, !featured && styles.toolbarFirst)}>
+        <div {...stylex.props(styles.searchField)}>
+          <GamesQueryField query={search.q ?? ""} />
+        </div>
+        <SegmentedControl
+          aria-label="Sort games"
+          size="lg"
+          selectedKeys={[sort]}
+          style={styles.filters}
+          onSelectionChange={(keys) => {
+            const [key] = keys;
+            const next = GAME_SORTS.find((id) => id === key);
+            if (!next) return;
+            updateSearch({ sort: next === "popular" ? undefined : next });
+          }}
+        >
+          {sortOptions.map((option) => (
+            <SegmentedControlItem key={option.id} id={option.id}>
+              {option.label}
+            </SegmentedControlItem>
+          ))}
+        </SegmentedControl>
+      </div>
+
+      {statusFilters.length > 1 ? (
+        <div {...stylex.props(styles.statusRow)}>
+          <SegmentedControl
+            aria-label="Filter by status"
+            selectedKeys={[search.status ?? "all"]}
+            style={styles.filters}
+            onSelectionChange={(keys) => {
+              const [key] = keys;
+              const next = GAME_STATUS_ORDER.find((id) => id === key);
+              updateSearch({ status: next });
+            }}
+          >
+            <SegmentedControlItem id="all">
+              {`All (${games.length})`}
+            </SegmentedControlItem>
+            {statusFilters.map((status) => (
+              <SegmentedControlItem key={status} id={status}>
+                {`${GAME_STATUS_LABELS[status]} (${statusCounts.get(status) ?? 0})`}
               </SegmentedControlItem>
-              {statusFilters.map((status) => (
-                <SegmentedControlItem key={status} id={status}>
-                  {`${GAME_STATUS_LABELS[status]} (${statusCounts.get(status) ?? 0})`}
-                </SegmentedControlItem>
-              ))}
-            </SegmentedControl>
+            ))}
+          </SegmentedControl>
+        </div>
+      ) : null}
+
+      <div {...stylex.props(styles.count)}>
+        {results.length === games.length
+          ? `${games.length} ${games.length === 1 ? "game" : "games"}`
+          : `${results.length} of ${games.length} games`}
+      </div>
+
+      {results.length > 0 ? (
+        <ul role="list" {...stylex.props(styles.grid)}>
+          {results.map((game) => (
+            <li key={game.id}>
+              <GameTile game={game} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState size="lg">
+          <EmptyStateImage>
+            <SearchX size={48} strokeWidth={1.75} />
+          </EmptyStateImage>
+          <EmptyStateTitle>
+            {games.length === 0
+              ? "No games listed yet"
+              : "No games match these filters"}
+          </EmptyStateTitle>
+          <EmptyStateDescription>
+            {games.length === 0
+              ? "Games published on atmosphere.games will show up here."
+              : "Try another status or search for something broader."}
+          </EmptyStateDescription>
+          {games.length > 0 ? (
+            <EmptyStateActions>
+              <Button
+                variant="secondary"
+                onPress={() =>
+                  void navigate({ search: {}, resetScroll: false })
+                }
+              >
+                Clear search and filters
+              </Button>
+            </EmptyStateActions>
           ) : null}
-
-          <SmallBody style={styles.resultCount}>
-            {results.length === games.length
-              ? `${games.length} ${games.length === 1 ? "game" : "games"}`
-              : `${results.length} of ${games.length} games`}
-          </SmallBody>
-
-          {results.length > 0 ? (
-            <ul role="list" {...stylex.props(styles.results)}>
-              {results.map((game) => (
-                <li key={game.id}>
-                  <GameRow game={game} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState size="lg" style={styles.emptyState}>
-              <EmptyStateImage>
-                <SearchX size={64} strokeWidth={2} />
-              </EmptyStateImage>
-              <EmptyStateTitle>
-                {games.length === 0
-                  ? "No games listed yet"
-                  : "No games match these filters"}
-              </EmptyStateTitle>
-              <EmptyStateDescription>
-                {games.length === 0
-                  ? "Games published on atmosphere.games will show up here."
-                  : "Try another status or search for something broader."}
-              </EmptyStateDescription>
-              {games.length > 0 ? (
-                <EmptyStateActions>
-                  <Button
-                    variant="secondary"
-                    onPress={() =>
-                      void navigate({ search: {}, resetScroll: false })
-                    }
-                  >
-                    Clear search and filters
-                  </Button>
-                </EmptyStateActions>
-              ) : null}
-            </EmptyState>
-          )}
-        </Flex>
-      </Flex>
-    </Page.Root>
-  );
-}
-
-/**
- * The shared browse row. Games are all tagged `games`, so the row shows the developer's own
- * genre tags instead, and a status badge for anything that isn't simply live.
- */
-function GameRow({ game }: { game: DirectoryGameCard }) {
-  const status = getGameStatus(game.gameStatus);
-
-  return (
-    <DetailedAppRow
-      listing={{ ...game, appTags: game.gameTags }}
-      byline={game.developerName ? `by ${game.developerName}` : null}
-      badge={
-        status === "live" ? null : (
-          <Badge size="sm" variant={getGameStatusBadgeVariant(status)}>
-            {GAME_STATUS_LABELS[status]}
-          </Badge>
-        )
-      }
-    />
+        </EmptyState>
+      )}
+    </>
   );
 }
 

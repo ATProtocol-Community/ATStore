@@ -44,13 +44,12 @@ const styles = stylex.create({
   md: { minHeight: sizeSpace["4xl"] },
   lg: { minHeight: sizeSpace["5xl"] },
   itemInner: {
-    borderRadius: radius.md,
-    cornerShape: "squircle",
+    borderRadius: radius.sm,
     gap: gap["xl"],
     alignItems: "center",
     backgroundColor: {
       default: "transparent",
-      [":is([data-focused]:not([data-disabled]) *)"]: uiColor.component2,
+      [":is([data-focused]:not([data-disabled]) *)"]: uiColor.component1,
       [":is([data-react-aria-pressable=true]:not([data-disabled])[data-pressed=true] *)"]:
         uiColor.component3,
       [":is([data-react-aria-pressable=true][data-hovered]:not([data-disabled]) *)"]:

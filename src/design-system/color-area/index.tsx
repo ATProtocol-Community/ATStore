@@ -17,7 +17,6 @@ import { size as sizeSpace } from "../theme/semantic-spacing.stylex";
 const styles = stylex.create({
   colorArea: {
     borderRadius: radius["md"],
-    cornerShape: "squircle",
     filter: {
       ":is([data-disabled])": "grayscale(1)",
     },
@@ -29,7 +28,6 @@ const styles = stylex.create({
     borderStyle: "solid",
     borderWidth: 2,
 
-    cornerShape: "squircle",
     boxShadow: " 0 0 0 1px black, inset 0 0 0 1px black",
     boxSizing: "border-box",
     filter: {
