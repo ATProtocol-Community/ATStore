@@ -55,8 +55,9 @@ body {
 /*
  * Page transitions (View Transitions API; the router starts them, see
  * src/lib/view-transitions.ts). Subtle on purpose: a quick fade out, a short
- * lift-and-fade in, a fixed header, a sliding nav underline, and listing
- * icons/covers that morph into the listing page header.
+ * lift-and-fade in, a fixed header, a sliding nav underline, and a listing's
+ * icon and hero that settle into place where they are (nothing travels
+ * across the page).
  */
 [data-site-header] {
   view-transition-name: site-header;
@@ -64,19 +65,12 @@ body {
 [data-nav-underline] {
   view-transition-name: nav-underline;
 }
-html[data-vt-hero] [data-hero-target] {
-  view-transition-name: var(--listing-hero-vt);
-}
 
 ::view-transition-old(root) {
   animation: vt-fade-out 120ms ease-in both;
 }
 ::view-transition-new(root) {
   animation: vt-lift-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-/* Opening a listing: the page rises a little more, behind the morphing icon. */
-html:active-view-transition-type(to-listing)::view-transition-new(root) {
-  animation: vt-lift-in-more 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 /* The header is identical across pages; never animate it. */
@@ -91,17 +85,24 @@ html:active-view-transition-type(to-listing)::view-transition-new(root) {
   animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* Listing icon / cover morphs (names are listing-icon-* / listing-hero-*). */
-::view-transition-group(*) {
-  animation-duration: 340ms;
-  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+/*
+ * Listing icon and hero. Arriving on a listing they settle in place, a beat
+ * after the page; leaving, they fade with it. Between two listings (or a
+ * listing and itself) the pair just crossfades in place.
+ */
+::view-transition-new(listing-icon):only-child {
+  animation: vt-settle 380ms cubic-bezier(0.2, 0.7, 0.2, 1) 40ms both;
 }
-/* Covers change aspect ratio (16:9 card → 16:7 hero); crop instead of stretch. */
-::view-transition-old(*),
-::view-transition-new(*) {
-  height: 100%;
-  object-fit: cover;
-  overflow: clip;
+::view-transition-new(listing-hero):only-child {
+  animation: vt-settle-soft 420ms cubic-bezier(0.2, 0.7, 0.2, 1) 80ms both;
+}
+::view-transition-old(listing-icon):only-child,
+::view-transition-old(listing-hero):only-child {
+  animation: vt-fade-out 120ms ease-in both;
+}
+::view-transition-group(listing-icon),
+::view-transition-group(listing-hero) {
+  animation-duration: 260ms;
 }
 
 @keyframes vt-fade-out {
@@ -115,10 +116,16 @@ html:active-view-transition-type(to-listing)::view-transition-new(root) {
     transform: translateY(8px);
   }
 }
-@keyframes vt-lift-in-more {
+@keyframes vt-settle {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(8px) scale(0.92);
+  }
+}
+@keyframes vt-settle-soft {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
   }
 }
 

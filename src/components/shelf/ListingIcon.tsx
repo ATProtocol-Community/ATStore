@@ -80,8 +80,6 @@ export function ListingIcon({
   return (
     <span
       aria-hidden
-      // Marks morph sources; see lib/view-transitions.ts.
-      data-listing-icon=""
       {...sx}
       style={
         transitionName

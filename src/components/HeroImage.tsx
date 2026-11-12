@@ -59,14 +59,9 @@ export function HeroImage({
   return (
     <div
       {...sx}
-      // Named only during a cover → hero morph (html[data-vt-hero], styles.css).
-      data-hero-target={transitionName ? "" : undefined}
       style={
         transitionName
-          ? ({
-              ...sx.style,
-              "--listing-hero-vt": transitionName,
-            } as React.CSSProperties)
+          ? { ...sx.style, viewTransitionName: transitionName }
           : sx.style
       }
     >

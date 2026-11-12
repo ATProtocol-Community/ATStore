@@ -61,7 +61,7 @@ import { getLegacyDirectoryListingId } from "../lib/directory-listing-slugs";
 import { ATMOSPHERE_GAMES_URL, isGameOnlyListing } from "../lib/game-listing";
 import { getDirectoryListingHeroImageAlt } from "../lib/listing-copy";
 import { buildRouteOgMeta } from "../lib/og-meta";
-import { listingHeroTransitionName } from "../lib/view-transitions";
+import { LISTING_HERO_TRANSITION } from "../lib/view-transitions";
 
 const PRODUCT_UPDATES_PREVIEW_COUNT = 3;
 const MENTIONS_PREVIEW_COUNT = 3;
@@ -316,7 +316,7 @@ function ProductPage() {
         <HeroImage
           alt={getDirectoryListingHeroImageAlt(listing)}
           src={listing.heroImageUrl}
-          transitionName={listingHeroTransitionName(productSlug)}
+          transitionName={LISTING_HERO_TRANSITION}
         />
       ) : null}
 
