@@ -24,6 +24,7 @@ import { resolveAtprotoPdsBaseUrl } from "#/lib/atproto/resolve-atproto-pds";
 import { linkListingToGameDefine } from "#/lib/atproto/tap-game-sync";
 import { fetchBlueskyPublicProfileFields } from "#/lib/bluesky-public-profile";
 import { refreshListingPageSnapshot } from "#/lib/listing-page-snapshot";
+import { pruneReplacedProductAccountMentions } from "#/lib/trending/prune-replaced-product-account-mentions";
 import { and, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -494,6 +495,7 @@ export async function upsertDirectoryListingFromTap(input: {
       claimPendingForDid: schema.storeListings.claimPendingForDid,
       migratedFromAtUri: schema.storeListings.migratedFromAtUri,
       priorAtUris: schema.storeListings.priorAtUris,
+      productAccountDid: schema.storeListings.productAccountDid,
       repoDid: schema.storeListings.repoDid,
       rkey: schema.storeListings.rkey,
       verificationStatus: schema.storeListings.verificationStatus,
@@ -696,6 +698,22 @@ export async function upsertDirectoryListingFromTap(input: {
       console.warn(
         `[tap-ingest] game link failed slug=${record.slug} game=${record.game}`,
         linkError,
+      );
+    }
+  }
+
+  /** Product account replaced by a record edited outside the app (in-app edits prune directly). */
+  if (
+    saved?.id &&
+    existingRow &&
+    (existingRow.productAccountDid ?? null) !== productDid
+  ) {
+    try {
+      await pruneReplacedProductAccountMentions(db, saved.id);
+    } catch (pruneError) {
+      console.warn(
+        `[tap-ingest] mention prune failed slug=${record.slug} id=${saved.id}`,
+        pruneError,
       );
     }
   }

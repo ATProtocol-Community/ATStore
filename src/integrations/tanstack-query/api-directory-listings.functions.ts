@@ -88,6 +88,7 @@ import { findEligibleProductClaimsForDid } from "#/lib/product-claim-eligibility
 import { PRODUCT_REVIEW_PREVIEW_COUNT } from "#/lib/product-reviews";
 import { serializeForJsonColumn } from "#/lib/serialize-for-json-column";
 import { trendingScoreSortEnabled } from "#/lib/trending/config";
+import { pruneReplacedProductAccountMentions } from "#/lib/trending/prune-replaced-product-account-mentions";
 import {
   adminFnMiddleware,
   getAtprotoSessionForRequest,
@@ -6018,6 +6019,9 @@ const updateOwnedProductListing = createServerFn({ method: "POST" })
       throw error;
     }
 
+    if ((full.productAccountDid ?? null) !== productAccountDid) {
+      await pruneReplacedProductAccountMentionsSafely(context.db, full.id);
+    }
     await refreshListingPageSnapshot(context.db, full.id);
 
     return { slug };
@@ -6738,6 +6742,19 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
         await deletePreviousOwnerListingRecord(previousRepoDid, oldRkey);
       }
 
+      if ((full.productAccountDid ?? null) !== (productAccountDid ?? null)) {
+        /** The record already moved; a failed cleanup must not trigger the rollback below. */
+        try {
+          await pruneReplacedProductAccountMentions(context.db, full.id);
+          await refreshListingPageSnapshot(context.db, full.id);
+        } catch (pruneError) {
+          console.warn(
+            `[listing-claim] mention prune failed id=${full.id}`,
+            pruneError,
+          );
+        }
+      }
+
       return { slug: inheritedSlug };
     } catch (error) {
       await context.db
@@ -6751,6 +6768,18 @@ const claimProductListingToPds = createServerFn({ method: "POST" })
       throw error;
     }
   });
+
+/** Mention cleanup after a product-account change; the listing save itself already succeeded. */
+async function pruneReplacedProductAccountMentionsSafely(
+  db: Database,
+  listingId: string,
+) {
+  try {
+    await pruneReplacedProductAccountMentions(db, listingId);
+  } catch (error) {
+    console.warn(`[listing-edit] mention prune failed id=${listingId}`, error);
+  }
+}
 
 /**
  * After a transfer, remove the listing record from the previous owner's repo using their stored
@@ -7528,6 +7557,9 @@ const updateStoreManagedListing = createServerFn({ method: "POST" })
       })
       .where(eq(t.id, full.id));
 
+    if ((full.productAccountDid ?? null) !== (productAccountDid ?? null)) {
+      await pruneReplacedProductAccountMentionsSafely(context.db, full.id);
+    }
     await refreshListingPageSnapshot(context.db, full.id);
 
     return { slug };
