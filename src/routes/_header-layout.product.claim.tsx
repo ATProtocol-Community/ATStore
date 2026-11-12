@@ -58,7 +58,7 @@ const styles = stylex.create({
   },
   claimCard: {
     padding: { default: 20, [breakpoints.md]: 24 },
-    borderColor: uiColor.text2,
+    borderColor: uiColor.border2,
     borderRadius: 20,
     borderStyle: "solid",
     borderWidth: 1,

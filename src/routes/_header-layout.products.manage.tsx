@@ -68,7 +68,7 @@ const styles = stylex.create({
     marginLeft: 8,
   },
   table: {
-    borderTopColor: uiColor.text2,
+    borderTopColor: uiColor.border2,
     borderTopStyle: "solid",
     borderTopWidth: 1,
   },
