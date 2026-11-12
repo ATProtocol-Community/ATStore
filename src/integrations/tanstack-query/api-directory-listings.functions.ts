@@ -103,6 +103,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  max,
   ne,
   or,
   sql,
@@ -3208,6 +3209,50 @@ async function selectDirectoryListingDetailRow(db: Database, whereClause: SQL) {
   return row ?? null;
 }
 
+/** Don't rebuild one listing's page snapshot more often than this. */
+const SNAPSHOT_MENTION_REFRESH_MIN_INTERVAL_MS = 60_000;
+const snapshotRefreshesInFlight = new Set<string>();
+
+/**
+ * The page snapshot (which holds the "On Bluesky" preview) is rebuilt when the
+ * listing, its reviews or its funding change, but the mentions watcher only
+ * inserts rows. If a newer mention exists than the snapshot, rebuild it in the
+ * background so the next view is current without slowing this one down
+ * (the rebuild calls the Bluesky API). One cheap indexed max() per view.
+ */
+async function refreshSnapshotIfMentionsAreNewer(
+  db: Database,
+  listingId: string,
+  refreshedAt: Date,
+) {
+  if (snapshotRefreshesInFlight.has(listingId)) return;
+  if (
+    Date.now() - refreshedAt.getTime() <
+    SNAPSHOT_MENTION_REFRESH_MIN_INTERVAL_MS
+  ) {
+    return;
+  }
+  const mentions = dbSchema.storeListingMentions;
+  const [latest] = await db
+    .select({ at: max(mentions.postCreatedAt) })
+    .from(mentions)
+    .where(eq(mentions.storeListingId, listingId));
+  if (!latest?.at || latest.at <= refreshedAt) return;
+
+  snapshotRefreshesInFlight.add(listingId);
+  void refreshListingPageSnapshot(db, listingId)
+    .catch((error: unknown) => {
+      console.error(
+        "[listing-snapshot] mention refresh failed",
+        listingId,
+        error,
+      );
+    })
+    .finally(() => {
+      snapshotRefreshesInFlight.delete(listingId);
+    });
+}
+
 export async function loadProductPageByListingId(
   db: Database,
   listingId: string,
@@ -3222,15 +3267,29 @@ export async function loadProductPageByListingId(
   }
 
   let [snapshot] = await db
-    .select({ payload: dbSchema.storeListingPageSnapshots.payload })
+    .select({
+      payload: dbSchema.storeListingPageSnapshots.payload,
+      refreshedAt: dbSchema.storeListingPageSnapshots.refreshedAt,
+    })
     .from(dbSchema.storeListingPageSnapshots)
     .where(eq(dbSchema.storeListingPageSnapshots.storeListingId, listingId))
     .limit(1);
 
+  if (snapshot) {
+    await refreshSnapshotIfMentionsAreNewer(
+      db,
+      listingId,
+      snapshot.refreshedAt,
+    );
+  }
+
   if (!snapshot && (options?.refreshIfMissing ?? true)) {
     await refreshListingPageSnapshot(db, listingId);
     [snapshot] = await db
-      .select({ payload: dbSchema.storeListingPageSnapshots.payload })
+      .select({
+        payload: dbSchema.storeListingPageSnapshots.payload,
+        refreshedAt: dbSchema.storeListingPageSnapshots.refreshedAt,
+      })
       .from(dbSchema.storeListingPageSnapshots)
       .where(eq(dbSchema.storeListingPageSnapshots.storeListingId, listingId))
       .limit(1);
