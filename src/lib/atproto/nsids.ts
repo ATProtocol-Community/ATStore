@@ -58,6 +58,16 @@ export const GAMES_NSID = {
   fave: "games.atmosphere.fave",
 } as const;
 
+/**
+ * Lexicon Community app directory NSIDs (source: tangled.org/lexicon.community/lexicons).
+ * Nothing publishes or ingests these yet; `community-app-record.ts` prepares record content
+ * for the move off `fyi.atstore.listing.detail`.
+ */
+export const COMMUNITY_APP_NSID = {
+  entry: "community.lexicon.app.entry",
+  profile: "community.lexicon.app.profile",
+} as const;
+
 export const COLLECTION = {
   authBasic: NSID.authBasic,
   profile: NSID.profile,
